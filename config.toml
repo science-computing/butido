@@ -1,0 +1,35 @@
+# repository of package definitions
+repository = "/tmp/path"
+
+# Phases which can be configured in the packages
+
+# This also defines the _order_ in which the phases are executed
+# Each phase gets a pre_ and a post_ phase added automatically.
+# So for [ "foo", "bar" ], the phases are executed in this order:
+#   pre_foo
+#   foo
+#   post_foo
+#   pre_bar
+#   bar
+#   post_bar
+#
+# Phases which are not listed here are not executed at all.
+available_phases = [ "unpack", "patch", "configure", "build", "fixup", "pack" ]
+
+[docker]
+# Images which can be used to build
+# images not listed here are automatically rejected
+images = [ "debian:bullseye" ]
+
+# List of docker endpoints
+[[docker.endpoints]]
+name          = "testhostname"
+uri           = "http://0.0.0.0:8095"
+endpoint_type = "http"
+
+
+[containers]
+# environment variables which are allowed during container start
+# This way, errors (typos) when passing environment to a build can be prevented
+allowed_env = [ "PATH" ]
+

@@ -1,0 +1,24 @@
+[package]
+name = "yabos"
+version = "0.1.0"
+authors = ["Matthias Beyer <mail@beyermatthias.de>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log       = "0.3"
+tracing   = "0.1"
+toml      = "0.5"
+serde     = "1"
+config    = "0.9"
+anyhow    = "1"
+getset    = "0.1"
+
+url      = { version = "2", features = ["serde"] }
+tokio    = { version = "0.2", features = ["full"] }
+shiplift = { git = "https://github.com/softprops/shiplift", branch = "master" }
+
+[dev-dependencies]
+env_logger = "0.7"
+
