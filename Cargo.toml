@@ -14,6 +14,9 @@ serde     = "1"
 config    = "0.9"
 anyhow    = "1"
 getset    = "0.1"
+walkdir   = "2"
+resiter   = "0.4"
+itertools = "0.9"
 
 url      = { version = "2", features = ["serde"] }
 tokio    = { version = "0.2", features = ["full"] }
