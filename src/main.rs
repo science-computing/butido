@@ -11,6 +11,7 @@ mod util;
 mod package;
 mod phase;
 mod config;
+mod repository;
 use crate::config::DockerConfig;
 use crate::config::Endpoint;
 use crate::config::EndpointType;
