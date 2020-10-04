@@ -11,7 +11,7 @@ use anyhow::Result;
 
 use crate::package::version::NameVersionBuffer;
 
-#[derive(Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct PackageName(String);
 
 impl Deref for PackageName {
@@ -33,7 +33,7 @@ impl std::fmt::Display for PackageName {
     }
 }
 
-#[derive(Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct PackageVersion(String);
 
 impl From<String> for PackageVersion {
