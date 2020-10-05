@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use url::Url;
 use getset::Getters;
 use serde::Deserialize;
+use anyhow::Result;
 
 use crate::phase::{PhaseName, Phase};
 use crate::package::util::*;
@@ -65,6 +66,42 @@ pub struct Package {
     #[getset(get = "pub")]
     #[serde(skip_serializing_if = "Option::is_none")]
     phases: Option<HashMap<PhaseName, Phase>>,
+}
+
+impl Package {
+    /// Get all dependencies of the package
+    ///
+    /// Either return the list of dependencies or, if available, run the dependencies_script to
+    /// read the dependencies from there.
+    pub fn get_all_dependencies(&self) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
+        use std::convert::TryInto;
+
+        // TODO: Current implementation does not run dependency script
+        //
+
+        self.dependencies.iter().map(|d| d.clone().try_into()).collect()
+    }
+}
+
+impl PartialEq for Package {
+    fn eq(&self, other: &Package) -> bool {
+        (self.name(), self.version()).eq(&(other.name(), other.version()))
+    }
+}
+
+impl PartialOrd for Package {
+    fn partial_cmp(&self, other: &Package) -> Option<std::cmp::Ordering> {
+        (self.name(), self.version()).partial_cmp(&(other.name(), other.version()))
+    }
+}
+
+impl Ord for Package {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (self.name(), self.version()).cmp(&(other.name(), other.version()))
+    }
+}
+
+impl Eq for Package {
 }
 
 #[derive(Debug, Deserialize)]
