@@ -3,6 +3,7 @@
 //! These types exist only for the purpose of strong typing
 //! and cannot do anything special.
 
+use std::result::Result as RResult;
 use std::ops::Deref;
 
 use serde::Deserialize;
@@ -15,6 +16,12 @@ impl Deref for PackageName {
     type Target = String;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl std::fmt::Display for PackageName {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        self.0.fmt(f)
     }
 }
 
@@ -33,8 +40,16 @@ pub struct SystemDependency(String);
 #[derive(Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct BuildDependency(String);
 
-#[derive(Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Dependency(String);
+
+impl std::convert::TryInto<(PackageName, PackageVersionConstraint)> for Dependency {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> RResult<(PackageName, PackageVersionConstraint), Self::Error> {
+        unimplemented!()
+    }
+}
 
 #[derive(Deserialize, Debug, Hash, Eq, PartialEq)]
 pub struct HashValue(String);
