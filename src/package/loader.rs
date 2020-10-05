@@ -23,11 +23,8 @@ impl Loader {
         Loader { root: root_path }
     }
 
-    pub fn load<PN, PVC>(&self, package_name: PN, package_version: PVC) -> Result<Option<Package>>
-        where PN: AsRef<PackageName>,
-            PVC: AsRef<PackageVersionConstraint>,
-    {
-        find_in(&self.root, config::Config::default(), package_name.as_ref(), package_version.as_ref())
+    pub fn load(&self, package_name: &PackageName, package_version: &PackageVersionConstraint) -> Result<Option<Package>> {
+        find_in(&self.root, config::Config::default(), package_name, package_version)
             .and_then(|o| if let Some(config) = o {
                 config.deserialize().map_err(Error::from)
             } else {
