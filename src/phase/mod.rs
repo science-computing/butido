@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Hash)]
+#[serde(transparent)]
 pub struct PhaseName(String);
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]

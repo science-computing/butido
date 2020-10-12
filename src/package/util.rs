@@ -12,6 +12,7 @@ use anyhow::Result;
 use crate::package::version::NameVersionBuffer;
 
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[serde(transparent)]
 pub struct PackageName(String);
 
 impl Deref for PackageName {
@@ -34,6 +35,7 @@ impl std::fmt::Display for PackageName {
 }
 
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[serde(transparent)]
 pub struct PackageVersion(String);
 
 impl From<String> for PackageVersion {
@@ -43,6 +45,7 @@ impl From<String> for PackageVersion {
 }
 
 #[derive(Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[serde(transparent)]
 pub struct SystemDependency(String);
 
 impl NameVersionBuffer for SystemDependency {
@@ -52,6 +55,7 @@ impl NameVersionBuffer for SystemDependency {
 }
 
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[serde(transparent)]
 pub struct BuildDependency(String);
 
 impl NameVersionBuffer for BuildDependency {
@@ -61,6 +65,7 @@ impl NameVersionBuffer for BuildDependency {
 }
 
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[serde(transparent)]
 pub struct Dependency(String);
 
 impl NameVersionBuffer for Dependency {
@@ -78,6 +83,7 @@ impl std::convert::TryInto<(PackageName, PackageVersionConstraint)> for Dependen
 }
 
 #[derive(Deserialize, Debug, Hash, Eq, PartialEq)]
+#[serde(transparent)]
 pub struct HashValue(String);
 
 
