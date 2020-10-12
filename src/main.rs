@@ -74,7 +74,7 @@ fn setup_progressbars(max_packages: u64) -> ProgressBars {
     let repo_loading = {
         let b = ProgressBar::new(max_packages);
         b.set_style({
-            ProgressStyle::default_bar().template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent}%): {bar} | {msg}")
+            ProgressStyle::default_bar().template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent:>3}%): {bar} | {msg}")
         });
 
         b.set_message("Loading Repository");
@@ -93,7 +93,7 @@ fn setup_progressbars(max_packages: u64) -> ProgressBars {
 fn tree_building_progress_bar(max: u64) -> ProgressBar {
     let b = ProgressBar::new(max);
     b.set_style({
-        ProgressStyle::default_bar().template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent}%): {bar} | {msg}")
+        ProgressStyle::default_bar().template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent:>3}%): {bar} | {msg}")
     });
     b
 }
