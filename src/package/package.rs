@@ -28,10 +28,7 @@ pub struct Package {
     version_is_semver: bool,
 
     #[getset(get = "pub")]
-    source_url: Url,
-
-    #[getset(get = "pub")]
-    source_hash: SourceHash,
+    source: Source,
 
     #[getset(get = "pub")]
     system_dependencies: Vec<SystemDependency>,
@@ -114,6 +111,15 @@ impl Ord for Package {
 }
 
 impl Eq for Package {
+}
+
+
+#[derive(Debug, Deserialize, Getters)]
+pub struct Source {
+    #[getset(get = "pub")]
+    url: Url,
+    #[getset(get = "pub")]
+    hash: SourceHash,
 }
 
 #[derive(Debug, Deserialize)]
