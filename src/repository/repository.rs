@@ -82,11 +82,12 @@ impl Repository {
             .collect()
     }
 
-    pub fn find<'a>(&'a self, name: &PackageName, version: &PackageVersion) -> Option<&'a Package> {
+    pub fn find<'a>(&'a self, name: &PackageName, version: &PackageVersion) -> Vec<&'a Package> {
         self.inner
             .iter()
-            .find(|((n, v), _)| n == name && v == version)
+            .filter(|((n, v), _)| n == name && v == version)
             .map(|(_, p)| p)
+            .collect()
     }
 
     pub fn find_with_version_contraint<'a>(&'a self, name: &PackageName, vc: &PackageVersionConstraint) -> Vec<&'a Package> {
