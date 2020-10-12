@@ -90,7 +90,7 @@ impl Repository {
             .collect()
     }
 
-    pub fn find_with_version_contraint<'a>(&'a self, name: &PackageName, vc: &PackageVersionConstraint) -> Vec<&'a Package> {
+    pub fn find_with_version_constraint<'a>(&'a self, name: &PackageName, vc: &PackageVersionConstraint) -> Vec<&'a Package> {
         self.inner
             .iter()
             .filter(|((n, v), _)| {
