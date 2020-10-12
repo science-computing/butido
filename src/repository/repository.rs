@@ -17,7 +17,7 @@ pub struct Repository {
 
 impl Repository {
 
-    pub fn load(path: &Path) -> Result<Self> {
+    pub fn load(path: &Path, progress: &indicatif::ProgressBar) -> Result<Self> {
         fn all_subdirs(p: &Path) -> Result<Vec<PathBuf>> {
             let mut v = Vec::new();
             for de in p.read_dir()? {
@@ -30,7 +30,7 @@ impl Repository {
             return Ok(v)
         }
 
-        fn load_recursive(path: &Path, mut config: config::Config) -> Result<Vec<Result<Package>>> {
+        fn load_recursive(path: &Path, mut config: config::Config, progress: &indicatif::ProgressBar) -> Result<Vec<Result<Package>>> {
             let pkg_file = path.join("pkg.toml");
 
             if pkg_file.is_file() {
@@ -48,13 +48,14 @@ impl Repository {
                     .deserialize()
                     .with_context(|| format!("Failed to parse {} into package", path.display()));
 
+                progress.tick();
                 Ok(vec![package])
             } else {
                 subdirs
                     .into_iter()
                     .fold(Ok(Vec::new()), |vec, dir| {
                         vec.and_then(|mut v| {
-                            let mut loaded = load_recursive(&dir, config.clone())
+                            let mut loaded = load_recursive(&dir, config.clone(), progress)
                                 .with_context(|| format!("Recursing for {}", pkg_file.display()))?;
 
                             v.append(&mut loaded);
@@ -64,7 +65,7 @@ impl Repository {
             }
         }
 
-        let inner = load_recursive(path, config::Config::default())
+        let inner = load_recursive(path, config::Config::default(), progress)
             .with_context(|| format!("Recursing for {}", path.display()))?
             .into_iter()
             .map_ok(|p| ((p.name().clone(), p.version().clone()), p))

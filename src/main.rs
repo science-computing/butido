@@ -1,7 +1,9 @@
 #[macro_use] extern crate log;
 
+use std::path::Path;
 use std::path::PathBuf;
 use anyhow::Result;
+use walkdir::WalkDir;
 
 mod cli;
 mod util;
@@ -28,7 +30,20 @@ async fn main() -> Result<()> {
     let docker_config = config.get::<DockerConfig>("docker")?;
 
     let repo_path = PathBuf::from(config.get_str("repository")?);
-    let repo      = Repository::load(&repo_path)?;
+    let progress  = indicatif::ProgressBar::new(count_pkg_files(&repo_path));
+    progress.set_style(indicatif::ProgressStyle::default_bar());
+    let repo      = Repository::load(&repo_path, &progress)?;
+    progress.finish_with_message("Repository loading finished");
 
     Ok(())
+}
+
+fn count_pkg_files(p: &Path) -> u64 {
+    WalkDir::new(p)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|d| d.file_type().is_file())
+        .filter(|f| f.path().file_name().map(|name| name == "pkg.toml").unwrap_or(false))
+        .count() as u64
 }
