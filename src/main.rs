@@ -55,8 +55,9 @@ async fn main() -> Result<()> {
     tokio::stream::iter(packages.into_iter().cloned())
         .map(|p| {
             let bar = progressbars.root.add(tree_building_progress_bar(max_packages));
+            bar.set_message(&format!("Building Package Tree for {}", p.name()));
             let mut tree = Tree::new();
-            tree.add_package(p, &repo, &DummyExecutor::new(), &DummyVersionParser::new());
+            tree.add_package(p, &repo, &DummyExecutor::new(), &DummyVersionParser::new(), &bar);
         })
         .collect::<Vec<_>>()
         .await;
@@ -75,6 +76,8 @@ fn setup_progressbars(max_packages: u64) -> ProgressBars {
         b.set_style({
             ProgressStyle::default_bar().template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent}%): {bar} | {msg}")
         });
+
+        b.set_message("Loading Repository");
         b
     };
 
