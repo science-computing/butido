@@ -3,11 +3,6 @@ use std::path::Path;
 use std::ops::Deref;
 use anyhow::Result;
 use anyhow::Error;
-use resiter::FilterMap;
-use resiter::Map;
-use resiter::AndThen;
-use resiter::Filter;
-use walkdir::WalkDir;
 
 use crate::package::Package;
 use crate::package::PackageName;

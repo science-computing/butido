@@ -12,7 +12,6 @@ use resiter::AndThen;
 use crate::phase::{PhaseName, Phase};
 use crate::package::util::*;
 use crate::package::version::VersionParser;
-use crate::package::version::NameVersionBuffer;
 use crate::util::docker::ImageName;
 use crate::util::executor::Executor;
 

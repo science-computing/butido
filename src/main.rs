@@ -1,10 +1,7 @@
 #[macro_use] extern crate log;
 
-use std::str::FromStr;
 use std::path::PathBuf;
-use anyhow::anyhow;
 use anyhow::Result;
-use anyhow::Error;
 
 mod cli;
 mod util;
@@ -13,8 +10,6 @@ mod phase;
 mod config;
 mod repository;
 use crate::config::DockerConfig;
-use crate::config::Endpoint;
-use crate::config::EndpointType;
 use crate::repository::Repository;
 
 #[tokio::main]
