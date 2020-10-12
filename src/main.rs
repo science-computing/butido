@@ -4,6 +4,7 @@ use std::str::FromStr;
 use anyhow::Result;
 use anyhow::Error;
 
+mod cli;
 mod util;
 mod package;
 mod phase;
