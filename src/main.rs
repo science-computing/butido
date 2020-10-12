@@ -15,9 +15,7 @@ mod repository;
 use crate::config::DockerConfig;
 use crate::config::Endpoint;
 use crate::config::EndpointType;
-use crate::package::Loader;
-use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
+use crate::repository::Repository;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,15 +32,8 @@ async fn main() -> Result<()> {
 
     let docker_config = config.get::<DockerConfig>("docker")?;
 
-    let loader = Loader::new(PathBuf::from(config.get_str("repository")?));
-    let p = cli.value_of("package")
-        .map(String::from)
-        .ok_or_else(|| anyhow!("BUG: Clap should enforce package parameter"))?;
-
-    let package_name = PackageName::from(p);
-
-    let p = loader.load(&package_name, &PackageVersionConstraint::Any)?
-        .ok_or_else(|| anyhow!("No package found"))?;
+    let repo_path = PathBuf::from(config.get_str("repository")?);
+    let repo      = Repository::load(&repo_path)?;
 
     Ok(())
 }
