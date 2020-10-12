@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use anyhow::anyhow;
 
+use crate::repository::Repository;
 use crate::package::Package;
 use crate::package::Loader;
 use crate::package::version::VersionParser;
@@ -18,25 +19,27 @@ impl Tree {
         Tree { root: BTreeMap::new() }
     }
 
-    pub fn add_package(&mut self, p: Package, loader: &Loader, executor: &dyn Executor, versionparser: &dyn VersionParser) -> Result<()> {
+    pub fn add_package(&mut self, p: Package, repo: &Repository, executor: &dyn Executor, versionparser: &dyn VersionParser) -> Result<()> {
         macro_rules! mk_add_package_tree {
-            ($this:ident, $pack:ident, $loader:ident, $root:ident, $executor:ident, $versionparser:ident) => {{
+            ($this:ident, $pack:ident, $repo:ident, $root:ident, $executor:ident, $versionparser:ident) => {{
                 let mut subtree = Tree::new();
                 ($pack).get_all_dependencies($executor, $versionparser)?
                     .into_iter()
                     .map(|(name, constr)| {
-                        let pack = ($loader)
-                            .load(&name, &constr)?
-                            .ok_or_else(|| anyhow!("Package not found: {}", name))?;
+                        let pack = ($repo).find_with_version_constraint(&name, &constr);
 
-                        if ($root).has_package(&($pack)) {
+                        if pack.iter().any(|p| ($root).has_package(p)) {
                             // package already exists in tree, which is unfortunate
                             // TODO: Handle gracefully
                             //
-                            return Err(anyhow!("Duplicate version of package {:?} found", ($pack)))
+                            return Err(anyhow!("Duplicate version of some package in {:?} found", pack))
                         }
 
-                        add_package_tree(&mut subtree, pack, ($loader), ($root), ($executor), ($versionparser))
+                        pack.into_iter()
+                            .map(|p| {
+                                add_package_tree(&mut subtree, p.clone(), ($repo), ($root), ($executor), ($versionparser))
+                            })
+                            .collect()
                     })
                     .collect::<Result<Vec<()>>>()?;
 
@@ -45,11 +48,11 @@ impl Tree {
             }}
         };
 
-        fn add_package_tree(this: &mut Tree, p: Package, loader: &Loader, root: &mut Tree, executor: &dyn Executor, versionparser: &dyn VersionParser) -> Result<()> {
-            mk_add_package_tree!(this, p, loader, root, executor, versionparser)
+        fn add_package_tree(this: &mut Tree, p: Package, repo: &Repository, root: &mut Tree, executor: &dyn Executor, versionparser: &dyn VersionParser) -> Result<()> {
+            mk_add_package_tree!(this, p, repo, root, executor, versionparser)
         }
 
-        mk_add_package_tree!(self, p, loader, self, executor, versionparser)
+        mk_add_package_tree!(self, p, repo, self, executor, versionparser)
     }
 
     pub fn has_package(&self, p: &Package) -> bool {
