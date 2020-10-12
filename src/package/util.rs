@@ -51,7 +51,7 @@ impl NameVersionBuffer for SystemDependency {
     }
 }
 
-#[derive(Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct BuildDependency(String);
 
 impl NameVersionBuffer for BuildDependency {
