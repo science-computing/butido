@@ -5,6 +5,7 @@ use anyhow::anyhow;
 
 use crate::package::Package;
 use crate::package::Loader;
+use crate::util::executor::Executor;
 
 pub struct Tree {
     root: BTreeMap<Package, Tree>,
@@ -16,11 +17,11 @@ impl Tree {
         Tree { root: BTreeMap::new() }
     }
 
-    pub fn add_package(&mut self, p: Package, loader: &Loader) -> Result<()> {
+    pub fn add_package(&mut self, p: Package, loader: &Loader, executor: &dyn Executor) -> Result<()> {
         macro_rules! mk_add_package_tree {
-            ($this:ident, $pack:ident, $loader:ident, $root:ident) => {{
+            ($this:ident, $pack:ident, $loader:ident, $root:ident, $executor:ident) => {{
                 let mut subtree = Tree::new();
-                ($pack).get_all_dependencies()?
+                ($pack).get_all_dependencies($executor)?
                     .into_iter()
                     .map(|(name, constr)| {
                         let pack = ($loader)
@@ -34,7 +35,7 @@ impl Tree {
                             return Err(anyhow!("Duplicate version of package {:?} found", ($pack)))
                         }
 
-                        add_package_tree(&mut subtree, pack, ($loader), ($root))
+                        add_package_tree(&mut subtree, pack, ($loader), ($root), ($executor))
                     })
                     .collect::<Result<Vec<()>>>()?;
 
@@ -43,11 +44,11 @@ impl Tree {
             }}
         };
 
-        fn add_package_tree(this: &mut Tree, p: Package, loader: &Loader, root: &mut Tree) -> Result<()> {
-            mk_add_package_tree!(this, p, loader, root)
+        fn add_package_tree(this: &mut Tree, p: Package, loader: &Loader, root: &mut Tree, executor: &dyn Executor) -> Result<()> {
+            mk_add_package_tree!(this, p, loader, root, executor)
         }
 
-        mk_add_package_tree!(self, p, loader, self)
+        mk_add_package_tree!(self, p, loader, self, executor)
     }
 
     pub fn has_package(&self, p: &Package) -> bool {

@@ -9,6 +9,7 @@ use anyhow::Result;
 use crate::phase::{PhaseName, Phase};
 use crate::package::util::*;
 use crate::util::docker::ImageName;
+use crate::util::executor::Executor;
 
 #[derive(Debug, Deserialize, Getters)]
 pub struct Package {
@@ -73,7 +74,7 @@ impl Package {
     ///
     /// Either return the list of dependencies or, if available, run the dependencies_script to
     /// read the dependencies from there.
-    pub fn get_all_dependencies(&self) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
+    pub fn get_all_dependencies(&self, executor: &dyn Executor, version_parser: &dyn VersionParser) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
         use std::convert::TryInto;
 
         // TODO: Current implementation does not run dependency script
