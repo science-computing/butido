@@ -9,7 +9,10 @@ pub struct PhaseName(String);
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
 pub enum Phase {
+    #[serde(rename = "path")]
     Path(PathBuf),
+
+    #[serde(rename = "script")]
     Text(String),
 }
 
