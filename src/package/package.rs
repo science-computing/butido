@@ -15,7 +15,7 @@ use crate::package::version::VersionParser;
 use crate::util::docker::ImageName;
 use crate::util::executor::Executor;
 
-#[derive(Debug, Deserialize, Getters)]
+#[derive(Clone, Debug, Deserialize, Getters)]
 pub struct Package {
     #[getset(get = "pub")]
     name: PackageName,
@@ -102,7 +102,7 @@ impl Eq for Package {
 }
 
 
-#[derive(Debug, Deserialize, Getters)]
+#[derive(Clone, Debug, Deserialize, Getters)]
 pub struct Source {
     #[getset(get = "pub")]
     url: Url,
@@ -110,7 +110,7 @@ pub struct Source {
     hash: SourceHash,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct SourceHash {
     #[serde(rename = "type")]
     hashtype: HashType,
@@ -119,7 +119,7 @@ pub struct SourceHash {
     value: HashValue,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub enum HashType {
     #[serde(rename = "sha1")]
     Sha1,
@@ -131,12 +131,12 @@ pub enum HashType {
     Sha512,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct PackageFlags {
     build_parallel: bool,
 }
 
-#[derive(Debug, Deserialize, Getters)]
+#[derive(Clone, Debug, Deserialize, Getters)]
 pub struct Dependencies {
     #[getset(get = "pub")]
     system: Vec<SystemDependency>,

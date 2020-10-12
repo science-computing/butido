@@ -10,7 +10,7 @@ pub mod docker {
     use anyhow::anyhow;
     use serde::Deserialize;
 
-    #[derive(Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+    #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
     pub struct ImageName(String);
 
     /// Check whether a string is a valid docker tag name

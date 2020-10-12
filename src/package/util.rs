@@ -44,7 +44,7 @@ impl From<String> for PackageVersion {
     }
 }
 
-#[derive(Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct SystemDependency(String);
 
@@ -82,7 +82,7 @@ impl std::convert::TryInto<(PackageName, PackageVersionConstraint)> for Dependen
     }
 }
 
-#[derive(Deserialize, Debug, Hash, Eq, PartialEq)]
+#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
 #[serde(transparent)]
 pub struct HashValue(String);
 
