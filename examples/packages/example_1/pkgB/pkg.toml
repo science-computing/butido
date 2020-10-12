@@ -1,0 +1,15 @@
+name              = "pkgB"
+version           = "1.0.0"
+
+[source]
+url  = "http://somerandomthi.ng/foo/bar.tar.gz"
+hash.type = "sha1"
+hash.hash = "23465"
+
+# overwrites
+[phases]
+
+build.script = '''
+    echo Overridden build phase in package pkgB
+'''
+
