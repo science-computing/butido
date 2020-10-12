@@ -143,7 +143,6 @@ pub struct Dependencies {
     system: Vec<SystemDependency>,
 
     #[getset(get = "pub")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "system_dep_script")]
     system_dependencies_script: Option<PathBuf>,
 
@@ -151,7 +150,6 @@ pub struct Dependencies {
     build: Vec<BuildDependency>,
 
     #[getset(get = "pub")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "build_dep_script")]
     build_dependencies_script: Option<PathBuf>,
 
@@ -159,7 +157,6 @@ pub struct Dependencies {
     runtime: Vec<Dependency>,
 
     #[getset(get = "pub")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "script")]
     dependencies_script: Option<PathBuf>,
 }
