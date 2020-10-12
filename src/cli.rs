@@ -14,5 +14,10 @@ pub fn cli<'a>() -> App<'a> {
             .multiple(false)
             .index(1)
         )
+        .arg(Arg::with_name("package_version")
+            .required(false)
+            .multiple(false)
+            .index(2)
+        )
 }
 
