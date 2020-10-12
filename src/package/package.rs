@@ -31,25 +31,7 @@ pub struct Package {
     source: Source,
 
     #[getset(get = "pub")]
-    system_dependencies: Vec<SystemDependency>,
-
-    #[getset(get = "pub")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    system_dependencies_script: Option<PathBuf>,
-
-    #[getset(get = "pub")]
-    build_dependencies: Vec<BuildDependency>,
-
-    #[getset(get = "pub")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    build_dependencies_script: Option<PathBuf>,
-
-    #[getset(get = "pub")]
-    dependencies: Vec<Dependency>,
-
-    #[getset(get = "pub")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    dependencies_script: Option<PathBuf>,
+    dependencies: Dependencies,
 
     #[getset(get = "pub")]
     patches: Vec<PathBuf>,
@@ -79,14 +61,21 @@ impl Package {
     pub fn get_all_dependencies(&self, executor: &dyn Executor, version_parser: &dyn VersionParser) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
         use std::convert::TryInto;
 
-        self.build_dependencies_script
+        self.dependencies()
+            .dependencies_script()
             .as_ref()
             .map(|path| executor.execute_dependency_script(path))
             .transpose()?
             .unwrap_or_default()
             .into_iter()
             .map(Ok)
-            .chain(self.dependencies.iter().cloned().map(|d| d.try_into().map_err(Error::from)))
+            .chain({
+                self.dependencies()
+                    .runtime()
+                    .iter()
+                    .cloned()
+                    .map(|d| d.try_into().map_err(Error::from))
+            })
             .and_then_ok(|d| version_parser.parse(&d).with_context(|| format!("Failed to parse: '{:?}'", d)).map_err(Error::from))
             .collect()
     }
@@ -146,5 +135,32 @@ pub enum HashType {
 #[derive(Debug, Deserialize)]
 pub struct PackageFlags {
     build_parallel: bool,
+}
+
+#[derive(Debug, Deserialize, Getters)]
+pub struct Dependencies {
+    #[getset(get = "pub")]
+    system: Vec<SystemDependency>,
+
+    #[getset(get = "pub")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "system_dep_script")]
+    system_dependencies_script: Option<PathBuf>,
+
+    #[getset(get = "pub")]
+    build: Vec<BuildDependency>,
+
+    #[getset(get = "pub")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "build_dep_script")]
+    build_dependencies_script: Option<PathBuf>,
+
+    #[getset(get = "pub")]
+    runtime: Vec<Dependency>,
+
+    #[getset(get = "pub")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "script")]
+    dependencies_script: Option<PathBuf>,
 }
 
