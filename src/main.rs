@@ -1,6 +1,8 @@
 #[macro_use] extern crate log;
 
 use std::str::FromStr;
+use std::path::PathBuf;
+use anyhow::anyhow;
 use anyhow::Result;
 use anyhow::Error;
 
@@ -12,9 +14,15 @@ mod config;
 use crate::config::DockerConfig;
 use crate::config::Endpoint;
 use crate::config::EndpointType;
+use crate::package::Loader;
+use crate::package::PackageName;
+use crate::package::PackageVersionConstraint;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let cli = cli::cli();
+    let cli = cli.get_matches();
+
     let mut config = ::config::Config::default();
     config
         .merge(::config::File::with_name("config"))?
@@ -25,28 +33,15 @@ async fn main() -> Result<()> {
 
     let docker_config = config.get::<DockerConfig>("docker")?;
 
-    let iter = docker_config
-        .endpoints()
-        .iter()
-        .map(|ep| {
-            match ep.endpoint_type() {
-                EndpointType::Http => {
-                    shiplift::Uri::from_str(ep.uri())
-                        .map(|uri| shiplift::Docker::host(uri))
-                        .map_err(Error::from)
-                }
+    let loader = Loader::new(PathBuf::from(config.get_str("repository")?));
+    let p = cli.value_of("package")
+        .map(String::from)
+        .ok_or_else(|| anyhow!("BUG: Clap should enforce package parameter"))?;
 
-                EndpointType::Socket => {
-                    Ok(shiplift::Docker::unix(ep.uri()))
-                }
-            }
-        });
+    let package_name = PackageName::from(p);
 
-    for d in iter {
-        let v = d?.version().await?;
-        println!("Docker: {}", v.version);
-        println!("API   : {}", v.api_version);
-    }
+    let p = loader.load(&package_name, &PackageVersionConstraint::Any)?
+        .ok_or_else(|| anyhow!("No package found"))?;
 
     Ok(())
 }
