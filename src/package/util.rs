@@ -21,6 +21,12 @@ impl Deref for PackageName {
     }
 }
 
+impl From<String> for PackageName {
+    fn from(s: String) -> Self {
+        PackageName(s)
+    }
+}
+
 impl std::fmt::Display for PackageName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         self.0.fmt(f)
