@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use anyhow::Error;
 use walkdir::WalkDir;
+use indicatif::*;
+use tokio::stream::StreamExt;
 
 mod cli;
 mod util;
@@ -14,6 +16,11 @@ mod config;
 mod repository;
 use crate::config::DockerConfig;
 use crate::repository::Repository;
+use crate::package::PackageName;
+use crate::package::PackageVersion;
+use crate::util::executor::DummyExecutor;
+use crate::package::DummyVersionParser;
+use crate::package::Tree;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -30,24 +37,41 @@ async fn main() -> Result<()> {
 
     let docker_config = config.get::<DockerConfig>("docker")?;
     let repo_path    = PathBuf::from(config.get_str("repository")?);
-
-    let progressbars = setup_progressbars(&repo_path);
+    let max_packages = count_pkg_files(&repo_path);
+    let progressbars = setup_progressbars(max_packages);
     let repo         = Repository::load(&repo_path, &progressbars.repo_loading)?;
     progressbars.repo_loading.finish_with_message("Repository loading finished");
+
+    let pname = cli.value_of("package_name").map(String::from).map(PackageName::from).unwrap(); // safe by clap
+    let pvers = cli.value_of("package_version").map(String::from).map(PackageVersion::from);
+
+    let packages = if let Some(pvers) = pvers {
+        repo.find(&pname, &pvers)
+    } else {
+        repo.find_by_name(&pname)
+    };
+    debug!("Found {} relevant packages", packages.len());
+
+    tokio::stream::iter(packages.into_iter().cloned())
+        .map(|p| {
+            let bar = progressbars.root.add(tree_building_progress_bar(max_packages));
+            let mut tree = Tree::new();
+            tree.add_package(p, &repo, &DummyExecutor::new(), &DummyVersionParser::new());
+        })
+        .collect::<Vec<_>>()
+        .await;
 
     progressbars.root.join().map_err(Error::from)
 }
 
 struct ProgressBars {
-    root:           indicatif::MultiProgress,
-    repo_loading:   indicatif::ProgressBar,
+    root:           MultiProgress,
+    repo_loading:   ProgressBar,
 }
 
-fn setup_progressbars(root_pkg_path: &Path) -> ProgressBars {
-    use indicatif::*;
-
+fn setup_progressbars(max_packages: u64) -> ProgressBars {
     let repo_loading = {
-        let b = ProgressBar::new(count_pkg_files(root_pkg_path));
+        let b = ProgressBar::new(max_packages);
         b.set_style({
             ProgressStyle::default_bar().template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent}%): {bar} | {msg}")
         });
@@ -61,6 +85,14 @@ fn setup_progressbars(root_pkg_path: &Path) -> ProgressBars {
         root,
         repo_loading,
     }
+}
+
+fn tree_building_progress_bar(max: u64) -> ProgressBar {
+    let b = ProgressBar::new(max);
+    b.set_style({
+        ProgressStyle::default_bar().template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent}%): {bar} | {msg}")
+    });
+    b
 }
 
 fn count_pkg_files(p: &Path) -> u64 {

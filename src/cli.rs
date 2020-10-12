@@ -9,7 +9,7 @@ pub fn cli<'a>() -> App<'a> {
         .author(crate_authors!())
         .version(crate_version!())
         .about("Generic Build Orchestration System for building linux packages with docker")
-        .arg(Arg::with_name("package")
+        .arg(Arg::with_name("package_name")
             .required(true)
             .multiple(false)
             .index(1)
