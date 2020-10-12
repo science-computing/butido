@@ -3,6 +3,7 @@
 use std::path::Path;
 use std::path::PathBuf;
 use anyhow::Result;
+use anyhow::Error;
 use walkdir::WalkDir;
 
 mod cli;
@@ -28,14 +29,38 @@ async fn main() -> Result<()> {
     //
 
     let docker_config = config.get::<DockerConfig>("docker")?;
+    let repo_path    = PathBuf::from(config.get_str("repository")?);
 
-    let repo_path = PathBuf::from(config.get_str("repository")?);
-    let progress  = indicatif::ProgressBar::new(count_pkg_files(&repo_path));
-    progress.set_style(indicatif::ProgressStyle::default_bar());
-    let repo      = Repository::load(&repo_path, &progress)?;
-    progress.finish_with_message("Repository loading finished");
+    let progressbars = setup_progressbars(&repo_path);
+    let repo         = Repository::load(&repo_path, &progressbars.repo_loading)?;
+    progressbars.repo_loading.finish_with_message("Repository loading finished");
 
-    Ok(())
+    progressbars.root.join().map_err(Error::from)
+}
+
+struct ProgressBars {
+    root:           indicatif::MultiProgress,
+    repo_loading:   indicatif::ProgressBar,
+}
+
+fn setup_progressbars(root_pkg_path: &Path) -> ProgressBars {
+    use indicatif::*;
+
+    let repo_loading = {
+        let b = ProgressBar::new(count_pkg_files(root_pkg_path));
+        b.set_style({
+            ProgressStyle::default_bar().template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent}%): {bar} | {msg}")
+        });
+        b
+    };
+
+    let root         = MultiProgress::new();
+    let repo_loading = root.add(repo_loading);
+
+    ProgressBars {
+        root,
+        repo_loading,
+    }
 }
 
 fn count_pkg_files(p: &Path) -> u64 {
@@ -47,3 +72,4 @@ fn count_pkg_files(p: &Path) -> u64 {
         .filter(|f| f.path().file_name().map(|name| name == "pkg.toml").unwrap_or(false))
         .count() as u64
 }
+
