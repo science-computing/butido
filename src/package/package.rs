@@ -5,9 +5,14 @@ use url::Url;
 use getset::Getters;
 use serde::Deserialize;
 use anyhow::Result;
+use anyhow::Error;
+use anyhow::Context;
+use resiter::AndThen;
 
 use crate::phase::{PhaseName, Phase};
 use crate::package::util::*;
+use crate::package::version::VersionParser;
+use crate::package::version::NameVersionBuffer;
 use crate::util::docker::ImageName;
 use crate::util::executor::Executor;
 
@@ -77,10 +82,16 @@ impl Package {
     pub fn get_all_dependencies(&self, executor: &dyn Executor, version_parser: &dyn VersionParser) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
         use std::convert::TryInto;
 
-        // TODO: Current implementation does not run dependency script
-        //
-
-        self.dependencies.iter().map(|d| d.clone().try_into()).collect()
+        self.build_dependencies_script
+            .as_ref()
+            .map(|path| executor.execute_dependency_script(path))
+            .transpose()?
+            .unwrap_or_default()
+            .into_iter()
+            .map(Ok)
+            .chain(self.dependencies.iter().cloned().map(|d| d.try_into().map_err(Error::from)))
+            .and_then_ok(|d| version_parser.parse(&d).with_context(|| format!("Failed to parse: '{:?}'", d)).map_err(Error::from))
+            .collect()
     }
 }
 

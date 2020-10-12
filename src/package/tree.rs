@@ -5,6 +5,7 @@ use anyhow::anyhow;
 
 use crate::package::Package;
 use crate::package::Loader;
+use crate::package::version::VersionParser;
 use crate::util::executor::Executor;
 
 pub struct Tree {
@@ -17,11 +18,11 @@ impl Tree {
         Tree { root: BTreeMap::new() }
     }
 
-    pub fn add_package(&mut self, p: Package, loader: &Loader, executor: &dyn Executor) -> Result<()> {
+    pub fn add_package(&mut self, p: Package, loader: &Loader, executor: &dyn Executor, versionparser: &dyn VersionParser) -> Result<()> {
         macro_rules! mk_add_package_tree {
-            ($this:ident, $pack:ident, $loader:ident, $root:ident, $executor:ident) => {{
+            ($this:ident, $pack:ident, $loader:ident, $root:ident, $executor:ident, $versionparser:ident) => {{
                 let mut subtree = Tree::new();
-                ($pack).get_all_dependencies($executor)?
+                ($pack).get_all_dependencies($executor, $versionparser)?
                     .into_iter()
                     .map(|(name, constr)| {
                         let pack = ($loader)
@@ -35,7 +36,7 @@ impl Tree {
                             return Err(anyhow!("Duplicate version of package {:?} found", ($pack)))
                         }
 
-                        add_package_tree(&mut subtree, pack, ($loader), ($root), ($executor))
+                        add_package_tree(&mut subtree, pack, ($loader), ($root), ($executor), ($versionparser))
                     })
                     .collect::<Result<Vec<()>>>()?;
 
@@ -44,11 +45,11 @@ impl Tree {
             }}
         };
 
-        fn add_package_tree(this: &mut Tree, p: Package, loader: &Loader, root: &mut Tree, executor: &dyn Executor) -> Result<()> {
-            mk_add_package_tree!(this, p, loader, root, executor)
+        fn add_package_tree(this: &mut Tree, p: Package, loader: &Loader, root: &mut Tree, executor: &dyn Executor, versionparser: &dyn VersionParser) -> Result<()> {
+            mk_add_package_tree!(this, p, loader, root, executor, versionparser)
         }
 
-        mk_add_package_tree!(self, p, loader, self, executor)
+        mk_add_package_tree!(self, p, loader, self, executor, versionparser)
     }
 
     pub fn has_package(&self, p: &Package) -> bool {
