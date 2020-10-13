@@ -14,7 +14,7 @@ mod package;
 mod phase;
 mod config;
 mod repository;
-use crate::config::DockerConfig;
+use crate::config::*;
 use crate::repository::Repository;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
@@ -35,8 +35,8 @@ async fn main() -> Result<()> {
         // Eg.. `YABOS_DEBUG=1 ./target/app` would set the `debug` key
     //
 
-    let docker_config = config.get::<DockerConfig>("docker")?;
-    let repo_path    = PathBuf::from(config.get_str("repository")?);
+    let config: Configuration = config.try_into::<NotValidatedConfiguration>()?.validate()?;
+    let repo_path    = PathBuf::from(config.repository());
     let max_packages = count_pkg_files(&repo_path);
     let progressbars = setup_progressbars(max_packages);
     let repo         = Repository::load(&repo_path, &progressbars.repo_loading)?;

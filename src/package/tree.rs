@@ -6,7 +6,6 @@ use indicatif::ProgressBar;
 
 use crate::repository::Repository;
 use crate::package::Package;
-use crate::package::Loader;
 use crate::package::version::VersionParser;
 use crate::util::executor::Executor;
 
@@ -73,13 +72,16 @@ impl Tree {
     /// # Note
     ///
     /// If the package is multiple times in the tree, only the first one will be found
-    ///
+    // TODO: Remove allow(unused)
+    #[allow(unused)]
     pub fn package_depth(&self, p: &Package) -> Option<usize> {
-        self.package_depth_of(p, |k| k == p)
+        self.package_depth_where(|k| k == p)
     }
 
     /// Same as `package_depth()` but with custom compare functionfunction
-    pub fn package_depth_of<F>(&self, p: &Package, cmp: F) -> Option<usize>
+    // TODO: Remove allow(unused)
+    #[allow(unused)]
+    pub fn package_depth_where<F>(&self, cmp: F) -> Option<usize>
         where F: Fn(&Package) -> bool
     {
         fn find_package_depth<F>(tree: &Tree, current: usize, cmp: &F) -> Option<usize>

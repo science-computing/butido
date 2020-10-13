@@ -22,6 +22,8 @@ pub mod docker {
     /// > contain a maximum of 128 characters.
     ///
     /// Returns Ok(()) if `s` is a valid docker tag name, otherwise an explanatory error message
+    // TODO: Remove allow(unused)
+    #[allow(unused)]
     pub fn is_valid_tag_name(s: &str) -> Result<()> {
         let valid_chars = s.chars().all(|c| {
             c == '_' ||

@@ -27,7 +27,7 @@ pub struct NotValidatedConfiguration {
 
 impl NotValidatedConfiguration {
     pub fn validate(self) -> Result<Configuration> {
-        unimplemented!()
+        Ok(Configuration(self)) // TODO: Implement properly
     }
 }
 
