@@ -7,15 +7,23 @@ use anyhow::anyhow;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 
+/// A dependency that can be installed from the system and is only required during build
+#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[serde(transparent)]
+pub struct SystemBuildDependency(String);
 
+/// A dependency that can be installed from the system and is required during runtime
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct SystemDependency(String);
 
+
+/// A dependency that is packaged and is only required during build time
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct BuildDependency(String);
 
+/// A dependency that is packaged and is required during runtime
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct Dependency(String);

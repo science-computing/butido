@@ -120,11 +120,18 @@ pub struct PackageFlags {
 #[derive(Clone, Debug, Deserialize, Getters)]
 pub struct Dependencies {
     #[getset(get = "pub")]
-    system: Vec<SystemDependency>,
+    system: Vec<SystemBuildDependency>,
 
     #[getset(get = "pub")]
     #[serde(rename = "system_dep_script")]
     system_dependencies_script: Option<PathBuf>,
+
+    #[getset(get = "pub")]
+    system_runtime: Vec<SystemDependency>,
+
+    #[getset(get = "pub")]
+    #[serde(rename = "system_runtime_dep_script")]
+    system_runtime_dependencies_script: Option<PathBuf>,
 
     #[getset(get = "pub")]
     build: Vec<BuildDependency>,

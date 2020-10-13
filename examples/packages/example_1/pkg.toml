@@ -14,6 +14,8 @@ patches = []
 [dependencies]
 system  = []
 system_dep_script = ""
+system_runtime  = []
+system_runtime_dep_script = ""
 build   = []
 build_dep_script = ""
 runtime = []
