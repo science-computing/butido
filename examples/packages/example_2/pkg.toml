@@ -1,0 +1,42 @@
+# root package definition
+
+# We only use semver here
+version_is_semver = true
+
+# environment which is automatically inherited to all other packages
+# but can also be overridden in the other packages
+environment.FOO = "bar"
+environment.BAZ = "bla"
+
+# no patches by default
+patches = []
+
+[dependencies]
+system  = []
+system_dep_script = ""
+build   = []
+build_dep_script = ""
+runtime = []
+script = ""
+
+# Root description of phases
+# can be overridden as well
+[phases]
+
+unpack.script = '''
+    echo UnpackPhase
+'''
+
+build.script = '''
+    echo BuildPhase
+'''
+
+install.script = '''
+    echo InstallPhase
+'''
+
+package.script = '''
+    echo PackagePhase
+'''
+
+

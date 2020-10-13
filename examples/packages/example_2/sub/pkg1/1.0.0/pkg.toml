@@ -1,0 +1,8 @@
+version = "1.0.0"
+
+[source]
+url  = "http://somerandomthi.ng/foo/bar-1.0.0.tar.gz"
+hash.type = "sha1"
+hash.hash = "23465"
+
+

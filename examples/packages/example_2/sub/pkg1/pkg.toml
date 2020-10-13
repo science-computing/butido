@@ -1,0 +1,4 @@
+name              = "pkg1"
+
+[dependencies]
+runtime = [ "pkg2 =2.0.0" ]
