@@ -23,6 +23,9 @@ use crate::package::Tree;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let _ = env_logger::try_init()?;
+    debug!("Debugging enabled");
+
     let cli = cli::cli();
     let cli = cli.get_matches();
 
@@ -51,7 +54,7 @@ async fn main() -> Result<()> {
     };
     debug!("Found {} relevant packages", packages.len());
 
-    tokio::stream::iter(packages.into_iter().cloned())
+    let trees = tokio::stream::iter(packages.into_iter().cloned())
         .map(|p| {
             let bar = progressbars.root.add(tree_building_progress_bar(max_packages));
             bar.set_message(&format!("Building Package Tree for {}", p.name()));
@@ -61,6 +64,8 @@ async fn main() -> Result<()> {
         })
         .collect::<Result<Vec<_>>>()
         .await?;
+
+    debug!("Trees loaded: {:?}", trees);
 
     progressbars.root.join().map_err(Error::from)
 }

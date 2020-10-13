@@ -8,6 +8,7 @@ use crate::repository::Repository;
 use crate::package::Package;
 use crate::util::executor::Executor;
 
+#[derive(Debug)]
 pub struct Tree {
     root: BTreeMap<Package, Tree>,
 }
@@ -25,7 +26,9 @@ impl Tree {
                 ($pack).get_all_dependencies($executor)?
                     .into_iter()
                     .map(|(name, constr)| {
+                        trace!("Dependency: {:?}", name);
                         let pack = ($repo).find_with_version_constraint(&name, &constr);
+                        trace!("Found: {:?}", pack);
 
                         if pack.iter().any(|p| ($root).has_package(p)) {
                             // package already exists in tree, which is unfortunate
@@ -33,16 +36,19 @@ impl Tree {
                             //
                             return Err(anyhow!("Duplicate version of some package in {:?} found", pack))
                         }
+                        trace!("All dependecies available...");
 
                         pack.into_iter()
                             .map(|p| {
                                 ($progress).tick();
+                                trace!("Following dependecy: {:?}", p);
                                 add_package_tree(&mut subtree, p.clone(), ($repo), ($root), ($executor), ($progress))
                             })
                             .collect()
                     })
                     .collect::<Result<Vec<()>>>()?;
 
+                trace!("Inserting subtree: {:?}", subtree);
                 ($this).root.insert(($pack), subtree);
                 Ok(())
             }}
@@ -52,6 +58,7 @@ impl Tree {
             mk_add_package_tree!(this, p, repo, root, executor, progress)
         }
 
+        trace!("Making package Tree for {:?}", p);
         mk_add_package_tree!(self, p, repo, self, executor, progress)
     }
 
