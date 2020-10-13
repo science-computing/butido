@@ -74,11 +74,11 @@ impl Tree {
     /// If the package is multiple times in the tree, only the first one will be found
     ///
     pub fn package_depth(&self, p: &Package) -> Option<usize> {
-        self.package_depth_of(p, |k| k == p)
+        self.package_depth_where(|k| k == p)
     }
 
     /// Same as `package_depth()` but with custom compare functionfunction
-    pub fn package_depth_of<F>(&self, p: &Package, cmp: F) -> Option<usize>
+    pub fn package_depth_where<F>(&self, cmp: F) -> Option<usize>
         where F: Fn(&Package) -> bool
     {
         fn find_package_depth<F>(tree: &Tree, current: usize, cmp: &F) -> Option<usize>
