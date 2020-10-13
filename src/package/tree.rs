@@ -72,12 +72,15 @@ impl Tree {
     /// # Note
     ///
     /// If the package is multiple times in the tree, only the first one will be found
-    ///
+    // TODO: Remove allow(unused)
+    #[allow(unused)]
     pub fn package_depth(&self, p: &Package) -> Option<usize> {
         self.package_depth_where(|k| k == p)
     }
 
     /// Same as `package_depth()` but with custom compare functionfunction
+    // TODO: Remove allow(unused)
+    #[allow(unused)]
     pub fn package_depth_where<F>(&self, cmp: F) -> Option<usize>
         where F: Fn(&Package) -> bool
     {

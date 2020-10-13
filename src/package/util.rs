@@ -88,7 +88,9 @@ pub struct HashValue(String);
 
 
 /// A type which can be used to express a package version constraint
+// TODO: Remove allow(unused)
 #[derive(Debug, Eq, PartialEq)]
+#[allow(unused)]
 pub enum PackageVersionConstraint {
     Any,
     Latest,
@@ -119,6 +121,8 @@ pub enum PackageVersionMatch {
 }
 
 impl PackageVersionMatch {
+    // TODO: Remove allow(unused)
+    #[allow(unused)]
     pub fn is_true(&self) -> bool {
         *self == PackageVersionMatch::True
     }
@@ -127,6 +131,8 @@ impl PackageVersionMatch {
         *self == PackageVersionMatch::False
     }
 
+    // TODO: Remove allow(unused)
+    #[allow(unused)]
     pub fn is_undecided(&self) -> bool {
         *self == PackageVersionMatch::Undecided
     }
