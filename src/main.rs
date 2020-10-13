@@ -19,7 +19,6 @@ use crate::repository::Repository;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::util::executor::DummyExecutor;
-use crate::package::DummyVersionParser;
 use crate::package::Tree;
 
 #[tokio::main]
@@ -57,7 +56,7 @@ async fn main() -> Result<()> {
             let bar = progressbars.root.add(tree_building_progress_bar(max_packages));
             bar.set_message(&format!("Building Package Tree for {}", p.name()));
             let mut tree = Tree::new();
-            tree.add_package(p, &repo, &DummyExecutor::new(), &DummyVersionParser::new(), &bar)?;
+            tree.add_package(p, &repo, &DummyExecutor::new(), &bar)?;
             Ok(tree)
         })
         .collect::<Result<Vec<_>>>()

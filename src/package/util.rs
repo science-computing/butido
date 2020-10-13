@@ -9,8 +9,6 @@ use std::ops::Deref;
 use serde::Deserialize;
 use anyhow::Result;
 
-use crate::package::version::NameVersionBuffer;
-
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct PackageName(String);
@@ -48,37 +46,21 @@ impl From<String> for PackageVersion {
 #[serde(transparent)]
 pub struct SystemDependency(String);
 
-impl NameVersionBuffer for SystemDependency {
-    fn get_as_str(&self) -> &str {
-        &self.0
-    }
-}
-
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct BuildDependency(String);
-
-impl NameVersionBuffer for BuildDependency {
-    fn get_as_str(&self) -> &str {
-        &self.0
-    }
-}
 
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct Dependency(String);
 
-impl NameVersionBuffer for Dependency {
-    fn get_as_str(&self) -> &str {
-        &self.0
-    }
-}
-
 impl std::convert::TryInto<(PackageName, PackageVersionConstraint)> for Dependency {
     type Error = anyhow::Error;
 
     fn try_into(self) -> RResult<(PackageName, PackageVersionConstraint), Self::Error> {
-        unimplemented!()
+        // TODO: Implement properly
+        let v: Vec<_> = self.0.split("-").collect();
+        Ok((PackageName::from(String::from(v[0])), PackageVersionConstraint::Any))
     }
 }
 

@@ -6,12 +6,10 @@ use getset::Getters;
 use serde::Deserialize;
 use anyhow::Result;
 use anyhow::Error;
-use anyhow::Context;
 use resiter::AndThen;
 
 use crate::phase::{PhaseName, Phase};
 use crate::package::util::*;
-use crate::package::version::VersionParser;
 use crate::util::docker::ImageName;
 use crate::util::executor::Executor;
 
@@ -57,7 +55,7 @@ impl Package {
     ///
     /// Either return the list of dependencies or, if available, run the dependencies_script to
     /// read the dependencies from there.
-    pub fn get_all_dependencies(&self, executor: &dyn Executor, version_parser: &dyn VersionParser) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
+    pub fn get_all_dependencies(&self, executor: &dyn Executor) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
         use std::convert::TryInto;
 
         self.dependencies()
@@ -75,7 +73,7 @@ impl Package {
                     .cloned()
                     .map(|d| d.try_into().map_err(Error::from))
             })
-            .and_then_ok(|d| version_parser.parse(&d).with_context(|| format!("Failed to parse: '{:?}'", d)).map_err(Error::from))
+            .and_then_ok(|d| d.try_into().map_err(Error::from))
             .collect()
     }
 }

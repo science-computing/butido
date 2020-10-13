@@ -6,7 +6,6 @@ use indicatif::ProgressBar;
 
 use crate::repository::Repository;
 use crate::package::Package;
-use crate::package::version::VersionParser;
 use crate::util::executor::Executor;
 
 pub struct Tree {
@@ -19,11 +18,11 @@ impl Tree {
         Tree { root: BTreeMap::new() }
     }
 
-    pub fn add_package(&mut self, p: Package, repo: &Repository, executor: &dyn Executor, versionparser: &dyn VersionParser, progress: &ProgressBar) -> Result<()> {
+    pub fn add_package(&mut self, p: Package, repo: &Repository, executor: &dyn Executor, progress: &ProgressBar) -> Result<()> {
         macro_rules! mk_add_package_tree {
-            ($this:ident, $pack:ident, $repo:ident, $root:ident, $executor:ident, $versionparser:ident, $progress:ident) => {{
+            ($this:ident, $pack:ident, $repo:ident, $root:ident, $executor:ident, $progress:ident) => {{
                 let mut subtree = Tree::new();
-                ($pack).get_all_dependencies($executor, $versionparser)?
+                ($pack).get_all_dependencies($executor)?
                     .into_iter()
                     .map(|(name, constr)| {
                         let pack = ($repo).find_with_version_constraint(&name, &constr);
@@ -38,7 +37,7 @@ impl Tree {
                         pack.into_iter()
                             .map(|p| {
                                 ($progress).tick();
-                                add_package_tree(&mut subtree, p.clone(), ($repo), ($root), ($executor), ($versionparser), ($progress))
+                                add_package_tree(&mut subtree, p.clone(), ($repo), ($root), ($executor), ($progress))
                             })
                             .collect()
                     })
@@ -49,11 +48,11 @@ impl Tree {
             }}
         };
 
-        fn add_package_tree(this: &mut Tree, p: Package, repo: &Repository, root: &mut Tree, executor: &dyn Executor, versionparser: &dyn VersionParser, progress: &ProgressBar) -> Result<()> {
-            mk_add_package_tree!(this, p, repo, root, executor, versionparser, progress)
+        fn add_package_tree(this: &mut Tree, p: Package, repo: &Repository, root: &mut Tree, executor: &dyn Executor, progress: &ProgressBar) -> Result<()> {
+            mk_add_package_tree!(this, p, repo, root, executor, progress)
         }
 
-        mk_add_package_tree!(self, p, repo, self, executor, versionparser, progress)
+        mk_add_package_tree!(self, p, repo, self, executor, progress)
     }
 
     pub fn has_package(&self, p: &Package) -> bool {
