@@ -15,7 +15,7 @@ use crate::package::version::*;
 use crate::util::docker::ImageName;
 use crate::util::executor::Executor;
 
-#[derive(Clone, Debug, Deserialize, Getters)]
+#[derive(Clone, Deserialize, Getters)]
 pub struct Package {
     #[getset(get = "pub")]
     name: PackageName,
@@ -77,6 +77,16 @@ impl Package {
             })
             .and_then_ok(|d| d.try_into().map_err(Error::from))
             .collect()
+    }
+}
+
+impl std::fmt::Debug for Package {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        if self.patches().is_empty() {
+            write!(f, "Package({:?}, {:?})", self.name(), self.version())
+        } else {
+            write!(f, "Package({:?}, {:?} + patches)", self.name(), self.version())
+        }
     }
 }
 
