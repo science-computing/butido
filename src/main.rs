@@ -66,6 +66,10 @@ async fn main() -> Result<()> {
         .await?;
 
     debug!("Trees loaded: {:?}", trees);
+    let mut out = std::io::stderr();
+    for tree in trees {
+        tree.debug_print(&mut out)?;
+    }
 
     progressbars.root.join().map_err(Error::from)
 }
