@@ -45,7 +45,7 @@ impl Repository {
 
             if subdirs.is_empty() {
                 let package = config
-                    .deserialize()
+                    .try_into()
                     .with_context(|| format!("Failed to parse {} into package", path.display()));
 
                 progress.tick();
