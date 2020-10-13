@@ -101,12 +101,12 @@ pub enum PackageVersionConstraint {
 impl PackageVersionConstraint {
     pub fn matches(&self, v: &PackageVersion) -> Result<PackageVersionMatch> {
         match self {
-            PackageVersionConstraint::Any                   => Ok(PackageVersionMatch::True),
-            PackageVersionConstraint::Latest                => Ok(PackageVersionMatch::Undecided),
-            PackageVersionConstraint::LowerAs(vers)         => unimplemented!(),
-            PackageVersionConstraint::HigherAs(vers)        => unimplemented!(),
-            PackageVersionConstraint::InRange(vers1, vers2) => unimplemented!(),
-            PackageVersionConstraint::Exact(vers)           => Ok(PackageVersionMatch::from(*v == *vers)),
+            PackageVersionConstraint::Any                     => Ok(PackageVersionMatch::True),
+            PackageVersionConstraint::Latest                  => Ok(PackageVersionMatch::Undecided),
+            PackageVersionConstraint::LowerAs(_vers)          => Ok(PackageVersionMatch::Undecided), // TODO: Fix implementation
+            PackageVersionConstraint::HigherAs(_vers)         => Ok(PackageVersionMatch::Undecided), // TODO: Fix implementation
+            PackageVersionConstraint::InRange(_vers1, _vers2) => Ok(PackageVersionMatch::Undecided), // TODO: Fix implementation
+            PackageVersionConstraint::Exact(vers)             => Ok(PackageVersionMatch::from(*v == *vers)),
         }
     }
 }
