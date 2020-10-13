@@ -6,7 +6,6 @@ use indicatif::ProgressBar;
 
 use crate::repository::Repository;
 use crate::package::Package;
-use crate::package::Loader;
 use crate::package::version::VersionParser;
 use crate::util::executor::Executor;
 
