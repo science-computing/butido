@@ -2,7 +2,7 @@ name              = "pkgA"
 version           = "1.0.0"
 
 [dependencies]
-runtime = [ "pkgB-1.0.0" ]
+runtime = [ "pkgB =1.0.0" ]
 
 [source]
 url  = "http://somerandomthi.ng/foo/bar.tar.gz"

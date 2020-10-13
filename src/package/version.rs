@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use anyhow::anyhow;
 use anyhow::Result;
 
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -17,7 +18,6 @@ impl From<String> for PackageVersion {
 #[allow(unused)]
 pub enum PackageVersionConstraint {
     Any,
-    Latest,
     LowerAs(PackageVersion),
     HigherAs(PackageVersion),
     InRange(PackageVersion, PackageVersion),
@@ -28,11 +28,48 @@ impl PackageVersionConstraint {
     pub fn matches(&self, v: &PackageVersion) -> Result<PackageVersionMatch> {
         match self {
             PackageVersionConstraint::Any                     => Ok(PackageVersionMatch::True),
-            PackageVersionConstraint::Latest                  => Ok(PackageVersionMatch::Undecided),
             PackageVersionConstraint::LowerAs(_vers)          => Ok(PackageVersionMatch::Undecided), // TODO: Fix implementation
             PackageVersionConstraint::HigherAs(_vers)         => Ok(PackageVersionMatch::Undecided), // TODO: Fix implementation
             PackageVersionConstraint::InRange(_vers1, _vers2) => Ok(PackageVersionMatch::Undecided), // TODO: Fix implementation
             PackageVersionConstraint::Exact(vers)             => Ok(PackageVersionMatch::from(*v == *vers)),
+        }
+    }
+
+    // TODO: Make this nice?
+    pub fn parse(s: &str) -> Result<Self> {
+        if s.is_empty() {
+            return Err(anyhow!("Cannot parse: '{}'", s))
+        }
+
+        let first_char = s.chars().next().ok_or_else(|| anyhow!("Failed to find first character: '{}'", s))?;
+        if first_char == '*' {
+            return Ok(PackageVersionConstraint::Any)
+        }
+
+        let v = s.chars().skip(1).collect::<String>();
+
+        if v.is_empty() {
+            return Err(anyhow!("Not a version: '{}'", v))
+        }
+
+        if first_char == '=' {
+            Ok(PackageVersionConstraint::Exact(PackageVersion::from(v)))
+        } else if first_char == '>' {
+            Ok(PackageVersionConstraint::HigherAs(PackageVersion::from(v)))
+        } else if first_char == '<' {
+            Ok(PackageVersionConstraint::LowerAs(PackageVersion::from(v)))
+        } else {
+            let mut iter = s.split("..");
+
+            let a = iter.next()
+                .map(String::from)
+                .ok_or_else(|| anyhow!("Trying to parse version range constraint failed: '{}'", s))?;
+
+            let b = iter.next()
+                .map(String::from)
+                .ok_or_else(|| anyhow!("Trying to parse version range constraint failed: '{}'", s))?;
+
+            Ok(PackageVersionConstraint::InRange(PackageVersion::from(a), PackageVersion::from(b)))
         }
     }
 }
@@ -69,6 +106,61 @@ impl From<bool> for PackageVersionMatch {
         } else {
             PackageVersionMatch::False
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_version_constraint_1() {
+        let s = "*";
+        let c = PackageVersionConstraint::parse(s).unwrap();
+        assert_eq!(c, PackageVersionConstraint::Any);
+    }
+
+    #[test]
+    fn test_parse_version_constraint_2() {
+        let s = "=1";
+        let c = PackageVersionConstraint::parse(s).unwrap();
+        assert_eq!(c, PackageVersionConstraint::Exact(PackageVersion::from(String::from("1"))));
+    }
+
+    #[test]
+    fn test_parse_version_constraint_3() {
+        let s = ">1";
+        let c = PackageVersionConstraint::parse(s).unwrap();
+        assert_eq!(c, PackageVersionConstraint::HigherAs(PackageVersion::from(String::from("1"))));
+    }
+
+    #[test]
+    fn test_parse_version_constraint_4() {
+        let s = "<1";
+        let c = PackageVersionConstraint::parse(s).unwrap();
+        assert_eq!(c, PackageVersionConstraint::LowerAs(PackageVersion::from(String::from("1"))));
+    }
+
+    #[test]
+    fn test_parse_version_constraint_5() {
+        let s = "=1.0.17";
+        let c = PackageVersionConstraint::parse(s).unwrap();
+        assert_eq!(c, PackageVersionConstraint::Exact(PackageVersion::from(String::from("1.0.17"))));
+    }
+
+    #[test]
+    fn test_parse_version_constraint_6() {
+        let s = "=1.0.17asejg";
+        let c = PackageVersionConstraint::parse(s).unwrap();
+        assert_eq!(c, PackageVersionConstraint::Exact(PackageVersion::from(String::from("1.0.17asejg"))));
+    }
+
+    #[test]
+    fn test_parse_version_constraint_7() {
+        let s = "=1-0B17-beta1247_commit_12653hasd";
+        let c = PackageVersionConstraint::parse(s).unwrap();
+        assert_eq!(c, PackageVersionConstraint::Exact(PackageVersion::from(String::from("1-0B17-beta1247_commit_12653hasd"))));
     }
 }
 
