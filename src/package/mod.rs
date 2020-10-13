@@ -1,9 +1,20 @@
-mod package;
+//! Module that contains all types and functionality that has to do with a package.
+
+mod dependency; 
+pub use dependency::*;
+
+mod name; 
+pub use name::*;
+
+mod package; 
 pub use package::*;
 
-mod util;
-pub use util::*;
+mod source; 
+pub use source::*;
 
-mod tree;
+mod tree; 
 pub use tree::*;
+
+mod version; 
+pub use version::*;
 

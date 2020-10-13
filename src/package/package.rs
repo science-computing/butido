@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 use std::collections::HashMap;
 
-use url::Url;
 use getset::Getters;
 use serde::Deserialize;
 use anyhow::Result;
@@ -9,7 +8,10 @@ use anyhow::Error;
 use resiter::AndThen;
 
 use crate::phase::{PhaseName, Phase};
-use crate::package::util::*;
+use crate::package::dependency::*;
+use crate::package::source::*;
+use crate::package::name::*;
+use crate::package::version::*;
 use crate::util::docker::ImageName;
 use crate::util::executor::Executor;
 
@@ -99,35 +101,6 @@ impl Ord for Package {
 impl Eq for Package {
 }
 
-
-#[derive(Clone, Debug, Deserialize, Getters)]
-pub struct Source {
-    #[getset(get = "pub")]
-    url: Url,
-    #[getset(get = "pub")]
-    hash: SourceHash,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct SourceHash {
-    #[serde(rename = "type")]
-    hashtype: HashType,
-
-    #[serde(rename = "hash")]
-    value: HashValue,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub enum HashType {
-    #[serde(rename = "sha1")]
-    Sha1,
-
-    #[serde(rename = "sha256")]
-    Sha256,
-
-    #[serde(rename = "sha512")]
-    Sha512,
-}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct PackageFlags {
