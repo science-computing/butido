@@ -57,10 +57,11 @@ async fn main() -> Result<()> {
             let bar = progressbars.root.add(tree_building_progress_bar(max_packages));
             bar.set_message(&format!("Building Package Tree for {}", p.name()));
             let mut tree = Tree::new();
-            tree.add_package(p, &repo, &DummyExecutor::new(), &DummyVersionParser::new(), &bar);
+            tree.add_package(p, &repo, &DummyExecutor::new(), &DummyVersionParser::new(), &bar)?;
+            Ok(tree)
         })
-        .collect::<Vec<_>>()
-        .await;
+        .collect::<Result<Vec<_>>>()
+        .await?;
 
     progressbars.root.join().map_err(Error::from)
 }
