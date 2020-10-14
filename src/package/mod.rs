@@ -9,6 +9,9 @@ pub use name::*;
 mod package;
 pub use package::*;
 
+mod script;
+pub use script::*;
+
 mod source;
 pub use source::*;
 
