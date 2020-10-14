@@ -13,6 +13,12 @@ pub mod docker {
     #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
     pub struct ImageName(String);
 
+    impl From<String> for ImageName {
+        fn from(s: String) -> Self {
+            ImageName(s)
+        }
+    }
+
     /// Check whether a string is a valid docker tag name
     ///
     /// From the docker spec:
