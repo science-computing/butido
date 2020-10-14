@@ -1,4 +1,4 @@
-REPO=/tmp/yabos_example_1
+REPO=/tmp/butido_example_1
 
 setup:
 	@echo Setting up repository in ${REPO}

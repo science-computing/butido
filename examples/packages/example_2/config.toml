@@ -1,7 +1,7 @@
-# Configuration file for YABOS for this repository
+# Configuration file for BUTIDO for this repository
 
 # repository of package definitions
-repository = "/tmp/yabos_example_2"
+repository = "/tmp/butido_example_2"
 
 # Phases which can be configured in the packages
 available_phases = [ "unpack", "build", "install", "package" ]

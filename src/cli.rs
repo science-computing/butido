@@ -5,7 +5,7 @@ use clap::crate_authors;
 use clap::crate_version;
 
 pub fn cli<'a>() -> App<'a> {
-    App::new("yabos")
+    App::new("butido")
         .author(crate_authors!())
         .version(crate_version!())
         .about("Generic Build Orchestration System for building linux packages with docker")
