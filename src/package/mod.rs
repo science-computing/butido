@@ -1,20 +1,20 @@
 //! Module that contains all types and functionality that has to do with a package.
 
-mod dependency; 
+mod dependency;
 pub use dependency::*;
 
-mod name; 
+mod name;
 pub use name::*;
 
-mod package; 
+mod package;
 pub use package::*;
 
-mod source; 
+mod source;
 pub use source::*;
 
-mod tree; 
+mod tree;
 pub use tree::*;
 
-mod version; 
+mod version;
 pub use version::*;
 
