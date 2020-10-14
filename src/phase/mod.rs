@@ -6,6 +6,12 @@ use serde::Deserialize;
 #[serde(transparent)]
 pub struct PhaseName(String);
 
+impl PhaseName {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub enum Phase {
     #[serde(rename = "path")]
