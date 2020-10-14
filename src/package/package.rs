@@ -48,8 +48,7 @@ pub struct Package {
     deny_on_images: Option<Vec<ImageName>>,
 
     #[getset(get = "pub")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    phases: Option<HashMap<PhaseName, Phase>>,
+    phases: HashMap<PhaseName, Phase>,
 }
 
 impl Package {
