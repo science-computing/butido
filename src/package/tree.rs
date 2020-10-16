@@ -62,6 +62,19 @@ impl Tree {
         mk_add_package_tree!(self, p, repo, self, executor, progress)
     }
 
+    /// Get packages of the tree
+    ///
+    /// This does not yield packages which are dependencies of this tree node.
+    /// It yields only packages for this particular Tree instance.
+    pub fn packages(&self) -> impl Iterator<Item = &Package> {
+        self.root.keys()
+    }
+
+    /// Get dependencies stored in this tree
+    pub fn dependencies(&self) -> impl Iterator<Item = &Tree> {
+        self.root.values()
+    }
+
     pub fn has_package(&self, p: &Package) -> bool {
         let name_eq = |k: &Package| k.name() == p.name();
         self.root.keys().any(name_eq) || self.root.values().any(|t| t.has_package(p))
