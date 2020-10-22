@@ -7,13 +7,13 @@ use crate::package::Package;
 #[derive(Debug)]
 pub struct Script(String);
 
-pub struct ScriptBuilder {
-    shebang : String,
+pub struct ScriptBuilder<'a> {
+    shebang : &'a String,
 }
 
-impl ScriptBuilder {
+impl<'a> ScriptBuilder<'a> {
     // TODO: Use handlebars and templating instead of hardcoding
-    pub fn new(shebang: String) -> Self {
+    pub fn new(shebang: &'a String) -> Self {
         ScriptBuilder {
             shebang,
         }
