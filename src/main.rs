@@ -15,6 +15,7 @@ use clap_v3::ArgMatches;
 
 mod cli;
 mod job;
+mod endpoint;
 mod util;
 mod log;
 mod package;
