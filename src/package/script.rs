@@ -19,7 +19,7 @@ impl<'a> ScriptBuilder<'a> {
         }
     }
 
-    pub fn build(self, package: &Package, phaseorder: &[&PhaseName]) -> Result<Script> {
+    pub fn build(self, package: &Package, phaseorder: &Vec<PhaseName>) -> Result<Script> {
         let mut script = format!("{shebang}\n", shebang = self.shebang);
 
         for name in phaseorder {
