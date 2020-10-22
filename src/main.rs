@@ -1,4 +1,5 @@
-#[macro_use] extern crate log;
+#[macro_use] extern crate log as logcrate;
+use logcrate::debug;
 
 use std::path::Path;
 use std::path::PathBuf;
@@ -11,6 +12,7 @@ use tokio::stream::StreamExt;
 mod cli;
 mod job;
 mod util;
+mod log;
 mod package;
 mod phase;
 mod config;
