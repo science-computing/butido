@@ -10,6 +10,13 @@ pub struct Source {
     hash: SourceHash,
 }
 
+impl Source {
+    #[cfg(test)]
+    pub fn new(url: Url, hash: SourceHash) -> Self {
+        Source { url, hash }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct SourceHash {
     #[serde(rename = "type")]
@@ -18,6 +25,14 @@ pub struct SourceHash {
     #[serde(rename = "hash")]
     value: HashValue,
 }
+
+impl SourceHash {
+    #[cfg(test)]
+    pub fn new(hashtype: HashType, value: HashValue) -> Self {
+        SourceHash { hashtype, value }
+    }
+}
+
 
 #[derive(Clone, Debug, Deserialize)]
 pub enum HashType {
@@ -34,4 +49,12 @@ pub enum HashType {
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
 #[serde(transparent)]
 pub struct HashValue(String);
+
+#[cfg(test)]
+impl From<String> for HashValue {
+    fn from(s: String) -> Self {
+        HashValue(s)
+    }
+}
+
 

@@ -15,6 +15,13 @@ pub struct Repository {
     inner: BTreeMap<(PackageName, PackageVersion), Package>,
 }
 
+#[cfg(test)]
+impl From<BTreeMap<(PackageName, PackageVersion), Package>> for Repository {
+    fn from(inner: BTreeMap<(PackageName, PackageVersion), Package>) -> Self {
+        Repository { inner }
+    }
+}
+
 impl Repository {
 
     pub fn load(path: &Path, progress: &indicatif::ProgressBar) -> Result<Self> {
@@ -98,5 +105,170 @@ impl Repository {
             })
             .map(|(_, p)| p)
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use url::Url;
+    use crate::package::Source;
+    use crate::package::SourceHash;
+    use crate::package::HashType;
+    use crate::package::HashValue;
+    use crate::package::Dependencies;
+
+    fn pname(name: &str) -> PackageName {
+        PackageName::from(String::from(name))
+    }
+
+    fn pversion(version: &str) -> PackageVersion {
+        PackageVersion::from(String::from(version))
+    }
+
+    fn package(name: &str, vers: &str, srcurl: &str, hash: &str) -> Package {
+        let name    = pname(name);
+        let version = pversion(vers);
+        let version_is_semver = false;
+        let source = {
+            let url       = Url::parse(srcurl).unwrap();
+            let hashvalue = HashValue::from(String::from(hash));
+            Source::new(url, SourceHash::new(HashType::Sha1, hashvalue))
+        };
+        let dependencies = Dependencies::empty();
+        Package::new(name, version, version_is_semver, source, dependencies)
+    }
+
+    #[test]
+    fn test_finding_by_name() {
+        let mut btree = BTreeMap::new();
+
+        {
+            let name = "a";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "123");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        let repo = Repository::from(btree);
+
+        let ps = repo.find_by_name(&pname("a"));
+        assert_eq!(ps.len(), 1);
+
+        let p = ps.get(0).unwrap();
+        assert_eq!(*p.name(), pname("a"));
+        assert_eq!(*p.version(), pversion("1"));
+        assert!(!p.version_is_semver());
+    }
+
+    #[test]
+    fn test_find() {
+        let mut btree = BTreeMap::new();
+
+        {
+            let name = "a";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "123");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+        {
+            let name = "a";
+            let vers = "2";
+            let pack = package(name, vers, "https://rust-lang.org", "124");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        let repo = Repository::from(btree);
+
+        let ps = repo.find(&pname("a"), &pversion("2"));
+        assert_eq!(ps.len(), 1);
+
+        let p = ps.get(0).unwrap();
+        assert_eq!(*p.name(), pname("a"));
+        assert_eq!(*p.version(), pversion("2"));
+        assert!(!p.version_is_semver());
+    }
+
+    #[test]
+    fn test_find_with_vers_constr_any() {
+        let mut btree = BTreeMap::new();
+
+        {
+            let name = "a";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "123");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+        {
+            let name = "a";
+            let vers = "2";
+            let pack = package(name, vers, "https://rust-lang.org", "124");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+        {
+            let name = "a";
+            let vers = "3";
+            let pack = package(name, vers, "https://rust-lang.org", "125");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        let repo = Repository::from(btree);
+
+        let constraint = PackageVersionConstraint::Any;
+
+        let ps = repo.find_with_version_constraint(&pname("a"), &constraint);
+        assert_eq!(ps.len(), 3);
+
+        let p = ps.get(0).unwrap();
+        assert_eq!(*p.name(), pname("a"));
+        assert_eq!(*p.version(), pversion("1"));
+        assert!(!p.version_is_semver());
+
+        let p = ps.get(1).unwrap();
+        assert_eq!(*p.name(), pname("a"));
+        assert_eq!(*p.version(), pversion("2"));
+        assert!(!p.version_is_semver());
+
+        let p = ps.get(2).unwrap();
+        assert_eq!(*p.name(), pname("a"));
+        assert_eq!(*p.version(), pversion("3"));
+        assert!(!p.version_is_semver());
+    }
+
+
+    #[test]
+    fn test_find_with_vers_constr_exact() {
+        let mut btree = BTreeMap::new();
+
+        {
+            let name = "a";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "123");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+        {
+            let name = "a";
+            let vers = "2";
+            let pack = package(name, vers, "https://rust-lang.org", "124");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+        {
+            let name = "a";
+            let vers = "3";
+            let pack = package(name, vers, "https://rust-lang.org", "125");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        let repo = Repository::from(btree);
+
+        let constraint = PackageVersionConstraint::Exact(pversion("2"));
+
+        let ps = repo.find_with_version_constraint(&pname("a"), &constraint);
+        assert_eq!(ps.len(), 1);
+
+        let p = ps.get(0).unwrap();
+        assert_eq!(*p.name(), pname("a"));
+        assert_eq!(*p.version(), pversion("2"));
+        assert!(!p.version_is_semver());
     }
 }

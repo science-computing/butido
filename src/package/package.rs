@@ -52,6 +52,23 @@ pub struct Package {
 }
 
 impl Package {
+
+    #[cfg(test)]
+    pub fn new(name: PackageName, version: PackageVersion, version_is_semver: bool, source: Source, dependencies: Dependencies) -> Self {
+        Package {
+            name,
+            version,
+            version_is_semver,
+            source,
+            dependencies,
+            patches: vec![],
+            environment: None,
+            flags: None,
+            deny_on_images: None,
+            phases: HashMap::new(),
+        }
+    }
+
     /// Get all dependencies of the package
     ///
     /// Either return the list of dependencies or, if available, run the dependencies_script to
@@ -145,5 +162,21 @@ pub struct Dependencies {
     #[getset(get = "pub")]
     #[serde(rename = "script")]
     dependencies_script: Option<PathBuf>,
+}
+
+#[cfg(test)]
+impl Dependencies {
+    pub fn empty() -> Self {
+        Dependencies {
+            system: vec![],
+            system_dependencies_script: None,
+            system_runtime: vec![],
+            system_runtime_dependencies_script: None,
+            build: vec![],
+            build_dependencies_script: None,
+            runtime: vec![],
+            dependencies_script: None,
+        }
+    }
 }
 
