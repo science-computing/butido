@@ -26,15 +26,19 @@ impl JobSet {
 /// Get the tree as sets of jobs, the deepest level of the tree first
 fn tree_into_jobsets(tree: Tree, image: ImageName, phases: Vec<PhaseName>) -> Result<Vec<JobSet>> {
     fn inner(tree: Tree, image: &ImageName, phases: &Vec<PhaseName>) -> Result<Vec<JobSet>> {
+        trace!("Creating jobsets for tree: {:?}", tree);
+
         let mut sets = vec![];
         let mut current_set = vec![];
 
         for (package, dep) in tree.into_iter() {
+            trace!("Recursing for package: {:?}", package);
             let mut sub_sets = inner(dep, image, phases)?; // recursion!
             sets.append(&mut sub_sets);
             current_set.push(package);
         }
 
+        debug!("Jobset for set: {:?}", current_set);
         let jobset = JobSet {
             set: current_set
                 .into_iter()
@@ -43,6 +47,7 @@ fn tree_into_jobsets(tree: Tree, image: ImageName, phases: Vec<PhaseName>) -> Re
                 })
                 .collect(),
         };
+        debug!("Jobset = {:?}", jobset);
 
         // make sure the current recursion is added _before_ all other recursions
         // which yields the highest level in the tree as _first_ element of the resulting vector
@@ -51,6 +56,7 @@ fn tree_into_jobsets(tree: Tree, image: ImageName, phases: Vec<PhaseName>) -> Re
             result.push(jobset)
         }
         result.append(&mut sets);
+        debug!("Result =  {:?}", result);
         Ok(result)
     }
 
@@ -83,8 +89,13 @@ mod tests {
 
     use indicatif::ProgressBar;
 
+    fn setup_logging() {
+        let _ = ::env_logger::try_init();
+    }
+
     #[test]
     fn test_one_element_tree_to_jobsets() {
+        setup_logging();
         let mut btree = BTreeMap::new();
 
         let p1 = {
