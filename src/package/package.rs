@@ -180,3 +180,38 @@ impl Dependencies {
     }
 }
 
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use url::Url;
+    use crate::package::Source;
+    use crate::package::SourceHash;
+    use crate::package::HashType;
+    use crate::package::HashValue;
+    use crate::package::Dependencies;
+
+    /// helper function for quick object construction
+    pub fn pname(name: &str) -> PackageName {
+        PackageName::from(String::from(name))
+    }
+
+    /// helper function for quick object construction
+    pub fn pversion(version: &str) -> PackageVersion {
+        PackageVersion::from(String::from(version))
+    }
+
+    /// helper function for quick object construction
+    pub fn package(name: &str, vers: &str, srcurl: &str, hash: &str) -> Package {
+        let name    = pname(name);
+        let version = pversion(vers);
+        let version_is_semver = false;
+        let source = {
+            let url       = Url::parse(srcurl).unwrap();
+            let hashvalue = HashValue::from(String::from(hash));
+            Source::new(url, SourceHash::new(HashType::Sha1, hashvalue))
+        };
+        let dependencies = Dependencies::empty();
+        Package::new(name, version, version_is_semver, source, dependencies)
+    }
+
+}

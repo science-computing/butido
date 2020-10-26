@@ -109,35 +109,11 @@ impl Repository {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
-    use url::Url;
-    use crate::package::Source;
-    use crate::package::SourceHash;
-    use crate::package::HashType;
-    use crate::package::HashValue;
-    use crate::package::Dependencies;
-
-    fn pname(name: &str) -> PackageName {
-        PackageName::from(String::from(name))
-    }
-
-    fn pversion(version: &str) -> PackageVersion {
-        PackageVersion::from(String::from(version))
-    }
-
-    fn package(name: &str, vers: &str, srcurl: &str, hash: &str) -> Package {
-        let name    = pname(name);
-        let version = pversion(vers);
-        let version_is_semver = false;
-        let source = {
-            let url       = Url::parse(srcurl).unwrap();
-            let hashvalue = HashValue::from(String::from(hash));
-            Source::new(url, SourceHash::new(HashType::Sha1, hashvalue))
-        };
-        let dependencies = Dependencies::empty();
-        Package::new(name, version, version_is_semver, source, dependencies)
-    }
+    use crate::package::tests::pname;
+    use crate::package::tests::pversion;
+    use crate::package::tests::package;
 
     #[test]
     fn test_finding_by_name() {
