@@ -52,7 +52,8 @@ fn tree_into_jobsets(tree: Tree, image: ImageName, phases: Vec<PhaseName>) -> Re
         // make sure the current recursion is added _before_ all other recursions
         // which yields the highest level in the tree as _first_ element of the resulting vector
         let mut result = Vec::new();
-        if jobset.is_empty() {
+        if !jobset.is_empty() {
+            debug!("Adding jobset: {:?}", jobset);
             result.push(jobset)
         }
         result.append(&mut sets);
