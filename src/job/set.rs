@@ -112,7 +112,12 @@ mod tests {
         let js = js.unwrap();
 
         assert_eq!(js.len(), 1, "There should be only one jobset if there is only one element in the dependency tree: {:?}", js);
+
         let js = js.get(0).unwrap();
+        assert_eq!(js.set.len(), 1, "The jobset should contain exactly one job: {:?}", js);
+
+        let job = js.set.get(0).unwrap();
+        assert_eq!(*job.package.name(), pname("a"), "The job should be for the package 'a': {:?}", job);
     }
 
 }
