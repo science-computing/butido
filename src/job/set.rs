@@ -57,3 +57,56 @@ fn tree_into_jobsets(tree: Tree, image: ImageName, phases: Vec<PhaseName>) -> Re
     })
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::collections::BTreeMap;
+
+    use url::Url;
+    use crate::package::tests::pname;
+    use crate::package::tests::pversion;
+    use crate::package::tests::package;
+    use crate::util::executor::*;
+    use crate::package::Dependency;
+    use crate::package::Dependencies;
+    use crate::phase::PhaseName;
+    use crate::util::docker::ImageName;
+    use crate::repository::Repository;
+
+    use indicatif::ProgressBar;
+
+    #[test]
+    fn test_one_element_tree_to_jobsets() {
+        let mut btree = BTreeMap::new();
+
+        let p1 = {
+            let name = "a";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "123");
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        let repo = Repository::from(btree);
+
+        let dummy_executor = DummyExecutor;
+        let progress = ProgressBar::new(1);
+
+        let mut tree = Tree::new();
+        let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
+        assert!(r.is_ok());
+
+        let image  = ImageName::from(String::from("test"));
+        let phases = vec![PhaseName::from(String::from("testphase"))];
+
+        let js = JobSet::sets_from_tree(tree, image, phases);
+        assert!(js.is_ok());
+        let js = js.unwrap();
+
+        assert_eq!(js.len(), 1, "There should be only one jobset if there is only one element in the dependency tree: {:?}", js);
+        let js = js.get(0).unwrap();
+    }
+
+}
+
