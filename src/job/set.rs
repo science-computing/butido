@@ -132,5 +132,119 @@ mod tests {
         assert_eq!(*job.package.name(), pname("a"), "The job should be for the package 'a': {:?}", job);
     }
 
+    #[test]
+    fn test_two_element_tree_to_jobsets() {
+        setup_logging();
+        let mut btree = BTreeMap::new();
+
+        let p1 = {
+            let name = "a";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "123");
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        let p2 = {
+            let name = "b";
+            let vers = "2";
+            let pack = package(name, vers, "https://rust-lang.org", "124");
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        let repo = Repository::from(btree);
+
+        let dummy_executor = DummyExecutor;
+        let progress = ProgressBar::new(1);
+
+        let mut tree = Tree::new();
+        let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
+        assert!(r.is_ok());
+
+        let r = tree.add_package(p2, &repo, &dummy_executor, &progress);
+        assert!(r.is_ok());
+
+        let image  = ImageName::from(String::from("test"));
+        let phases = vec![PhaseName::from(String::from("testphase"))];
+
+        let js = JobSet::sets_from_tree(tree, image, phases);
+        assert!(js.is_ok());
+        let js = js.unwrap();
+
+        assert_eq!(js.len(), 1, "There should be one set of jobs for two packages on the same level in the tree: {:?}", js);
+
+        let js = js.get(0).unwrap();
+        assert_eq!(js.set.len(), 2, "The jobset should contain exactly two jobs: {:?}", js);
+
+        let job = js.set.get(0).unwrap();
+        assert_eq!(*job.package.name(), pname("a"), "The job should be for the package 'a': {:?}", job);
+
+        let job = js.set.get(1).unwrap();
+        assert_eq!(*job.package.name(), pname("b"), "The job should be for the package 'a': {:?}", job);
+    }
+
+    #[test]
+    fn test_two_dependent_elements_to_jobsets() {
+        setup_logging();
+        let mut btree = BTreeMap::new();
+
+        let p1 = {
+            let name = "a";
+            let vers = "1";
+            let mut pack = package(name, vers, "https://rust-lang.org", "123");
+            {
+                let d1 = Dependency::from(String::from("b =2"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        let p2 = {
+            let name = "b";
+            let vers = "2";
+            let pack = package(name, vers, "https://rust-lang.org", "124");
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        let repo = Repository::from(btree);
+
+        let dummy_executor = DummyExecutor;
+        let progress = ProgressBar::new(1);
+
+        let mut tree = Tree::new();
+        let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
+        assert!(r.is_ok());
+
+        let image  = ImageName::from(String::from("test"));
+        let phases = vec![PhaseName::from(String::from("testphase"))];
+
+        let js = JobSet::sets_from_tree(tree, image, phases);
+        assert!(js.is_ok());
+        let js = js.unwrap();
+
+        assert_eq!(js.len(), 2, "There should be two set of jobs for two packages where one depends on the other: {:?}", js);
+
+        {
+            let first_js = js.get(0).unwrap();
+            assert_eq!(first_js.set.len(), 1, "The first jobset should contain exactly one job: {:?}", js);
+
+            let job = first_js.set.get(0).unwrap();
+            assert_eq!(*job.package.name(), pname("b"), "The job from the first set should be for the package 'b': {:?}", job);
+        }
+
+        {
+            let second_js = js.get(1).unwrap();
+            assert_eq!(second_js.set.len(), 1, "The second jobset should contain exactly one job: {:?}", js);
+
+            let job = second_js.set.get(0).unwrap();
+            assert_eq!(*job.package.name(), pname("a"), "The job should be for the package 'a': {:?}", job);
+        }
+
+    }
+
 }
 
