@@ -69,6 +69,11 @@ impl Package {
         }
     }
 
+    #[cfg(test)]
+    pub fn set_dependencies(&mut self, dependencies: Dependencies) {
+        self.dependencies = dependencies;
+    }
+
     /// Get all dependencies of the package
     ///
     /// Either return the list of dependencies or, if available, run the dependencies_script to
@@ -175,6 +180,23 @@ impl Dependencies {
             build: vec![],
             build_dependencies_script: None,
             runtime: vec![],
+            dependencies_script: None,
+        }
+    }
+
+    pub fn with_runtime_dependency(runtime_dependency: Dependency) -> Self {
+        Dependencies::with_runtime_dependencies(vec![runtime_dependency])
+    }
+
+    pub fn with_runtime_dependencies(runtime_dependencies: Vec<Dependency>) -> Self {
+        Dependencies {
+            system: vec![],
+            system_dependencies_script: None,
+            system_runtime: vec![],
+            system_runtime_dependencies_script: None,
+            build: vec![],
+            build_dependencies_script: None,
+            runtime: runtime_dependencies,
             dependencies_script: None,
         }
     }
