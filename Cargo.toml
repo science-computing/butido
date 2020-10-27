@@ -27,7 +27,8 @@ pom         = "3"
 futures     = "0.3"
 handlebars  = "3"
 filters     = "0.4.0"
-indoc	    = "1"
+indoc       = "1"
+diesel      = { version = "1.4", features = ["postgres"] }
 
 url      = { version = "2", features = ["serde"] }
 tokio    = { version = "0.2", features = ["full"] }
