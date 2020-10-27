@@ -89,6 +89,18 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
 mod tests {
     use super::*;
 
+    // Helper function for showing log item in error message in pretty
+    fn prettify_item(e: &LogItem) -> String {
+        match e {
+            LogItem::Line(buf) => {
+                let line = String::from_utf8(buf.to_vec()).unwrap();
+                format!("LogItem::Line({})", line)
+            },
+            other => format!("{:?}", other),
+        }
+    }
+
+
     #[test]
     fn test_non_log() {
         let s = "foo bar";
