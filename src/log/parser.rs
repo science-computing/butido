@@ -76,9 +76,9 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
             (seq(b"PHASE:") * string().map(|s| LogItem::CurrentPhase(s)))
             |
             (
-                (seq(b"STATE:ERR") * string().map(|s| LogItem::State(Err(s))))
+                (seq(b"STATE:ERR:") * string().map(|s| LogItem::State(Err(s))))
                 |
-                (seq(b"STATE:OK") * string().map(|s| LogItem::State(Ok(s))))
+                (seq(b"STATE:OK:") * string().map(|s| LogItem::State(Ok(s))))
             )
         )
     )
