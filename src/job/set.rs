@@ -110,7 +110,7 @@ mod tests {
         let repo = Repository::from(btree);
 
         let dummy_executor = DummyExecutor;
-        let progress = ProgressBar::new(1);
+        let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
         let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
@@ -156,7 +156,7 @@ mod tests {
         let repo = Repository::from(btree);
 
         let dummy_executor = DummyExecutor;
-        let progress = ProgressBar::new(1);
+        let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
         let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
@@ -213,7 +213,7 @@ mod tests {
         let repo = Repository::from(btree);
 
         let dummy_executor = DummyExecutor;
-        let progress = ProgressBar::new(1);
+        let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
         let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
