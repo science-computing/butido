@@ -12,6 +12,13 @@ impl PhaseName {
     }
 }
 
+#[cfg(test)]
+impl From<String> for PhaseName {
+    fn from(s: String) -> Self {
+        PhaseName(s)
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub enum Phase {
     #[serde(rename = "path")]

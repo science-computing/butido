@@ -75,6 +75,10 @@ impl Tree {
         self.root.values()
     }
 
+    pub fn into_iter(self) -> impl IntoIterator<Item = (Package, Tree)> {
+        self.root.into_iter()
+    }
+
     pub fn has_package(&self, p: &Package) -> bool {
         let name_eq = |k: &Package| k.name() == p.name();
         self.root.keys().any(name_eq) || self.root.values().any(|t| t.has_package(p))

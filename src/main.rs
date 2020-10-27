@@ -9,6 +9,7 @@ use indicatif::*;
 use tokio::stream::StreamExt;
 
 mod cli;
+mod job;
 mod util;
 mod package;
 mod phase;
