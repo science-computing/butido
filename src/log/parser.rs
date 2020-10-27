@@ -132,5 +132,110 @@ mod tests {
         let r = r.unwrap();
         assert_eq!(r, LogItem::Line("#BUTIDO:PROGRESS:-1".bytes().collect()));
     }
+
+    #[test]
+    fn test_phase() {
+        let s = "#BUTIDO:PHASE:\"a\"";
+        let p = parser();
+        let r = p.parse(s.as_bytes());
+
+        assert!(r.is_ok(), "Not ok: {:?}", r);
+        let r = r.unwrap();
+        assert_eq!(r, LogItem::CurrentPhase(String::from("a")), "Expected CurrentPhase(a), got: {}", prettify_item(&r));
+    }
+
+    #[test]
+    fn test_phase_multiline() {
+        let s = "#BUTIDO:PHASE:\"a
+
+            \"";
+        let p = parser();
+        let r = p.parse(s.as_bytes());
+
+        assert!(r.is_ok(), "Not ok: {:?}", r);
+        let r = r.unwrap();
+        assert_eq!(r, LogItem::CurrentPhase(String::from("a\n\n            ")), "Expected CurrentPhase(a), got: {}", prettify_item(&r));
+    }
+
+    #[test]
+    fn test_multiline() {
+        let buffer: &'static str = indoc::indoc! {"
+            #BUTIDO:PROGRESS:0
+            Some log line
+            #BUTIDO:PHASE:\"configure\"
+            Some log line
+            Some log line
+            Some log line
+            #BUTIDO:PHASE:\"Build\"
+            Some other log line
+            Some other log line
+            Some other log line
+            #BUTIDO:STATE:OK:\"finished successfully\"
+        "};
+
+        let p = parser();
+
+        let res = buffer
+            .lines()
+            .map(|line| p.parse(line.as_bytes()).map_err(Error::from))
+            .collect::<Result<Vec<_>>>();
+
+        assert!(res.is_ok());
+        let res   = res.unwrap();
+        let mut i = res.iter();
+
+        {
+            let elem = i.next().unwrap();
+            let expe = LogItem::Progress(0);
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+        }
+        {
+            let elem = i.next().unwrap();
+            let expe = LogItem::Line("Some log line".bytes().collect());
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+        }
+        {
+            let elem = i.next().unwrap();
+            let expe = LogItem::CurrentPhase(String::from("configure"));
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+        }
+        {
+            let expe = LogItem::Line("Some log line".bytes().collect());
+
+            let elem = i.next().unwrap();
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+
+            let elem = i.next().unwrap();
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+
+            let elem = i.next().unwrap();
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+        }
+        {
+            let elem = i.next().unwrap();
+            let expe = LogItem::CurrentPhase(String::from("Build"));
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+        }
+        {
+            let expe = LogItem::Line("Some other log line".bytes().collect());
+
+            let elem = i.next().unwrap();
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+
+            let elem = i.next().unwrap();
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+
+            let elem = i.next().unwrap();
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+        }
+        {
+            let elem = i.next().unwrap();
+            let expe = LogItem::State(Ok(String::from("finished successfully")));
+            assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
+        }
+        {
+            assert!(i.next().is_none());
+        }
+    }
 }
 

@@ -30,3 +30,6 @@ url      = { version = "2", features = ["serde"] }
 tokio    = { version = "0.2", features = ["full"] }
 shiplift = { git = "https://github.com/softprops/shiplift", branch = "master" }
 
+
+[dev-dependencies]
+indoc = "1"
