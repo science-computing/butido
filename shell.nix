@@ -14,6 +14,8 @@ pkgs.mkShell {
     rustChannels.stable.rustc
     rustChannels.stable.cargo
 
+    diesel-cli
+
     cmake
     curl
     gcc
