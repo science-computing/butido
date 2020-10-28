@@ -7,14 +7,20 @@ use anyhow::anyhow;
 use anyhow::Result;
 use pom::*;
 use pom::parser::Parser as PomParser;
+use getset::Getters;
 
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 
+#[derive(Debug, Getters)]
 pub struct Artifact {
+    #[getset(get = "pub")]
     path: PathBuf,
 
+    #[getset(get = "pub")]
     name: PackageName,
+
+    #[getset(get = "pub")]
     version: PackageVersion,
 }
 
