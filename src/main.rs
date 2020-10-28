@@ -3,6 +3,7 @@ use logcrate::debug;
 
 use std::path::Path;
 use std::path::PathBuf;
+use std::collections::BTreeMap;
 use anyhow::Result;
 use anyhow::Error;
 use walkdir::WalkDir;
@@ -24,6 +25,8 @@ use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::util::executor::DummyExecutor;
 use crate::package::Tree;
+use crate::filestore::ReleaseStore;
+use crate::filestore::StagingStore;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -45,6 +48,33 @@ async fn main() -> Result<()> {
     let repo_path    = PathBuf::from(config.repository());
     let max_packages = count_pkg_files(&repo_path);
     let progressbars = setup_progressbars(max_packages);
+
+    let release_dir  = async {
+        let variables = BTreeMap::new();
+        let p = config.releases_directory(&variables)?;
+        debug!("Loading release directory: {}", p.display());
+        let r = ReleaseStore::load(&p, progressbars.release_loading.clone());
+        if r.is_ok() {
+            progressbars.release_loading.finish_with_message("Loaded releases successfully");
+        } else {
+            progressbars.release_loading.finish_with_message("Failed to load releases");
+        }
+        r
+    };
+
+    let staging_dir = async {
+        let variables = BTreeMap::new();
+        let p = config.staging_directory(&variables)?;
+        debug!("Loading staging directory: {}", p.display());
+        let r = StagingStore::load(&p, progressbars.staging_loading.clone());
+        if r.is_ok() {
+            progressbars.release_loading.finish_with_message("Loaded staging successfully");
+        } else {
+            progressbars.release_loading.finish_with_message("Failed to load staging");
+        }
+        r
+    };
+
     let repo         = Repository::load(&repo_path, &progressbars.repo_loading)?;
     progressbars.repo_loading.finish_with_message("Repository loading finished");
 
@@ -79,27 +109,30 @@ async fn main() -> Result<()> {
 }
 
 struct ProgressBars {
-    root:           MultiProgress,
-    repo_loading:   ProgressBar,
+    root:            MultiProgress,
+    release_loading: ProgressBar,
+    staging_loading: ProgressBar,
+    repo_loading:    ProgressBar,
 }
 
 fn setup_progressbars(max_packages: u64) -> ProgressBars {
-    let repo_loading = {
+    fn bar(msg: &str, max_packages: u64) -> ProgressBar {
         let b = ProgressBar::new(max_packages);
         b.set_style({
-            ProgressStyle::default_bar().template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent:>3}%): {bar} | {msg}")
+            ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent:>3}%): {bar} | {msg}")
         });
 
-        b.set_message("Loading Repository");
+        b.set_message(msg);
         b
-    };
+    }
 
-    let root         = MultiProgress::new();
-    let repo_loading = root.add(repo_loading);
-
+    let root = MultiProgress::new();
     ProgressBars {
+        repo_loading:    root.add(bar("Repository loading", max_packages)),
+        staging_loading: root.add(bar("Loading staging", max_packages)),
+        release_loading: root.add(bar("Loading releases", max_packages)),
         root,
-        repo_loading,
     }
 }
 
