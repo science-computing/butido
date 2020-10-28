@@ -1,6 +1,50 @@
 # repository of package definitions
 repository = "/tmp/path"
 
+# The position of the release binaries
+#
+# butido checks this location for packages when installing dependencies
+#
+#
+# # Note
+#
+# Interpolation of variables (ones that are passed on the CLI for
+# the build), is supported for this variable.
+# This way you can write
+#
+# ```
+# releases = "/storage/releases/${IMAGE}/"
+# ```
+#
+# for example.
+#
+releases = "/tmp/releases"
+
+# The position of the staging binaries
+# butido rolls a dice for each submitted build and generates a
+# per-process-staging directory here to store intermediate builds.
+#
+#
+# # Note
+#
+# Interpolation of variables (ones that are passed on the CLI for
+# the build), is supported for this variable.
+# This way you can write
+#
+# ```
+# staging = "/storage/staging/${IMAGE}/${SOME_ENV_VAR}"
+# ```
+#
+# for example.
+#
+#
+# # Warning
+#
+# It is the task of the user to move packages from herre to the "releases"
+# folder.
+#
+staging  = "/tmp/staging"
+
 # Phases which can be configured in the packages
 
 # This also defines the _order_ in which the phases are executed
