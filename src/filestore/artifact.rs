@@ -76,6 +76,7 @@ impl Artifact {
 
         Ok(root.join(format!("{}-{}", name, version)))
     }
+
 }
 
 #[cfg(test)]
