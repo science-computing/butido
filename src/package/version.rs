@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use anyhow::anyhow;
 use anyhow::Result;
+use pom::parser::Parser as PomParser;
 
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
@@ -9,6 +10,24 @@ pub struct PackageVersion(String);
 impl From<String> for PackageVersion {
     fn from(s: String) -> Self {
         PackageVersion(s)
+    }
+}
+
+impl std::fmt::Display for PackageVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        self.0.fmt(f)
+    }
+}
+
+impl PackageVersion {
+    pub fn parser<'a>() -> PomParser<'a, u8, Self> {
+        use crate::util::parser::*;
+        (
+            numbers() +
+            ((dash() | under() | dot() | letters() | numbers()).repeat(0..))
+        )
+        .collect()
+        .convert(|b| String::from_utf8(b.to_vec()).map(Self::from))
     }
 }
 

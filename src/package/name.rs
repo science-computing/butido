@@ -1,5 +1,6 @@
 use std::ops::Deref;
 use serde::Deserialize;
+use pom::parser::Parser as PomParser;
 
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
@@ -23,3 +24,13 @@ impl std::fmt::Display for PackageName {
         self.0.fmt(f)
     }
 }
+
+impl PackageName {
+    pub fn parser<'a>() -> PomParser<'a, u8, Self> {
+        use crate::util::parser::*;
+        (letters() + ((letters() | numbers()).repeat(0..)))
+            .collect()
+            .convert(|b| String::from_utf8(b.to_vec()).map(Self::from))
+    }
+}
+

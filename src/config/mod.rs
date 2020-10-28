@@ -1,11 +1,14 @@
 use std::path::PathBuf;
 use std::fmt::Debug;
 use std::ops::Deref;
+use std::collections::BTreeMap;
 
 use anyhow::Result;
+use anyhow::Context;
 use getset::Getters;
 use getset::CopyGetters;
 use serde::Deserialize;
+use handlebars::Handlebars;
 
 use crate::phase::PhaseName;
 use crate::util::EnvironmentVariableName;
@@ -15,6 +18,12 @@ use crate::util::docker::ImageName;
 pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     repository: PathBuf,
+
+    #[serde(rename = "releases")]
+    releases_directory: String,
+
+    #[serde(rename = "staging")]
+    staging_directory: String,
 
     #[getset(get = "pub")]
     docker: DockerConfig,
@@ -26,20 +35,51 @@ pub struct NotValidatedConfiguration {
     available_phases: Vec<PhaseName>,
 }
 
-impl NotValidatedConfiguration {
-    pub fn validate(self) -> Result<Configuration> {
-        Ok(Configuration(self)) // TODO: Implement properly
+impl<'reg> NotValidatedConfiguration {
+    pub fn validate(self) -> Result<Configuration<'reg>> {
+        // TODO: Implement proper validation
+
+        let hb = {
+            let mut hb = Handlebars::new();
+            hb.register_template_string("releases", &self.releases_directory)?;
+            hb.register_template_string("staging", &self.staging_directory)?;
+            hb
+        };
+
+        Ok(Configuration {
+            inner: self,
+            hb,
+        })
     }
 }
 
 #[derive(Debug)]
-pub struct Configuration(NotValidatedConfiguration);
+pub struct Configuration<'reg> {
+    inner: NotValidatedConfiguration,
+    hb: Handlebars<'reg>,
+}
 
-impl Deref for Configuration {
+impl<'reg> Deref for Configuration<'reg> {
     type Target = NotValidatedConfiguration;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.inner
+    }
+}
+
+impl<'reg> Configuration<'reg> {
+    /// Get the path to the releases directory, interpolate every variable used in the config
+    pub fn releases_directory(&self, hm: &BTreeMap<String, String>) -> Result<PathBuf> {
+        self.hb.render("releases", hm)
+            .map(PathBuf::from)
+            .context("Interpolating variables into 'release' setting from configuration")
+    }
+
+    /// Get the path to the staging directory, interpolate every variable used in the config
+    pub fn staging_directory(&self, hm: &BTreeMap<String, String>) -> Result<PathBuf> {
+        self.hb.render("staging", hm)
+            .map(PathBuf::from)
+            .context("Interpolating variables into 'staging' setting from configuration")
     }
 }
 
