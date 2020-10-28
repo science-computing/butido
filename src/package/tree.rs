@@ -19,7 +19,7 @@ impl Tree {
         Tree { root: BTreeMap::new() }
     }
 
-    pub fn add_package(&mut self, p: Package, repo: &Repository, executor: &dyn Executor, progress: &ProgressBar) -> Result<()> {
+    pub fn add_package(&mut self, p: Package, repo: &Repository, executor: &dyn Executor, progress: ProgressBar) -> Result<()> {
         macro_rules! mk_add_package_tree {
             ($this:ident, $pack:ident, $repo:ident, $root:ident, $executor:ident, $progress:ident) => {{
                 let mut subtree = Tree::new();
@@ -42,7 +42,7 @@ impl Tree {
                             .map(|p| {
                                 ($progress).tick();
                                 trace!("Following dependecy: {:?}", p);
-                                add_package_tree(&mut subtree, p.clone(), ($repo), ($root), ($executor), ($progress))
+                                add_package_tree(&mut subtree, p.clone(), ($repo), ($root), ($executor), ($progress).clone())
                             })
                             .collect()
                     })
@@ -54,7 +54,7 @@ impl Tree {
             }}
         };
 
-        fn add_package_tree(this: &mut Tree, p: Package, repo: &Repository, root: &mut Tree, executor: &dyn Executor, progress: &ProgressBar) -> Result<()> {
+        fn add_package_tree(this: &mut Tree, p: Package, repo: &Repository, root: &mut Tree, executor: &dyn Executor, progress: ProgressBar) -> Result<()> {
             mk_add_package_tree!(this, p, repo, root, executor, progress)
         }
 

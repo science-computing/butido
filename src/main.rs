@@ -27,6 +27,7 @@ use crate::util::executor::DummyExecutor;
 use crate::package::Tree;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
+use crate::util::progress::ProgressBars;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -47,7 +48,7 @@ async fn main() -> Result<()> {
     let config: Configuration = config.try_into::<NotValidatedConfiguration>()?.validate()?;
     let repo_path    = PathBuf::from(config.repository());
     let max_packages = count_pkg_files(&repo_path, ProgressBar::new_spinner());
-    let progressbars = setup_progressbars(max_packages);
+    let progressbars = ProgressBars::setup(max_packages);
 
     let release_dir  = async {
         let variables = BTreeMap::new();
@@ -90,10 +91,8 @@ async fn main() -> Result<()> {
 
     let trees = tokio::stream::iter(packages.into_iter().cloned())
         .map(|p| {
-            let bar = progressbars.root.add(tree_building_progress_bar(max_packages));
-            bar.set_message(&format!("Building Package Tree for {}", p.name()));
             let mut tree = Tree::new();
-            tree.add_package(p, &repo, &DummyExecutor::new(), &bar)?;
+            tree.add_package(p, &repo, &DummyExecutor::new(), progressbars.tree_building.clone())?;
             Ok(tree)
         })
         .collect::<Result<Vec<_>>>()
@@ -106,42 +105,6 @@ async fn main() -> Result<()> {
     }
 
     progressbars.root.join().map_err(Error::from)
-}
-
-struct ProgressBars {
-    root:            MultiProgress,
-    release_loading: ProgressBar,
-    staging_loading: ProgressBar,
-    repo_loading:    ProgressBar,
-}
-
-fn setup_progressbars(max_packages: u64) -> ProgressBars {
-    fn bar(msg: &str, max_packages: u64) -> ProgressBar {
-        let b = ProgressBar::new(max_packages);
-        b.set_style({
-            ProgressStyle::default_bar()
-                .template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent:>3}%): {bar} | {msg}")
-        });
-
-        b.set_message(msg);
-        b
-    }
-
-    let root = MultiProgress::new();
-    ProgressBars {
-        repo_loading:    root.add(bar("Repository loading", max_packages)),
-        staging_loading: root.add(bar("Loading staging", max_packages)),
-        release_loading: root.add(bar("Loading releases", max_packages)),
-        root,
-    }
-}
-
-fn tree_building_progress_bar(max: u64) -> ProgressBar {
-    let b = ProgressBar::new(max);
-    b.set_style({
-        ProgressStyle::default_bar().template("[{elapsed_precise}] {pos:>3}/{len:>3} ({percent:>3}%): {bar} | {msg}")
-    });
-    b
 }
 
 fn count_pkg_files(p: &Path, progress: ProgressBar) -> u64 {

@@ -5,6 +5,7 @@ pub struct EnvironmentVariableName(String);
 
 pub mod executor;
 pub mod parser;
+pub mod progress;
 
 pub mod docker {
     use anyhow::Result;
