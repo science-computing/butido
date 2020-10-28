@@ -29,6 +29,14 @@ pub fn cli<'a>() -> App<'a> {
             .help("Pass these variables to each build job (expects \"key=value\" or name of variable available in ENV)")
         )
 
+        .arg(Arg::with_name("image")
+            .required(true)
+            .multiple(false)
+            .short('I')
+            .long("image")
+            .help("Name of the docker image to use")
+        )
+
 }
 
 /// Naive check whether 's' is a 'key=value' pair or an existing environment variable
