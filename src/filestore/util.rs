@@ -11,6 +11,7 @@ use anyhow::Error;
 use walkdir::WalkDir;
 use resiter::Map;
 use resiter::AndThen;
+use indicatif::ProgressBar;
 
 use crate::filestore::Artifact;
 use crate::package::PackageName;
@@ -28,7 +29,7 @@ pub struct FileStoreImpl {
 
 impl FileStoreImpl {
     /// Loads the passed path recursively into a Path => Artifact mapping
-    pub fn load(root: &Path) -> Result<Self> {
+    pub fn load(root: &Path, progress: ProgressBar) -> Result<Self> {
         if root.is_dir() {
             let store = WalkDir::new(root)
                 .follow_links(false)
@@ -37,6 +38,7 @@ impl FileStoreImpl {
                 .map_err(Error::from)
                 .map_ok(|f| f.path().to_path_buf())
                 .and_then_ok(|pb| {
+                    progress.tick();
                     Artifact::load(&pb).map(|a| (pb, a))
                 })
                 .collect::<Result<BTreeMap<PathBuf, Artifact>>>()?;

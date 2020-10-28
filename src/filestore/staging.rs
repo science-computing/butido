@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::path::PathBuf;
 use anyhow::Result;
+use indicatif::ProgressBar;
 
 use crate::filestore::util::FileStoreImpl;
 
@@ -8,8 +9,8 @@ use crate::filestore::util::FileStoreImpl;
 pub struct StagingStore(pub (in crate::filestore) FileStoreImpl);
 
 impl StagingStore {
-    pub fn load(root: &Path) -> Result<Self> {
-        FileStoreImpl::load(root).map(StagingStore)
+    pub fn load(root: &Path, progress: ProgressBar) -> Result<Self> {
+        FileStoreImpl::load(root, progress).map(StagingStore)
     }
 }
 
