@@ -40,6 +40,21 @@ pub fn cli<'a>() -> App<'a> {
                 .long("image")
                 .help("Name of the docker image to use")
             )
+
+            .arg(Arg::with_name("overwrite_release_dir")
+                .required(true)
+                .multiple(false)
+                .long("realease-dir")
+                .help("Overwrite the release directory. This is not recommended. Use the config file instead.")
+            )
+
+            .arg(Arg::with_name("overwrite_staging_dir")
+                .required(true)
+                .multiple(false)
+                .short('S')
+                .long("staging-dir")
+                .help("Overwrite the staging directory.")
+            )
         )
 
 }
