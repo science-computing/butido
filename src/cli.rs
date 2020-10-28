@@ -19,5 +19,60 @@ pub fn cli<'a>() -> App<'a> {
             .multiple(false)
             .index(2)
         )
+
+        .arg(Arg::with_name("env")
+            .required(false)
+            .multiple(true)
+            .short('E')
+            .long("env")
+            .validator(env_pass_validator)
+            .help("Pass these variables to each build job (expects \"key=value\" or name of variable available in ENV)")
+        )
+
+}
+
+/// Naive check whether 's' is a 'key=value' pair or an existing environment variable
+///
+/// TODO: Clean up this spaghetti code
+fn env_pass_validator(s: String) -> Result<(), String> {
+    let v = s.split("=").collect::<Vec<_>>();
+
+    if v.len() != 2 {
+        if v.len() == 1 {
+            if let Some(name) = v.get(0) {
+                match std::env::var(name) {
+                    Err(std::env::VarError::NotPresent) => {
+                        return Err(format!("Environment variable '{}' not present", name))
+                    },
+                    Err(std::env::VarError::NotUnicode(_)) => {
+                        return Err(format!("Environment variable '{}' not unicode", name))
+                    },
+                    Ok(_) => return Ok(()),
+                }
+            } else {
+                return Err(format!("BUG")) // TODO: Make nice, not runtime error
+            }
+        } else {
+            return Err(format!("Expected a 'key=value' string, got something different: '{}'", s))
+        }
+    } else {
+        if let Some(key) = v.get(0) {
+            if key.chars().any(|c| c == ' ' || c == '\t' || c == '\n') {
+                return Err(format!("Invalid characters found in key: '{}'", s))
+            }
+        } else {
+            return Err(format!("No key found in '{}'", s))
+        }
+
+        if let Some(value) = v.get(1) {
+            if value.chars().any(|c| c == ' ' || c == '\t' || c == '\n') {
+                return Err(format!("Invalid characters found in value: '{}'", s))
+            }
+        } else {
+            return Err(format!("No value found in '{}'", s))
+        }
+    }
+
+    Ok(())
 }
 
