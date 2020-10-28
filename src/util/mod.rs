@@ -4,6 +4,7 @@ use serde::Deserialize;
 pub struct EnvironmentVariableName(String);
 
 pub mod executor;
+pub mod parser;
 
 pub mod docker {
     use anyhow::Result;

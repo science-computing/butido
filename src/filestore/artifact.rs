@@ -45,31 +45,8 @@ impl Artifact {
 
     /// Construct a parser that parses a Vec<u8> into (PackageName, PackageVersion)
     fn parser<'a>() -> PomParser<'a, u8, (PackageName, PackageVersion)> {
-        use pom::parser::*;
-        use pom::char_class::hex_digit;
-
-        let numbers = || one_of(b"0123456789").repeat(1..);
-        let letters = || pom::parser::is_a(pom::char_class::alpha).repeat(1..);
-        let dash    = || sym(b'-').map(|b| vec![b]);
-        let under   = || sym(b'_').map(|b| vec![b]);
-        let dot     = || sym(b'.').map(|b| vec![b]);
-
-        let package_name = (letters() + ((letters() | numbers()).repeat(0..)))
-            .collect()
-            .convert(|b| String::from_utf8(b.to_vec()));
-
-        let package_version = (
-                numbers() +
-                ((dash() | under() | dot() | letters() | numbers()).repeat(0..))
-            )
-            .collect()
-            .convert(|b| String::from_utf8(b.to_vec()));
-
-        (package_name + dash() + package_version)
-            .map(|((name, _), version)| (name, version))
-            .map(|(name, version)| {
-                (PackageName::from(name), PackageVersion::from(version))
-            })
+        (PackageName::parser() + crate::util::parser::dash() + PackageVersion::parser())
+            .map(|((name, _), vers)| (name, vers))
     }
 
     pub fn create(root: &Path, name: PackageName, version: PackageVersion) -> Result<Self> {
