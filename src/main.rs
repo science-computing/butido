@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
 
     let config: Configuration = config.try_into::<NotValidatedConfiguration>()?.validate()?;
     let repo_path    = PathBuf::from(config.repository());
-    let max_packages = count_pkg_files(&repo_path);
+    let max_packages = count_pkg_files(&repo_path, ProgressBar::new_spinner());
     let progressbars = setup_progressbars(max_packages);
     let repo         = Repository::load(&repo_path, &progressbars.repo_loading)?;
     progressbars.repo_loading.finish_with_message("Repository loading finished");
@@ -110,13 +110,14 @@ fn tree_building_progress_bar(max: u64) -> ProgressBar {
     b
 }
 
-fn count_pkg_files(p: &Path) -> u64 {
+fn count_pkg_files(p: &Path, progress: ProgressBar) -> u64 {
     WalkDir::new(p)
         .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|d| d.file_type().is_file())
         .filter(|f| f.path().file_name().map(|name| name == "pkg.toml").unwrap_or(false))
+        .inspect(|_| progress.tick())
         .count() as u64
 }
 
