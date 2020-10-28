@@ -12,6 +12,12 @@ impl From<String> for PackageVersion {
     }
 }
 
+impl std::fmt::Display for PackageVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        self.0.fmt(f)
+    }
+}
+
 /// A type which can be used to express a package version constraint
 // TODO: Remove allow(unused)
 #[derive(Debug, Eq, PartialEq)]
