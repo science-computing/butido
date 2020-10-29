@@ -106,6 +106,10 @@ impl Repository {
             .map(|(_, p)| p)
             .collect()
     }
+
+    pub fn packages(&self) -> impl Iterator<Item = &Package> {
+        self.inner.values()
+    }
 }
 
 #[cfg(test)]

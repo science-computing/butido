@@ -4,6 +4,12 @@ use clap::Arg;
 use clap::crate_authors;
 use clap::crate_version;
 
+// Helper types to ship around stringly typed clap API.
+pub const IDENT_DEPENDENCY_TYPE_SYSTEM: &'static str         = "system";
+pub const IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME: &'static str = "system-runtime";
+pub const IDENT_DEPENDENCY_TYPE_BUILD: &'static str          = "build";
+pub const IDENT_DEPENDENCY_TYPE_RUNTIME: &'static str        = "runtime";
+
 pub fn cli<'a>() -> App<'a> {
     App::new("butido")
         .author(crate_authors!())
@@ -54,6 +60,64 @@ pub fn cli<'a>() -> App<'a> {
                 .short('S')
                 .long("staging-dir")
                 .help("Overwrite the staging directory.")
+            )
+        )
+
+        .subcommand(App::new("what-depends")
+            .about("List all packages that depend on a specific package")
+            .arg(Arg::with_name("package_name")
+                .required(true)
+                .multiple(false)
+                .index(1)
+                .help("The name of the package")
+            )
+            .arg(Arg::with_name("package_version_constraint")
+                .required(false)
+                .multiple(false)
+                .index(2)
+                .help("A version constraint to search for (optional)")
+            )
+            .arg(Arg::with_name("dependency_type")
+                .required(false)
+                .multiple(true)
+                .takes_value(true)
+                .short('t')
+                .long("type")
+                .value_name("DEPENDENCY_TYPE")
+                .possible_values(&[
+                    IDENT_DEPENDENCY_TYPE_SYSTEM,
+                    IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME,
+                    IDENT_DEPENDENCY_TYPE_BUILD,
+                    IDENT_DEPENDENCY_TYPE_RUNTIME,
+                ])
+                .default_values(&[
+                    IDENT_DEPENDENCY_TYPE_SYSTEM,
+                    IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME,
+                    IDENT_DEPENDENCY_TYPE_BUILD,
+                    IDENT_DEPENDENCY_TYPE_RUNTIME,
+                ])
+                .help("Specify which dependency types are to be checked. By default, all are checked")
+            )
+            .arg(Arg::with_name("list-format")
+                .required(false)
+                .multiple(false)
+                .short('f')
+                .long("format")
+                .default_value("{i} - {name} - {version} - {source_url} - {source_hash_type}:{source_hash}")
+                .help("The format to print the found packages with.")
+                .long_help(indoc::indoc!(r#"
+                The format to print the found packages with.
+
+                Possible tokens are:
+                    i                   - Line number
+                    name                - Name of the package
+                    version             - Version of the package
+                    source_url          - URL from where the source was retrieved
+                    source_hash_type    - Type of hash noted in the package
+                    source_hash         - Hash of the sources
+
+                Handlebars modifiers are available.
+                "#))
             )
         )
 
