@@ -1,4 +1,5 @@
 #[macro_use] extern crate log as logcrate;
+#[macro_use] extern crate diesel;
 use logcrate::debug;
 
 use std::path::Path;
@@ -23,6 +24,7 @@ mod config;
 mod repository;
 mod filestore;
 mod ui;
+mod schema;
 use crate::config::*;
 use crate::repository::Repository;
 use crate::package::PackageName;
