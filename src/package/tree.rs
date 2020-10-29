@@ -170,7 +170,7 @@ mod tests {
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
+        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
         assert!(r.is_ok());
     }
 
@@ -199,10 +199,10 @@ mod tests {
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
+        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
         assert!(r.is_ok());
 
-        let r = tree.add_package(p2, &repo, &dummy_executor, &progress);
+        let r = tree.add_package(p2, &repo, &dummy_executor, progress.clone());
         assert!(r.is_ok());
     }
 
@@ -237,7 +237,7 @@ mod tests {
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
+        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("a")));
         assert!(tree.packages().all(|p| *p.version() == pversion("1")));
@@ -330,7 +330,7 @@ mod tests {
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
+        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("p1")));
         assert!(tree.packages().all(|p| *p.version() == pversion("1")));
@@ -503,7 +503,7 @@ mod tests {
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, &progress);
+        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("p1")));
         assert!(tree.packages().all(|p| *p.version() == pversion("1")));
