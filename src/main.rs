@@ -159,60 +159,23 @@ async fn build<'a>(matches: &ArgMatches,
 }
 
 async fn what_depends(matches: &ArgMatches, repo: Repository, progress: ProgressBar) -> Result<()> {
-    use crate::package::Package;
-    use crate::package::StringEqual;
-    use filters::ops::bool::Bool;
     use filters::filter::Filter;
 
     let package_filter = {
-        let name = matches.value_of("package_name")
-            .map(String::from)
-            .unwrap();
+        fn getbool(m: &ArgMatches, name: &str, cmp: &str) -> bool {
+            // unwrap is safe here because clap is configured with default values
+            m.values_of(name).unwrap().any(|v| v == cmp)
+        }
 
-        let check_system_dep = matches
-            .values_of("dependency_type")
-            .unwrap() // safe because Arg::default_values() called
-            .any(|v| v == crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM);
+        let name = matches.value_of("package_name").map(String::from).unwrap();
 
-        let check_system_runtime_dep = matches
-            .values_of("dependency_type")
-            .unwrap() // safe because Arg::default_values() called
-            .any(|v| v == crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME);
-
-        let check_build_dep = matches
-            .values_of("dependency_type")
-            .unwrap() // safe because Arg::default_values() called
-            .any(|v| v == crate::cli::IDENT_DEPENDENCY_TYPE_BUILD);
-
-        let check_runtime_dep = matches
-            .values_of("dependency_type")
-            .unwrap() // safe because Arg::default_values() called
-            .any(|v| v == crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME);
-
-        let n = name.clone(); // clone, so we can move into closure
-        let filter_system_dep = move |p: &Package| {
-            p.dependencies().system().iter().any(|sys_build_dep| sys_build_dep.str_equal(&n))
-        };
-
-        let n = name.clone(); // clone, so we can move into closure
-        let filter_system_runtime_dep = move |p: &Package| {
-            p.dependencies().system_runtime().iter().any(|sys_rt_dep| sys_rt_dep.str_equal(&n))
-        };
-
-        let n = name.clone(); // clone, so we can move into closure
-        let filter_build_dep = move |p: &Package| {
-            p.dependencies().build().iter().any(|build_dep| build_dep.str_equal(&n))
-        };
-
-        let n = name.clone(); // clone, so we can move into closure
-        let filter_rt_dep = move |p: &Package| {
-            p.dependencies().runtime().iter().any(|rt_dep| rt_dep.str_equal(&n))
-        };
-
-        (Bool::new(check_system_dep).and(filter_system_dep))
-            .or(Bool::new(check_system_runtime_dep).and(filter_system_runtime_dep))
-            .or(Bool::new(check_build_dep).and(filter_build_dep))
-            .or(Bool::new(check_runtime_dep).and(filter_rt_dep))
+        crate::util::filters::build_package_filter(
+            name,
+            getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM),
+            getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME),
+            getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_BUILD),
+            getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME),
+        )
     };
 
     let format = matches.value_of("format").unwrap(); // safe by clap default value
