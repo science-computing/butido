@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+die() {
+    echo >&2 "$*"
+    exit 1
+}
+
 [ -z "$PG_USER" ] && die "Not set: PG_USER"
 [ -z "$PG_PW" ] && die "Not set: PG_PW"
 [ -z "$PG_DB" ] && die "Not set: PG_DB"
