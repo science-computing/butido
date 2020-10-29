@@ -75,6 +75,11 @@ async fn main() -> Result<()> {
 
             build(matches, &config, repo, bar_tree_building, bar_release_loading, bar_staging_loading).await?
         },
+        ("what-depends", Some(matches)) => {
+            let bar = progressbars.what_depends();
+            bar.set_length(max_packages);
+            what_depends(matches, repo, bar).await?
+        },
 
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
@@ -151,6 +156,69 @@ async fn build<'a>(matches: &ArgMatches,
     }
 
     Ok(())
+}
+
+async fn what_depends(matches: &ArgMatches, repo: Repository, progress: ProgressBar) -> Result<()> {
+    use crate::package::Package;
+    use crate::package::StringEqual;
+    use filters::ops::bool::Bool;
+    use filters::filter::Filter;
+
+    let package_filter = {
+        let name = matches.value_of("package_name")
+            .map(String::from)
+            .unwrap();
+
+        let check_system_dep = matches
+            .values_of("dependency_type")
+            .unwrap() // safe because Arg::default_values() called
+            .any(|v| v == crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM);
+
+        let check_system_runtime_dep = matches
+            .values_of("dependency_type")
+            .unwrap() // safe because Arg::default_values() called
+            .any(|v| v == crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME);
+
+        let check_build_dep = matches
+            .values_of("dependency_type")
+            .unwrap() // safe because Arg::default_values() called
+            .any(|v| v == crate::cli::IDENT_DEPENDENCY_TYPE_BUILD);
+
+        let check_runtime_dep = matches
+            .values_of("dependency_type")
+            .unwrap() // safe because Arg::default_values() called
+            .any(|v| v == crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME);
+
+        let n = name.clone(); // clone, so we can move into closure
+        let filter_system_dep = move |p: &Package| {
+            p.dependencies().system().iter().any(|sys_build_dep| sys_build_dep.str_equal(&n))
+        };
+
+        let n = name.clone(); // clone, so we can move into closure
+        let filter_system_runtime_dep = move |p: &Package| {
+            p.dependencies().system_runtime().iter().any(|sys_rt_dep| sys_rt_dep.str_equal(&n))
+        };
+
+        let n = name.clone(); // clone, so we can move into closure
+        let filter_build_dep = move |p: &Package| {
+            p.dependencies().build().iter().any(|build_dep| build_dep.str_equal(&n))
+        };
+
+        let n = name.clone(); // clone, so we can move into closure
+        let filter_rt_dep = move |p: &Package| {
+            p.dependencies().runtime().iter().any(|rt_dep| rt_dep.str_equal(&n))
+        };
+
+        (Bool::new(check_system_dep).and(filter_system_dep))
+            .or(Bool::new(check_system_runtime_dep).and(filter_system_runtime_dep))
+            .or(Bool::new(check_build_dep).and(filter_build_dep))
+            .or(Bool::new(check_runtime_dep).and(filter_rt_dep))
+    };
+
+    let format = matches.value_of("format").unwrap(); // safe by clap default value
+    let mut stdout = std::io::stdout();
+    let iter = repo.packages().filter(|package| package_filter.filter(package));
+    ui::print_packages(&mut stdout, format, iter)
 }
 
 fn count_pkg_files(p: &Path, progress: ProgressBar) -> u64 {
