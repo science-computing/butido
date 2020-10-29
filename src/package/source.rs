@@ -17,12 +17,14 @@ impl Source {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Getters)]
 pub struct SourceHash {
     #[serde(rename = "type")]
+    #[getset(get = "pub")]
     hashtype: HashType,
 
     #[serde(rename = "hash")]
+    #[getset(get = "pub")]
     value: HashValue,
 }
 
