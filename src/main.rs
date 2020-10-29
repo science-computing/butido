@@ -178,7 +178,7 @@ async fn what_depends(matches: &ArgMatches, repo: Repository, progress: Progress
         )
     };
 
-    let format = matches.value_of("format").unwrap(); // safe by clap default value
+    let format = matches.value_of("list-format").unwrap(); // safe by clap default value
     let mut stdout = std::io::stdout();
     let iter = repo.packages().filter(|package| package_filter.filter(package));
     ui::print_packages(&mut stdout, format, iter)
