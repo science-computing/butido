@@ -169,7 +169,7 @@ async fn what_depends(matches: &ArgMatches, repo: Repository, progress: Progress
 
         let name = matches.value_of("package_name").map(String::from).unwrap();
 
-        crate::util::filters::build_package_filter(
+        crate::util::filters::build_package_filter_by_dependency_name(
             name,
             getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM),
             getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME),

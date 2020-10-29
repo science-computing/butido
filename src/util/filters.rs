@@ -5,7 +5,7 @@ use filters::ops::bool::Bool;
 use filters::filter::Filter;
 
 /// Helper function to build a package filter based on some flags and the package version
-pub fn build_package_filter(
+pub fn build_package_filter_by_dependency_name(
     name: String,
     check_system_dep: bool,
     check_system_runtime_dep: bool,
@@ -78,7 +78,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter(String::from("foo"), false, false, false, false);
+        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, false);
 
         let found = repo.packages()
             .filter(|p| f.filter(p))
@@ -102,7 +102,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter(String::from("foo"), false, false, false, false);
+        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, false);
 
         let found = repo.packages()
             .filter(|p| f.filter(p))
@@ -126,7 +126,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter(String::from("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, true);
 
         let found = repo.packages()
             .filter(|p| f.filter(p))
@@ -155,7 +155,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter(String::from("foo"), false, false, false, false);
+        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, false);
 
         let found = repo.packages()
             .filter(|p| f.filter(p))
@@ -178,7 +178,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter(String::from("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, true);
 
         let found = repo.packages()
             .filter(|p| f.filter(p))
@@ -207,7 +207,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter(String::from("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, true);
 
         let found = repo.packages()
             .filter(|p| f.filter(p))
@@ -254,7 +254,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter(String::from("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, true);
 
         let found = repo.packages()
             .filter(|p| f.filter(p))
