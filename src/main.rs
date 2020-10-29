@@ -11,6 +11,7 @@ use anyhow::Error;
 use walkdir::WalkDir;
 use indicatif::*;
 use tokio::stream::StreamExt;
+use clap_v3::ArgMatches;
 
 mod cli;
 mod job;
@@ -48,44 +49,81 @@ async fn main() -> Result<()> {
     //
 
     let config: Configuration = config.try_into::<NotValidatedConfiguration>()?.validate()?;
-    let repo_path    = PathBuf::from(config.repository());
-    let max_packages = count_pkg_files(&repo_path, ProgressBar::new_spinner());
-    let progressbars = ProgressBars::setup(max_packages);
+    let repo_path             = PathBuf::from(config.repository());
+    let max_packages          = count_pkg_files(&repo_path, ProgressBar::new_spinner());
+    let mut progressbars      = ProgressBars::setup();
 
-    let release_dir  = async {
+    let repo = {
+        let bar = progressbars.repo_loading();
+        bar.set_length(max_packages);
+        let repo = Repository::load(&repo_path, &bar)?;
+        bar.finish_with_message("Repository loading finished");
+        repo
+    };
+
+    match cli.subcommand() {
+        ("build", Some(matches))        => {
+            let bar_tree_building = progressbars.tree_building();
+            bar_tree_building.set_length(max_packages);
+
+            let bar_release_loading = progressbars.release_loading();
+            bar_release_loading.set_length(max_packages);
+
+            let bar_staging_loading = progressbars.staging_loading();
+            bar_staging_loading.set_length(max_packages);
+
+            build(matches, &config, repo, bar_tree_building, bar_release_loading, bar_staging_loading).await?
+        },
+
+        (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
+    }
+
+    progressbars.into_inner().join().map_err(Error::from)
+}
+
+async fn build<'a>(matches: &ArgMatches,
+               config: &Configuration<'a>,
+               repo: Repository,
+               bar_tree_building: ProgressBar,
+               bar_release_loading: ProgressBar,
+               bar_staging_loading: ProgressBar)
+    -> Result<()>
+{
+    let release_dir  = async move {
         let variables = BTreeMap::new();
         let p = config.releases_directory(&variables)?;
         debug!("Loading release directory: {}", p.display());
-        let r = ReleaseStore::load(&p, progressbars.release_loading.clone());
+        let r = ReleaseStore::load(&p, bar_release_loading.clone());
         if r.is_ok() {
-            progressbars.release_loading.finish_with_message("Loaded releases successfully");
+            bar_release_loading.finish_with_message("Loaded releases successfully");
         } else {
-            progressbars.release_loading.finish_with_message("Failed to load releases");
+            bar_release_loading.finish_with_message("Failed to load releases");
         }
         r
     };
 
-    let staging_dir = async {
+    let staging_dir = async move {
         let variables = BTreeMap::new();
         let p = config.staging_directory(&variables)?;
         debug!("Loading staging directory: {}", p.display());
-        let r = StagingStore::load(&p, progressbars.staging_loading.clone());
+        let r = StagingStore::load(&p, bar_staging_loading.clone());
         if r.is_ok() {
-            progressbars.release_loading.finish_with_message("Loaded staging successfully");
+            bar_staging_loading.finish_with_message("Loaded staging successfully");
         } else {
-            progressbars.release_loading.finish_with_message("Failed to load staging");
+            bar_staging_loading.finish_with_message("Failed to load staging");
         }
         r
     };
 
-    let repo         = Repository::load(&repo_path, &progressbars.repo_loading)?;
-    progressbars.repo_loading.finish_with_message("Repository loading finished");
 
-    let sub = cli.subcommand_matches("build")
-        .ok_or_else(|| anyhow!("Only 'build' is available as subcommand right now!"))?;
+    let pname = matches.value_of("package_name")
+        .map(String::from)
+        .map(PackageName::from)
+        .unwrap(); // safe by clap
 
-    let pname = sub.value_of("package_name").map(String::from).map(PackageName::from).unwrap(); // safe by clap
-    let pvers = sub.value_of("package_version").map(String::from).map(PackageVersion::from);
+    let pvers = matches.value_of("package_version")
+        .map(String::from)
+        .map(PackageVersion::from);
 
     let packages = if let Some(pvers) = pvers {
         repo.find(&pname, &pvers)
@@ -97,11 +135,13 @@ async fn main() -> Result<()> {
     let trees = tokio::stream::iter(packages.into_iter().cloned())
         .map(|p| {
             let mut tree = Tree::new();
-            tree.add_package(p, &repo, &DummyExecutor::new(), progressbars.tree_building.clone())?;
+            tree.add_package(p, &repo, &DummyExecutor::new(), bar_tree_building.clone())?;
             Ok(tree)
         })
         .collect::<Result<Vec<_>>>()
         .await?;
+
+    bar_tree_building.finish_with_message("Finished loading Tree");
 
     debug!("Trees loaded: {:?}", trees);
     let mut out = std::io::stderr();
@@ -109,7 +149,7 @@ async fn main() -> Result<()> {
         tree.debug_print(&mut out)?;
     }
 
-    progressbars.root.join().map_err(Error::from)
+    Ok(())
 }
 
 fn count_pkg_files(p: &Path, progress: ProgressBar) -> u64 {
