@@ -22,6 +22,7 @@ mod phase;
 mod config;
 mod repository;
 mod filestore;
+mod ui;
 use crate::config::*;
 use crate::repository::Repository;
 use crate::package::PackageName;
