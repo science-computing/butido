@@ -1,5 +1,7 @@
 use crate::package::Package;
+use crate::package::PackageName;
 use crate::package::StringEqual;
+use crate::package::PackageVersionConstraint;
 
 use filters::ops::bool::Bool;
 use filters::filter::Filter;
@@ -42,6 +44,28 @@ pub fn build_package_filter_by_dependency_name(
         .or(Bool::new(check_build_dep).and(filter_build_dep))
         .or(Bool::new(check_runtime_dep).and(filter_rt_dep))
 }
+
+pub fn build_package_filter_by_name_and_version(
+    name: PackageName, 
+    version_constraint: Option<PackageVersionConstraint>)
+    -> impl filters::filter::Filter<Package>
+{
+    let name_filter    = move |p: &Package| {
+        trace!("Checking {:?} -> name == {}", p, name);
+        *p.name() == name
+    };
+    let version_filter = move |p: &Package| {
+        trace!("Checking {:?} -> version matches {:?}", p, version_constraint);
+        version_constraint.as_ref().map(|c| {
+            c.matches(p.version())
+                .unwrap() // TODO: This cannot fail because matches() returns always Ok(_). Still, FIXME
+                .is_true()
+        }).unwrap_or(true)
+    };
+
+    name_filter.and(version_filter)
+}
+
 
 #[cfg(test)]
 mod tests {

@@ -99,18 +99,90 @@ pub fn cli<'a>() -> App<'a> {
                 .long("format")
                 .default_value("{{i}} - {{name}} - {{version}} - {{source_url}} - {{source_hash_type}}:{{source_hash}}")
                 .help("The format to print the found packages with.")
-                .long_help(indoc::indoc!(r#"
-                The format to print the found packages with.
+                .long_help(&indoc::indoc!(r#"
+                    The format to print the found packages with.
 
-                Possible tokens are:
-                    i                   - Line number
-                    name                - Name of the package
-                    version             - Version of the package
-                    source_url          - URL from where the source was retrieved
-                    source_hash_type    - Type of hash noted in the package
-                    source_hash         - Hash of the sources
+                    Possible tokens are:
+                        i                   - Line number
+                        name                - Name of the package
+                        version             - Version of the package
+                        source_url          - URL from where the source was retrieved
+                        source_hash_type    - Type of hash noted in the package
+                        source_hash         - Hash of the sources
+                        system_deps         - System dependencies, as list
+                        system_runtime_deps - System runtime dependencies, as list
+                        build_deps          - Build dependencies, as list
+                        runtime_deps        - Runtime dependencies, as list
 
-                Handlebars modifiers are available.
+                    Handlebars modifiers are available.
+                "#))
+            )
+        )
+        .subcommand(App::new("dependencies-of")
+            .alias("depsof")
+            .about("List the depenendcies of a package")
+            .arg(Arg::with_name("package_name")
+                .required(true)
+                .multiple(false)
+                .index(1)
+                .value_name("PACKAGE_NAME")
+                .help("The name of the package")
+            )
+            .arg(Arg::with_name("package_version_constraint")
+                .required(false)
+                .multiple(false)
+                .index(2)
+                .value_name("VERSION_CONSTRAINT")
+                .help("A version constraint to search for (optional)")
+            )
+            .arg(Arg::with_name("dependency_type")
+                .required(false)
+                .multiple(true)
+                .takes_value(true)
+                .short('t')
+                .long("type")
+                .value_name("DEPENDENCY_TYPE")
+                .possible_values(&[
+                    IDENT_DEPENDENCY_TYPE_SYSTEM,
+                    IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME,
+                    IDENT_DEPENDENCY_TYPE_BUILD,
+                    IDENT_DEPENDENCY_TYPE_RUNTIME,
+                ])
+                .default_values(&[
+                    IDENT_DEPENDENCY_TYPE_SYSTEM,
+                    IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME,
+                    IDENT_DEPENDENCY_TYPE_BUILD,
+                    IDENT_DEPENDENCY_TYPE_RUNTIME,
+                ])
+                .help("Specify which dependency types are to be printed. By default, all are checked")
+            )
+            .arg(Arg::with_name("list-format")
+                .required(false)
+                .multiple(false)
+                .short('f')
+                .long("format")
+                .default_value(r#"{{i}} {{name}} - {{version}}: {{#if print_runtime_deps}}Runtime: {{runtime_deps}},{{/if}} {{#if print_build_deps}}Build: {{build_deps}},{{/if}} {{#if print_system_deps}}System: {{system_deps}},{{/if}} {{#if print_system_runtime_deps}}System-Runtime: {{system_runtime_deps}}{{/if}}"#)
+                .help("The format to print the found packages with.")
+                .long_help(&indoc::indoc!(r#"
+                    The format to print the found packages with.
+
+                    Possible tokens are:
+                        i                         - Line number
+                        name                      - Name of the package
+                        version                   - Version of the package
+                        source_url                - URL from where the source was retrieved
+                        source_hash_type          - Type of hash noted in the package
+                        source_hash               - Hash of the sources
+                        system_deps               - System dependencies, as list
+                        system_runtime_deps       - System runtime dependencies, as list
+                        build_deps                - Build dependencies, as list
+                        runtime_deps              - Runtime dependencies, as list
+                        print_system_deps         - boolean flag to use in format string, true if user wants to see system deps
+                        print_system_runtime_deps - boolean flag to use in format string, true if user wants to see system runtime deps
+                        print_build_deps          - boolean flag to use in format string, true if user wants to see build deps
+                        print_runtime_deps        - boolean flag to use in format string, true if user wants to see runtime deps
+
+                    Handlebars modifiers are available.
                 "#))
             )
         )
