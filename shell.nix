@@ -37,10 +37,6 @@ pkgs.mkShell {
     zlib
   ];
 
-  shellHook = ''
-    alias docker='docker --host=tcp://localhost:8095'
-  '';
-
   LIBCLANG_PATH   = "${pkgs.llvmPackages.libclang}/lib";
   inherit PG_USER PG_DB PG_PW PG_CONTAINER_NAME;
 }
