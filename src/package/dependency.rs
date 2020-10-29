@@ -7,15 +7,32 @@ use anyhow::anyhow;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 
+pub trait StringEqual {
+    fn str_equal(&self, s: &str) -> bool;
+}
+
 /// A dependency that can be installed from the system and is only required during build
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct SystemBuildDependency(String);
 
+impl StringEqual for SystemBuildDependency {
+    fn str_equal(&self, s: &str) -> bool {
+        self.0 == s
+    }
+}
+
+
 /// A dependency that can be installed from the system and is required during runtime
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct SystemDependency(String);
+
+impl StringEqual for SystemDependency {
+    fn str_equal(&self, s: &str) -> bool {
+        self.0 == s
+    }
+}
 
 
 /// A dependency that is packaged and is only required during build time
@@ -23,10 +40,23 @@ pub struct SystemDependency(String);
 #[serde(transparent)]
 pub struct BuildDependency(String);
 
+impl StringEqual for BuildDependency {
+    fn str_equal(&self, s: &str) -> bool {
+        self.0 == s
+    }
+}
+
+
 /// A dependency that is packaged and is required during runtime
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct Dependency(String);
+
+impl StringEqual for Dependency {
+    fn str_equal(&self, s: &str) -> bool {
+        self.0 == s
+    }
+}
 
 impl From<String> for Dependency {
     fn from(s: String) -> Dependency {
