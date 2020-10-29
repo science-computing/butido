@@ -48,6 +48,17 @@ pub enum HashType {
     Sha512,
 }
 
+impl std::fmt::Display for HashType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            HashType::Sha1   => write!(f, "sha1"),
+            HashType::Sha256 => write!(f, "sha256"),
+            HashType::Sha512 => write!(f, "sha512"),
+        }
+    }
+}
+
+
 #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
 #[serde(transparent)]
 pub struct HashValue(String);
@@ -59,4 +70,9 @@ impl From<String> for HashValue {
     }
 }
 
+impl std::fmt::Display for HashValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        self.0.fmt(f)
+    }
+}
 
