@@ -26,7 +26,7 @@ uuid        = { version = "0.8", features = ["v4"] }
 pom         = "3"
 futures     = "0.3"
 handlebars  = "3"
-filters     = { git = "https://github.com/matthiasbeyer/filters", branch = "master" }
+filters     = "0.4.0"
 indoc	    = "1"
 
 url      = { version = "2", features = ["serde"] }
