@@ -4,6 +4,8 @@ use logcrate::debug;
 use std::path::Path;
 use std::path::PathBuf;
 use std::collections::BTreeMap;
+
+use anyhow::anyhow;
 use anyhow::Result;
 use anyhow::Error;
 use walkdir::WalkDir;
@@ -79,8 +81,11 @@ async fn main() -> Result<()> {
     let repo         = Repository::load(&repo_path, &progressbars.repo_loading)?;
     progressbars.repo_loading.finish_with_message("Repository loading finished");
 
-    let pname = cli.value_of("package_name").map(String::from).map(PackageName::from).unwrap(); // safe by clap
-    let pvers = cli.value_of("package_version").map(String::from).map(PackageVersion::from);
+    let sub = cli.subcommand_matches("build")
+        .ok_or_else(|| anyhow!("Only 'build' is available as subcommand right now!"))?;
+
+    let pname = sub.value_of("package_name").map(String::from).map(PackageName::from).unwrap(); // safe by clap
+    let pvers = sub.value_of("package_version").map(String::from).map(PackageVersion::from);
 
     let packages = if let Some(pvers) = pvers {
         repo.find(&pname, &pvers)
