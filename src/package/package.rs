@@ -79,24 +79,35 @@ impl Package {
     /// Either return the list of dependencies or, if available, run the dependencies_script to
     /// read the dependencies from there.
     pub fn get_all_dependencies(&self, executor: &dyn Executor) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
-        use std::convert::TryInto;
+        use crate::package::ParseDependency;
 
-        self.dependencies()
-            .dependencies_script()
-            .as_ref()
-            .map(|path| executor.execute_dependency_script(path))
-            .transpose()?
-            .unwrap_or_default()
-            .into_iter()
-            .map(Ok)
-            .chain({
-                self.dependencies()
-                    .runtime()
-                    .iter()
-                    .cloned()
-                    .map(|d| d.try_into().map_err(Error::from))
-            })
-            .and_then_ok(|d| d.try_into().map_err(Error::from))
+        let system_iter = self.dependencies()
+            .system()
+            .iter()
+            .cloned()
+            .map(|d| d.parse_into_name_and_version());
+
+        let system_runtime_iter = self.dependencies()
+            .system_runtime()
+            .iter()
+            .cloned()
+            .map(|d| d.parse_into_name_and_version());
+
+        let build_iter = self.dependencies()
+            .build()
+            .iter()
+            .cloned()
+            .map(|d| d.parse_into_name_and_version());
+
+        let runtime_iter = self.dependencies()
+            .runtime()
+            .iter()
+            .cloned()
+            .map(|d| d.parse_into_name_and_version());
+
+        system_iter.chain(system_runtime_iter)
+            .chain(build_iter)
+            .chain(runtime_iter)
             .collect()
     }
 }
