@@ -1,3 +1,11 @@
+use lazy_static::lazy_static;
+use anyhow::anyhow;
+use anyhow::Result;
+use regex::Regex;
+
+use crate::package::PackageName;
+use crate::package::PackageVersionConstraint;
+
 mod system;
 pub use system::*;
 
@@ -12,6 +20,36 @@ pub use runtime::*;
 
 pub trait StringEqual {
     fn str_equal(&self, s: &str) -> bool;
+}
+
+pub trait ParseDependency {
+    fn parse_into_name_and_version(self) -> Result<(PackageName, PackageVersionConstraint)>;
+}
+
+lazy_static! {
+    pub(in crate::package::dependency)  static ref DEPENDENCY_PARSING_RE: Regex =
+        Regex::new("^(?P<name>[[:alpha:]]([[[:alnum:]]-_])*) (?P<version>([\\*=><])?[[:alnum:]]([[[:alnum:]][[:punct:]]])*)$").unwrap();
+}
+
+/// Helper function for the actual implementation of the ParseDependency trait.
+///
+/// TODO: Reimplement using pom crate
+pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_and_version(s: &str)
+    -> Result<(PackageName, PackageVersionConstraint)>
+{
+    let caps = crate::package::dependency::DEPENDENCY_PARSING_RE
+        .captures(s)
+        .ok_or_else(|| anyhow!("Could not parse into package name and package version constraint: '{}'", s))?;
+
+    let name = caps.name("name")
+        .ok_or_else(|| anyhow!("Could not parse name: '{}'", s))?;
+
+    let vers = caps.name("version")
+        .ok_or_else(|| anyhow!("Could not parse version: '{}'", s))?;
+
+    let constraint = PackageVersionConstraint::parse(vers.as_str())?;
+
+    Ok((PackageName::from(String::from(name.as_str())), constraint))
 }
 
 #[cfg(test)]
