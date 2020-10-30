@@ -78,15 +78,11 @@ impl Package {
     ///
     /// Either return the list of dependencies or, if available, run the dependencies_script to
     /// read the dependencies from there.
-    pub fn get_all_dependencies(&self) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
-        self.get_system_dependencies()?
-            .into_iter()
-            .map(Ok)
-            .chain(self.get_self_packaged_dependencies()?.into_iter().map(Ok))
-            .collect()
+    pub fn get_all_dependencies<'a>(&'a self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
+        self.get_system_dependencies().chain(self.get_self_packaged_dependencies())
     }
 
-    pub fn get_system_dependencies(&self) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
+    pub fn get_system_dependencies<'a>(&'a self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
         let system_iter = self.dependencies()
             .system()
             .iter()
@@ -99,10 +95,10 @@ impl Package {
             .cloned()
             .map(|d| d.parse_into_name_and_version());
 
-        system_iter.chain(system_runtime_iter).collect()
+        system_iter.chain(system_runtime_iter)
     }
 
-    pub fn get_self_packaged_dependencies(&self) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
+    pub fn get_self_packaged_dependencies<'a>(&'a self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
         let build_iter = self.dependencies()
             .build()
             .iter()
@@ -115,7 +111,7 @@ impl Package {
             .cloned()
             .map(|d| d.parse_into_name_and_version());
 
-        build_iter.chain(runtime_iter).collect()
+        build_iter.chain(runtime_iter)
     }
 }
 

@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use anyhow::anyhow;
 use indicatif::ProgressBar;
+use resiter::AndThen;
 
 use crate::repository::Repository;
 use crate::package::Package;
@@ -22,9 +23,8 @@ impl Tree {
         macro_rules! mk_add_package_tree {
             ($this:ident, $pack:ident, $repo:ident, $root:ident, $progress:ident) => {{
                 let mut subtree = Tree::new();
-                ($pack).get_all_dependencies()?
-                    .into_iter()
-                    .map(|(name, constr)| {
+                ($pack).get_all_dependencies()
+                    .and_then_ok(|(name, constr)| {
                         trace!("Dependency: {:?}", name);
                         let pack = ($repo).find_with_version_constraint(&name, &constr);
                         trace!("Found: {:?}", pack);
