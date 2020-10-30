@@ -144,29 +144,13 @@ pub struct Dependencies {
     system: Vec<SystemBuildDependency>,
 
     #[getset(get = "pub")]
-    #[serde(rename = "system_dep_script")]
-    system_dependencies_script: Option<PathBuf>,
-
-    #[getset(get = "pub")]
     system_runtime: Vec<SystemDependency>,
-
-    #[getset(get = "pub")]
-    #[serde(rename = "system_runtime_dep_script")]
-    system_runtime_dependencies_script: Option<PathBuf>,
 
     #[getset(get = "pub")]
     build: Vec<BuildDependency>,
 
     #[getset(get = "pub")]
-    #[serde(rename = "build_dep_script")]
-    build_dependencies_script: Option<PathBuf>,
-
-    #[getset(get = "pub")]
     runtime: Vec<Dependency>,
-
-    #[getset(get = "pub")]
-    #[serde(rename = "script")]
-    dependencies_script: Option<PathBuf>,
 }
 
 #[cfg(test)]
@@ -174,13 +158,9 @@ impl Dependencies {
     pub fn empty() -> Self {
         Dependencies {
             system: vec![],
-            system_dependencies_script: None,
             system_runtime: vec![],
-            system_runtime_dependencies_script: None,
             build: vec![],
-            build_dependencies_script: None,
             runtime: vec![],
-            dependencies_script: None,
         }
     }
 
@@ -191,13 +171,9 @@ impl Dependencies {
     pub fn with_runtime_dependencies(runtime_dependencies: Vec<Dependency>) -> Self {
         Dependencies {
             system: vec![],
-            system_dependencies_script: None,
             system_runtime: vec![],
-            system_runtime_dependencies_script: None,
             build: vec![],
-            build_dependencies_script: None,
             runtime: runtime_dependencies,
-            dependencies_script: None,
         }
     }
 }
