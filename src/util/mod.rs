@@ -3,7 +3,6 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct EnvironmentVariableName(String);
 
-pub mod executor;
 pub mod filters;
 pub mod parser;
 pub mod progress;

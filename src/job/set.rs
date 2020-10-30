@@ -81,7 +81,6 @@ mod tests {
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
     use crate::package::tests::package;
-    use crate::util::executor::*;
     use crate::package::Dependency;
     use crate::package::Dependencies;
     use crate::phase::PhaseName;
@@ -108,12 +107,10 @@ mod tests {
         };
 
         let repo = Repository::from(btree);
-
-        let dummy_executor = DummyExecutor;
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
+        let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
 
         let image  = ImageName::from(String::from("test"));
@@ -154,15 +151,13 @@ mod tests {
         };
 
         let repo = Repository::from(btree);
-
-        let dummy_executor = DummyExecutor;
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
+        let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
 
-        let r = tree.add_package(p2, &repo, &dummy_executor, progress.clone());
+        let r = tree.add_package(p2, &repo, progress.clone());
         assert!(r.is_ok());
 
         let image  = ImageName::from(String::from("test"));
@@ -211,12 +206,10 @@ mod tests {
         };
 
         let repo = Repository::from(btree);
-
-        let dummy_executor = DummyExecutor;
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
+        let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
 
         let image  = ImageName::from(String::from("test"));

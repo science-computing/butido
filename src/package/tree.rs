@@ -3,10 +3,10 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use anyhow::anyhow;
 use indicatif::ProgressBar;
+use resiter::AndThen;
 
 use crate::repository::Repository;
 use crate::package::Package;
-use crate::util::executor::Executor;
 
 #[derive(Debug)]
 pub struct Tree {
@@ -19,13 +19,12 @@ impl Tree {
         Tree { root: BTreeMap::new() }
     }
 
-    pub fn add_package(&mut self, p: Package, repo: &Repository, executor: &dyn Executor, progress: ProgressBar) -> Result<()> {
+    pub fn add_package(&mut self, p: Package, repo: &Repository, progress: ProgressBar) -> Result<()> {
         macro_rules! mk_add_package_tree {
-            ($this:ident, $pack:ident, $repo:ident, $root:ident, $executor:ident, $progress:ident) => {{
+            ($this:ident, $pack:ident, $repo:ident, $root:ident, $progress:ident) => {{
                 let mut subtree = Tree::new();
-                ($pack).get_all_dependencies($executor)?
-                    .into_iter()
-                    .map(|(name, constr)| {
+                ($pack).get_self_packaged_dependencies()
+                    .and_then_ok(|(name, constr)| {
                         trace!("Dependency: {:?}", name);
                         let pack = ($repo).find_with_version_constraint(&name, &constr);
                         trace!("Found: {:?}", pack);
@@ -42,7 +41,7 @@ impl Tree {
                             .map(|p| {
                                 ($progress).tick();
                                 trace!("Following dependecy: {:?}", p);
-                                add_package_tree(&mut subtree, p.clone(), ($repo), ($root), ($executor), ($progress).clone())
+                                add_package_tree(&mut subtree, p.clone(), ($repo), ($root), ($progress).clone())
                             })
                             .collect()
                     })
@@ -54,12 +53,12 @@ impl Tree {
             }}
         };
 
-        fn add_package_tree(this: &mut Tree, p: Package, repo: &Repository, root: &mut Tree, executor: &dyn Executor, progress: ProgressBar) -> Result<()> {
-            mk_add_package_tree!(this, p, repo, root, executor, progress)
+        fn add_package_tree(this: &mut Tree, p: Package, repo: &Repository, root: &mut Tree, progress: ProgressBar) -> Result<()> {
+            mk_add_package_tree!(this, p, repo, root, progress)
         }
 
         trace!("Making package Tree for {:?}", p);
-        mk_add_package_tree!(self, p, repo, self, executor, progress)
+        mk_add_package_tree!(self, p, repo, self, progress)
     }
 
     /// Get packages of the tree
@@ -146,7 +145,6 @@ mod tests {
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
     use crate::package::tests::package;
-    use crate::util::executor::*;
     use crate::package::Dependency;
     use crate::package::Dependencies;
 
@@ -165,12 +163,10 @@ mod tests {
         };
 
         let repo = Repository::from(btree);
-
-        let dummy_executor = DummyExecutor;
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
+        let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
     }
 
@@ -194,15 +190,13 @@ mod tests {
         };
 
         let repo = Repository::from(btree);
-
-        let dummy_executor = DummyExecutor;
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
+        let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
 
-        let r = tree.add_package(p2, &repo, &dummy_executor, progress.clone());
+        let r = tree.add_package(p2, &repo, progress.clone());
         assert!(r.is_ok());
     }
 
@@ -232,12 +226,10 @@ mod tests {
         }
 
         let repo = Repository::from(btree);
-
-        let dummy_executor = DummyExecutor;
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
+        let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("a")));
         assert!(tree.packages().all(|p| *p.version() == pversion("1")));
@@ -325,12 +317,10 @@ mod tests {
         }
 
         let repo = Repository::from(btree);
-
-        let dummy_executor = DummyExecutor;
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
+        let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("p1")));
         assert!(tree.packages().all(|p| *p.version() == pversion("1")));
@@ -498,12 +488,10 @@ mod tests {
         }
 
         let repo = Repository::from(btree);
-
-        let dummy_executor = DummyExecutor;
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::new();
-        let r = tree.add_package(p1, &repo, &dummy_executor, progress.clone());
+        let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("p1")));
         assert!(tree.packages().all(|p| *p.version() == pversion("1")));

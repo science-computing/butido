@@ -27,7 +27,6 @@ use crate::config::*;
 use crate::repository::Repository;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
-use crate::util::executor::DummyExecutor;
 use crate::package::Tree;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
@@ -141,7 +140,7 @@ async fn build<'a>(matches: &ArgMatches,
     let trees = tokio::stream::iter(packages.into_iter().cloned())
         .map(|p| {
             let mut tree = Tree::new();
-            tree.add_package(p, &repo, &DummyExecutor::new(), bar_tree_building.clone())?;
+            tree.add_package(p, &repo, bar_tree_building.clone())?;
             Ok(tree)
         })
         .collect::<Result<Vec<_>>>()

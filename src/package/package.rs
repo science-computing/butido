@@ -13,7 +13,7 @@ use crate::package::source::*;
 use crate::package::name::*;
 use crate::package::version::*;
 use crate::util::docker::ImageName;
-use crate::util::executor::Executor;
+use crate::package::ParseDependency;
 
 #[derive(Clone, Deserialize, Getters)]
 pub struct Package {
@@ -78,26 +78,40 @@ impl Package {
     ///
     /// Either return the list of dependencies or, if available, run the dependencies_script to
     /// read the dependencies from there.
-    pub fn get_all_dependencies(&self, executor: &dyn Executor) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
-        use std::convert::TryInto;
+    pub fn get_all_dependencies<'a>(&'a self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
+        self.get_system_dependencies().chain(self.get_self_packaged_dependencies())
+    }
 
-        self.dependencies()
-            .dependencies_script()
-            .as_ref()
-            .map(|path| executor.execute_dependency_script(path))
-            .transpose()?
-            .unwrap_or_default()
-            .into_iter()
-            .map(Ok)
-            .chain({
-                self.dependencies()
-                    .runtime()
-                    .iter()
-                    .cloned()
-                    .map(|d| d.try_into().map_err(Error::from))
-            })
-            .and_then_ok(|d| d.try_into().map_err(Error::from))
-            .collect()
+    pub fn get_system_dependencies<'a>(&'a self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
+        let system_iter = self.dependencies()
+            .system()
+            .iter()
+            .cloned()
+            .map(|d| d.parse_into_name_and_version());
+
+        let system_runtime_iter = self.dependencies()
+            .system_runtime()
+            .iter()
+            .cloned()
+            .map(|d| d.parse_into_name_and_version());
+
+        system_iter.chain(system_runtime_iter)
+    }
+
+    pub fn get_self_packaged_dependencies<'a>(&'a self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
+        let build_iter = self.dependencies()
+            .build()
+            .iter()
+            .cloned()
+            .map(|d| d.parse_into_name_and_version());
+
+        let runtime_iter = self.dependencies()
+            .runtime()
+            .iter()
+            .cloned()
+            .map(|d| d.parse_into_name_and_version());
+
+        build_iter.chain(runtime_iter)
     }
 }
 
@@ -144,29 +158,13 @@ pub struct Dependencies {
     system: Vec<SystemBuildDependency>,
 
     #[getset(get = "pub")]
-    #[serde(rename = "system_dep_script")]
-    system_dependencies_script: Option<PathBuf>,
-
-    #[getset(get = "pub")]
     system_runtime: Vec<SystemDependency>,
-
-    #[getset(get = "pub")]
-    #[serde(rename = "system_runtime_dep_script")]
-    system_runtime_dependencies_script: Option<PathBuf>,
 
     #[getset(get = "pub")]
     build: Vec<BuildDependency>,
 
     #[getset(get = "pub")]
-    #[serde(rename = "build_dep_script")]
-    build_dependencies_script: Option<PathBuf>,
-
-    #[getset(get = "pub")]
     runtime: Vec<Dependency>,
-
-    #[getset(get = "pub")]
-    #[serde(rename = "script")]
-    dependencies_script: Option<PathBuf>,
 }
 
 #[cfg(test)]
@@ -174,13 +172,9 @@ impl Dependencies {
     pub fn empty() -> Self {
         Dependencies {
             system: vec![],
-            system_dependencies_script: None,
             system_runtime: vec![],
-            system_runtime_dependencies_script: None,
             build: vec![],
-            build_dependencies_script: None,
             runtime: vec![],
-            dependencies_script: None,
         }
     }
 
@@ -191,13 +185,9 @@ impl Dependencies {
     pub fn with_runtime_dependencies(runtime_dependencies: Vec<Dependency>) -> Self {
         Dependencies {
             system: vec![],
-            system_dependencies_script: None,
             system_runtime: vec![],
-            system_runtime_dependencies_script: None,
             build: vec![],
-            build_dependencies_script: None,
             runtime: runtime_dependencies,
-            dependencies_script: None,
         }
     }
 }
