@@ -13,7 +13,6 @@ use crate::package::source::*;
 use crate::package::name::*;
 use crate::package::version::*;
 use crate::util::docker::ImageName;
-use crate::util::executor::Executor;
 
 #[derive(Clone, Deserialize, Getters)]
 pub struct Package {
@@ -78,7 +77,7 @@ impl Package {
     ///
     /// Either return the list of dependencies or, if available, run the dependencies_script to
     /// read the dependencies from there.
-    pub fn get_all_dependencies(&self, executor: &dyn Executor) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
+    pub fn get_all_dependencies(&self) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
         use crate::package::ParseDependency;
 
         let system_iter = self.dependencies()

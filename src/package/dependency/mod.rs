@@ -88,7 +88,7 @@ mod tests {
         let s = "vim =8.2";
         let d = Dependency::from(String::from(s));
 
-        let (n, c) = d.try_into().unwrap();
+        let (n, c) = d.parse_into_name_and_version().unwrap();
 
         assert_eq!(n, name("vim"));
         assert_eq!(c, exact("8.2"));
@@ -99,7 +99,7 @@ mod tests {
         let s = "gtk15 >1b";
         let d = Dependency::from(String::from(s));
 
-        let (n, c) = d.try_into().unwrap();
+        let (n, c) = d.parse_into_name_and_version().unwrap();
 
         assert_eq!(n, name("gtk15"));
         assert_eq!(c, higher_as("1b"));
