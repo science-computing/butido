@@ -13,6 +13,7 @@ use crate::package::source::*;
 use crate::package::name::*;
 use crate::package::version::*;
 use crate::util::docker::ImageName;
+use crate::package::ParseDependency;
 
 #[derive(Clone, Deserialize, Getters)]
 pub struct Package {
@@ -78,8 +79,14 @@ impl Package {
     /// Either return the list of dependencies or, if available, run the dependencies_script to
     /// read the dependencies from there.
     pub fn get_all_dependencies(&self) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
-        use crate::package::ParseDependency;
+        self.get_system_dependencies()?
+            .into_iter()
+            .map(Ok)
+            .chain(self.get_self_packaged_dependencies()?.into_iter().map(Ok))
+            .collect()
+    }
 
+    pub fn get_system_dependencies(&self) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
         let system_iter = self.dependencies()
             .system()
             .iter()
@@ -92,6 +99,10 @@ impl Package {
             .cloned()
             .map(|d| d.parse_into_name_and_version());
 
+        system_iter.chain(system_runtime_iter).collect()
+    }
+
+    pub fn get_self_packaged_dependencies(&self) -> Result<Vec<(PackageName, PackageVersionConstraint)>> {
         let build_iter = self.dependencies()
             .build()
             .iter()
@@ -104,10 +115,7 @@ impl Package {
             .cloned()
             .map(|d| d.parse_into_name_and_version());
 
-        system_iter.chain(system_runtime_iter)
-            .chain(build_iter)
-            .chain(runtime_iter)
-            .collect()
+        build_iter.chain(runtime_iter).collect()
     }
 }
 
