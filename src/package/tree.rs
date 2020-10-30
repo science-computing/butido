@@ -23,7 +23,7 @@ impl Tree {
         macro_rules! mk_add_package_tree {
             ($this:ident, $pack:ident, $repo:ident, $root:ident, $progress:ident) => {{
                 let mut subtree = Tree::new();
-                ($pack).get_all_dependencies()
+                ($pack).get_self_packaged_dependencies()
                     .and_then_ok(|(name, constr)| {
                         trace!("Dependency: {:?}", name);
                         let pack = ($repo).find_with_version_constraint(&name, &constr);
