@@ -14,8 +14,6 @@ use crate::log::LogItem;
 use crate::filestore::StagingStore;
 
 pub struct EndpointScheduler {
-    jobsets: Vec<JobSet>,
-
     endpoints: Vec<EndpointManager>,
 
     staging_store: Arc<RwLock<StagingStore>>,
@@ -23,11 +21,10 @@ pub struct EndpointScheduler {
 
 impl EndpointScheduler {
 
-    pub async fn setup(jobsets: Vec<JobSet>, endpoints: Vec<EndpointManagerConfiguration>, staging_store: StagingStore) -> Result<Self> {
+    pub async fn setup(endpoints: Vec<EndpointManagerConfiguration>, staging_store: StagingStore) -> Result<Self> {
         let endpoints = Self::setup_endpoints(endpoints).await?;
 
         Ok(EndpointScheduler {
-            jobsets,
             endpoints,
             staging_store: Arc::new(RwLock::new(staging_store)),
         })
