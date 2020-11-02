@@ -10,20 +10,45 @@ use itertools::Itertools;
 
 use crate::package::Package;
 
-pub fn print_packages<'a, I>(out: &mut dyn Write, format: &str, iter: I) -> Result<()>
+pub fn print_packages<'a, I>(out: &mut dyn Write,
+                             format: &str,
+                             iter: I,
+                             print_runtime_deps: bool,
+                             print_build_deps: bool,
+                             print_sys_deps: bool,
+                             print_sys_runtime_deps: bool)
+-> Result<()>
     where I: Iterator<Item = &'a Package>
 {
     let mut hb = Handlebars::new();
     hb.register_template_string("package", format)?;
 
     for (i, package) in iter.enumerate() {
-        print_package(out, &hb, i, package)?;
+        print_package(out,
+                      &hb,
+                      i,
+                      package,
+                      print_runtime_deps,
+                      print_build_deps,
+                      print_sys_deps,
+                      print_sys_runtime_deps
+                      )?;
     }
 
     Ok(())
 }
 
-fn print_package(out: &mut dyn Write, hb: &Handlebars, i: usize, package: &Package) -> Result<()> {
+fn print_package(out: &mut dyn Write,
+                 hb: &Handlebars,
+                 i: usize,
+                 package: &Package,
+                 print_runtime_deps: bool,
+                 print_build_deps: bool,
+                 print_sys_deps: bool,
+                 print_sys_runtime_deps: bool
+                 )
+    -> Result<()>
+{
     let mut data = BTreeMap::new();
     data.insert("i", i.to_string());
     data.insert("name",             format!("{}", package.name()));
@@ -31,36 +56,53 @@ fn print_package(out: &mut dyn Write, hb: &Handlebars, i: usize, package: &Packa
     data.insert("source_url",       format!("{}", package.source().url()));
     data.insert("source_hash_type", format!("{}", package.source().hash().hashtype()));
     data.insert("source_hash",      format!("{}", package.source().hash().value()));
+
+    // This is an ugly hack. Because the `data` is a <String, String>, we do only insert the flag
+    // if it is set, because handlebars renders a non-present value as false
+    if print_runtime_deps {
+        data.insert("print_runtime_deps",     format!("{}", print_runtime_deps));
+    }
+    if print_build_deps {
+        data.insert("print_build_deps",       format!("{}", print_build_deps));
+    }
+    if print_sys_deps {
+        data.insert("print_system_deps",         format!("{}", print_sys_deps));
+    }
+    if print_sys_runtime_deps {
+        data.insert("print_system_runtime_deps", format!("{}", print_sys_runtime_deps));
+    }
+
     data.insert("runtime_deps",     {
-        package.dependencies()
-            .runtime()
-            .iter()
-            .map(|p| p.as_ref())
-            .join(", ")
+        format!("[{}]", package.dependencies()
+                .runtime()
+                .iter()
+                .map(|p| p.as_ref())
+                .join(", "))
     });
     data.insert("build_deps",     {
-        package.dependencies()
-            .build()
-            .iter()
-            .map(|p| p.as_ref())
-            .join(", ")
+        format!("[{}]", package.dependencies()
+                .build()
+                .iter()
+                .map(|p| p.as_ref())
+                .join(", "))
     });
     data.insert("system_deps",     {
-        package.dependencies()
-            .system()
-            .iter()
-            .map(|p| p.as_ref())
-            .join(", ")
+        format!("[{}]", package.dependencies()
+                .system()
+                .iter()
+                .map(|p| p.as_ref())
+                .join(", "))
     });
     data.insert("system_runtime_deps",     {
-        package.dependencies()
-            .system_runtime()
-            .iter()
-            .map(|p| p.as_ref())
-            .join(", ")
+        format!("[{}]", package.dependencies()
+                .system_runtime()
+                .iter()
+                .map(|p| p.as_ref())
+                .join(", "))
     });
 
     hb.render("package", &data)
         .map_err(Error::from)
         .and_then(|r| writeln!(out, "{}", r).map_err(Error::from))
 }
+
