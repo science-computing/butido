@@ -11,6 +11,12 @@ use crate::package::PackageVersionConstraint;
 #[serde(transparent)]
 pub struct BuildDependency(String);
 
+impl AsRef<str> for BuildDependency {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
 impl StringEqual for BuildDependency {
     fn str_equal(&self, s: &str) -> bool {
         self.0 == s

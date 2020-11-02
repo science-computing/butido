@@ -80,6 +80,12 @@ async fn main() -> Result<()> {
             what_depends(matches, repo, bar).await?
         },
 
+        ("dependencies-of", Some(matches)) => {
+            let bar = progressbars.what_depends();
+            bar.set_length(max_packages);
+            dependencies_of(matches, repo, bar).await?
+        },
+
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 
@@ -160,27 +166,79 @@ async fn build<'a>(matches: &ArgMatches,
 async fn what_depends(matches: &ArgMatches, repo: Repository, progress: ProgressBar) -> Result<()> {
     use filters::filter::Filter;
 
-    let package_filter = {
-        fn getbool(m: &ArgMatches, name: &str, cmp: &str) -> bool {
-            // unwrap is safe here because clap is configured with default values
-            m.values_of(name).unwrap().any(|v| v == cmp)
-        }
+    let print_runtime_deps     = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME);
+    let print_build_deps       = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_BUILD);
+    let print_sys_deps         = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM);
+    let print_sys_runtime_deps = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME);
 
+    let package_filter = {
         let name = matches.value_of("package_name").map(String::from).unwrap();
 
         crate::util::filters::build_package_filter_by_dependency_name(
             name,
-            getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM),
-            getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME),
-            getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_BUILD),
-            getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME),
+            print_sys_deps,
+            print_sys_runtime_deps,
+            print_build_deps,
+            print_runtime_deps
         )
     };
 
     let format = matches.value_of("list-format").unwrap(); // safe by clap default value
     let mut stdout = std::io::stdout();
     let iter = repo.packages().filter(|package| package_filter.filter(package));
-    ui::print_packages(&mut stdout, format, iter)
+    ui::print_packages(&mut stdout,
+                       format,
+                       iter,
+                       print_runtime_deps,
+                       print_build_deps,
+                       print_sys_deps,
+                       print_sys_runtime_deps)
+}
+
+async fn dependencies_of(matches: &ArgMatches, repo: Repository, progress: ProgressBar) -> Result<()> {
+    use filters::filter::Filter;
+    use crate::package::PackageVersionConstraint;
+
+    let package_filter = {
+        let name = matches.value_of("package_name").map(String::from).map(PackageName::from).unwrap();
+        trace!("Checking for package with name = {}", name);
+
+        let version_constraint = matches
+            .value_of("package_version_constraint")
+            .map(|s| PackageVersionConstraint::parse(s))
+            .transpose()?;
+
+        trace!("Checking for package with version constraint = {:?}", version_constraint);
+
+        crate::util::filters::build_package_filter_by_name_and_version(
+            name, version_constraint
+        )
+    };
+
+    let format = matches.value_of("list-format").unwrap(); // safe by clap default value
+    let mut stdout = std::io::stdout();
+    let iter = repo.packages().filter(|package| package_filter.filter(package))
+        .inspect(|pkg| trace!("Found package: {:?}", pkg));
+
+    let print_runtime_deps     = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME);
+    let print_build_deps       = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_BUILD);
+    let print_sys_deps         = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM);
+    let print_sys_runtime_deps = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME);
+
+    trace!("Printing packages with format = '{}', runtime: {}, build: {}, sys: {}, sys_rt: {}",
+           format,
+           print_runtime_deps,
+           print_build_deps,
+           print_sys_deps,
+           print_sys_runtime_deps);
+
+    ui::print_packages(&mut stdout,
+                       format,
+                       iter,
+                       print_runtime_deps,
+                       print_build_deps,
+                       print_sys_deps,
+                       print_sys_runtime_deps)
 }
 
 fn count_pkg_files(p: &Path, progress: ProgressBar) -> u64 {
@@ -192,5 +250,10 @@ fn count_pkg_files(p: &Path, progress: ProgressBar) -> u64 {
         .filter(|f| f.path().file_name().map(|name| name == "pkg.toml").unwrap_or(false))
         .inspect(|_| progress.tick())
         .count() as u64
+}
+
+fn getbool(m: &ArgMatches, name: &str, cmp: &str) -> bool {
+    // unwrap is safe here because clap is configured with default values
+    m.values_of(name).unwrap().any(|v| v == cmp)
 }
 
