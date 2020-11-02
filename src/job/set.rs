@@ -5,6 +5,7 @@ use crate::package::Package;
 use crate::package::Tree;
 use crate::phase::PhaseName;
 use crate::util::docker::ImageName;
+use crate::job::RunnableJob;
 
 /// A set of jobs that could theoretically be run in parallel
 #[derive(Debug)]
@@ -19,6 +20,10 @@ impl JobSet {
 
     fn is_empty(&self) -> bool {
         self.set.is_empty()
+    }
+
+    pub fn into_runables(self) -> impl Iterator<Item = Result<RunnableJob>> {
+        self.set.into_iter().map(RunnableJob::build_from_job)
     }
 
 }
