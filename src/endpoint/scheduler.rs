@@ -21,12 +21,12 @@ pub struct EndpointScheduler {
 
 impl EndpointScheduler {
 
-    pub async fn setup(endpoints: Vec<EndpointManagerConfiguration>, staging_store: StagingStore) -> Result<Self> {
+    pub async fn setup(endpoints: Vec<EndpointManagerConfiguration>, staging_store: Arc<RwLock<StagingStore>>) -> Result<Self> {
         let endpoints = Self::setup_endpoints(endpoints).await?;
 
         Ok(EndpointScheduler {
             endpoints,
-            staging_store: Arc::new(RwLock::new(staging_store)),
+            staging_store,
         })
     }
 
