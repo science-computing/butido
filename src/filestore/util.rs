@@ -54,6 +54,22 @@ impl FileStoreImpl {
         self.store.values()
     }
 
+    pub (in crate::filestore) fn load_from_path(&mut self, pb: &PathBuf) -> Result<&Artifact> {
+        if !self.is_sub_path(pb) {
+            Err(anyhow!("Not a sub-path of {}: {}", self.root.display(), pb.display()))
+        } else {
+            if self.store.get(pb).is_some() {
+                Err(anyhow!("Entry exists: {}", pb.display()))
+            } else {
+                Ok(self.store.entry(pb.to_path_buf()).or_insert(Artifact::load(pb)?))
+            }
+        }
+    }
+
+    fn is_sub_path(&self, p: &Path) -> bool {
+        unimplemented!()
+    }
+
     pub fn get(&self, p: &Path) -> Option<&Artifact> {
         self.store.get(p)
     }
