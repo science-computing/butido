@@ -1,3 +1,6 @@
+use std::sync::Arc;
+use std::sync::RwLock;
+
 use anyhow::Result;
 use tokio::stream::StreamExt;
 use tokio::sync::mpsc::UnboundedSender;
@@ -7,20 +10,25 @@ use crate::endpoint::EndpointManagerConfiguration;
 use crate::job::JobSet;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
+use crate::filestore::StagingStore;
 
 pub struct EndpointScheduler {
     jobsets: Vec<JobSet>,
 
-    endpoints: Vec<EndpointManager>
+    endpoints: Vec<EndpointManager>,
+
+    staging_store: Arc<RwLock<StagingStore>>,
 }
 
 impl EndpointScheduler {
 
-    pub async fn setup(jobsets: Vec<JobSet>, endpoints: Vec<EndpointManagerConfiguration>) -> Result<Self> {
+    pub async fn setup(jobsets: Vec<JobSet>, endpoints: Vec<EndpointManagerConfiguration>, staging_store: StagingStore) -> Result<Self> {
         let endpoints = Self::setup_endpoints(endpoints).await?;
 
         Ok(EndpointScheduler {
-            jobsets, endpoints
+            jobsets,
+            endpoints,
+            staging_store: Arc::new(RwLock::new(staging_store)),
         })
     }
 
@@ -54,7 +62,7 @@ impl EndpointScheduler {
                 Some(ep) => {
                     let ep = ep.clone();
                     unordered.push(async {
-                        ep.run_job(next_job.0, next_job.1).await
+                        ep.run_job(next_job.0, next_job.1, self.staging_store.clone()).await
                     });
                 }
             }
