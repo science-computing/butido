@@ -24,7 +24,7 @@ use crate::package::PackageVersion;
 ///
 /// It can then be wrapped into the actual interface of this module with specialized functionality.
 pub struct FileStoreImpl {
-    root: PathBuf,
+    pub(in crate::filestore) root: PathBuf,
     store: BTreeMap<PathBuf, Artifact>,
 }
 
