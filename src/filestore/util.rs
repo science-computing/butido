@@ -24,6 +24,7 @@ use crate::package::PackageVersion;
 ///
 /// It can then be wrapped into the actual interface of this module with specialized functionality.
 pub struct FileStoreImpl {
+    root: PathBuf,
     store: BTreeMap<PathBuf, Artifact>,
 }
 
@@ -43,7 +44,7 @@ impl FileStoreImpl {
                 })
                 .collect::<Result<BTreeMap<PathBuf, Artifact>>>()?;
 
-            Ok(FileStoreImpl { store })
+            Ok(FileStoreImpl { root: root.to_path_buf(), store })
         } else {
             Err(anyhow!("File store cannot be loaded from non-directory: {}", root.display()))
         }
