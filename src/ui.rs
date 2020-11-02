@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use anyhow::Error;
 use handlebars::Handlebars;
+use itertools::Itertools;
 
 use crate::package::Package;
 
@@ -30,6 +31,34 @@ fn print_package(out: &mut dyn Write, hb: &Handlebars, i: usize, package: &Packa
     data.insert("source_url",       format!("{}", package.source().url()));
     data.insert("source_hash_type", format!("{}", package.source().hash().hashtype()));
     data.insert("source_hash",      format!("{}", package.source().hash().value()));
+    data.insert("runtime_deps",     {
+        package.dependencies()
+            .runtime()
+            .iter()
+            .map(|p| p.as_ref())
+            .join(", ")
+    });
+    data.insert("build_deps",     {
+        package.dependencies()
+            .build()
+            .iter()
+            .map(|p| p.as_ref())
+            .join(", ")
+    });
+    data.insert("system_deps",     {
+        package.dependencies()
+            .system()
+            .iter()
+            .map(|p| p.as_ref())
+            .join(", ")
+    });
+    data.insert("system_runtime_deps",     {
+        package.dependencies()
+            .system_runtime()
+            .iter()
+            .map(|p| p.as_ref())
+            .join(", ")
+    });
 
     hb.render("package", &data)
         .map_err(Error::from)
