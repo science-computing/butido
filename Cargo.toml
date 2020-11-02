@@ -29,6 +29,7 @@ handlebars  = "3"
 filters     = "0.4.0"
 indoc       = "1"
 typed-builder = "0.7"
+tar	    = "0.4"
 
 url      = { version = "2", features = ["serde"] }
 tokio    = { version = "0.2", features = ["full"] }
