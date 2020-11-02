@@ -24,6 +24,7 @@ mod config;
 mod repository;
 mod filestore;
 mod ui;
+mod orchestrator;
 use crate::config::*;
 use crate::repository::Repository;
 use crate::package::PackageName;
