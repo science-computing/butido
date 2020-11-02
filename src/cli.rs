@@ -97,7 +97,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .short('f')
                 .long("format")
-                .default_value("{i} - {name} - {version} - {source_url} - {source_hash_type}:{source_hash}")
+                .default_value("{{i}} - {{name}} - {{version}} - {{source_url}} - {{source_hash_type}}:{{source_hash}}")
                 .help("The format to print the found packages with.")
                 .long_help(indoc::indoc!(r#"
                 The format to print the found packages with.
