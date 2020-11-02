@@ -21,6 +21,12 @@ pub mod docker {
         }
     }
 
+    impl AsRef<str> for ImageName {
+        fn as_ref(&self) -> &str {
+            self.0.as_ref()
+        }
+    }
+
     /// Check whether a string is a valid docker tag name
     ///
     /// From the docker spec:
