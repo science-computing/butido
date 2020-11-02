@@ -158,7 +158,7 @@ impl EndpointManager {
             .map_err(|_| anyhow!("Lock poisoned"))
     }
 
-    pub async fn run_job(self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<()>  {
+    pub async fn run_job(self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<Vec<PathBuf>>  {
         use crate::log::buffer_stream_to_line_stream;
         use tokio::stream::StreamExt;
 

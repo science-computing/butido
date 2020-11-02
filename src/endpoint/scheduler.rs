@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use tokio::stream::StreamExt;
@@ -48,7 +49,7 @@ impl EndpointScheduler {
     /// available endpoints.
     ///
     /// It does not yet schedule like it is supposed to do.
-    pub async fn run_jobset(&self, js: Vec<(RunnableJob, UnboundedSender<LogItem>)>) -> Result<()> {
+    pub async fn run_jobset(&self, js: Vec<(RunnableJob, UnboundedSender<LogItem>)>) -> Result<Vec<PathBuf>> {
         let unordered    = futures::stream::FuturesUnordered::new();
         let mut i: usize = 0;
         let mut iter     = js.into_iter();
@@ -70,7 +71,13 @@ impl EndpointScheduler {
             i += 1;
         }
 
-        unordered.collect().await
+        let res = unordered.collect::<Result<Vec<_>>>()
+            .await?
+            .into_iter()
+            .flatten() // We get a Vec<Vec<PathBuf>> here, but we only care about all pathes in one Vec<_>
+            .collect();
+
+        Ok(res)
     }
 
 }
