@@ -17,6 +17,7 @@ use crate::endpoint::managerconf::EndpointManagerConfiguration;
 use crate::job::RunnableJob;
 use crate::job::JobResource;
 use crate::log::LogItem;
+use crate::filestore::StagingStore;
 
 /// The EndpointManager manages a _single_ endpoint
 #[derive(Clone, Debug)]
@@ -157,7 +158,7 @@ impl EndpointManager {
             .map_err(|_| anyhow!("Lock poisoned"))
     }
 
-    pub async fn run_job(self, job: RunnableJob, logsink: UnboundedSender<LogItem>) -> Result<()>  {
+    pub async fn run_job(self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<()>  {
         use crate::log::buffer_stream_to_line_stream;
         use tokio::stream::StreamExt;
 
@@ -203,7 +204,7 @@ impl EndpointManager {
         container.copy_file_into(script_path, script).await?;
 
         let stream = container.exec(&exec_opts);
-        buffer_stream_to_line_stream(stream)
+        let _ = buffer_stream_to_line_stream(stream)
             .map(|line| {
                 line.map_err(Error::from)
                     .and_then(|l| {
@@ -213,7 +214,16 @@ impl EndpointManager {
                             .and_then(|item| logsink.send(item).map_err(Error::from))
                     })
             })
-            .collect()
+            .collect::<Result<Vec<_>>>()
+            .await?;
+
+        let tar_stream = container.copy_from(&PathBuf::from("/outputs/"))
+            .map(|item| item.map_err(Error::from));
+
+        staging
+            .write()
+            .map_err(|_| lockpoisoned())?
+            .write_files_from_tar_stream(tar_stream)
             .await
     }
 
