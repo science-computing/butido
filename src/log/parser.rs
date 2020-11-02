@@ -17,7 +17,7 @@ use crate::log::util::*;
 
 type IoResult<T> = RResult<T, futures::io::Error>;
 
-fn buffer_stream_to_line_stream<S>(stream: S) -> impl Stream<Item = IoResult<String>>
+pub fn buffer_stream_to_line_stream<S>(stream: S) -> impl Stream<Item = IoResult<String>>
     where S: Stream<Item = shiplift::Result<TtyChunk>> + std::marker::Unpin
 {
     stream.map(|r| r.map(TtyChunkBuf::from))
