@@ -33,5 +33,5 @@ fn print_package(out: &mut dyn Write, hb: &Handlebars, i: usize, package: &Packa
 
     hb.render("package", &data)
         .map_err(Error::from)
-        .and_then(|r| write!(out, "{}", r).map_err(Error::from))
+        .and_then(|r| writeln!(out, "{}", r).map_err(Error::from))
 }
