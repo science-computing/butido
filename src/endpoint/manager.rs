@@ -1,15 +1,22 @@
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::str::FromStr;
+use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use anyhow::Error;
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::UnboundedReceiver;
+use shiplift::ExecContainerOptions;
+use shiplift::ContainerOptions;
 
 use crate::util::docker::ImageName;
 use crate::endpoint::configured::ConfiguredEndpoint;
 use crate::endpoint::managerconf::EndpointManagerConfiguration;
+use crate::job::RunnableJob;
+use crate::job::JobResource;
+use crate::log::LogItem;
 
 /// The EndpointManager manages a _single_ endpoint
 #[derive(Clone, Debug)]
@@ -136,14 +143,81 @@ impl EndpointManager {
         self.inner.read().map(|rw| rw.endpoint.name().clone()).map_err(|_| lockpoisoned())
     }
 
-    pub async fn run_job(self, job: RunnableJob, logsink: UnboundedSender<LogItem>) -> Result<()>  {
-        unimplemented!()
+    pub fn get_num_current_jobs(&self) -> Result<usize> {
+        self.inner
+            .read()
+            .map(|lock| lock.endpoint.num_current_jobs())
+            .map_err(|_| anyhow!("Lock poisoned"))
+    }
+
+    pub fn get_num_max_jobs(&self) -> Result<usize> {
+        self.inner
+            .read()
+            .map(|lock| lock.endpoint.num_max_jobs())
+            .map_err(|_| anyhow!("Lock poisoned"))
+    }
+
+    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>) -> Result<()>  {
+        use crate::log::buffer_stream_to_line_stream;
+        use tokio::stream::StreamExt;
+
+        let lock = self.inner
+            // Taking write lock, because we alter interior here, which shouldn't happen in
+            // parallel eventhough technically possible.
+            .write()
+            .map_err(|_| anyhow!("Lock poisoned"))?;
+
+        let (container_id, _warnings) = {
+            let envs: Vec<String> = job.resources()
+                .iter()
+                .filter_map(|r| match r {
+                    JobResource::Environment(k, v) => Some(format!("{}={}", k, v)),
+                    JobResource::Path(_)           => None,
+                })
+                .collect();
+
+            let builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref())
+                    .env(envs.iter().map(AsRef::as_ref).collect())
+                    .build();
+
+            let create_info = lock.endpoint
+                .docker()
+                .containers()
+                .create(&builder_opts)
+                .await?;
+
+            if create_info.warnings.is_some() {
+                // TODO: Handle warnings
+            } 
+
+            (create_info.id, create_info.warnings)
+        };
+
+        let script      = job.script().as_ref().as_bytes();
+        let script_path = PathBuf::from("/script");
+        let exec_opts   = ExecContainerOptions::builder()
+            .cmd(vec!["/script"])
+            .build();
+
+        let container = lock.endpoint.docker().containers().get(&container_id);
+        container.copy_file_into(script_path, script).await?;
+
+        let stream = container.exec(&exec_opts);
+        buffer_stream_to_line_stream(stream)
+            .map(|line| {
+                line.map_err(Error::from)
+                    .and_then(|l| {
+                        crate::log::parser()
+                            .parse(l.as_bytes())
+                            .map_err(Error::from)
+                            .and_then(|item| logsink.send(item).map_err(Error::from))
+                    })
+            })
+            .collect()
+            .await
     }
 
 }
-
-type LogItem     = (); // TODO Replace with actual implementation
-type RunnableJob = (); // TODO Replace with actual implementation
 
 
 /// Helper fn for std::sync::PoisonError wrapping
