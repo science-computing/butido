@@ -7,6 +7,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use itertools::Itertools;
 
 use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
@@ -144,7 +145,7 @@ fn artifacts(conn_cfg: DbConnectionConfig) -> Result<()> {
     if data.is_empty() {
         info!("No artifacts in database");
     } else {
-        display_as_table(hdrs, data);
+        display_as_table(hdrs, data)?;
     }
 
     Ok(())
@@ -188,25 +189,39 @@ fn envvars(conn_cfg: DbConnectionConfig) -> Result<()> {
     if data.is_empty() {
         info!("No environment variables in database");
     } else {
-        display_as_table(hdrs, data);
+        display_as_table(hdrs, data)?;
     }
 
     Ok(())
 }
 
-fn display_as_table<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>) {
-    let mut ascii_table = ascii_table::AsciiTable::default();
+/// Display the passed data as nice ascii table,
+/// or, if stdout is a pipe, print it nicely parseable
+fn display_as_table<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>) -> Result<()> {
+    use std::io::Write;
 
-    ascii_table.max_width = terminal_size::terminal_size()
-        .map(|tpl| tpl.0.0 as usize) // an ugly interface indeed!
-        .unwrap_or(80);
+    if atty::is(atty::Stream::Stdout) {
+        let mut ascii_table = ascii_table::AsciiTable::default();
 
-    headers.into_iter()
-        .enumerate()
-        .for_each(|(i, c)| {
-            ascii_table.columns.insert(i, c);
-        });
+        ascii_table.max_width = terminal_size::terminal_size()
+            .map(|tpl| tpl.0.0 as usize) // an ugly interface indeed!
+            .unwrap_or(80);
 
-    ascii_table.print(data);
+        headers.into_iter()
+            .enumerate()
+            .for_each(|(i, c)| {
+                ascii_table.columns.insert(i, c);
+            });
+
+        ascii_table.print(data);
+    } else {
+        let mut out = std::io::stdout();
+        let mut lock = out.lock();
+        for list in data {
+            writeln!(lock, "{}", list.iter().map(|d| d.to_string()).join(" "))?;
+        }
+    }
+
+    Ok(())
 }
 

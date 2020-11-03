@@ -32,6 +32,7 @@ diesel      = { version = "1.4", features = ["postgres"] }
 which       = "4"
 ascii_table = "3"
 terminal_size = "0.1"
+atty        = "0.2"
 
 url      = { version = "2", features = ["serde"] }
 tokio    = { version = "0.2", features = ["full"] }
