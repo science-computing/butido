@@ -27,6 +27,7 @@ pkgs.mkShell {
     diesel-cli
     pgcli
     pgcli-dev
+    postgresql
 
     cmake
     curl
