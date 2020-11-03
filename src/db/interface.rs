@@ -8,9 +8,11 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use itertools::Itertools;
+use diesel::RunQueryDsl;
 
 use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
+use crate::db::models;
 
 pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &Configuration) -> Result<()> {
     match matches.subcommand() {
@@ -115,34 +117,15 @@ fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &
 }
 
 fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
-    use diesel::RunQueryDsl;
     use crate::schema::artifacts::dsl;
-    use crate::db::models;
 
-    let csv = matches.is_present("csv");
-
-    let hdrs = vec![
-        {
-            let mut column = ascii_table::Column::default();
-            column.header  = "Id".into();
-            column.align   = ascii_table::Align::Left;
-            column
-        },
-        {
-            let mut column = ascii_table::Column::default();
-            column.header  = "Path".into();
-            column.align   = ascii_table::Align::Left;
-            column
-        }
-    ];
-
-    let connection = crate::db::establish_connection(conn_cfg)?;
+    let csv  = matches.is_present("csv");
+    let hdrs = mk_header(vec!["id", "path"]);
+    let conn = crate::db::establish_connection(conn_cfg)?;
     let data = dsl::artifacts
-        .load::<models::Artifact>(&connection)?
+        .load::<models::Artifact>(&conn)?
         .into_iter()
-        .map(|artifact| {
-            vec![format!("{}", artifact.id), artifact.path]
-        })
+        .map(|artifact| vec![format!("{}", artifact.id), artifact.path])
         .collect::<Vec<_>>();
 
     if data.is_empty() {
@@ -155,36 +138,13 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 }
 
 fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
-    use diesel::RunQueryDsl;
     use crate::schema::envvars::dsl;
-    use crate::db::models;
 
-    let csv = matches.is_present("csv");
-
-    let hdrs = vec![
-        {
-            let mut column = ascii_table::Column::default();
-            column.header  = "Id".into();
-            column.align   = ascii_table::Align::Left;
-            column
-        },
-        {
-            let mut column = ascii_table::Column::default();
-            column.header  = "Name".into();
-            column.align   = ascii_table::Align::Left;
-            column
-        },
-        {
-            let mut column = ascii_table::Column::default();
-            column.header  = "Value".into();
-            column.align   = ascii_table::Align::Left;
-            column
-        }
-    ];
-
-    let connection = crate::db::establish_connection(conn_cfg)?;
+    let csv  = matches.is_present("csv");
+    let hdrs = mk_header(vec!["id", "name", "value"]);
+    let conn = crate::db::establish_connection(conn_cfg)?;
     let data = dsl::envvars
-        .load::<models::EnvVar>(&connection)?
+        .load::<models::EnvVar>(&conn)?
         .into_iter()
         .map(|evar| {
             vec![format!("{}", evar.id), evar.name, evar.value]
@@ -201,30 +161,13 @@ fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 }
 
 fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
-    use diesel::RunQueryDsl;
     use crate::schema::images::dsl;
-    use crate::db::models;
 
-    let csv = matches.is_present("csv");
-
-    let hdrs = vec![
-        {
-            let mut column = ascii_table::Column::default();
-            column.header  = "Id".into();
-            column.align   = ascii_table::Align::Left;
-            column
-        },
-        {
-            let mut column = ascii_table::Column::default();
-            column.header  = "Name".into();
-            column.align   = ascii_table::Align::Left;
-            column
-        }
-    ];
-
-    let connection = crate::db::establish_connection(conn_cfg)?;
+    let csv  = matches.is_present("csv");
+    let hdrs = mk_header(vec!["id", "name"]);
+    let conn = crate::db::establish_connection(conn_cfg)?;
     let data = dsl::images
-        .load::<models::Image>(&connection)?
+        .load::<models::Image>(&conn)?
         .into_iter()
         .map(|image| {
             vec![format!("{}", image.id), image.name]
@@ -238,6 +181,17 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
+    vec.into_iter()
+        .map(|name| {
+            let mut column = ascii_table::Column::default();
+            column.header  = name.into();
+            column.align   = ascii_table::Align::Left;
+            column
+        })
+        .collect()
 }
 
 /// Display the passed data as nice ascii table,
