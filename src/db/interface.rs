@@ -15,8 +15,8 @@ use crate::db::DbConnectionConfig;
 pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &Configuration) -> Result<()> {
     match matches.subcommand() {
         ("cli", Some(matches))        => cli(db_connection_config, matches, config),
-        ("artifacts", Some(matches))  => artifacts(db_connection_config),
-        ("envvars", Some(matches))    => envvars(db_connection_config),
+        ("artifacts", Some(matches))  => artifacts(db_connection_config, matches),
+        ("envvars", Some(matches))    => envvars(db_connection_config, matches),
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 }
@@ -113,10 +113,12 @@ fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &
         .run_for_uri(db_connection_config)
 }
 
-fn artifacts(conn_cfg: DbConnectionConfig) -> Result<()> {
+fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use diesel::RunQueryDsl;
     use crate::schema::artifacts::dsl;
     use crate::db::models;
+
+    let csv = matches.is_present("csv");
 
     let hdrs = vec![
         {
@@ -145,16 +147,18 @@ fn artifacts(conn_cfg: DbConnectionConfig) -> Result<()> {
     if data.is_empty() {
         info!("No artifacts in database");
     } else {
-        display_as_table(hdrs, data)?;
+        display_data(hdrs, data, csv)?;
     }
 
     Ok(())
 }
 
-fn envvars(conn_cfg: DbConnectionConfig) -> Result<()> {
+fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use diesel::RunQueryDsl;
     use crate::schema::envvars::dsl;
     use crate::db::models;
+
+    let csv = matches.is_present("csv");
 
     let hdrs = vec![
         {
@@ -189,7 +193,7 @@ fn envvars(conn_cfg: DbConnectionConfig) -> Result<()> {
     if data.is_empty() {
         info!("No environment variables in database");
     } else {
-        display_as_table(hdrs, data)?;
+        display_data(hdrs, data, csv)?;
     }
 
     Ok(())
@@ -197,31 +201,52 @@ fn envvars(conn_cfg: DbConnectionConfig) -> Result<()> {
 
 /// Display the passed data as nice ascii table,
 /// or, if stdout is a pipe, print it nicely parseable
-fn display_as_table<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>) -> Result<()> {
+fn display_data<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>, csv: bool) -> Result<()> {
     use std::io::Write;
 
-    if atty::is(atty::Stream::Stdout) {
-        let mut ascii_table = ascii_table::AsciiTable::default();
+    if csv {
+         use csv::WriterBuilder;
+         let mut wtr = WriterBuilder::new().from_writer(vec![]);
+         for record in data.into_iter() {
+             let r: Vec<String> = record.into_iter()
+                 .map(|e| e.to_string())
+                 .collect();
 
-        ascii_table.max_width = terminal_size::terminal_size()
-            .map(|tpl| tpl.0.0 as usize) // an ugly interface indeed!
-            .unwrap_or(80);
+             wtr.write_record(&r)?;
+         }
 
-        headers.into_iter()
-            .enumerate()
-            .for_each(|(i, c)| {
-                ascii_table.columns.insert(i, c);
-            });
-
-        ascii_table.print(data);
-    } else {
         let mut out = std::io::stdout();
         let mut lock = out.lock();
-        for list in data {
-            writeln!(lock, "{}", list.iter().map(|d| d.to_string()).join(" "))?;
+
+         wtr.into_inner()
+             .map_err(Error::from)
+             .and_then(|t| String::from_utf8(t).map_err(Error::from))
+             .and_then(|text| writeln!(lock, "{}", text).map_err(Error::from))
+
+    } else {
+        if atty::is(atty::Stream::Stdout) {
+            let mut ascii_table = ascii_table::AsciiTable::default();
+
+            ascii_table.max_width = terminal_size::terminal_size()
+                .map(|tpl| tpl.0.0 as usize) // an ugly interface indeed!
+                .unwrap_or(80);
+
+            headers.into_iter()
+                .enumerate()
+                .for_each(|(i, c)| {
+                    ascii_table.columns.insert(i, c);
+                });
+
+            ascii_table.print(data);
+            Ok(())
+        } else {
+            let mut out = std::io::stdout();
+            let mut lock = out.lock();
+            for list in data {
+                writeln!(lock, "{}", list.iter().map(|d| d.to_string()).join(" "))?;
+            }
+            Ok(())
         }
     }
-
-    Ok(())
 }
 

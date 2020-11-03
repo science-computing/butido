@@ -33,10 +33,24 @@ pub fn cli<'a>() -> App<'a> {
 
         .subcommand(App::new("artifacts")
             .about("List artifacts from the DB")
+            .arg(Arg::with_name("csv")
+                .required(false)
+                .multiple(false)
+                .long("csv")
+                .takes_value(false)
+                .help("Format output as CSV")
+            )
         )
 
         .subcommand(App::new("envvars")
             .about("List envvars from the DB")
+            .arg(Arg::with_name("csv")
+                .required(false)
+                .multiple(false)
+                .long("csv")
+                .takes_value(false)
+                .help("Format output as CSV")
+            )
         )
 
 }
