@@ -54,6 +54,8 @@ pub fn cli<'a>() -> App<'a> {
         )
 
 
+        .subcommand(crate::db::cli())
+
         .subcommand(App::new("build")
             .about("Build packages in containers")
 
