@@ -45,7 +45,7 @@ async fn main() -> Result<()> {
     let mut config = ::config::Config::default();
     config
         .merge(::config::File::with_name("config"))?
-        .merge(::config::Environment::with_prefix("YABOS"))?;
+        .merge(::config::Environment::with_prefix("BUTIDO"))?;
         // Add in settings from the environment (with a prefix of YABOS)
         // Eg.. `YABOS_DEBUG=1 ./target/app` would set the `debug` key
     //
