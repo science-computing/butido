@@ -31,5 +31,9 @@ pub fn cli<'a>() -> App<'a> {
             )
         )
 
+        .subcommand(App::new("artifacts")
+            .about("List artifacts from the DB")
+        )
+
 }
 

@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::fmt::Display;
 
 use clap_v3 as clap;
 use clap::ArgMatches;
@@ -13,6 +14,7 @@ use crate::db::DbConnectionConfig;
 pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &Configuration) -> Result<()> {
     match matches.subcommand() {
         ("cli", Some(matches))        => cli(db_connection_config, matches, config),
+        ("artifacts", Some(matches))  => artifacts(db_connection_config),
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 }
@@ -108,3 +110,58 @@ fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &
         .ok_or_else(|| anyhow!("No Program found"))?
         .run_for_uri(db_connection_config)
 }
+
+fn artifacts(conn_cfg: DbConnectionConfig) -> Result<()> {
+    use diesel::RunQueryDsl;
+    use crate::schema::artifacts::dsl;
+    use crate::db::models;
+
+    let hdrs = vec![
+        {
+            let mut column = ascii_table::Column::default();
+            column.header  = "Id".into();
+            column.align   = ascii_table::Align::Left;
+            column
+        },
+        {
+            let mut column = ascii_table::Column::default();
+            column.header  = "Path".into();
+            column.align   = ascii_table::Align::Left;
+            column
+        }
+    ];
+
+    let connection = crate::db::establish_connection(conn_cfg)?;
+    let data = dsl::artifacts
+        .load::<models::Artifact>(&connection)?
+        .into_iter()
+        .map(|artifact| {
+            vec![format!("{}", artifact.id), artifact.path]
+        })
+        .collect::<Vec<_>>();
+
+    if data.is_empty() {
+        info!("No artifacts in database");
+    } else {
+        display_as_table(hdrs, data);
+    }
+
+    Ok(())
+}
+
+fn display_as_table<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>) {
+    let mut ascii_table = ascii_table::AsciiTable::default();
+
+    ascii_table.max_width = terminal_size::terminal_size()
+        .map(|tpl| tpl.0.0 as usize) // an ugly interface indeed!
+        .unwrap_or(80);
+
+    headers.into_iter()
+        .enumerate()
+        .for_each(|(i, c)| {
+            ascii_table.columns.insert(i, c);
+        });
+
+    ascii_table.print(data);
+}
+
