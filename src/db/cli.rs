@@ -35,5 +35,9 @@ pub fn cli<'a>() -> App<'a> {
             .about("List artifacts from the DB")
         )
 
+        .subcommand(App::new("envvars")
+            .about("List envvars from the DB")
+        )
+
 }
 

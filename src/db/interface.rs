@@ -15,6 +15,7 @@ pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches,
     match matches.subcommand() {
         ("cli", Some(matches))        => cli(db_connection_config, matches, config),
         ("artifacts", Some(matches))  => artifacts(db_connection_config),
+        ("envvars", Some(matches))    => envvars(db_connection_config),
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 }
@@ -142,6 +143,50 @@ fn artifacts(conn_cfg: DbConnectionConfig) -> Result<()> {
 
     if data.is_empty() {
         info!("No artifacts in database");
+    } else {
+        display_as_table(hdrs, data);
+    }
+
+    Ok(())
+}
+
+fn envvars(conn_cfg: DbConnectionConfig) -> Result<()> {
+    use diesel::RunQueryDsl;
+    use crate::schema::envvars::dsl;
+    use crate::db::models;
+
+    let hdrs = vec![
+        {
+            let mut column = ascii_table::Column::default();
+            column.header  = "Id".into();
+            column.align   = ascii_table::Align::Left;
+            column
+        },
+        {
+            let mut column = ascii_table::Column::default();
+            column.header  = "Name".into();
+            column.align   = ascii_table::Align::Left;
+            column
+        },
+        {
+            let mut column = ascii_table::Column::default();
+            column.header  = "Value".into();
+            column.align   = ascii_table::Align::Left;
+            column
+        }
+    ];
+
+    let connection = crate::db::establish_connection(conn_cfg)?;
+    let data = dsl::envvars
+        .load::<models::EnvVar>(&connection)?
+        .into_iter()
+        .map(|evar| {
+            vec![format!("{}", evar.id), evar.name, evar.value]
+        })
+        .collect::<Vec<_>>();
+
+    if data.is_empty() {
+        info!("No environment variables in database");
     } else {
         display_as_table(hdrs, data);
     }
