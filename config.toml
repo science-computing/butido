@@ -45,6 +45,21 @@ releases = "/tmp/releases"
 #
 staging  = "/tmp/staging"
 
+# ####
+#
+# Log database configuration
+#
+# ####
+
+# The database to use
+#
+# Can be overridden via environment vairbale BUTIDO_DATABASE_URI or set via CLI.
+database_host     = "localhost"
+database_port     = 5432
+database_user     = "pgdev"
+database_password = "password"
+database_name     = "butido"
+
 # Phases which can be configured in the packages
 
 # This also defines the _order_ in which the phases are executed
