@@ -53,5 +53,16 @@ pub fn cli<'a>() -> App<'a> {
             )
         )
 
+        .subcommand(App::new("images")
+            .about("List images from the DB")
+            .arg(Arg::with_name("csv")
+                .required(false)
+                .multiple(false)
+                .long("csv")
+                .takes_value(false)
+                .help("Format output as CSV")
+            )
+        )
+
 }
 

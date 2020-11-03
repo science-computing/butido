@@ -17,6 +17,7 @@ pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches,
         ("cli", Some(matches))        => cli(db_connection_config, matches, config),
         ("artifacts", Some(matches))  => artifacts(db_connection_config, matches),
         ("envvars", Some(matches))    => envvars(db_connection_config, matches),
+        ("images", Some(matches))     => images(db_connection_config, matches),
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 }
@@ -192,6 +193,46 @@ fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 
     if data.is_empty() {
         info!("No environment variables in database");
+    } else {
+        display_data(hdrs, data, csv)?;
+    }
+
+    Ok(())
+}
+
+fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+    use diesel::RunQueryDsl;
+    use crate::schema::images::dsl;
+    use crate::db::models;
+
+    let csv = matches.is_present("csv");
+
+    let hdrs = vec![
+        {
+            let mut column = ascii_table::Column::default();
+            column.header  = "Id".into();
+            column.align   = ascii_table::Align::Left;
+            column
+        },
+        {
+            let mut column = ascii_table::Column::default();
+            column.header  = "Name".into();
+            column.align   = ascii_table::Align::Left;
+            column
+        }
+    ];
+
+    let connection = crate::db::establish_connection(conn_cfg)?;
+    let data = dsl::images
+        .load::<models::Image>(&connection)?
+        .into_iter()
+        .map(|image| {
+            vec![format!("{}", image.id), image.name]
+        })
+        .collect::<Vec<_>>();
+
+    if data.is_empty() {
+        info!("No images in database");
     } else {
         display_data(hdrs, data, csv)?;
     }
