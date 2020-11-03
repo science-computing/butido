@@ -55,7 +55,6 @@ async fn main() -> Result<()> {
     let repo_path             = PathBuf::from(config.repository());
     let max_packages          = count_pkg_files(&repo_path, ProgressBar::new_spinner());
     let mut progressbars      = ProgressBars::setup();
-    let db                    = db::establish_connection(&config, &cli)?;
 
     let repo = {
         let bar = progressbars.repo_loading();
@@ -65,7 +64,9 @@ async fn main() -> Result<()> {
         repo
     };
 
+    let db_connection_config = crate::db::parse_db_connection_config(&config, &cli);
     match cli.subcommand() {
+        ("db", Some(matches))           => db::interface(db_connection_config, matches, &config)?,
         ("build", Some(matches))        => {
             let bar_tree_building = progressbars.tree_building();
             bar_tree_building.set_length(max_packages);

@@ -29,6 +29,7 @@ handlebars  = "3"
 filters     = "0.4.0"
 indoc       = "1"
 diesel      = { version = "1.4", features = ["postgres"] }
+which       = "4"
 
 url      = { version = "2", features = ["serde"] }
 tokio    = { version = "0.2", features = ["full"] }
