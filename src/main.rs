@@ -25,6 +25,7 @@ mod repository;
 mod filestore;
 mod ui;
 mod schema;
+mod db;
 use crate::config::*;
 use crate::repository::Repository;
 use crate::package::PackageName;
@@ -54,6 +55,7 @@ async fn main() -> Result<()> {
     let repo_path             = PathBuf::from(config.repository());
     let max_packages          = count_pkg_files(&repo_path, ProgressBar::new_spinner());
     let mut progressbars      = ProgressBars::setup();
+    let db                    = db::establish_connection(&config, &cli)?;
 
     let repo = {
         let bar = progressbars.repo_loading();
