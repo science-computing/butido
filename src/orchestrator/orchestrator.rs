@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use typed_builder::TypedBuilder;
+use diesel::PgConnection;
 
 use crate::endpoint::EndpointManagerConfiguration;
 use crate::endpoint::EndpointScheduler;
@@ -18,6 +19,7 @@ pub struct Orchestrator {
     staging_store: Arc<RwLock<StagingStore>>,
     release_store: Arc<RwLock<ReleaseStore>>,
     jobsets: Vec<JobSet>,
+    database: PgConnection,
 }
 
 #[derive(TypedBuilder)]
@@ -26,6 +28,7 @@ pub struct OrchestratorSetup {
     staging_store: Arc<RwLock<StagingStore>>,
     release_store: Arc<RwLock<ReleaseStore>>,
     jobsets: Vec<JobSet>,
+    database: PgConnection,
 }
 
 impl OrchestratorSetup {
@@ -37,6 +40,7 @@ impl OrchestratorSetup {
             staging_store:  self.staging_store,
             release_store:  self.release_store,
             jobsets:        self.jobsets,
+            database:       self.database,
         })
     }
 }
