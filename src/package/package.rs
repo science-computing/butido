@@ -87,13 +87,13 @@ impl Package {
             .system()
             .iter()
             .cloned()
-            .map(|d| d.parse_into_name_and_version());
+            .map(|d| d.parse_as_name_and_version());
 
         let system_runtime_iter = self.dependencies()
             .system_runtime()
             .iter()
             .cloned()
-            .map(|d| d.parse_into_name_and_version());
+            .map(|d| d.parse_as_name_and_version());
 
         system_iter.chain(system_runtime_iter)
     }
@@ -103,13 +103,13 @@ impl Package {
             .build()
             .iter()
             .cloned()
-            .map(|d| d.parse_into_name_and_version());
+            .map(|d| d.parse_as_name_and_version());
 
         let runtime_iter = self.dependencies()
             .runtime()
             .iter()
             .cloned()
-            .map(|d| d.parse_into_name_and_version());
+            .map(|d| d.parse_as_name_and_version());
 
         build_iter.chain(runtime_iter)
     }
