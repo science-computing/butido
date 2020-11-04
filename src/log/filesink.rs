@@ -31,7 +31,7 @@ impl FileSink {
 
 impl LogSink for FileSink {
     fn log_item(&mut self, item: LogItem) -> Result<()> {
-        let s: String = item.try_into()?;
+        let s = item.display()?;
         writeln!(self.file, "{}", s)?;
         Ok(())
     }

@@ -19,17 +19,23 @@ pub enum LogItem {
     State(Result<String, String>),
 }
 
-impl TryInto<String> for LogItem {
-    type Error = anyhow::Error;
-
-    fn try_into(self) -> Result<String> {
+impl LogItem {
+    pub fn display(&self) -> Result<Display> {
         match self {
-            LogItem::Line(v)         => String::from_utf8(v).map_err(Error::from),
-            LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u)),
-            LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p)),
-            LogItem::State(Ok(s))    => Ok(format!("#BUTIDO:STATE:OK:{}", s)),
-            LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s)),
+            LogItem::Line(s)         => Ok(Display(String::from_utf8(s.to_vec())?)),
+            LogItem::Progress(u)     => Ok(Display(format!("#BUTIDO:PROGRESS:{}", u))),
+            LogItem::CurrentPhase(p) => Ok(Display(format!("#BUTIDO:PHASE:{}", p))),
+            LogItem::State(Ok(s))    => Ok(Display(format!("#BUTIDO:STATE:OK:{}", s))),
+            LogItem::State(Err(s))   => Ok(Display(format!("#BUTIDO:STATE:ERR:{}", s))),
         }
+    }
+}
+
+pub struct Display(String);
+
+impl std::fmt::Display for Display {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        write!(f, "{}", self.0)
     }
 }
 
