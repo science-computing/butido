@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use crate::filestore::Artifact;
 
 /// TODO implement
 #[derive(Debug)]
 pub enum JobResource {
     Environment(String, String),
-    Path(PathBuf)
+    Artifact(Artifact)
 }
 

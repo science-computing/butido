@@ -173,7 +173,7 @@ impl EndpointManager {
                 .iter()
                 .filter_map(|r| match r {
                     JobResource::Environment(k, v) => Some(format!("{}={}", k, v)),
-                    JobResource::Path(_)           => None,
+                    JobResource::Artifact(_)       => None,
                 })
                 .collect();
 
