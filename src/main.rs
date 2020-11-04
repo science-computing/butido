@@ -197,22 +197,12 @@ async fn what_depends(matches: &ArgMatches, repo: Repository, progress: Progress
 
 async fn dependencies_of(matches: &ArgMatches, repo: Repository, progress: ProgressBar) -> Result<()> {
     use filters::filter::Filter;
-    use crate::package::PackageVersionConstraint;
 
     let package_filter = {
         let name = matches.value_of("package_name").map(String::from).map(PackageName::from).unwrap();
         trace!("Checking for package with name = {}", name);
 
-        let version_constraint = matches
-            .value_of("package_version_constraint")
-            .map(|s| PackageVersionConstraint::parse(s))
-            .transpose()?;
-
-        trace!("Checking for package with version constraint = {:?}", version_constraint);
-
-        crate::util::filters::build_package_filter_by_name_and_version(
-            name, version_constraint
-        )
+        crate::util::filters::build_package_filter_by_name(name)
     };
 
     let format = matches.value_of("list-format").unwrap(); // safe by clap default value

@@ -16,6 +16,7 @@ use indicatif::ProgressBar;
 use crate::filestore::Artifact;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
+use crate::package::PackageVersionConstraint;
 
 /// The actual filestore implementation
 ///
@@ -64,10 +65,10 @@ impl FileStoreImpl {
             .collect()
     }
 
-    pub fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersion) -> Vec<&Artifact> {
+    pub fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersionConstraint) -> Vec<&Artifact> {
         self.store
             .values()
-            .filter(|a| a.name() == name && a.version() == version)
+            .filter(|a| a.name() == name && version.matches(a.version()))
             .collect()
     }
 
