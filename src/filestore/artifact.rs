@@ -1,5 +1,8 @@
 use std::path::Path;
 use std::path::PathBuf;
+use std::cmp::PartialOrd;
+use std::cmp::Ord;
+use std::cmp::Ordering;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -12,7 +15,7 @@ use getset::Getters;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 
-#[derive(Debug, Getters)]
+#[derive(Clone, PartialEq, Eq, Debug, Getters)]
 pub struct Artifact {
     #[getset(get = "pub")]
     path: PathBuf,
@@ -23,6 +26,19 @@ pub struct Artifact {
     #[getset(get = "pub")]
     version: PackageVersion,
 }
+
+impl PartialOrd for Artifact {
+    fn partial_cmp(&self, other: &Artifact) -> Option<Ordering> {
+        self.version.partial_cmp(&other.version)
+    }
+}
+
+impl Ord for Artifact {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.version.cmp(&other.version)
+    }
+}
+
 
 impl Artifact {
     pub fn load(path: &Path) -> Result<Self> {
