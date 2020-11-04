@@ -13,6 +13,8 @@ use crate::job::RunnableJob;
 use crate::log::LogItem;
 use crate::filestore::StagingStore;
 use crate::filestore::ReleaseStore;
+use crate::log::FileLogSinkFactory;
+use crate::log::LogSink;
 
 pub struct Orchestrator {
     scheduler: EndpointScheduler,
@@ -20,6 +22,7 @@ pub struct Orchestrator {
     release_store: Arc<RwLock<ReleaseStore>>,
     jobsets: Vec<JobSet>,
     database: PgConnection,
+    file_log_sink_factory: Option<FileLogSinkFactory>,
 }
 
 #[derive(TypedBuilder)]
@@ -29,6 +32,7 @@ pub struct OrchestratorSetup {
     release_store: Arc<RwLock<ReleaseStore>>,
     jobsets: Vec<JobSet>,
     database: PgConnection,
+    file_log_sink_factory: Option<FileLogSinkFactory>,
 }
 
 impl OrchestratorSetup {
@@ -36,11 +40,12 @@ impl OrchestratorSetup {
         let scheduler = EndpointScheduler::setup(self.ep_cfg, self.staging_store.clone()).await?;
 
         Ok(Orchestrator {
-            scheduler:      scheduler,
-            staging_store:  self.staging_store,
-            release_store:  self.release_store,
-            jobsets:        self.jobsets,
-            database:       self.database,
+            scheduler:             scheduler,
+            staging_store:         self.staging_store,
+            release_store:         self.release_store,
+            jobsets:               self.jobsets,
+            database:              self.database,
+            file_log_sink_factory: self.file_log_sink_factory,
         })
     }
 }
