@@ -6,6 +6,16 @@ let
   );
 
   pkgs = import <nixpkgs> { overlays = [ moz_overlay ]; };
+
+  pgcli-dev = pkgs.writeShellScriptBin "pgcli-dev" ''
+    exec ${pkgs.pgcli}/bin/pgcli -h localhost -p 5432 ${PG_DB} ${PG_USER}
+  '';
+
+  PG_USER           = "pgdev";
+  PG_DB             = "butido";
+  PG_PW             = "password";
+  PG_CONTAINER_NAME = "pg-dev-container";
+
 in
 pkgs.mkShell {
   buildInputs = with pkgs; [
@@ -13,6 +23,11 @@ pkgs.mkShell {
     rustChannels.stable.rust
     rustChannels.stable.rustc
     rustChannels.stable.cargo
+
+    diesel-cli
+    pgcli
+    pgcli-dev
+    postgresql
 
     cmake
     curl
@@ -23,11 +38,8 @@ pkgs.mkShell {
     zlib
   ];
 
-  shellHook = ''
-    alias docker='docker --host=tcp://localhost:8095'
-  '';
-
   LIBCLANG_PATH   = "${pkgs.llvmPackages.libclang}/lib";
+  inherit PG_USER PG_DB PG_PW PG_CONTAINER_NAME;
 }
 
 

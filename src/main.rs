@@ -1,4 +1,5 @@
 #[macro_use] extern crate log as logcrate;
+#[macro_use] extern crate diesel;
 use logcrate::debug;
 
 use std::path::Path;
@@ -25,6 +26,8 @@ mod repository;
 mod filestore;
 mod ui;
 mod orchestrator;
+mod schema;
+mod db;
 use crate::config::*;
 use crate::repository::Repository;
 use crate::package::PackageName;
@@ -45,7 +48,7 @@ async fn main() -> Result<()> {
     let mut config = ::config::Config::default();
     config
         .merge(::config::File::with_name("config"))?
-        .merge(::config::Environment::with_prefix("YABOS"))?;
+        .merge(::config::Environment::with_prefix("BUTIDO"))?;
         // Add in settings from the environment (with a prefix of YABOS)
         // Eg.. `YABOS_DEBUG=1 ./target/app` would set the `debug` key
     //
@@ -55,16 +58,19 @@ async fn main() -> Result<()> {
     let max_packages          = count_pkg_files(&repo_path, ProgressBar::new_spinner());
     let mut progressbars      = ProgressBars::setup();
 
-    let repo = {
+    let mut load_repo = || -> Result<Repository> {
         let bar = progressbars.repo_loading();
         bar.set_length(max_packages);
         let repo = Repository::load(&repo_path, &bar)?;
         bar.finish_with_message("Repository loading finished");
-        repo
+        Ok(repo)
     };
 
+    let db_connection_config = crate::db::parse_db_connection_config(&config, &cli);
     match cli.subcommand() {
+        ("db", Some(matches))           => db::interface(db_connection_config, matches, &config)?,
         ("build", Some(matches))        => {
+            let repo = load_repo()?;
             let bar_tree_building = progressbars.tree_building();
             bar_tree_building.set_length(max_packages);
 
@@ -77,12 +83,14 @@ async fn main() -> Result<()> {
             build(matches, &config, repo, bar_tree_building, bar_release_loading, bar_staging_loading).await?
         },
         ("what-depends", Some(matches)) => {
+            let repo = load_repo()?;
             let bar = progressbars.what_depends();
             bar.set_length(max_packages);
             what_depends(matches, repo, bar).await?
         },
 
         ("dependencies-of", Some(matches)) => {
+            let repo = load_repo()?;
             let bar = progressbars.what_depends();
             bar.set_length(max_packages);
             dependencies_of(matches, repo, bar).await?
