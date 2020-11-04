@@ -26,7 +26,7 @@ impl Tree {
                 ($pack).get_self_packaged_dependencies()
                     .and_then_ok(|(name, constr)| {
                         trace!("Dependency: {:?}", name);
-                        let pack = ($repo).find_with_version_constraint(&name, &constr);
+                        let pack = ($repo).find_with_version(&name, &constr);
                         trace!("Found: {:?}", pack);
 
                         if pack.iter().any(|p| ($root).has_package(p)) {

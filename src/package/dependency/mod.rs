@@ -47,9 +47,9 @@ pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_
     let vers = caps.name("version")
         .ok_or_else(|| anyhow!("Could not parse version: '{}'", s))?;
 
-    let constraint = PackageVersionConstraint::parse(vers.as_str())?;
+    let v = PackageVersionConstraint::parser().parse(vers.as_str().as_bytes())?;
 
-    Ok((PackageName::from(String::from(name.as_str())), constraint))
+    Ok((PackageName::from(String::from(name.as_str())), v))
 }
 
 #[cfg(test)]
@@ -61,7 +61,6 @@ mod tests {
     use crate::package::Package;
     use crate::package::PackageName;
     use crate::package::PackageVersion;
-    use crate::package::PackageVersionConstraint;
 
     //
     // helper functions
@@ -71,12 +70,8 @@ mod tests {
         PackageName::from(String::from(s))
     }
 
-    fn exact(s: &'static str) -> PackageVersionConstraint {
-        PackageVersionConstraint::Exact(PackageVersion::from(String::from(s)))
-    }
-
-    fn higher_as(s: &'static str) -> PackageVersionConstraint {
-        PackageVersionConstraint::HigherAs(PackageVersion::from(String::from(s)))
+    fn exact(s: &'static str) -> PackageVersion {
+        PackageVersion::from(String::from(s))
     }
 
     //
@@ -91,17 +86,17 @@ mod tests {
         let (n, c) = d.parse_into_name_and_version().unwrap();
 
         assert_eq!(n, name("vim"));
-        assert_eq!(c, exact("8.2"));
+        assert_eq!(c, PackageVersionConstraint::from_version(String::from("="), exact("8.2")));
     }
 
     #[test]
     fn test_dependency_conversion_2() {
-        let s = "gtk15 >1b";
+        let s = "gtk15 =1b";
         let d = Dependency::from(String::from(s));
 
         let (n, c) = d.parse_into_name_and_version().unwrap();
 
         assert_eq!(n, name("gtk15"));
-        assert_eq!(c, higher_as("1b"));
+        assert_eq!(c, PackageVersionConstraint::from_version(String::from("="), exact("1b")));
     }
 }

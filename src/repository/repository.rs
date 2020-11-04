@@ -97,12 +97,10 @@ impl Repository {
             .collect()
     }
 
-    pub fn find_with_version_constraint<'a>(&'a self, name: &PackageName, vc: &PackageVersionConstraint) -> Vec<&'a Package> {
+    pub fn find_with_version<'a>(&'a self, name: &PackageName, vc: &PackageVersionConstraint) -> Vec<&'a Package> {
         self.inner
             .iter()
-            .filter(|((n, v), _)| {
-                n == name && vc.matches(v).map(|mtch| !mtch.is_false()).unwrap_or(false)
-            })
+            .filter(|((n, v), _)| n == name && vc.matches(v))
             .map(|(_, p)| p)
             .collect()
     }
@@ -169,52 +167,6 @@ pub mod tests {
         assert!(!p.version_is_semver());
     }
 
-    #[test]
-    fn test_find_with_vers_constr_any() {
-        let mut btree = BTreeMap::new();
-
-        {
-            let name = "a";
-            let vers = "1";
-            let pack = package(name, vers, "https://rust-lang.org", "123");
-            btree.insert((pname(name), pversion(vers)), pack);
-        }
-        {
-            let name = "a";
-            let vers = "2";
-            let pack = package(name, vers, "https://rust-lang.org", "124");
-            btree.insert((pname(name), pversion(vers)), pack);
-        }
-        {
-            let name = "a";
-            let vers = "3";
-            let pack = package(name, vers, "https://rust-lang.org", "125");
-            btree.insert((pname(name), pversion(vers)), pack);
-        }
-
-        let repo = Repository::from(btree);
-
-        let constraint = PackageVersionConstraint::Any;
-
-        let ps = repo.find_with_version_constraint(&pname("a"), &constraint);
-        assert_eq!(ps.len(), 3);
-
-        let p = ps.get(0).unwrap();
-        assert_eq!(*p.name(), pname("a"));
-        assert_eq!(*p.version(), pversion("1"));
-        assert!(!p.version_is_semver());
-
-        let p = ps.get(1).unwrap();
-        assert_eq!(*p.name(), pname("a"));
-        assert_eq!(*p.version(), pversion("2"));
-        assert!(!p.version_is_semver());
-
-        let p = ps.get(2).unwrap();
-        assert_eq!(*p.name(), pname("a"));
-        assert_eq!(*p.version(), pversion("3"));
-        assert!(!p.version_is_semver());
-    }
-
 
     #[test]
     fn test_find_with_vers_constr_exact() {
@@ -241,9 +193,9 @@ pub mod tests {
 
         let repo = Repository::from(btree);
 
-        let constraint = PackageVersionConstraint::Exact(pversion("2"));
+        let constraint = PackageVersionConstraint::from_version(String::from("="), pversion("2"));
 
-        let ps = repo.find_with_version_constraint(&pname("a"), &constraint);
+        let ps = repo.find_with_version(&pname("a"), &constraint);
         assert_eq!(ps.len(), 1);
 
         let p = ps.get(0).unwrap();

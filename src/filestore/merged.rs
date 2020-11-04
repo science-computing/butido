@@ -3,6 +3,7 @@ use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
+use crate::package::PackageVersionConstraint;
 
 /// A type that merges the release store and the staging store
 ///
@@ -35,16 +36,16 @@ impl<'a> MergedStores<'a> {
         }
     }
 
-    pub fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersion) -> Vec<&Artifact> {
+    pub fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersionConstraint) -> Vec<&Artifact> {
         let v = self.staging.0
             .values()
-            .filter(|a| a.name() == name && a.version() == version)
+            .filter(|a| a.name() == name && version.matches(a.version()))
             .collect::<Vec<_>>();
 
         if v.is_empty() {
             self.release.0
                 .values()
-                .filter(|a| a.name() == name && a.version() == version)
+                .filter(|a| a.name() == name && version.matches(a.version()))
                 .collect()
         } else {
             v
