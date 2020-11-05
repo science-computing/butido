@@ -10,3 +10,6 @@ pub use image::*;
 mod githash;
 pub use githash::*;
 
+mod package;
+pub use package::*;
+
