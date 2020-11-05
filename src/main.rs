@@ -86,7 +86,7 @@ async fn main() -> Result<()> {
             let bar_staging_loading = progressbars.staging_loading();
             bar_staging_loading.set_length(max_packages);
 
-            build(matches, conn, &config, repo, bar_tree_building, bar_release_loading, bar_staging_loading).await?
+            build(matches, conn, &config, repo, &repo_path, bar_tree_building, bar_release_loading, bar_staging_loading).await?
         },
         ("what-depends", Some(matches)) => {
             let repo = load_repo()?;
@@ -112,6 +112,7 @@ async fn build<'a>(matches: &ArgMatches,
                database_connection: PgConnection,
                config: &Configuration<'a>,
                repo: Repository,
+               repo_path: &Path,
                bar_tree_building: ProgressBar,
                bar_release_loading: ProgressBar,
                bar_staging_loading: ProgressBar)
@@ -119,6 +120,7 @@ async fn build<'a>(matches: &ArgMatches,
 {
     use crate::db::models::{Package, NewPackage};
     use schema::packages;
+    use schema::githashes;
 
     let release_dir  = async move {
         let variables = BTreeMap::new();
@@ -194,6 +196,23 @@ async fn build<'a>(matches: &ArgMatches,
             .load::<crate::db::models::Package>(&database_connection)?
     };
 
+    let db_githash = {
+        use crate::schema::githashes::*;
+        use crate::db::models::NewGitHash;
+
+        let hash_str = crate::util::git::get_repo_head_commit_hash(repo_path)?;
+        let new_hash = NewGitHash { hash: &hash_str };
+
+        diesel::insert_into(githashes::table)
+            .values(&new_hash)
+            .on_conflict_do_nothing()
+            .execute(&database_connection)?;
+
+        crate::schema::githashes::dsl::githashes
+            .filter(hash.eq(hash_str))
+            .limit(1)
+            .load::<crate::db::models::GitHash>(&database_connection)?
+    };
 
 
     Ok(())
