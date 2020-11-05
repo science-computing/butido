@@ -3,10 +3,10 @@ use typed_builder::TypedBuilder;
 use anyhow::Result;
 
 use crate::util::docker::ImageName;
-use crate::endpoint::EndpointManager;
+use crate::endpoint::ConfiguredEndpoint;
 
 #[derive(Getters, TypedBuilder)]
-pub struct EndpointManagerConfiguration {
+pub struct EndpointConfiguration {
     #[getset(get = "pub")]
     endpoint: crate::config::Endpoint,
 
@@ -23,9 +23,9 @@ pub struct EndpointManagerConfiguration {
     required_docker_api_versions: Option<Vec<String>>,
 }
 
-impl EndpointManagerConfiguration {
-    pub async fn connect(self) -> Result<EndpointManager> {
-        EndpointManager::setup(self).await
+impl EndpointConfiguration {
+    pub async fn connect(self) -> Result<ConfiguredEndpoint> {
+        ConfiguredEndpoint::setup(self).await
     }
 }
 

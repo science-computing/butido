@@ -6,7 +6,7 @@ use anyhow::Result;
 use typed_builder::TypedBuilder;
 use diesel::PgConnection;
 
-use crate::endpoint::EndpointManagerConfiguration;
+use crate::endpoint::EndpointConfiguration;
 use crate::endpoint::EndpointScheduler;
 use crate::job::JobSet;
 use crate::job::RunnableJob;
@@ -27,7 +27,7 @@ pub struct Orchestrator {
 
 #[derive(TypedBuilder)]
 pub struct OrchestratorSetup {
-    ep_cfg: Vec<EndpointManagerConfiguration>,
+    ep_cfg: Vec<EndpointConfiguration>,
     staging_store: Arc<RwLock<StagingStore>>,
     release_store: Arc<RwLock<ReleaseStore>>,
     jobsets: Vec<JobSet>,
