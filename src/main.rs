@@ -121,6 +121,7 @@ async fn build<'a>(matches: &ArgMatches,
     use crate::db::models::{Package, NewPackage};
     use schema::packages;
     use schema::githashes;
+    use schema::images;
 
     let release_dir  = async move {
         let variables = BTreeMap::new();
@@ -176,6 +177,8 @@ async fn build<'a>(matches: &ArgMatches,
     tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
     bar_tree_building.finish_with_message("Finished loading Tree");
 
+    let image_name = matches.value_of("image").unwrap(); // safe by clap
+
     let db_package = {
         use crate::schema::packages::*;
 
@@ -213,6 +216,24 @@ async fn build<'a>(matches: &ArgMatches,
             .limit(1)
             .load::<crate::db::models::GitHash>(&database_connection)?
     };
+
+    let db_image = {
+        use crate::schema::images::*;
+        use crate::db::models::NewImage;
+
+        let new_image = NewImage { name: &image_name };
+
+        diesel::insert_into(images::table)
+            .values(&new_image)
+            .on_conflict_do_nothing()
+            .execute(&database_connection)?;
+
+        crate::schema::images::dsl::images
+            .filter(name.eq(&image_name))
+            .limit(1)
+            .load::<crate::db::models::Image>(&database_connection)?
+    };
+
 
 
     Ok(())
