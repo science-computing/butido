@@ -132,6 +132,32 @@ async fn build<'a>(matches: &ArgMatches,
     let submit_id = uuid::Uuid::new_v4();
     info!("Submit {}, started {}", submit_id, now);
 
+    let image_name = matches.value_of("image").unwrap(); // safe by clap
+    let hash_str   = crate::util::git::get_repo_head_commit_hash(repo_path)?;
+
+    let pname = matches.value_of("package_name")
+        .map(String::from)
+        .map(PackageName::from)
+        .unwrap(); // safe by clap
+
+    let pvers = matches.value_of("package_version")
+        .map(String::from)
+        .map(PackageVersion::from);
+
+    let packages = if let Some(pvers) = pvers {
+        repo.find(&pname, &pvers)
+    } else {
+        repo.find_by_name(&pname)
+    };
+    debug!("Found {} relevant packages", packages.len());
+
+    /// We only support building one package per call.
+    /// Everything else is invalid
+    if packages.len() > 1 {
+        return Err(anyhow!("Found multiple packages ({}). Cannot decide which one to build", packages.len()))
+    }
+    let package = *packages.get(0).ok_or_else(|| anyhow!("Found no package."))?;
+
     let release_dir  = async move {
         let variables = BTreeMap::new();
         let p = config.releases_directory(&variables)?;
@@ -158,39 +184,28 @@ async fn build<'a>(matches: &ArgMatches,
         r
     };
 
-
-    let pname = matches.value_of("package_name")
-        .map(String::from)
-        .map(PackageName::from)
-        .unwrap(); // safe by clap
-
-    let pvers = matches.value_of("package_version")
-        .map(String::from)
-        .map(PackageVersion::from);
-
-    let packages = if let Some(pvers) = pvers {
-        repo.find(&pname, &pvers)
-    } else {
-        repo.find_by_name(&pname)
+    let tree = async {
+        let mut tree = Tree::new();
+        tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
+        bar_tree_building.finish_with_message("Finished loading Tree");
+        Ok(tree) as Result<Tree>
     };
-    debug!("Found {} relevant packages", packages.len());
 
-    /// We only support building one package per call.
-    /// Everything else is invalid
-    if packages.len() > 1 {
-        return Err(anyhow!("Found multiple packages ({}). Cannot decide which one to build", packages.len()))
-    }
-    let package = *packages.get(0).ok_or_else(|| anyhow!("Found no package."))?;
+    let db_package = async { Package::create_or_fetch(&database_connection, &package) };
+    let db_githash = async { GitHash::create_or_fetch(&database_connection, &hash_str) };
+    let db_image   = async { Image::create_or_fetch(&database_connection, &image_name) };
 
-    let mut tree = Tree::new();
-    tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
-    bar_tree_building.finish_with_message("Finished loading Tree");
 
-    let image_name = matches.value_of("image").unwrap(); // safe by clap
-    let hash_str   = crate::util::git::get_repo_head_commit_hash(repo_path)?;
-    let db_package = Package::create_or_fetch(&database_connection, &package)?;
-    let db_githash = GitHash::create_or_fetch(&database_connection, &hash_str)?;
-    let db_image   = Image::create_or_fetch(&database_connection, &image_name)?;
+    let (tree, db_package, db_githash, db_image) = tokio::join!(
+        tree,
+        db_package,
+        db_githash,
+        db_image
+    );
+
+    let (tree, db_package, db_githash, db_image) =
+        (tree?, db_package?, db_githash?, db_image?);
+
     let submit = Submit::create(&database_connection,
         &tree,
         &now,
