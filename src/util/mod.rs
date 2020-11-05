@@ -4,6 +4,7 @@ use serde::Deserialize;
 pub struct EnvironmentVariableName(String);
 
 pub mod filters;
+pub mod git;
 pub mod parser;
 pub mod progress;
 
