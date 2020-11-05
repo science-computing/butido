@@ -13,3 +13,6 @@ pub use githash::*;
 mod package;
 pub use package::*;
 
+mod submit;
+pub use submit::*;
+
