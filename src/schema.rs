@@ -89,7 +89,6 @@ table! {
         requested_package_id -> Int4,
         repo_hash_id -> Int4,
         tree -> Jsonb,
-        buildplan -> Jsonb,
     }
 }
 

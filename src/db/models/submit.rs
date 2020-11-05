@@ -11,6 +11,5 @@ pub struct Submit {
     pub requested_package_id: i32,
     pub repo_hash_id: i32,
     pub tree: Jsonb,
-    pub buildplan: Jsonb,
 }
 
