@@ -7,3 +7,18 @@ pub enum JobResource {
     Artifact(Artifact)
 }
 
+impl JobResource {
+    pub fn env(&self) -> Option<(&String, &String)> {
+        match self {
+            JobResource::Environment(k, v) => Some((k, v)),
+            _ => None
+        }
+    }
+    pub fn artifact(&self) -> Option<&Artifact> {
+        match self {
+            JobResource::Artifact(a) => Some(a),
+            _ => None
+        }
+    }
+}
+
