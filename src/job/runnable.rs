@@ -35,7 +35,7 @@ pub struct RunnableJob {
 }
 
 impl RunnableJob {
-    pub fn build_from_job<'a>(job: Job, merged_stores: &'a MergedStores<'a>) -> Result<Self> {
+    pub fn build_from_job(job: Job, merged_stores: &MergedStores) -> Result<Self> {
         let script = ScriptBuilder::new(&job.script_shebang)
             .build(&job.package, &job.script_phases)?;
 
@@ -45,7 +45,7 @@ impl RunnableJob {
             .into_iter()
             .map(|runtime_dep| {
                 let (name, version) = runtime_dep.parse_as_name_and_version()?;
-                let mut a = merged_stores.get_artifact_by_name_and_version(&name, &version);
+                let mut a = merged_stores.get_artifact_by_name_and_version(&name, &version)?;
 
                 if a.is_empty() {
                     Err(anyhow!("Cannot find dependency: {:?} {:?}", name, version))

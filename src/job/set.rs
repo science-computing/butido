@@ -23,7 +23,7 @@ impl JobSet {
         self.set.is_empty()
     }
 
-    pub fn into_runables<'a>(self, merged_stores: &'a MergedStores<'a>) -> impl Iterator<Item = Result<RunnableJob>> + 'a {
+    pub fn into_runables<'a>(self, merged_stores: &'a MergedStores) -> impl Iterator<Item = Result<RunnableJob>> + 'a {
         self.set.into_iter().map(move |j| RunnableJob::build_from_job(j, merged_stores))
     }
 
