@@ -1,14 +1,25 @@
 //! Utility functions for the UI
 
 use std::io::Write;
+use std::path::Path;
 use std::collections::BTreeMap;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use anyhow::Error;
 use handlebars::Handlebars;
 use itertools::Itertools;
 
 use crate::package::Package;
+
+pub fn package_repo_cleanness_check(repo_path: &Path) -> Result<()> {
+    if !crate::util::git::repo_is_clean(&repo_path)? {
+        error!("Repository not clean, refusing to go on: {}", repo_path.display());
+        Err(anyhow!("Repository not clean, refusing to go on: {}", repo_path.display()))
+    } else {
+        Ok(())
+    }
+}
 
 pub fn print_packages<'a, I>(out: &mut dyn Write,
                              format: &str,

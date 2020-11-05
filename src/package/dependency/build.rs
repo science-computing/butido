@@ -1,3 +1,4 @@
+use serde::Serialize;
 use serde::Deserialize;
 use anyhow::Result;
 
@@ -7,7 +8,7 @@ use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 
 /// A dependency that is packaged and is only required during build time
-#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct BuildDependency(String);
 

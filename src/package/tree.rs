@@ -4,11 +4,13 @@ use anyhow::Result;
 use anyhow::anyhow;
 use indicatif::ProgressBar;
 use resiter::AndThen;
+use serde::Serialize;
+use serde::Deserialize;
 
 use crate::repository::Repository;
 use crate::package::Package;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Tree {
     root: BTreeMap<Package, Tree>,
 }

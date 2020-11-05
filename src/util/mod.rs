@@ -4,15 +4,17 @@ use serde::Deserialize;
 pub struct EnvironmentVariableName(String);
 
 pub mod filters;
+pub mod git;
 pub mod parser;
 pub mod progress;
 
 pub mod docker {
     use anyhow::Result;
     use anyhow::anyhow;
+    use serde::Serialize;
     use serde::Deserialize;
 
-    #[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+    #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
     pub struct ImageName(String);
 
     impl From<String> for ImageName {
