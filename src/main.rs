@@ -2,6 +2,7 @@
 #[macro_use] extern crate diesel;
 use logcrate::debug;
 
+use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::collections::BTreeMap;
@@ -14,6 +15,7 @@ use indicatif::*;
 use tokio::stream::StreamExt;
 use clap_v3::ArgMatches;
 use diesel::PgConnection;
+use diesel::prelude::*;
 
 mod cli;
 mod job;
@@ -115,6 +117,9 @@ async fn build<'a>(matches: &ArgMatches,
                bar_staging_loading: ProgressBar)
     -> Result<()>
 {
+    use crate::db::models::{Package, NewPackage};
+    use schema::packages;
+
     let release_dir  = async move {
         let variables = BTreeMap::new();
         let p = config.releases_directory(&variables)?;
@@ -169,11 +174,27 @@ async fn build<'a>(matches: &ArgMatches,
     tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
     bar_tree_building.finish_with_message("Finished loading Tree");
 
-    debug!("Trees loaded: {:?}", trees);
-    let mut out = std::io::stderr();
-    for tree in trees {
-        tree.debug_print(&mut out)?;
-    }
+    let db_package = {
+        use crate::schema::packages::*;
+
+        let new_package = NewPackage {
+            name:    package.name().deref(),
+            version: package.version().deref(),
+        };
+
+        diesel::insert_into(packages::table)
+            .values(&new_package)
+            .on_conflict_do_nothing()
+            .execute(&database_connection)?;
+
+        crate::schema::packages::dsl::packages
+            .filter(name.eq(package.name().deref()))
+            .filter(version.eq(package.version().deref()))
+            .limit(1)
+            .load::<crate::db::models::Package>(&database_connection)?
+    };
+
+
 
     Ok(())
 }
