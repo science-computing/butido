@@ -13,6 +13,7 @@ use walkdir::WalkDir;
 use indicatif::*;
 use tokio::stream::StreamExt;
 use clap_v3::ArgMatches;
+use diesel::PgConnection;
 
 mod cli;
 mod job;
@@ -71,6 +72,8 @@ async fn main() -> Result<()> {
     match cli.subcommand() {
         ("db", Some(matches))           => db::interface(db_connection_config, matches, &config)?,
         ("build", Some(matches))        => {
+            let conn = crate::db::establish_connection(db_connection_config)?;
+
             let repo = load_repo()?;
             let bar_tree_building = progressbars.tree_building();
             bar_tree_building.set_length(max_packages);
@@ -81,7 +84,7 @@ async fn main() -> Result<()> {
             let bar_staging_loading = progressbars.staging_loading();
             bar_staging_loading.set_length(max_packages);
 
-            build(matches, &config, repo, bar_tree_building, bar_release_loading, bar_staging_loading).await?
+            build(matches, conn, &config, repo, bar_tree_building, bar_release_loading, bar_staging_loading).await?
         },
         ("what-depends", Some(matches)) => {
             let repo = load_repo()?;
@@ -104,6 +107,7 @@ async fn main() -> Result<()> {
 }
 
 async fn build<'a>(matches: &ArgMatches,
+               database_connection: PgConnection,
                config: &Configuration<'a>,
                repo: Repository,
                bar_tree_building: ProgressBar,
