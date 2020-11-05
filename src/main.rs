@@ -118,7 +118,11 @@ async fn build<'a>(matches: &ArgMatches,
                bar_staging_loading: ProgressBar)
     -> Result<()>
 {
-    use crate::db::models::{Package, NewPackage};
+    use crate::db::models::{
+        Package,
+        GitHash,
+        Image,
+    };
     use schema::packages;
     use schema::githashes;
     use schema::images;
@@ -178,63 +182,10 @@ async fn build<'a>(matches: &ArgMatches,
     bar_tree_building.finish_with_message("Finished loading Tree");
 
     let image_name = matches.value_of("image").unwrap(); // safe by clap
-
-    let db_package = {
-        use crate::schema::packages::*;
-
-        let new_package = NewPackage {
-            name:    package.name().deref(),
-            version: package.version().deref(),
-        };
-
-        diesel::insert_into(packages::table)
-            .values(&new_package)
-            .on_conflict_do_nothing()
-            .execute(&database_connection)?;
-
-        crate::schema::packages::dsl::packages
-            .filter(name.eq(package.name().deref()))
-            .filter(version.eq(package.version().deref()))
-            .limit(1)
-            .load::<crate::db::models::Package>(&database_connection)?
-    };
-
-    let db_githash = {
-        use crate::schema::githashes::*;
-        use crate::db::models::NewGitHash;
-
-        let hash_str = crate::util::git::get_repo_head_commit_hash(repo_path)?;
-        let new_hash = NewGitHash { hash: &hash_str };
-
-        diesel::insert_into(githashes::table)
-            .values(&new_hash)
-            .on_conflict_do_nothing()
-            .execute(&database_connection)?;
-
-        crate::schema::githashes::dsl::githashes
-            .filter(hash.eq(hash_str))
-            .limit(1)
-            .load::<crate::db::models::GitHash>(&database_connection)?
-    };
-
-    let db_image = {
-        use crate::schema::images::*;
-        use crate::db::models::NewImage;
-
-        let new_image = NewImage { name: &image_name };
-
-        diesel::insert_into(images::table)
-            .values(&new_image)
-            .on_conflict_do_nothing()
-            .execute(&database_connection)?;
-
-        crate::schema::images::dsl::images
-            .filter(name.eq(&image_name))
-            .limit(1)
-            .load::<crate::db::models::Image>(&database_connection)?
-    };
-
-
+    let hash_str   = crate::util::git::get_repo_head_commit_hash(repo_path)?;
+    let db_package = Package::create_or_fetch(&database_connection, &package)?;
+    let db_githash = GitHash::create_or_fetch(&database_connection, &hash_str)?;
+    let db_image   = Image::create_or_fetch(&database_connection, &image_name)?;
 
     Ok(())
 }
