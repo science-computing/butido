@@ -158,15 +158,15 @@ async fn build<'a>(matches: &ArgMatches,
     };
     debug!("Found {} relevant packages", packages.len());
 
-    let trees = tokio::stream::iter(packages.into_iter().cloned())
-        .map(|p| {
-            let mut tree = Tree::new();
-            tree.add_package(p, &repo, bar_tree_building.clone())?;
-            Ok(tree)
-        })
-        .collect::<Result<Vec<_>>>()
-        .await?;
+    /// We only support building one package per call.
+    /// Everything else is invalid
+    if packages.len() > 1 {
+        return Err(anyhow!("Found multiple packages ({}). Cannot decide which one to build", packages.len()))
+    }
+    let package = *packages.get(0).ok_or_else(|| anyhow!("Found no package."))?;
 
+    let mut tree = Tree::new();
+    tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
     bar_tree_building.finish_with_message("Finished loading Tree");
 
     debug!("Trees loaded: {:?}", trees);
