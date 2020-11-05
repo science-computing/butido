@@ -1,8 +1,9 @@
 use url::Url;
+use serde::Serialize;
 use serde::Deserialize;
 use getset::Getters;
 
-#[derive(Clone, Debug, Deserialize, Getters)]
+#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Source {
     #[getset(get = "pub")]
     url: Url,
@@ -17,7 +18,7 @@ impl Source {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Getters)]
+#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct SourceHash {
     #[serde(rename = "type")]
     #[getset(get = "pub")]
@@ -36,7 +37,7 @@ impl SourceHash {
 }
 
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum HashType {
     #[serde(rename = "sha1")]
     Sha1,
@@ -59,7 +60,7 @@ impl std::fmt::Display for HashType {
 }
 
 
-#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
 #[serde(transparent)]
 pub struct HashValue(String);
 

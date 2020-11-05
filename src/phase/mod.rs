@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
+use serde::Serialize;
 use serde::Deserialize;
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Hash)]
 #[serde(transparent)]
 pub struct PhaseName(String);
 
@@ -19,7 +20,7 @@ impl From<String> for PhaseName {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Phase {
     #[serde(rename = "path")]
     Path(PathBuf),

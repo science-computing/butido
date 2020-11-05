@@ -1,3 +1,4 @@
+use serde::Serialize;
 use serde::Deserialize;
 use anyhow::Result;
 
@@ -8,7 +9,7 @@ use crate::package::dependency::ParseDependency;
 
 
 /// A dependency that is packaged and is required during runtime
-#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct Dependency(String);
 

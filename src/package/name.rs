@@ -1,8 +1,9 @@
 use std::ops::Deref;
+use serde::Serialize;
 use serde::Deserialize;
 use pom::parser::Parser as PomParser;
 
-#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct PackageName(String);
 
