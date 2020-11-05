@@ -26,49 +26,53 @@ impl MergedStores {
         MergedStores { release, staging }
     }
 
-    pub fn get_artifact_by_name(&self, name: &PackageName) -> Result<Vec<&Artifact>> {
+    pub fn get_artifact_by_name(&self, name: &PackageName) -> Result<Vec<Artifact>> {
         let v = self.staging
             .read()
-            .map_err(|_| anyhow!("Lock poisoned"))
-            .map(|s| {
-                s.0.values()
-                    .filter(|a| a.name() == name)
-                    .collect::<Vec<_>>()
-            })?;
+            .map_err(|_| anyhow!("Lock poisoned"))?
+            .0
+            .values()
+            .filter(|a| a.name() == name)
+            .cloned()
+            .collect::<Vec<_>>();
 
         if v.is_empty() {
-            self.release
-                .read()
-                .map_err(|_| anyhow!("Lock poisoned"))
-                .map(|r| {
-                    r.0.values()
-                        .filter(|a| a.name() == name)
-                        .collect()
-                })
+            Ok({
+                self.release
+                    .read()
+                    .map_err(|_| anyhow!("Lock poisoned"))?
+                    .0
+                    .values()
+                    .filter(|a| a.name() == name)
+                    .cloned()
+                    .collect()
+            })
         } else {
             Ok(v)
         }
     }
 
-    pub fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersionConstraint) -> Result<Vec<&Artifact>> {
+    pub fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersionConstraint) -> Result<Vec<Artifact>> {
         let v = self.staging
             .read()
-            .map_err(|_| anyhow!("Lock poisoned"))
-            .map(|s| {
-                s.0.values()
-                    .filter(|a| a.name() == name && version.matches(a.version()))
-                    .collect::<Vec<_>>()
-            })?;
+            .map_err(|_| anyhow!("Lock poisoned"))?
+            .0
+            .values()
+            .filter(|a| a.name() == name && version.matches(a.version()))
+            .cloned()
+            .collect::<Vec<_>>();
 
         if v.is_empty() {
-            self.release
-                .read()
-                .map_err(|_| anyhow!("Lock poisoned"))
-                .map(|r| {
-                    r.0.values()
-                        .filter(|a| a.name() == name && version.matches(a.version()))
-                        .collect()
-                })
+            Ok({
+                self.release
+                    .read()
+                    .map_err(|_| anyhow!("Lock poisoned"))?
+                    .0
+                    .values()
+                    .filter(|a| a.name() == name && version.matches(a.version()))
+                    .cloned()
+                    .collect()
+            })
         } else {
             Ok(v)
         }
