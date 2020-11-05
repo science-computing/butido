@@ -7,3 +7,6 @@ pub use envvar::*;
 mod image;
 pub use image::*;
 
+mod githash;
+pub use githash::*;
+
