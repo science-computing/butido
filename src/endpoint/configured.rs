@@ -51,6 +51,14 @@ impl Debug for ConfiguredEndpoint {
 }
 
 impl ConfiguredEndpoint {
+    pub fn inc_current_jobs(&mut self) {
+        self.num_current_jobs += 1;
+    }
+
+    pub fn dec_current_jobs(&mut self) {
+        self.num_current_jobs -= 1;
+    }
+
     pub(in super) async fn setup(epc: EndpointConfiguration) -> Result<Self> {
         let ep = ConfiguredEndpoint::setup_endpoint(epc.endpoint())?;
 
