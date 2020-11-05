@@ -65,26 +65,27 @@ impl EndpointScheduler {
     }
 
     fn select_free_endpoint(&self) -> Result<Arc<RwLock<ConfiguredEndpoint>>> {
+        use itertools::Itertools;
+
         loop {
-            if let Some(e) = self
-                .endpoints
+            let writelocks = self.endpoints
                 .iter()
-                .filter_map(|endpoint| {
-                    match endpoint.write() {
-                        Err(e) => Some(Err(anyhow!("Lock poisoned"))),
-                        Ok(mut ep) => {
-                            if ep.num_current_jobs() < ep.num_max_jobs() {
-                                ep.inc_current_jobs();
-                                Some(Ok(endpoint.clone()))
-                            } else {
-                                None
-                            }
-                        }
-                    }
+                .map(|ep| ep.write().map_err(|_| anyhow!("Lock poisoned")).map(|wl| (wl, ep.clone())))
+                .collect::<Result<Vec<(_, _)>>>()?;
+
+            if let Some(endpoint) = writelocks
+                .iter()
+                .filter(|(wl, _)| wl.num_max_jobs() > wl.num_current_jobs())
+                .sorted_by(|(wl1, _), (wl2, _)| {
+                    let a = (wl1.num_max_jobs() - wl1.num_current_jobs());
+                    let b = (wl2.num_max_jobs() - wl2.num_current_jobs());
+
+                    a.cmp(&b)
                 })
+                .map(|tpl| tpl.1.clone())
                 .next()
             {
-                return e
+                return Ok(endpoint)
             }
         }
     }
