@@ -122,10 +122,15 @@ async fn build<'a>(matches: &ArgMatches,
         Package,
         GitHash,
         Image,
+        Submit,
     };
     use schema::packages;
     use schema::githashes;
     use schema::images;
+
+    let now = chrono::offset::Local::now().naive_local();
+    let submit_id = uuid::Uuid::new_v4();
+    info!("Submit {}, started {}", submit_id, now);
 
     let release_dir  = async move {
         let variables = BTreeMap::new();
@@ -186,6 +191,13 @@ async fn build<'a>(matches: &ArgMatches,
     let db_package = Package::create_or_fetch(&database_connection, &package)?;
     let db_githash = GitHash::create_or_fetch(&database_connection, &hash_str)?;
     let db_image   = Image::create_or_fetch(&database_connection, &image_name)?;
+    let submit = Submit::create(&database_connection,
+        &tree,
+        &now,
+        &submit_id,
+        &db_image,
+        &db_package,
+        &db_githash)?;
 
     Ok(())
 }
