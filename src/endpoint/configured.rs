@@ -34,30 +34,16 @@ pub struct ConfiguredEndpoint {
     speed: usize,
 
     #[getset(get_copy = "pub")]
-    num_current_jobs: usize,
-
-    #[getset(get_copy = "pub")]
     num_max_jobs: usize,
 }
 
 impl Debug for ConfiguredEndpoint {
     fn fmt(&self, f: &mut Formatter) -> std::result::Result<(), std::fmt::Error> {
-        write!(f,
-            "ConfiguredEndpoint({}, {}/{})",
-            self.name,
-            self.num_current_jobs,
-            self.num_max_jobs)
+        write!(f, "ConfiguredEndpoint({}, max: {})", self.name, self.num_max_jobs)
     }
 }
 
 impl ConfiguredEndpoint {
-    pub fn inc_current_jobs(&mut self) {
-        self.num_current_jobs += 1;
-    }
-
-    pub fn dec_current_jobs(&mut self) {
-        self.num_current_jobs -= 1;
-    }
 
     pub(in super) async fn setup(epc: EndpointConfiguration) -> Result<Self> {
         let ep = ConfiguredEndpoint::setup_endpoint(epc.endpoint())?;
@@ -87,7 +73,6 @@ impl ConfiguredEndpoint {
                             .name(ep.name().clone())
                             .docker(docker)
                             .speed(ep.speed())
-                            .num_current_jobs(0)
                             .num_max_jobs(ep.maxjobs())
                             .build()
                     })
@@ -98,7 +83,6 @@ impl ConfiguredEndpoint {
                     ConfiguredEndpoint::builder()
                         .name(ep.name().clone())
                         .speed(ep.speed())
-                        .num_current_jobs(0)
                         .num_max_jobs(ep.maxjobs())
                         .docker(shiplift::Docker::unix(ep.uri()))
                         .build()
@@ -228,6 +212,14 @@ impl ConfiguredEndpoint {
             .await
     }
 
+    pub async fn number_of_running_containers(&self) -> Result<usize> {
+        self.docker
+            .containers()
+            .list(&Default::default())
+            .await
+            .map_err(Error::from)
+            .map(|list| list.len())
+    }
 
 }
 

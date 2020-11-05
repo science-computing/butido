@@ -55,8 +55,8 @@ impl EndpointScheduler {
     /// # Warning
     ///
     /// This function blocks as long as there is no free endpoint available!
-    pub fn schedule_job(&self, job: RunnableJob, sender: UnboundedSender<LogItem>) -> Result<JobHandle> {
-        let endpoint = self.select_free_endpoint()?;
+    pub async fn schedule_job(&self, job: RunnableJob, sender: UnboundedSender<LogItem>) -> Result<JobHandle> {
+        let endpoint = self.select_free_endpoint().await?;
 
         Ok(JobHandle {
             endpoint, job, sender,
@@ -64,24 +64,24 @@ impl EndpointScheduler {
         })
     }
 
-    fn select_free_endpoint(&self) -> Result<Arc<RwLock<ConfiguredEndpoint>>> {
+    async fn select_free_endpoint(&self) -> Result<Arc<RwLock<ConfiguredEndpoint>>> {
         use itertools::Itertools;
+        use futures::FutureExt;
 
         loop {
-            let writelocks = self.endpoints
-                .iter()
-                .map(|ep| ep.write().map_err(|_| anyhow!("Lock poisoned")).map(|wl| (wl, ep.clone())))
-                .collect::<Result<Vec<(_, _)>>>()?;
+            let unordered = futures::stream::FuturesUnordered::new();
+            for ep in self.endpoints.iter().cloned() {
+                unordered.push(async move {
+                    let wl = ep.write().map_err(|_| anyhow!("Lock poisoned"))?;
+                    wl.number_of_running_containers().await.map(|u| (u, ep.clone()))
+                });
+            }
 
-            if let Some(endpoint) = writelocks
-                .iter()
-                .filter(|(wl, _)| wl.num_max_jobs() > wl.num_current_jobs())
-                .sorted_by(|(wl1, _), (wl2, _)| {
-                    let a = (wl1.num_max_jobs() - wl1.num_current_jobs());
-                    let b = (wl2.num_max_jobs() - wl2.num_current_jobs());
+            let endpoints = unordered.collect::<Result<Vec<_>>>().await?;
 
-                    a.cmp(&b)
-                })
+            if let Some(endpoint) = endpoints
+                .iter()
+                .sorted_by(|tpla, tplb| tpla.0.cmp(&tplb.0))
                 .map(|tpl| tpl.1.clone())
                 .next()
             {
@@ -106,13 +106,6 @@ impl JobHandle {
             .map_err(|_| anyhow!("Lock poisoned"))?
             .run_job(self.job, self.sender, self.staging_store)
             .await?;
-
-        {
-            self.endpoint
-                .write()
-                .map_err(|_| anyhow!("Lock poisoned"))?
-                .dec_current_jobs();
-        }
 
         Ok(res)
     }
