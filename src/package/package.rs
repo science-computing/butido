@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 
 use getset::Getters;
+use serde::Serialize;
 use serde::Deserialize;
 use anyhow::Result;
 use anyhow::Error;
@@ -15,7 +16,7 @@ use crate::package::version::*;
 use crate::util::docker::ImageName;
 use crate::package::ParseDependency;
 
-#[derive(Clone, Deserialize, Getters)]
+#[derive(Clone, Serialize, Deserialize, Getters)]
 pub struct Package {
     #[getset(get = "pub")]
     name: PackageName,
@@ -147,12 +148,12 @@ impl Eq for Package {
 }
 
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PackageFlags {
     build_parallel: bool,
 }
 
-#[derive(Clone, Debug, Deserialize, Getters)]
+#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Dependencies {
     #[getset(get = "pub")]
     system: Vec<SystemBuildDependency>,

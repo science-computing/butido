@@ -1,3 +1,4 @@
+use serde::Serialize;
 use serde::Deserialize;
 use anyhow::anyhow;
 use anyhow::Error;
@@ -31,7 +32,7 @@ impl PackageVersionConstraint {
     }
 }
 
-#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct PackageVersion(String);
 

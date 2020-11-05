@@ -1,3 +1,4 @@
+use serde::Serialize;
 use serde::Deserialize;
 use anyhow::Result;
 
@@ -7,7 +8,7 @@ use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 
 /// A dependency that can be installed from the system and is required during runtime
-#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct SystemDependency(String);
 

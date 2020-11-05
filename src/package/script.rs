@@ -1,10 +1,13 @@
 use anyhow::Result;
+use serde::Serialize;
+use serde::Deserialize;
 
 use crate::phase::Phase;
 use crate::phase::PhaseName;
 use crate::package::Package;
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(transparent)]
 pub struct Script(String);
 
 pub struct ScriptBuilder<'a> {
