@@ -44,7 +44,7 @@ impl Submit {
                   requested_image: &Image,
                   requested_package: &Package,
                   repo_hash: &GitHash)
-        -> Result<Vec<Submit>>
+        -> Result<Submit>
 {
         let tree_json = serde_json::to_value(t)?;
 
@@ -64,8 +64,7 @@ impl Submit {
 
         dsl::submits
             .filter(uuid.eq(uuid))
-            .limit(1)
-            .load::<Submit>(database_connection)
+            .first::<Submit>(database_connection)
             .map_err(Error::from)
     }
 }
