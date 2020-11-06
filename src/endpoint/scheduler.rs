@@ -92,6 +92,7 @@ impl EndpointScheduler {
 
 }
 
+#[derive(Debug)]
 pub struct JobHandle {
     endpoint: Arc<RwLock<Endpoint>>,
     job: RunnableJob,
