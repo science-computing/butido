@@ -12,14 +12,10 @@ environment.BAZ = "bla"
 patches = []
 
 [dependencies]
-system  = []
-system_dep_script = ""
+system          = []
 system_runtime  = []
-system_runtime_dep_script = ""
-build   = []
-build_dep_script = ""
-runtime = []
-script = ""
+build           = []
+runtime         = []
 
 # Root description of phases
 # can be overridden as well

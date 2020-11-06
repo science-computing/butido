@@ -3,6 +3,25 @@
 # repository of package definitions
 repository = "/tmp/butido_example_1"
 
+releases = "/tmp/butido-releases"
+staging  = "/tmp/butido-staging"
+
+# ####
+#
+# Log database configuration
+#
+# ####
+
+# The database to use
+#
+# Can be overridden via environment vairbale BUTIDO_DATABASE_URI or set via CLI.
+database_host     = "localhost"
+database_port     = 5432
+database_user     = "pgdev"
+database_password = "password"
+database_name     = "butido"
+
+
 # Phases which can be configured in the packages
 available_phases = [ "unpack", "build", "install", "package" ]
 
@@ -10,12 +29,15 @@ available_phases = [ "unpack", "build", "install", "package" ]
 # Images which can be used to build
 # images not listed here are automatically rejected
 images = [ "debian:bullseye" ]
+verify_images_present = true
 
 # List of docker endpoints
 [[docker.endpoints]]
 name          = "example host name"
 uri           = "http://0.0.0.0:8095"
 endpoint_type = "http"
+speed         = 1
+maxjobs       = 10
 
 
 [containers]
