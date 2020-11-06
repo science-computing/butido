@@ -11,5 +11,9 @@ hash.hash = "23465"
 
 build.script = '''
     echo Overridden build phase in package pkgB
+
+    mkdir -p /outputs/
+    touch /outputs/pkgB-1.0.0.txt
+    ls /outputs/
 '''
 

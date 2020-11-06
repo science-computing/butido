@@ -9,8 +9,13 @@ url  = "http://somerandomthi.ng/foo/bar.tar.gz"
 hash.type = "sha1"
 hash.hash = "23465"
 
+[phases]
 # overwrites
-phases.install.script = '''
+install.script = '''
     echo Overridden install phase in package pkgA
+
+    mkdir -p /outputs
+    touch /outputs/pkgA-1.0.0.txt
+    ls /outputs
 '''
 
