@@ -74,9 +74,12 @@ impl Orchestrator {
             let results = { // run the jobs in the set
                 let unordered = futures::stream::FuturesUnordered::new();
                 for runnable in jobset.into_runables(&merged_store) {
+                    let runnable = runnable?;
+                    trace!("Runnable {} for package {}", runnable.uuid(), runnable.package().name());
                     let (sender, receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
 
-                    let jobhandle = self.scheduler.schedule_job(runnable?, sender).await?;
+                    let jobhandle = self.scheduler.schedule_job(runnable, sender).await?;
+                    trace!("Jobhandle -> {:?}", jobhandle);
                     unordered.push(async move {
                         jobhandle.get_result().await
                     });
@@ -93,7 +96,9 @@ impl Orchestrator {
                     .read()
                     .map_err(|_| anyhow!("Lock Poisoned"))?;
 
+                trace!("Checking results...");
                 for path in results.iter() {
+                    trace!("Checking path: {}", path.display());
                     if !staging_store_lock.path_exists_in_store_root(&path) {
                         return Err(anyhow!("Result path {} is missing from staging store", path.display()))
                             .with_context(|| anyhow!("Should be: {}/{}", staging_store_lock.root_path().display(), path.display()))
@@ -107,7 +112,9 @@ impl Orchestrator {
                     .write()
                     .map_err(|_| anyhow!("Lock Poisoned"))?;
 
+                trace!("Loading results into staging store");
                 for path in results.iter() {
+                    trace!("Loading path: {}", path.display());
                     staging_store_lock.load_from_path(&path)
                         .context("Loading artifacts into staging store")?;
                 }

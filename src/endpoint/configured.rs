@@ -96,7 +96,10 @@ impl Endpoint {
         match req {
             None => Ok(()),
             Some(v) => {
-                let avail = ep.docker().version().await?;
+                let avail = ep.docker()
+                    .version()
+                    .await
+                    .with_context(|| anyhow!("Getting version of endpoint: {}", ep.name))?;
 
                 if !v.contains(&avail.version) {
                     Err(anyhow!("Incompatible docker version on endpoint {}: {}",
@@ -112,7 +115,10 @@ impl Endpoint {
         match req {
             None => Ok(()),
             Some(v) => {
-                let avail = ep.docker().version().await?;
+                let avail = ep.docker()
+                    .version()
+                    .await
+                    .with_context(|| anyhow!("Getting API version of endpoint: {}", ep.name))?;
 
                 if !v.contains(&avail.api_version) {
                     Err(anyhow!("Incompatible docker API version on endpoint {}: {}",
@@ -177,7 +183,8 @@ impl Endpoint {
             let create_info = self.docker
                 .containers()
                 .create(&builder_opts)
-                .await?;
+                .await
+                .with_context(|| anyhow!("Creating container on '{}'", self.name))?;
 
             if let Some(warnings) = create_info.warnings.as_ref() {
                 for warning in warnings {
@@ -219,7 +226,8 @@ impl Endpoint {
             .map(|r| r.with_context(|| anyhow!("Fetching log from container {} on {}", container_id, self.name)))
             .await?;
 
-        let tar_stream = container.copy_from(&PathBuf::from("/outputs/"))
+        let tar_stream = container
+            .copy_from(&PathBuf::from("/outputs/"))
             .map(|item| item.map_err(Error::from));
 
         staging
@@ -227,6 +235,8 @@ impl Endpoint {
             .map_err(|_| anyhow!("Lock poisoned"))?
             .write_files_from_tar_stream(tar_stream)
             .await
+            .with_context(|| anyhow!("Copying the TAR stream to the staging store"))
+            .map_err(Error::from)
     }
 
     pub async fn number_of_running_containers(&self) -> Result<usize> {

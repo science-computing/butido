@@ -139,7 +139,9 @@ async fn build<'a>(matches: &ArgMatches,
     info!("Submit {}, started {}", submit_id, now);
 
     let image_name = matches.value_of("image").map(String::from).map(ImageName::from).unwrap(); // safe by clap
+    debug!("Getting repository HEAD");
     let hash_str   = crate::util::git::get_repo_head_commit_hash(repo_path)?;
+    trace!("Repository HEAD = {}", hash_str);
     let phases = config.available_phases();
 
     let endpoint_configurations = config.docker().endpoints()
@@ -154,6 +156,7 @@ async fn build<'a>(matches: &ArgMatches,
                 .build()
         })
         .collect();
+    info!("Endpoint config build");
 
     let pname = matches.value_of("package_name")
         .map(String::from)
@@ -163,6 +166,7 @@ async fn build<'a>(matches: &ArgMatches,
     let pvers = matches.value_of("package_version")
         .map(String::from)
         .map(PackageVersion::from);
+    info!("We want {} ({:?})", pname, pvers);
 
     let packages = if let Some(pvers) = pvers {
         repo.find(&pname, &pvers)
@@ -211,11 +215,12 @@ async fn build<'a>(matches: &ArgMatches,
         Ok(tree) as Result<Tree>
     };
 
+    trace!("Setting up database jobs for Package, GitHash, Image");
     let db_package = async { Package::create_or_fetch(&database_connection, &package) };
     let db_githash = async { GitHash::create_or_fetch(&database_connection, &hash_str) };
     let db_image   = async { Image::create_or_fetch(&database_connection, &image_name) };
 
-
+    trace!("Running database jobs for Package, GitHash, Image");
     let (tree, db_package, db_githash, db_image) = tokio::join!(
         tree,
         db_package,
@@ -226,6 +231,8 @@ async fn build<'a>(matches: &ArgMatches,
     let (tree, db_package, db_githash, db_image) =
         (tree?, db_package?, db_githash?, db_image?);
 
+    trace!("Database jobs for Package, GitHash, Image finished successfully");
+    trace!("Creating Submit in database");
     let submit = Submit::create(&database_connection,
         &tree,
         &now,
@@ -233,10 +240,14 @@ async fn build<'a>(matches: &ArgMatches,
         &db_image,
         &db_package,
         &db_githash)?;
+    trace!("Creating Submit in database finished successfully");
 
+    trace!("Setting up job sets");
     let jobsets = JobSet::sets_from_tree(tree, image_name, phases.clone())?;
+    trace!("Setting up job sets finished successfully");
 
-    OrchestratorSetup::builder()
+    trace!("Setting up Orchestrator");
+    let orch = OrchestratorSetup::builder()
         .endpoint_config(endpoint_configurations)
         .staging_store(staging_dir.await?)
         .release_store(release_dir.await?)
@@ -246,9 +257,10 @@ async fn build<'a>(matches: &ArgMatches,
         .jobsets(jobsets)
         .build()
         .setup()
-        .await?
-        .run()
-        .await
+        .await?;
+
+    info!("Running orchestrator...");
+    orch.run().await
 }
 
 async fn what_depends(matches: &ArgMatches, repo: Repository, progress: ProgressBar) -> Result<()> {

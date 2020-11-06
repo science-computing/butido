@@ -4,6 +4,7 @@ use std::sync::RwLock;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use tokio::stream::StreamExt;
 use tokio::sync::mpsc::UnboundedSender;
@@ -102,11 +103,14 @@ pub struct JobHandle {
 
 impl JobHandle {
     pub async fn get_result(self) -> Result<Vec<PathBuf>> {
-        let res = self.endpoint
+        let ep = self.endpoint
             .read()
-            .map_err(|_| anyhow!("Lock poisoned"))?
+            .map_err(|_| anyhow!("Lock poisoned"))?;
+
+        let res = ep
             .run_job(self.job, self.sender, self.staging_store)
-            .await?;
+            .await
+            .with_context(|| anyhow!("Running job on '{}'", ep.name()))?;
 
         Ok(res)
     }

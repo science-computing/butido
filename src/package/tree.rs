@@ -49,7 +49,7 @@ impl Tree {
                     })
                     .collect::<Result<Vec<()>>>()?;
 
-                trace!("Inserting subtree: {:?}", subtree);
+                trace!("Inserting subtree: {:?} -> {:?}", ($pack), subtree);
                 ($this).root.insert(($pack), subtree);
                 Ok(())
             }}
@@ -60,7 +60,9 @@ impl Tree {
         }
 
         trace!("Making package Tree for {:?}", p);
-        mk_add_package_tree!(self, p, repo, self, progress)
+        let r = mk_add_package_tree!(self, p, repo, self, progress);
+        trace!("Finished makeing package Tree");
+        r
     }
 
     /// Get packages of the tree

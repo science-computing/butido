@@ -1,6 +1,8 @@
 use std::ops::Deref;
 
+use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::Context;
 use anyhow::Result;
 use diesel::PgConnection;
 use diesel::prelude::*;
@@ -63,11 +65,13 @@ impl Submit {
         diesel::insert_into(submits::table)
             .values(&new_submit)
             .on_conflict_do_nothing()
-            .execute(database_connection)?;
+            .execute(database_connection)
+            .context("Inserting new submit into submits table")?;
 
         dsl::submits
             .filter(uuid.eq(uuid))
             .first::<Submit>(database_connection)
+            .context("Loading submit")
             .map_err(Error::from)
     }
 }
