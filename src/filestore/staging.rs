@@ -8,6 +8,7 @@ use resiter::Map;
 use tar;
 
 use crate::filestore::util::FileStoreImpl;
+use crate::filestore::Artifact;
 
 // The implementation of this type must be available in the merged filestore.
 pub struct StagingStore(pub (in crate::filestore) FileStoreImpl);
@@ -52,6 +53,18 @@ impl StagingStore {
                 self.0.load_from_path(&path).map(|art| art.path().clone())
             })
             .collect()
+    }
+
+    pub fn load_from_path(&mut self, pb: &PathBuf) -> Result<&Artifact> {
+        self.0.load_from_path(pb)
+    }
+
+    pub fn root_path(&self) -> &Path {
+        self.0.root_path()
+    }
+
+    pub fn path_exists_in_store_root(&self, path: &Path) -> bool {
+        self.0.path_exists_in_store_root(path)
     }
 }
 

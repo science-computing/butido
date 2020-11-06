@@ -51,6 +51,14 @@ impl FileStoreImpl {
         }
     }
 
+    pub fn root_path(&self) -> &Path {
+        &self.root
+    }
+
+    pub fn path_exists_in_store_root(&self, p: &Path) -> bool {
+        self.root.join(p).is_file()
+    }
+
     pub (in crate::filestore) fn values(&self) -> impl Iterator<Item = &Artifact> {
         self.store.values()
     }
