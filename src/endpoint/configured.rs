@@ -180,6 +180,7 @@ impl Endpoint {
 
             let builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref())
                     .env(envs.iter().map(AsRef::as_ref).collect())
+                    .cmd(vec!["/bin/bash", "/script"])
                     .build();
 
             let create_info = self.docker
@@ -199,9 +200,6 @@ impl Endpoint {
 
         let script      = job.script().as_ref().as_bytes();
         let script_path = PathBuf::from("/script");
-        let exec_opts   = ExecContainerOptions::builder()
-            .cmd(vec!["/script"])
-            .build();
 
         let container = self.docker.containers().get(&container_id);
         container
@@ -210,7 +208,14 @@ impl Endpoint {
             .then(|_| container.start())
             .map(|r| r.with_context(|| anyhow!("Starting the container {} on '{}'", container_id, self.name)))
             .then(|_| async {
-                let stream = container.exec(&exec_opts);
+                use shiplift::builder::LogsOptions;
+                let log_opts = LogsOptions::builder()
+                    .stdout(true)
+                    .stderr(true)
+                    .timestamps(false)
+                    .build();
+
+                let stream = container.logs(&log_opts);
                 buffer_stream_to_line_stream(stream)
                     .map(|line| {
                         trace!("['{}':{}] Found log line: {:?}", self.name, container_id, line);
