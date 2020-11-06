@@ -14,6 +14,7 @@ docker run            \
     --name ${PG_CONTAINER_NAME}   \
     -e POSTGRES_PASSWORD=${PG_PW} \
     -p 5432:5432          \
+    -m 512m           \
     -d                \
     --rm              \
     postgres
