@@ -147,7 +147,7 @@ pub struct ContainerConfig {
 }
 
 
-#[derive(Debug, Getters, CopyGetters, Deserialize)]
+#[derive(Clone, Debug, Getters, CopyGetters, Deserialize)]
 pub struct Endpoint {
     #[getset(get = "pub")]
     name: String,
@@ -171,7 +171,7 @@ pub struct Endpoint {
     maxjobs: usize,
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub enum EndpointType {
     Socket,
     Http,
