@@ -29,7 +29,14 @@ impl Repository {
             let mut v = Vec::new();
             for de in p.read_dir()? {
                 let de = de?;
-                if de.file_type()?.is_dir() {
+                let is_dir = de.file_type()?.is_dir();
+                let is_hidden = de.path()
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.starts_with("."))
+                    .unwrap_or(false);
+
+                if is_dir && !is_hidden {
                     v.push(de.path());
                 }
             }
