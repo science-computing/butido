@@ -82,6 +82,8 @@ pub fn cli<'a>() -> App<'a> {
             .arg(Arg::with_name("image")
                 .required(true)
                 .multiple(false)
+                .takes_value(true)
+                .value_name("IMAGE NAME")
                 .short('I')
                 .long("image")
                 .help("Name of the docker image to use")
