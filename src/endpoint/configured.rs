@@ -180,7 +180,8 @@ impl Endpoint {
 
             let builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref())
                     .env(envs.iter().map(AsRef::as_ref).collect())
-                    .cmd(vec!["/bin/bash", "/script"])
+                    .cmd(vec!["/bin/bash"]) // we start the container with /bin/bash, but exec() the script in it later
+                    .attach_stdin(true) // we have to attach, otherwise bash exits
                     .build();
 
             let create_info = self.docker
@@ -200,6 +201,11 @@ impl Endpoint {
 
         let script      = job.script().as_ref().as_bytes();
         let script_path = PathBuf::from("/script");
+        let exec_opts = ExecContainerOptions::builder()
+            .cmd(vec!["/bin/bash", "/script"])
+            .attach_stderr(true)
+            .attach_stdout(true)
+            .build();
 
         let container = self.docker.containers().get(&container_id);
         container
@@ -207,16 +213,8 @@ impl Endpoint {
             .map(|r| r.with_context(|| anyhow!("Copying the script into the container {} on '{}'", container_id, self.name)))
             .then(|_| container.start())
             .map(|r| r.with_context(|| anyhow!("Starting the container {} on '{}'", container_id, self.name)))
-            .then(|_| async {
-                use shiplift::builder::LogsOptions;
-                let log_opts = LogsOptions::builder()
-                    .stdout(true)
-                    .stderr(true)
-                    .timestamps(false)
-                    .build();
-
-                let stream = container.logs(&log_opts);
-                buffer_stream_to_line_stream(stream)
+            .then(|_| {
+                buffer_stream_to_line_stream(container.exec(&exec_opts))
                     .map(|line| {
                         trace!("['{}':{}] Found log line: {:?}", self.name, container_id, line);
                         line.with_context(|| anyhow!("Getting log from {}:{}", self.name, container_id))
@@ -234,7 +232,6 @@ impl Endpoint {
                             })
                     })
                     .collect::<Result<Vec<_>>>()
-                    .await
             })
             .map(|r| r.with_context(|| anyhow!("Fetching log from container {} on {}", container_id, self.name)))
             .await?;
@@ -243,13 +240,16 @@ impl Endpoint {
             .copy_from(&PathBuf::from("/outputs/"))
             .map(|item| item.map_err(Error::from));
 
-        staging
+        let r = staging
             .write()
             .map_err(|_| anyhow!("Lock poisoned"))?
             .write_files_from_tar_stream(tar_stream)
             .await
-            .with_context(|| anyhow!("Copying the TAR stream to the staging store"))
-            .map_err(Error::from)
+            .with_context(|| anyhow!("Copying the TAR stream to the staging store"))?;
+
+        container.stop(None).await?;
+
+        Ok(r)
     }
 
     pub async fn number_of_running_containers(&self) -> Result<usize> {
