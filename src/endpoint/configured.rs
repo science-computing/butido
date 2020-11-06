@@ -179,8 +179,10 @@ impl Endpoint {
                 .create(&builder_opts)
                 .await?;
 
-            if create_info.warnings.is_some() {
-                // TODO: Handle warnings
+            if let Some(warnings) = create_info.warnings.as_ref() {
+                for warning in warnings {
+                    warn!("{}", warning);
+                }
             }
 
             (create_info.id, create_info.warnings)
