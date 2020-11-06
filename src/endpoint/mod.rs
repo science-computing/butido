@@ -1,5 +1,5 @@
-mod managerconf;
-pub use managerconf::*;
+mod configuration;
+pub use configuration::*;
 
 mod scheduler;
 pub use scheduler::*;
