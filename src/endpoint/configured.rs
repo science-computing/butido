@@ -23,7 +23,7 @@ use crate::log::LogItem;
 use crate::filestore::StagingStore;
 
 #[derive(Getters, CopyGetters, TypedBuilder)]
-pub struct ConfiguredEndpoint {
+pub struct Endpoint {
     #[getset(get = "pub")]
     name: String,
 
@@ -37,20 +37,20 @@ pub struct ConfiguredEndpoint {
     num_max_jobs: usize,
 }
 
-impl Debug for ConfiguredEndpoint {
+impl Debug for Endpoint {
     fn fmt(&self, f: &mut Formatter) -> std::result::Result<(), std::fmt::Error> {
-        write!(f, "ConfiguredEndpoint({}, max: {})", self.name, self.num_max_jobs)
+        write!(f, "Endpoint({}, max: {})", self.name, self.num_max_jobs)
     }
 }
 
-impl ConfiguredEndpoint {
+impl Endpoint {
 
     pub(in super) async fn setup(epc: EndpointConfiguration) -> Result<Self> {
-        let ep = ConfiguredEndpoint::setup_endpoint(epc.endpoint())?;
+        let ep = Endpoint::setup_endpoint(epc.endpoint())?;
 
-        let versions_compat     = ConfiguredEndpoint::check_version_compat(epc.required_docker_versions().as_ref(), &ep);
-        let api_versions_compat = ConfiguredEndpoint::check_api_version_compat(epc.required_docker_api_versions().as_ref(), &ep);
-        let imgs_avail          = ConfiguredEndpoint::check_images_available(epc.required_images().as_ref(), &ep);
+        let versions_compat     = Endpoint::check_version_compat(epc.required_docker_versions().as_ref(), &ep);
+        let api_versions_compat = Endpoint::check_api_version_compat(epc.required_docker_api_versions().as_ref(), &ep);
+        let imgs_avail          = Endpoint::check_images_available(epc.required_images().as_ref(), &ep);
 
         let (versions_compat, api_versions_compat, imgs_avail) =
             tokio::join!(versions_compat, api_versions_compat, imgs_avail);
@@ -62,14 +62,14 @@ impl ConfiguredEndpoint {
         Ok(ep)
     }
 
-    fn setup_endpoint(ep: &crate::config::Endpoint) -> Result<ConfiguredEndpoint> {
+    fn setup_endpoint(ep: &crate::config::Endpoint) -> Result<Endpoint> {
         match ep.endpoint_type() {
             crate::config::EndpointType::Http => {
                 shiplift::Uri::from_str(ep.uri())
                     .map(|uri| shiplift::Docker::host(uri))
                     .map_err(Error::from)
                     .map(|docker| {
-                        ConfiguredEndpoint::builder()
+                        Endpoint::builder()
                             .name(ep.name().clone())
                             .docker(docker)
                             .speed(ep.speed())
@@ -80,7 +80,7 @@ impl ConfiguredEndpoint {
 
             crate::config::EndpointType::Socket => {
                 Ok({
-                    ConfiguredEndpoint::builder()
+                    Endpoint::builder()
                         .name(ep.name().clone())
                         .speed(ep.speed())
                         .num_max_jobs(ep.maxjobs())
@@ -91,7 +91,7 @@ impl ConfiguredEndpoint {
         }
     }
 
-    async fn check_version_compat(req: Option<&Vec<String>>, ep: &ConfiguredEndpoint) -> Result<()> {
+    async fn check_version_compat(req: Option<&Vec<String>>, ep: &Endpoint) -> Result<()> {
         match req {
             None => Ok(()),
             Some(v) => {
@@ -107,7 +107,7 @@ impl ConfiguredEndpoint {
         }
     }
 
-    async fn check_api_version_compat(req: Option<&Vec<String>>, ep: &ConfiguredEndpoint) -> Result<()> {
+    async fn check_api_version_compat(req: Option<&Vec<String>>, ep: &Endpoint) -> Result<()> {
         match req {
             None => Ok(()),
             Some(v) => {
@@ -123,7 +123,7 @@ impl ConfiguredEndpoint {
         }
     }
 
-    async fn check_images_available(imgs: &Vec<ImageName>, ep: &ConfiguredEndpoint) -> Result<()> {
+    async fn check_images_available(imgs: &Vec<ImageName>, ep: &Endpoint) -> Result<()> {
         use shiplift::ImageListOptions;
 
         ep.docker()

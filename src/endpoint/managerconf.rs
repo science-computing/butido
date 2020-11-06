@@ -3,7 +3,7 @@ use typed_builder::TypedBuilder;
 use anyhow::Result;
 
 use crate::util::docker::ImageName;
-use crate::endpoint::ConfiguredEndpoint;
+use crate::endpoint::Endpoint;
 
 #[derive(Getters, TypedBuilder)]
 pub struct EndpointConfiguration {
@@ -24,8 +24,8 @@ pub struct EndpointConfiguration {
 }
 
 impl EndpointConfiguration {
-    pub async fn connect(self) -> Result<ConfiguredEndpoint> {
-        ConfiguredEndpoint::setup(self).await
+    pub async fn connect(self) -> Result<Endpoint> {
+        Endpoint::setup(self).await
     }
 }
 

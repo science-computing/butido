@@ -8,7 +8,7 @@ use anyhow::Result;
 use tokio::stream::StreamExt;
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::endpoint::ConfiguredEndpoint;
+use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
 use crate::job::JobSet;
 use crate::job::RunnableJob;
@@ -16,7 +16,7 @@ use crate::log::LogItem;
 use crate::filestore::StagingStore;
 
 pub struct EndpointScheduler {
-    endpoints: Vec<Arc<RwLock<ConfiguredEndpoint>>>,
+    endpoints: Vec<Arc<RwLock<Endpoint>>>,
 
     staging_store: Arc<RwLock<StagingStore>>,
 }
@@ -32,14 +32,14 @@ impl EndpointScheduler {
         })
     }
 
-    async fn setup_endpoints(endpoints: Vec<EndpointConfiguration>) -> Result<Vec<Arc<RwLock<ConfiguredEndpoint>>>> {
+    async fn setup_endpoints(endpoints: Vec<EndpointConfiguration>) -> Result<Vec<Arc<RwLock<Endpoint>>>> {
         use futures::FutureExt;
 
         let unordered = futures::stream::FuturesUnordered::new();
 
         for cfg in endpoints.into_iter() {
             unordered.push({
-                ConfiguredEndpoint::setup(cfg)
+                Endpoint::setup(cfg)
                     .map(|r_ep| {
                         r_ep.map(RwLock::new)
                             .map(Arc::new)
@@ -64,7 +64,7 @@ impl EndpointScheduler {
         })
     }
 
-    async fn select_free_endpoint(&self) -> Result<Arc<RwLock<ConfiguredEndpoint>>> {
+    async fn select_free_endpoint(&self) -> Result<Arc<RwLock<Endpoint>>> {
         use itertools::Itertools;
         use futures::FutureExt;
 
@@ -93,7 +93,7 @@ impl EndpointScheduler {
 }
 
 pub struct JobHandle {
-    endpoint: Arc<RwLock<ConfiguredEndpoint>>,
+    endpoint: Arc<RwLock<Endpoint>>,
     job: RunnableJob,
     sender: UnboundedSender<LogItem>,
     staging_store: Arc<RwLock<StagingStore>>,
