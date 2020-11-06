@@ -1,5 +1,7 @@
 use std::path::Path;
 use std::path::PathBuf;
+use std::fmt::Debug;
+
 use anyhow::Result;
 use anyhow::Error;
 use indicatif::ProgressBar;
@@ -12,6 +14,12 @@ use crate::filestore::Artifact;
 
 // The implementation of this type must be available in the merged filestore.
 pub struct StagingStore(pub (in crate::filestore) FileStoreImpl);
+
+impl Debug for StagingStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
+        write!(f, "StagingStore(root: {})", self.0.root.display())
+    }
+}
 
 impl StagingStore {
     pub fn load(root: &Path, progress: ProgressBar) -> Result<Self> {
