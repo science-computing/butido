@@ -25,6 +25,7 @@ use crate::package::PackageVersionConstraint;
 ///
 /// It can then be wrapped into the actual interface of this module with specialized functionality.
 pub struct FileStoreImpl {
+    pub(in crate::filestore) root: PathBuf,
     store: BTreeMap<PathBuf, Artifact>,
 }
 
@@ -44,14 +45,38 @@ impl FileStoreImpl {
                 })
                 .collect::<Result<BTreeMap<PathBuf, Artifact>>>()?;
 
-            Ok(FileStoreImpl { store })
+            Ok(FileStoreImpl { root: root.to_path_buf(), store })
         } else {
             Err(anyhow!("File store cannot be loaded from non-directory: {}", root.display()))
         }
     }
 
+    pub fn root_path(&self) -> &Path {
+        &self.root
+    }
+
+    pub fn path_exists_in_store_root(&self, p: &Path) -> bool {
+        self.root.join(p).is_file()
+    }
+
     pub (in crate::filestore) fn values(&self) -> impl Iterator<Item = &Artifact> {
         self.store.values()
+    }
+
+    pub (in crate::filestore) fn load_from_path(&mut self, pb: &PathBuf) -> Result<&Artifact> {
+        if !self.is_sub_path(pb) {
+            Err(anyhow!("Not a sub-path of {}: {}", self.root.display(), pb.display()))
+        } else {
+            if self.store.get(pb).is_some() {
+                Err(anyhow!("Entry exists: {}", pb.display()))
+            } else {
+                Ok(self.store.entry(pb.to_path_buf()).or_insert(Artifact::load(pb)?))
+            }
+        }
+    }
+
+    fn is_sub_path(&self, p: &Path) -> bool {
+        unimplemented!()
     }
 
     pub fn get(&self, p: &Path) -> Option<&Artifact> {

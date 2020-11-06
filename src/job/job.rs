@@ -5,18 +5,29 @@ use crate::package::Package;
 use crate::phase::PhaseName;
 use crate::util::docker::ImageName;
 
+use getset::Getters;
+
 /// A prepared, but not necessarily runnable, job configuration
-#[derive(Debug)]
+#[derive(Debug, Getters)]
 pub struct Job {
     /// A unique name for the job, not necessarily human-readable
+    #[getset(get = "pub")]
     pub(in super) uuid: Uuid,
 
+    #[getset(get = "pub")]
     pub(in super) package: Package,
+
+    #[getset(get = "pub")]
     pub(in super) image: ImageName,
 
+
+    #[getset(get = "pub")]
     pub(in super) script_shebang: String,
+
+    #[getset(get = "pub")]
     pub(in super) script_phases: Vec<PhaseName>,
 
+    #[getset(get = "pub")]
     pub(in super) resources: Vec<JobResource>,
 }
 

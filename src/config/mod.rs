@@ -26,6 +26,26 @@ pub struct NotValidatedConfiguration {
     staging_directory: String,
 
     #[getset(get = "pub")]
+    #[serde(rename = "database_host")]
+    database_host: String,
+
+    #[getset(get = "pub")]
+    #[serde(rename = "database_port")]
+    database_port: String,
+
+    #[getset(get = "pub")]
+    #[serde(rename = "database_user")]
+    database_user: String,
+
+    #[getset(get = "pub")]
+    #[serde(rename = "database_password")]
+    database_password: String,
+
+    #[getset(get = "pub")]
+    #[serde(rename = "database_name")]
+    database_name: String,
+
+    #[getset(get = "pub")]
     docker: DockerConfig,
 
     #[getset(get = "pub")]
@@ -127,7 +147,7 @@ pub struct ContainerConfig {
 }
 
 
-#[derive(Debug, Getters, CopyGetters, Deserialize)]
+#[derive(Clone, Debug, Getters, CopyGetters, Deserialize)]
 pub struct Endpoint {
     #[getset(get = "pub")]
     name: String,
@@ -151,7 +171,7 @@ pub struct Endpoint {
     maxjobs: usize,
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub enum EndpointType {
     Socket,
     Http,

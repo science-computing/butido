@@ -10,6 +10,12 @@ use crate::package::Package;
 #[serde(transparent)]
 pub struct Script(String);
 
+impl AsRef<str> for Script {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
 pub struct ScriptBuilder<'a> {
     shebang : &'a String,
 }

@@ -4,6 +4,7 @@ use serde::Deserialize;
 pub struct EnvironmentVariableName(String);
 
 pub mod filters;
+pub mod git;
 pub mod parser;
 pub mod progress;
 
@@ -19,6 +20,12 @@ pub mod docker {
     impl From<String> for ImageName {
         fn from(s: String) -> Self {
             ImageName(s)
+        }
+    }
+
+    impl AsRef<str> for ImageName {
+        fn as_ref(&self) -> &str {
+            self.0.as_ref()
         }
     }
 

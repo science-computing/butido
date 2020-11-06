@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use serde::Serialize;
 use serde::Deserialize;
 use anyhow::anyhow;
@@ -35,6 +37,13 @@ impl PackageVersionConstraint {
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct PackageVersion(String);
+
+impl Deref for PackageVersion {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl From<String> for PackageVersion {
     fn from(s: String) -> Self {

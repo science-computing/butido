@@ -25,7 +25,7 @@ impl StringEqual for SystemBuildDependency {
 }
 
 impl ParseDependency for SystemBuildDependency {
-    fn parse_into_name_and_version(self) -> Result<(PackageName, PackageVersionConstraint)> {
+    fn parse_as_name_and_version(&self) -> Result<(PackageName, PackageVersionConstraint)> {
         crate::package::dependency::parse_package_dependency_string_into_name_and_version(&self.0)
     }
 }

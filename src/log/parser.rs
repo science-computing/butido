@@ -14,32 +14,17 @@ use pom::parser::Parser as PomParser;
 use shiplift::tty::TtyChunk;
 
 use crate::log::util::*;
+use crate::log::LogItem;
 
 type IoResult<T> = RResult<T, futures::io::Error>;
 
-fn buffer_stream_to_line_stream<S>(stream: S) -> impl Stream<Item = IoResult<String>>
+pub fn buffer_stream_to_line_stream<S>(stream: S) -> impl Stream<Item = IoResult<String>>
     where S: Stream<Item = shiplift::Result<TtyChunk>> + std::marker::Unpin
 {
     stream.map(|r| r.map(TtyChunkBuf::from))
         .map_err(|e| futures::io::Error::new(futures::io::ErrorKind::Other, e))
         .into_async_read()
         .lines()
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub enum LogItem {
-    /// A line from the log, unmodified
-    Line(Vec<u8>),
-
-    /// A progress report
-    Progress(usize),
-
-    /// The name of the current phase the process is in
-    CurrentPhase(String),
-
-    /// The end-state of the process
-    /// Either Ok or Error
-    State(Result<String, String>),
 }
 
 pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {

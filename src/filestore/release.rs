@@ -14,9 +14,5 @@ impl ReleaseStore {
     pub fn load(root: &Path, progress: ProgressBar) -> Result<Self> {
         FileStoreImpl::load(root, progress).map(ReleaseStore)
     }
-
-    pub fn merged<'a>(&'a self, staging: &'a StagingStore) -> MergedStores<'a> {
-        MergedStores::new(self, staging)
-    }
 }
 
