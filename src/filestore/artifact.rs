@@ -43,7 +43,8 @@ impl Ord for Artifact {
 impl Artifact {
     pub fn load(path: &Path) -> Result<Self> {
         if path.is_file() {
-            let (name, version) = Self::parse_path(path)?;
+            let (name, version) = Self::parse_path(path)
+                .with_context(|| anyhow!("Pathing artifact path: '{}'", path.display()))?;
 
             Ok(Artifact {
                 path: path.to_path_buf(),
@@ -52,7 +53,11 @@ impl Artifact {
                 version
             })
         } else {
-            Err(anyhow!("Path does not exist: {}", path.display()))
+            if path.is_dir() {
+                Err(anyhow!("Cannot load non-file path: {}", path.display()))
+            } else {
+                Err(anyhow!("Path does not exist: {}", path.display()))
+            }
         }
     }
 

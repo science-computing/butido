@@ -2,8 +2,10 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::fmt::Debug;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use anyhow::Error;
+use anyhow::Context;
 use indicatif::ProgressBar;
 use futures::stream::Stream;
 use resiter::Map;
@@ -44,23 +46,30 @@ impl StagingStore {
             .and_then(|bytes| {
                 let mut archive = tar::Archive::new(&bytes[..]);
 
-                let outputs = archive.entries()?
+                let outputs = archive.entries()
+                    .context("Fetching entries from tar archive")?
                     .map(|ent| {
-                        let p = ent?.path()?.into_owned();
+                        let p = ent?.path().context("Getting path of TAR entry")?.into_owned();
                         Ok(p)
                     })
                     .map_ok(|path| dest.join(path))
                     .filter_ok(|p| p.is_file())
-                    .collect::<Result<Vec<_>>>()?;
+                    .collect::<Result<Vec<_>>>()
+                    .context("Collecting outputs of TAR archive")?;
 
                 tar::Archive::new(&bytes[..])
                     .unpack(dest)
+                    .context("Unpacking TAR")
                     .map_err(Error::from)
                     .map(|_| outputs)
-            })?
+            })
+            .context("Concatenating the output bytestream")?
             .into_iter()
             .map(|path| {
-                self.0.load_from_path(&path).map(|art| art.path().clone())
+                self.0.load_from_path(&path)
+                    .with_context(|| anyhow!("Loading from path: {}", path.display()))
+                    .map_err(Error::from)
+                    .map(|art| art.path().clone())
             })
             .collect()
     }
