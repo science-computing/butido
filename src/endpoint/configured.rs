@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::path::PathBuf;
 
 use anyhow::Error;
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use getset::{Getters, CopyGetters};
@@ -126,29 +127,33 @@ impl Endpoint {
     async fn check_images_available(imgs: &Vec<ImageName>, ep: &Endpoint) -> Result<()> {
         use shiplift::ImageListOptions;
 
-        ep.docker()
+        trace!("Checking availability of images: {:?}", imgs);
+        let available_names = ep
+            .docker()
             .images()
             .list(&ImageListOptions::builder().all().build())
-            .await?
+            .await
+            .with_context(|| anyhow!("Listing images on endpoint: {}", ep.name))?
             .into_iter()
             .map(|image_rep| {
-                if let Some(tags) = image_rep.repo_tags {
-                    tags.into_iter().map(|name| {
-                        let tag = ImageName::from(name.clone());
-
-                        if imgs.iter().any(|img| *img == tag) && !imgs.is_empty() {
-                            return Err(anyhow!("Image {} missing in endpoint {}", name, ep.name()))
-                        }
-
-                        Ok(())
-                    })
-                    .collect::<Result<()>>()?;
-                    }
-                // If no tags, ignore
-
-                Ok(())
+                image_rep.repo_tags
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(ImageName::from)
             })
-        .collect::<Result<()>>()
+            .flatten()
+            .collect::<Vec<ImageName>>();
+
+        imgs.iter()
+            .map(|img| {
+                if !available_names.contains(img) {
+                    Err(anyhow!("Image '{}' missing from endpoint '{}'", img.as_ref(), ep.name))
+                } else {
+                    Ok(())
+                }
+            })
+            .collect::<Result<Vec<_>>>()
+            .map(|_| ())
     }
 
     pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<Vec<PathBuf>>  {
