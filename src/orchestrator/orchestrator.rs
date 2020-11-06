@@ -116,19 +116,6 @@ impl Orchestrator {
                     }
                 }
             }
-
-            { // register all written paths to the store
-                let mut staging_store_lock = self.staging_store
-                    .write()
-                    .map_err(|_| anyhow!("Lock Poisoned"))?;
-
-                trace!("Loading results into staging store");
-                for path in results.iter() {
-                    trace!("Loading path: {}", path.display());
-                    staging_store_lock.load_from_path(&path)
-                        .context("Loading artifacts into staging store")?;
-                }
-            }
         }
 
         Ok(())
