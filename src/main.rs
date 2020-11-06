@@ -127,12 +127,13 @@ async fn build<'a>(matches: &ArgMatches,
     use schema::packages;
     use schema::githashes;
     use schema::images;
+    use crate::util::docker::ImageName;
 
     let now = chrono::offset::Local::now().naive_local();
     let submit_id = uuid::Uuid::new_v4();
     info!("Submit {}, started {}", submit_id, now);
 
-    let image_name = matches.value_of("image").unwrap(); // safe by clap
+    let image_name = matches.value_of("image").map(String::from).map(ImageName::from).unwrap(); // safe by clap
     let hash_str   = crate::util::git::get_repo_head_commit_hash(repo_path)?;
 
     let pname = matches.value_of("package_name")
