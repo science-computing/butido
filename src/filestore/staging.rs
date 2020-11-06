@@ -7,6 +7,7 @@ use anyhow::Error;
 use indicatif::ProgressBar;
 use futures::stream::Stream;
 use resiter::Map;
+use resiter::Filter;
 use tar;
 
 use crate::filestore::util::FileStoreImpl;
@@ -49,6 +50,7 @@ impl StagingStore {
                         Ok(p)
                     })
                     .map_ok(|path| dest.join(path))
+                    .filter_ok(|p| p.is_file())
                     .collect::<Result<Vec<_>>>()?;
 
                 tar::Archive::new(&bytes[..])
