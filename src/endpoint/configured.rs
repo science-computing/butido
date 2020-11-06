@@ -219,12 +219,18 @@ impl Endpoint {
                 buffer_stream_to_line_stream(stream)
                     .map(|line| {
                         trace!("['{}':{}] Found log line: {:?}", self.name, container_id, line);
-                        line.map_err(Error::from)
+                        line.with_context(|| anyhow!("Getting log from {}:{}", self.name, container_id))
+                            .map_err(Error::from)
                             .and_then(|l| {
                                 crate::log::parser()
                                     .parse(l.as_bytes())
+                                    .with_context(|| anyhow!("Parsing log from {}:{}: {:?}", self.name, container_id, l))
                                     .map_err(Error::from)
-                                    .and_then(|item| logsink.send(item).map_err(Error::from))
+                                    .and_then(|item| {
+                                        logsink.send(item)
+                                            .with_context(|| anyhow!("Sending log to log sink"))
+                                            .map_err(Error::from)
+                                    })
                             })
                     })
                     .collect::<Result<Vec<_>>>()
