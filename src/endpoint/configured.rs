@@ -150,6 +150,8 @@ impl Endpoint {
             .flatten()
             .collect::<Vec<ImageName>>();
 
+        trace!("Available images = {:?}", available_names);
+
         imgs.iter()
             .map(|img| {
                 if !available_names.contains(img) {
