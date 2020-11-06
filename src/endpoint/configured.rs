@@ -247,7 +247,7 @@ impl Endpoint {
             .await
             .with_context(|| anyhow!("Copying the TAR stream to the staging store"))?;
 
-        container.stop(None).await?;
+        container.stop(Some(std::time::Duration::new(1, 0))).await?;
 
         Ok(r)
     }
