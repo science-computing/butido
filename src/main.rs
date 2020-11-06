@@ -39,6 +39,8 @@ use crate::package::Tree;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 use crate::util::progress::ProgressBars;
+use crate::orchestrator::Orchestrator;
+use crate::orchestrator::OrchestratorSetup;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -127,6 +129,9 @@ async fn build<'a>(matches: &ArgMatches,
     use schema::packages;
     use schema::githashes;
     use schema::images;
+    use crate::job::JobSet;
+    use std::sync::Arc;
+    use std::sync::RwLock;
     use crate::util::docker::ImageName;
 
     let now = chrono::offset::Local::now().naive_local();
@@ -135,6 +140,20 @@ async fn build<'a>(matches: &ArgMatches,
 
     let image_name = matches.value_of("image").map(String::from).map(ImageName::from).unwrap(); // safe by clap
     let hash_str   = crate::util::git::get_repo_head_commit_hash(repo_path)?;
+    let phases = config.available_phases();
+
+    let endpoint_configurations = config.docker().endpoints()
+        .iter()
+        .cloned()
+        .map(|ep_cfg| {
+            crate::endpoint::EndpointConfiguration::builder()
+                .endpoint(ep_cfg)
+                .required_images(config.docker().images().clone())
+                .required_docker_versions(config.docker().docker_versions().clone())
+                .required_docker_api_versions(config.docker().docker_api_versions().clone())
+                .build()
+        })
+        .collect();
 
     let pname = matches.value_of("package_name")
         .map(String::from)
@@ -169,7 +188,7 @@ async fn build<'a>(matches: &ArgMatches,
         } else {
             bar_release_loading.finish_with_message("Failed to load releases");
         }
-        r
+        r.map(RwLock::new).map(Arc::new)
     };
 
     let staging_dir = async move {
@@ -182,7 +201,7 @@ async fn build<'a>(matches: &ArgMatches,
         } else {
             bar_staging_loading.finish_with_message("Failed to load staging");
         }
-        r
+        r.map(RwLock::new).map(Arc::new)
     };
 
     let tree = async {
@@ -215,7 +234,21 @@ async fn build<'a>(matches: &ArgMatches,
         &db_package,
         &db_githash)?;
 
-    Ok(())
+    let jobsets = JobSet::sets_from_tree(tree, image_name, phases.clone())?;
+
+    OrchestratorSetup::builder()
+        .endpoint_config(endpoint_configurations)
+        .staging_store(staging_dir.await?)
+        .release_store(release_dir.await?)
+        .database(database_connection)
+        .submit(submit)
+        .file_log_sink_factory(None)
+        .jobsets(jobsets)
+        .build()
+        .setup()
+        .await?
+        .run()
+        .await
 }
 
 async fn what_depends(matches: &ArgMatches, repo: Repository, progress: ProgressBar) -> Result<()> {
