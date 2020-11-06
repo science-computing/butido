@@ -38,7 +38,7 @@ pub struct Orchestrator {
 
 #[derive(TypedBuilder)]
 pub struct OrchestratorSetup {
-    ep_cfg: Vec<EndpointConfiguration>,
+    endpoint_config: Vec<EndpointConfiguration>,
     staging_store: Arc<RwLock<StagingStore>>,
     release_store: Arc<RwLock<ReleaseStore>>,
     jobsets: Vec<JobSet>,
@@ -49,7 +49,7 @@ pub struct OrchestratorSetup {
 
 impl OrchestratorSetup {
     pub async fn setup(self) -> Result<Orchestrator> {
-        let scheduler = EndpointScheduler::setup(self.ep_cfg, self.staging_store.clone()).await?;
+        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone()).await?;
 
         Ok(Orchestrator {
             scheduler:             scheduler,
