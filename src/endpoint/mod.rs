@@ -1,11 +1,9 @@
-mod manager;
-pub use manager::*;
-
-mod managerconf;
-pub use managerconf::*;
+mod configuration;
+pub use configuration::*;
 
 mod scheduler;
 pub use scheduler::*;
 
 mod configured;
+pub use configured::*;
 
