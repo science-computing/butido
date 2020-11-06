@@ -159,6 +159,7 @@ impl Endpoint {
     pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<Vec<PathBuf>>  {
         use crate::log::buffer_stream_to_line_stream;
         use tokio::stream::StreamExt;
+        use futures::FutureExt;
 
         let (container_id, _warnings) = {
             let envs: Vec<String> = job.resources()
@@ -192,19 +193,28 @@ impl Endpoint {
             .build();
 
         let container = self.docker.containers().get(&container_id);
-        container.copy_file_into(script_path, script).await?;
-        let stream = container.exec(&exec_opts);
-        let _ = buffer_stream_to_line_stream(stream)
-            .map(|line| {
-                line.map_err(Error::from)
-                    .and_then(|l| {
-                        crate::log::parser()
-                            .parse(l.as_bytes())
-                            .map_err(Error::from)
-                            .and_then(|item| logsink.send(item).map_err(Error::from))
+        container
+            .copy_file_into(script_path, script)
+            .map(|r| r.with_context(|| anyhow!("Copying the script into the container {} on '{}'", container_id, self.name)))
+            .then(|_| container.start())
+            .map(|r| r.with_context(|| anyhow!("Starting the container {} on '{}'", container_id, self.name)))
+            .then(|_| async {
+                let stream = container.exec(&exec_opts);
+                buffer_stream_to_line_stream(stream)
+                    .map(|line| {
+                        trace!("['{}':{}] Found log line: {:?}", self.name, container_id, line);
+                        line.map_err(Error::from)
+                            .and_then(|l| {
+                                crate::log::parser()
+                                    .parse(l.as_bytes())
+                                    .map_err(Error::from)
+                                    .and_then(|item| logsink.send(item).map_err(Error::from))
+                            })
                     })
+                    .collect::<Result<Vec<_>>>()
+                    .await
             })
-            .collect::<Result<Vec<_>>>()
+            .map(|r| r.with_context(|| anyhow!("Fetching log from container {} on {}", container_id, self.name)))
             .await?;
 
         let tar_stream = container.copy_from(&PathBuf::from("/outputs/"))
