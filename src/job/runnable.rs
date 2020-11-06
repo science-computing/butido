@@ -19,6 +19,7 @@ use crate::package::ParseDependency;
 /// A job configuration that can be run. All inputs are clear here.
 #[derive(Debug, Getters)]
 pub struct RunnableJob {
+    #[getset(get = "pub")]
     uuid: Uuid,
 
     #[getset(get = "pub")]
