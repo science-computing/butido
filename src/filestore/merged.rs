@@ -58,7 +58,10 @@ impl MergedStores {
             .map_err(|_| anyhow!("Lock poisoned"))?
             .0
             .values()
-            .filter(|a| a.name() == name && version.matches(a.version()))
+            .filter(|a| {
+                trace!("Checking {:?} == {:?} && {:?} == {:?}", a.name(), name, version, a.version());
+                a.name() == name && version.matches(a.version())
+            })
             .cloned()
             .collect::<Vec<_>>();
 
