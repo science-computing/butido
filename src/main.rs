@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::collections::BTreeMap;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::Error;
 use walkdir::WalkDir;
@@ -139,6 +140,15 @@ async fn build<'a>(matches: &ArgMatches,
     info!("Submit {}, started {}", submit_id, now);
 
     let image_name = matches.value_of("image").map(String::from).map(ImageName::from).unwrap(); // safe by clap
+    if config.docker().verify_images_present() {
+        if !config.docker().images().iter().any(|img| image_name == *img) {
+            return Err(anyhow!("Requested build image {} is not in the configured images"))
+                .with_context(|| anyhow!("Available images: {:?}", config.docker().images()))
+                .with_context(|| anyhow!("Image present verification failed"))
+                .map_err(Error::from)
+        }
+    }
+
     debug!("Getting repository HEAD");
     let hash_str   = crate::util::git::get_repo_head_commit_hash(repo_path)?;
     trace!("Repository HEAD = {}", hash_str);
