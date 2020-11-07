@@ -79,6 +79,19 @@ available_phases = [ "unpack", "patch", "configure", "build", "fixup", "pack" ]
 # Images which can be used to build
 # images not listed here are automatically rejected
 images = [ "debian:bullseye" ]
+
+#
+# Verify whether the requested images are present
+#
+# This setting is twofold:
+# First, it checks whether the image requested on the commandline (when
+# building) is actually in the whitelist (`docker.images` setting in the
+# configuration file).
+# Second, it checks that every used endpoint actually has the requested image
+# present.
+# This check is done when setting up the connection to the endpoints, so this
+# will fail _before_ any actual building starts.
+#
 verify_images_present = true
 
 # List of docker endpoints
