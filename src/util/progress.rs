@@ -1,4 +1,5 @@
 use indicatif::*;
+use uuid::Uuid;
 
 pub struct ProgressBars {
     bar_template: String,
@@ -37,8 +38,8 @@ impl ProgressBars {
         b
     }
 
-    pub fn job_bar(&self) -> ProgressBar {
-        Self::bar(&format!("Job"), &self.bar_template)
+    pub fn job_bar(&self, id: &Uuid) -> ProgressBar {
+        Self::bar(&format!("Job: {}", id), &self.bar_template)
     }
 
     fn bar(msg: &str, template: &str) -> ProgressBar {
