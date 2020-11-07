@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
     let config: Configuration = config.try_into::<NotValidatedConfiguration>()?.validate()?;
     let repo_path             = PathBuf::from(config.repository());
     let _                     = crate::ui::package_repo_cleanness_check(&repo_path)?;
-    let max_packages          = count_pkg_files(&repo_path, ProgressBar::new_spinner());
+    let max_packages          = count_pkg_files(&repo_path);
     let mut progressbars      = ProgressBars::setup();
 
     let mut load_repo = || -> Result<Repository> {
@@ -341,14 +341,13 @@ async fn dependencies_of(matches: &ArgMatches, repo: Repository, progress: Progr
                        print_sys_runtime_deps)
 }
 
-fn count_pkg_files(p: &Path, progress: ProgressBar) -> u64 {
+fn count_pkg_files(p: &Path) -> u64 {
     WalkDir::new(p)
         .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|d| d.file_type().is_file())
         .filter(|f| f.path().file_name().map(|name| name == "pkg.toml").unwrap_or(false))
-        .inspect(|_| progress.tick())
         .count() as u64
 }
 
