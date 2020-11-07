@@ -232,6 +232,17 @@ pub fn cli<'a>() -> App<'a> {
                 "#))
             )
         )
+        .subcommand(App::new("versions-of")
+            .alias("versions")
+            .about("List the versions of a package")
+            .arg(Arg::with_name("package_name")
+                .required(true)
+                .multiple(false)
+                .index(1)
+                .value_name("PACKAGE_NAME")
+                .help("The name of the package")
+            )
+        )
 
 }
 
