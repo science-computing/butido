@@ -80,16 +80,8 @@ async fn main() -> Result<()> {
             let conn = crate::db::establish_connection(db_connection_config)?;
 
             let repo = load_repo()?;
-            let bar_tree_building = progressbars.tree_building();
-            bar_tree_building.set_length(max_packages);
 
-            let bar_release_loading = progressbars.release_loading();
-            bar_release_loading.set_length(max_packages);
-
-            let bar_staging_loading = progressbars.staging_loading();
-            bar_staging_loading.set_length(max_packages);
-
-            build(matches, conn, &config, repo, &repo_path, bar_tree_building, bar_release_loading, bar_staging_loading).await?
+            build(matches, progressbars, conn, &config, repo, &repo_path, max_packages as u64).await?
         },
         ("what-depends", Some(matches)) => {
             let repo = load_repo()?;
@@ -112,13 +104,12 @@ async fn main() -> Result<()> {
 }
 
 async fn build<'a>(matches: &ArgMatches,
+               progressbars: ProgressBars,
                database_connection: PgConnection,
                config: &Configuration<'a>,
                repo: Repository,
                repo_path: &Path,
-               bar_tree_building: ProgressBar,
-               bar_release_loading: ProgressBar,
-               bar_staging_loading: ProgressBar)
+               max_packages: u64)
     -> Result<()>
 {
     use crate::db::models::{
@@ -192,7 +183,10 @@ async fn build<'a>(matches: &ArgMatches,
     }
     let package = *packages.get(0).ok_or_else(|| anyhow!("Found no package."))?;
 
-    let release_dir  = async move {
+    let release_dir  = {
+        let bar_release_loading = progressbars.release_loading();
+        bar_release_loading.set_length(max_packages);
+
         let variables = BTreeMap::new();
         let p = config.releases_directory(&variables)?;
         debug!("Loading release directory: {}", p.display());
@@ -202,10 +196,13 @@ async fn build<'a>(matches: &ArgMatches,
         } else {
             bar_release_loading.finish_with_message("Failed to load releases");
         }
-        r.map(RwLock::new).map(Arc::new)
+        r.map(RwLock::new).map(Arc::new)?
     };
 
-    let staging_dir = async move {
+    let staging_dir = {
+        let bar_staging_loading = progressbars.staging_loading();
+        bar_staging_loading.set_length(max_packages);
+
         let variables = BTreeMap::new();
         let p = config.staging_directory(&variables)?;
         debug!("Loading staging directory: {}", p.display());
@@ -215,14 +212,18 @@ async fn build<'a>(matches: &ArgMatches,
         } else {
             bar_staging_loading.finish_with_message("Failed to load staging");
         }
-        r.map(RwLock::new).map(Arc::new)
+        r.map(RwLock::new).map(Arc::new)?
     };
 
-    let tree = async {
+    let tree = {
+        let bar_tree_building = progressbars.tree_building();
+        bar_tree_building.set_length(max_packages);
+
         let mut tree = Tree::new();
         tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
+
         bar_tree_building.finish_with_message("Finished loading Tree");
-        Ok(tree) as Result<Tree>
+        tree
     };
 
     trace!("Setting up database jobs for Package, GitHash, Image");
@@ -231,15 +232,13 @@ async fn build<'a>(matches: &ArgMatches,
     let db_image   = async { Image::create_or_fetch(&database_connection, &image_name) };
 
     trace!("Running database jobs for Package, GitHash, Image");
-    let (tree, db_package, db_githash, db_image) = tokio::join!(
-        tree,
+    let (db_package, db_githash, db_image) = tokio::join!(
         db_package,
         db_githash,
         db_image
     );
 
-    let (tree, db_package, db_githash, db_image) =
-        (tree?, db_package?, db_githash?, db_image?);
+    let (db_package, db_githash, db_image) = (db_package?, db_githash?, db_image?);
 
     trace!("Database jobs for Package, GitHash, Image finished successfully");
     trace!("Creating Submit in database");
@@ -258,9 +257,10 @@ async fn build<'a>(matches: &ArgMatches,
 
     trace!("Setting up Orchestrator");
     let orch = OrchestratorSetup::builder()
+        .progress_generator(progressbars)
         .endpoint_config(endpoint_configurations)
-        .staging_store(staging_dir.await?)
-        .release_store(release_dir.await?)
+        .staging_store(staging_dir)
+        .release_store(release_dir)
         .database(database_connection)
         .submit(submit)
         .file_log_sink_factory(None)
