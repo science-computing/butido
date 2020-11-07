@@ -12,6 +12,11 @@ hash.hash = "23465"
 [phases]
 # overwrites
 install.script = '''
+    ls /inputs
+    [[ -e /inputs/pkgB-1.0.0.txt ]] || {
+        echo "Not found: pkgB-1.0.0"
+        exit 1
+    }
     echo Overridden install phase in package pkgA
 
     mkdir -p /outputs
