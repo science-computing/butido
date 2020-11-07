@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
     let repo_path             = PathBuf::from(config.repository());
     let _                     = crate::ui::package_repo_cleanness_check(&repo_path)?;
     let max_packages          = count_pkg_files(&repo_path);
-    let mut progressbars      = ProgressBars::setup();
+    let mut progressbars      = ProgressBars::setup(config.progress_format().clone());
 
     let mut load_repo = || -> Result<Repository> {
         let bar = progressbars.repo_loading();
