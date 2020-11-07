@@ -40,31 +40,21 @@ impl RunnableJob {
         let script = ScriptBuilder::new(&job.script_shebang)
             .build(&job.package, &job.script_phases)?;
 
-        let resources = job.package()
+        trace!("Preparing build dependencies");
+        let build_resources = job.package()
             .dependencies()
             .build()
             .into_iter()
-            .map(|runtime_dep| {
-                let (name, version) = runtime_dep.parse_as_name_and_version()?;
-                let mut a = merged_stores.get_artifact_by_name_and_version(&name, &version)?;
+            .map(|dep| Self::build_resource(dep, merged_stores));
 
-                if a.is_empty() {
-                    Err(anyhow!("Cannot find dependency: {:?} {:?}", name, version))
-                        .context("Building a runnable job")
-                        .map_err(Error::from)
-                } else {
-                    a.sort();
-                    let a_len = a.len();
-                    let found_dependency = a.into_iter().next().unwrap(); // save by above check
-                    if a_len > 1 {
-                        warn!("Found more than one dependency for {:?} {:?}", name, version);
-                        warn!("Using: {:?}", found_dependency);
-                        warn!("Please investigate, this might be a BUG");
-                    }
+        trace!("Preparing runtime dependencies");
+        let runtime_resources = job.package()
+            .dependencies()
+            .runtime()
+            .into_iter()
+            .map(|dep| Self::build_resource(dep, merged_stores));
 
-                    Ok(JobResource::Artifact(found_dependency.clone()))
-                }
-            })
+        let resources = build_resources.chain(runtime_resources)
             .collect::<Result<Vec<JobResource>>>()?;
 
         Ok(RunnableJob {
@@ -75,6 +65,30 @@ impl RunnableJob {
 
             script,
         })
+
+    }
+
+    fn build_resource(dep: &dyn ParseDependency, merged_stores: &MergedStores) -> Result<JobResource> {
+        let (name, vers) = dep.parse_as_name_and_version()?;
+        trace!("Copying dep: {:?} {:?}", name, vers);
+        let mut a = merged_stores.get_artifact_by_name_and_version(&name, &vers)?;
+
+        if a.is_empty() {
+            Err(anyhow!("Cannot find dependency: {:?} {:?}", name, vers))
+                .context("Building a runnable job")
+                .map_err(Error::from)
+        } else {
+            a.sort();
+            let a_len = a.len();
+            let found_dependency = a.into_iter().next().unwrap(); // save by above check
+            if a_len > 1 {
+                warn!("Found more than one dependency for {:?} {:?}", name, vers);
+                warn!("Using: {:?}", found_dependency);
+                warn!("Please investigate, this might be a BUG");
+            }
+
+            Ok(JobResource::Artifact(found_dependency.clone()))
+        }
 
     }
 }
