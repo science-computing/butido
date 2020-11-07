@@ -27,6 +27,10 @@ impl JobSet {
         self.set.into_iter().map(move |j| RunnableJob::build_from_job(j, merged_stores))
     }
 
+    pub fn len(&self) -> usize {
+        self.set.len()
+    }
+
 }
 
 /// Get the tree as sets of jobs, the deepest level of the tree first
