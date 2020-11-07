@@ -105,6 +105,11 @@ async fn main() -> Result<()> {
             dependencies_of(matches, repo, bar).await?
         },
 
+        ("versions-of", Some(matches)) => {
+            let repo = load_repo()?;
+            versions_of(matches, repo).await?
+        }
+
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 
@@ -339,6 +344,26 @@ async fn dependencies_of(matches: &ArgMatches, repo: Repository, progress: Progr
                        print_build_deps,
                        print_sys_deps,
                        print_sys_runtime_deps)
+}
+
+async fn versions_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
+    use filters::filter::Filter;
+    use std::io::Write;
+
+    let package_filter = {
+        let name = matches.value_of("package_name").map(String::from).map(PackageName::from).unwrap();
+        trace!("Checking for package with name = {}", name);
+
+        crate::util::filters::build_package_filter_by_name(name)
+    };
+
+    let mut stdout = std::io::stdout();
+    repo.packages()
+        .filter(|package| package_filter.filter(package))
+        .inspect(|pkg| trace!("Found package: {:?}", pkg))
+        .map(|pkg| writeln!(stdout, "{}", pkg.version()).map_err(Error::from))
+        .collect::<Result<Vec<_>>>()
+        .map(|_| ())
 }
 
 fn count_pkg_files(p: &Path, progress: ProgressBar) -> u64 {
