@@ -62,7 +62,7 @@ impl Artifact {
     }
 
     fn parse_path(path: &Path) -> Result<(PackageName, PackageVersion)> {
-        path.file_name()
+        path.file_stem()
             .ok_or_else(|| anyhow!("Cannot get filename from {}", path.display()))?
             .to_owned()
             .into_string()
