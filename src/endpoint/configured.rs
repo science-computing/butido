@@ -208,6 +208,31 @@ impl Endpoint {
             .build();
 
         let container = self.docker.containers().get(&container_id);
+        { // Copy all Path artifacts to the container
+            job.resources()
+                .into_iter()
+                .filter_map(JobResource::artifact)
+                .cloned()
+                .map(|art| async {
+                    let artifact_file_name = art.path().file_name()
+                        .ok_or_else(|| anyhow!("BUG: artifact {} is not a file", art.path().display()))?;
+                    let destination = PathBuf::from("/inputs/").join(artifact_file_name);
+                    trace!("Copying {} to container: {}:{}", art.path().display(), container_id, destination.display());
+                    let buf = tokio::fs::read(art.path())
+                        .await
+                        .map(Vec::from)
+                        .map_err(Error::from)?;
+
+                    drop(art); // ensure `art` is moved into closure
+                    container.copy_file_into(destination, &buf)
+                        .await
+                        .map_err(Error::from)
+                })
+                .collect::<futures::stream::FuturesUnordered<_>>()
+                .collect::<Result<Vec<_>>>()
+                .await?;
+        }
+
         container
             .copy_file_into(script_path, script)
             .map(|r| r.with_context(|| anyhow!("Copying the script into the container {} on '{}'", container_id, self.name)))
