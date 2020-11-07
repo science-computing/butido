@@ -170,13 +170,11 @@ impl Endpoint {
         use futures::FutureExt;
 
         let (container_id, _warnings) = {
-            let envs: Vec<String> = job.resources()
+            let envs = job.resources()
                 .iter()
-                .filter_map(|r| match r {
-                    JobResource::Environment(k, v) => Some(format!("{}={}", k, v)),
-                    JobResource::Artifact(_)       => None,
-                })
-                .collect();
+                .filter_map(JobResource::env)
+                .map(|(k, v)| format!("{}={}", k, v))
+                .collect::<Vec<_>>();
 
             let builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref())
                     .env(envs.iter().map(AsRef::as_ref).collect())
