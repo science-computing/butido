@@ -31,6 +31,16 @@ impl ProgressBars {
         Self::bar("Crawling dependencies", &self.bar_template)
     }
 
+    pub fn jobset_bar(&self, jobset_num: usize, number_of_jobsets: usize, jobs_in_jobset: usize) -> ProgressBar {
+        let b = Self::bar(&format!("Jobset {}/{} ({} Jobs)", jobset_num, number_of_jobsets, jobs_in_jobset), &self.bar_template);
+        b.set_length(jobs_in_jobset as u64);
+        b
+    }
+
+    pub fn job_bar(&self) -> ProgressBar {
+        Self::bar(&format!("Job"), &self.bar_template)
+    }
+
     fn bar(msg: &str, template: &str) -> ProgressBar {
         let b = ProgressBar::new(1);
         b.set_style(ProgressStyle::default_bar().template(template));
