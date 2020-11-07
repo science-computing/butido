@@ -19,6 +19,10 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     repository: PathBuf,
 
+    #[serde(default = "default_progress_format")]
+    #[getset(get = "pub")]
+    progress_format: String,
+
     #[serde(rename = "releases")]
     releases_directory: String,
 
@@ -178,3 +182,6 @@ pub enum EndpointType {
 }
 
 
+fn default_progress_format() -> String {
+    String::from("[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}")
+}

@@ -1,6 +1,17 @@
 # repository of package definitions
 repository = "/tmp/path"
 
+# Format of the progress bars used.
+# See https://docs.rs/indicatif/0.15.0/indicatif/#templates
+# for how to customize this.
+#
+# Note that 40 is a nice width for the bar itself here, because that's 63
+# characters before the actually {msg}, which gives the message enough space to
+# fit a 80 or 100 character wide terminal!
+#
+# This is also the default if the setting is not present.
+progress_format = "[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}"
+
 # The position of the release binaries
 #
 # butido checks this location for packages when installing dependencies
