@@ -209,7 +209,7 @@ fn display_data<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>
              wtr.write_record(&r)?;
          }
 
-        let mut out = std::io::stdout();
+        let out = std::io::stdout();
         let mut lock = out.lock();
 
          wtr.into_inner()
@@ -234,7 +234,7 @@ fn display_data<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>
             ascii_table.print(data);
             Ok(())
         } else {
-            let mut out = std::io::stdout();
+            let out = std::io::stdout();
             let mut lock = out.lock();
             for list in data {
                 writeln!(lock, "{}", list.iter().map(|d| d.to_string()).join(" "))?;

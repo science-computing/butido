@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
     let max_packages          = count_pkg_files(&repo_path);
     let progressbars          = ProgressBars::setup(config.progress_format().clone());
 
-    let mut load_repo = || -> Result<Repository> {
+    let load_repo = || -> Result<Repository> {
         let bar = progressbars.repo_loading();
         bar.set_length(max_packages);
         let repo = Repository::load(&repo_path, &bar)?;
