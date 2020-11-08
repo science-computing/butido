@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_parser_one_letter_name() {
-        let p = PathBuf::from("a-1");
+        let p = PathBuf::from("a-1.ext");
         let r = Artifact::parse_path(&p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_parser_multi_letter_name() {
-        let p = PathBuf::from("foo-1");
+        let p = PathBuf::from("foo-1.ext");
         let r = Artifact::parse_path(&p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_parser_multi_char_version() {
-        let p = PathBuf::from("foo-1123");
+        let p = PathBuf::from("foo-1123.ext");
         let r = Artifact::parse_path(&p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn test_parser_multi_char_version_dashed() {
-        let p = PathBuf::from("foo-1-1-2-3");
+        let p = PathBuf::from("foo-1-1-2-3.ext");
         let r = Artifact::parse_path(&p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_parser_multi_char_version_dashed_and_dotted() {
-        let p = PathBuf::from("foo-1-1.2-3");
+        let p = PathBuf::from("foo-1-1.2-3.ext");
         let r = Artifact::parse_path(&p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn test_parser_alnum_version() {
-        let p = PathBuf::from("foo-1-1.2a3");
+        let p = PathBuf::from("foo-1-1.2a3.ext");
         let r = Artifact::parse_path(&p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_parser_package_name_with_number() {
-        let p = PathBuf::from("foo2-1-1.2a3");
+        let p = PathBuf::from("foo2-1-1.2a3.ext");
         let r = Artifact::parse_path(&p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
