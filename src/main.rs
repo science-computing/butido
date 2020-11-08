@@ -300,7 +300,8 @@ async fn what_depends(matches: &ArgMatches, repo: Repository, progress: Progress
 
     let format = matches.value_of("list-format").unwrap(); // safe by clap default value
     let mut stdout = std::io::stdout();
-    let iter = repo.packages().filter(|package| package_filter.filter(package));
+    let iter = repo.packages().filter(|package| package_filter.filter(package))
+        .inspect(|p| trace!("Found: {:?}", p));
     ui::print_packages(&mut stdout,
                        format,
                        iter,

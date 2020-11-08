@@ -17,25 +17,41 @@ pub fn build_package_filter_by_dependency_name(
     let n = name.clone(); // clone, so we can move into closure
     let filter_system_dep = move |p: &Package| {
         trace!("Checking whether any system depenency of {:?} is '{}'", p, n);
-        p.dependencies().system().iter().any(|sys_build_dep| sys_build_dep.str_equal(&n))
+        p.dependencies()
+            .system()
+            .iter()
+            .inspect(|d| trace!("Checking {:?}", d))
+            .any(|sys_build_dep| sys_build_dep.str_equal(&n))
     };
 
     let n = name.clone(); // clone, so we can move into closure
     let filter_system_runtime_dep = move |p: &Package| {
         trace!("Checking whether any system runtime depenency of {:?} is '{}'", p, n);
-        p.dependencies().system_runtime().iter().any(|sys_rt_dep| sys_rt_dep.str_equal(&n))
+        p.dependencies()
+            .system_runtime()
+            .iter()
+            .inspect(|d| trace!("Checking {:?}", d))
+            .any(|sys_rt_dep| sys_rt_dep.str_equal(&n))
     };
 
     let n = name.clone(); // clone, so we can move into closure
     let filter_build_dep = move |p: &Package| {
         trace!("Checking whether any build depenency of {:?} is '{}'", p, n);
-        p.dependencies().build().iter().any(|build_dep| build_dep.str_equal(&n))
+        p.dependencies()
+            .build()
+            .iter()
+            .inspect(|d| trace!("Checking {:?}", d))
+            .any(|build_dep| build_dep.str_equal(&n))
     };
 
     let n = name.clone(); // clone, so we can move into closure
     let filter_rt_dep = move |p: &Package| {
         trace!("Checking whether any runtime depenency of {:?} is '{}'", p, n);
-        p.dependencies().runtime().iter().any(|rt_dep| rt_dep.str_equal(&n))
+        p.dependencies()
+            .runtime()
+            .iter()
+            .inspect(|d| trace!("Checking {:?}", d))
+            .any(|rt_dep| rt_dep.str_equal(&n))
     };
 
     (Bool::new(check_system_dep).and(filter_system_dep))
