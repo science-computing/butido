@@ -92,14 +92,14 @@ async fn main() -> Result<()> {
             let repo = load_repo()?;
             let bar = progressbars.what_depends();
             bar.set_length(max_packages);
-            what_depends(matches, repo, bar).await?
+            what_depends(matches, &config, repo, bar).await?
         },
 
         ("dependencies-of", Some(matches)) => {
             let repo = load_repo()?;
             let bar = progressbars.what_depends();
             bar.set_length(max_packages);
-            dependencies_of(matches, repo, bar).await?
+            dependencies_of(matches, &config, repo, bar).await?
         },
 
         ("versions-of", Some(matches)) => {
@@ -276,7 +276,7 @@ async fn build<'a>(matches: &ArgMatches,
     orch.run().await
 }
 
-async fn what_depends(matches: &ArgMatches, repo: Repository, progress: ProgressBar) -> Result<()> {
+async fn what_depends<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository, progress: ProgressBar) -> Result<()> {
     use filters::failable::filter::FailableFilter;
 
     let print_runtime_deps     = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME);
@@ -296,7 +296,7 @@ async fn what_depends(matches: &ArgMatches, repo: Repository, progress: Progress
         )
     };
 
-    let format = matches.value_of("list-format").unwrap(); // safe by clap default value
+    let format = config.package_print_format();
     let mut stdout = std::io::stdout();
 
     let packages = repo.packages()
@@ -315,7 +315,7 @@ async fn what_depends(matches: &ArgMatches, repo: Repository, progress: Progress
                        print_sys_runtime_deps)
 }
 
-async fn dependencies_of(matches: &ArgMatches, repo: Repository, progress: ProgressBar) -> Result<()> {
+async fn dependencies_of<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository, progress: ProgressBar) -> Result<()> {
     use filters::filter::Filter;
 
     let package_filter = {
@@ -325,7 +325,7 @@ async fn dependencies_of(matches: &ArgMatches, repo: Repository, progress: Progr
         crate::util::filters::build_package_filter_by_name(name)
     };
 
-    let format = matches.value_of("list-format").unwrap(); // safe by clap default value
+    let format = config.package_print_format();
     let mut stdout = std::io::stdout();
     let iter = repo.packages().filter(|package| package_filter.filter(package))
         .inspect(|pkg| trace!("Found package: {:?}", pkg));
