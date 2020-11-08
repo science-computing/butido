@@ -1,49 +1,52 @@
 #[macro_use] extern crate log as logcrate;
 #[macro_use] extern crate diesel;
-use logcrate::debug;
 
-use std::ops::Deref;
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
-use std::collections::BTreeMap;
+use std::sync::Arc;
+use std::sync::RwLock;
 
-use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Result;
 use anyhow::Error;
-use walkdir::WalkDir;
-use indicatif::*;
-use tokio::stream::StreamExt;
+use anyhow::Result;
+use anyhow::anyhow;
 use clap_v3::ArgMatches;
 use diesel::PgConnection;
 use diesel::prelude::*;
+use indicatif::*;
+use logcrate::debug;
 use resiter::Filter;
 use resiter::Map;
+use tokio::stream::StreamExt;
+use walkdir::WalkDir;
 
 mod cli;
-mod job;
+mod config;
+mod db;
 mod endpoint;
-mod util;
+mod filestore;
+mod job;
 mod log;
+mod orchestrator;
 mod package;
 mod phase;
-mod config;
 mod repository;
-mod filestore;
-mod ui;
-mod orchestrator;
 mod schema;
-mod db;
+mod ui;
+mod util;
+
 use crate::config::*;
-use crate::repository::Repository;
+use crate::filestore::ReleaseStore;
+use crate::filestore::StagingStore;
+use crate::job::JobSet;
+use crate::orchestrator::OrchestratorSetup;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::package::Tree;
-use crate::filestore::ReleaseStore;
-use crate::filestore::StagingStore;
+use crate::repository::Repository;
+use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
-use crate::orchestrator::Orchestrator;
-use crate::orchestrator::OrchestratorSetup;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -125,13 +128,6 @@ async fn build<'a>(matches: &ArgMatches,
         Image,
         Submit,
     };
-    use schema::packages;
-    use schema::githashes;
-    use schema::images;
-    use crate::job::JobSet;
-    use std::sync::Arc;
-    use std::sync::RwLock;
-    use crate::util::docker::ImageName;
 
     let now = chrono::offset::Local::now().naive_local();
     let submit_id = uuid::Uuid::new_v4();

@@ -1,14 +1,14 @@
-use std::path::PathBuf;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::ops::Deref;
-use std::collections::BTreeMap;
+use std::path::PathBuf;
 
-use anyhow::Result;
 use anyhow::Context;
-use getset::Getters;
+use anyhow::Result;
 use getset::CopyGetters;
-use serde::Deserialize;
+use getset::Getters;
 use handlebars::Handlebars;
+use serde::Deserialize;
 
 use crate::phase::PhaseName;
 use crate::util::EnvironmentVariableName;

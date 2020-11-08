@@ -1,9 +1,9 @@
+use anyhow::Result;
 use getset::Getters;
 use typed_builder::TypedBuilder;
-use anyhow::Result;
 
-use crate::util::docker::ImageName;
 use crate::endpoint::Endpoint;
+use crate::util::docker::ImageName;
 
 #[derive(Getters, TypedBuilder)]
 pub struct EndpointConfiguration {

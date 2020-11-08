@@ -1,11 +1,11 @@
+use anyhow::Error;
+use anyhow::Result;
+use filters::failable::filter::FailableFilter;
+use resiter::Map;
+
 use crate::package::Package;
 use crate::package::PackageName;
 use crate::package::ParseDependency;
-
-use resiter::Map;
-use filters::failable::filter::FailableFilter;
-use anyhow::Error;
-use anyhow::Result;
 
 /// Helper function to build a package filter based on some flags and the package version
 pub fn build_package_filter_by_dependency_name(

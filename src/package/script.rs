@@ -1,10 +1,10 @@
 use anyhow::Result;
-use serde::Serialize;
 use serde::Deserialize;
+use serde::Serialize;
 
+use crate::package::Package;
 use crate::phase::Phase;
 use crate::phase::PhaseName;
-use crate::package::Package;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]

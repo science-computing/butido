@@ -1,20 +1,18 @@
-use std::path::PathBuf;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
-use getset::Getters;
-use serde::Serialize;
-use serde::Deserialize;
 use anyhow::Result;
-use anyhow::Error;
-use resiter::AndThen;
+use getset::Getters;
+use serde::Deserialize;
+use serde::Serialize;
 
-use crate::phase::{PhaseName, Phase};
-use crate::package::dependency::*;
-use crate::package::source::*;
-use crate::package::name::*;
-use crate::package::version::*;
-use crate::util::docker::ImageName;
 use crate::package::ParseDependency;
+use crate::package::dependency::*;
+use crate::package::name::*;
+use crate::package::source::*;
+use crate::package::version::*;
+use crate::phase::{PhaseName, Phase};
+use crate::util::docker::ImageName;
 
 #[derive(Clone, Serialize, Deserialize, Getters)]
 pub struct Package {

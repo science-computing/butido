@@ -1,14 +1,15 @@
-use std::path::PathBuf;
 use std::fmt::Display;
+use std::path::PathBuf;
+use std::process::Command;
 
 use clap_v3 as clap;
-use clap::ArgMatches;
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use itertools::Itertools;
+use anyhow::anyhow;
+use clap::ArgMatches;
 use diesel::RunQueryDsl;
+use itertools::Itertools;
 
 use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
@@ -25,8 +26,6 @@ pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches,
 }
 
 fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &Configuration) -> Result<()> {
-    use std::process::Command;
-
     trait PgCliCommand {
         fn run_for_uri(&self, dbcc: DbConnectionConfig)  -> Result<()>;
     }

@@ -1,20 +1,15 @@
 use std::result::Result as RResult;
 use std::str::FromStr;
-use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
 
-use anyhow::Error;
-use anyhow::Result;
-use anyhow::anyhow;
 use futures::AsyncBufReadExt;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use pom::*;
 use pom::parser::Parser as PomParser;
 use shiplift::tty::TtyChunk;
 
-use crate::log::util::*;
 use crate::log::LogItem;
+use crate::log::util::*;
 
 type IoResult<T> = RResult<T, futures::io::Error>;
 
@@ -29,7 +24,6 @@ pub fn buffer_stream_to_line_stream<S>(stream: S) -> impl Stream<Item = IoResult
 
 pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
     use pom::parser::*;
-    use pom::char_class::hex_digit;
 
     let number = one_of(b"0123456789")
         .repeat(1..)
@@ -73,6 +67,8 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Error;
+    use anyhow::Result;
 
     // Helper function for showing log item in error message in pretty
     fn prettify_item(e: &LogItem) -> String {

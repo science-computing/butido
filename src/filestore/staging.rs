@@ -1,19 +1,19 @@
+use std::fmt::Debug;
 use std::path::Path;
 use std::path::PathBuf;
-use std::fmt::Debug;
 
-use anyhow::anyhow;
-use anyhow::Result;
-use anyhow::Error;
 use anyhow::Context;
-use indicatif::ProgressBar;
+use anyhow::Error;
+use anyhow::Result;
+use anyhow::anyhow;
 use futures::stream::Stream;
-use resiter::Map;
+use indicatif::ProgressBar;
 use resiter::Filter;
+use resiter::Map;
 use tar;
 
-use crate::filestore::util::FileStoreImpl;
 use crate::filestore::Artifact;
+use crate::filestore::util::FileStoreImpl;
 
 // The implementation of this type must be available in the merged filestore.
 pub struct StagingStore(pub (in crate::filestore) FileStoreImpl);
@@ -38,7 +38,6 @@ impl StagingStore {
         where S: Stream<Item = Result<Vec<u8>>>
     {
         use futures::stream::TryStreamExt;
-        use std::io::Read;
 
         let dest = &self.0.root;
         stream.try_concat()

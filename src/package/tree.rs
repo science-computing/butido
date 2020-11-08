@@ -4,11 +4,11 @@ use anyhow::Result;
 use anyhow::anyhow;
 use indicatif::ProgressBar;
 use resiter::AndThen;
-use serde::Serialize;
 use serde::Deserialize;
+use serde::Serialize;
 
-use crate::repository::Repository;
 use crate::package::Package;
+use crate::repository::Repository;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Tree {
@@ -145,7 +145,6 @@ impl Tree {
 mod tests {
     use super::*;
 
-    use url::Url;
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
     use crate::package::tests::package;

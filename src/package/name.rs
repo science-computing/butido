@@ -1,7 +1,8 @@
 use std::ops::Deref;
-use serde::Serialize;
-use serde::Deserialize;
+
 use pom::parser::Parser as PomParser;
+use serde::Deserialize;
+use serde::Serialize;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]

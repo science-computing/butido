@@ -5,17 +5,16 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
-use anyhow::Result;
 use anyhow::Error;
-use walkdir::WalkDir;
-use resiter::Map;
-use resiter::AndThen;
+use anyhow::Result;
+use anyhow::anyhow;
 use indicatif::ProgressBar;
+use resiter::AndThen;
+use resiter::Map;
+use walkdir::WalkDir;
 
 use crate::filestore::Artifact;
 use crate::package::PackageName;
-use crate::package::PackageVersion;
 use crate::package::PackageVersionConstraint;
 
 /// The actual filestore implementation

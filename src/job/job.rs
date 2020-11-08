@@ -1,11 +1,10 @@
+use getset::Getters;
 use uuid::Uuid;
 
 use crate::job::JobResource;
 use crate::package::Package;
 use crate::phase::PhaseName;
 use crate::util::docker::ImageName;
-
-use getset::Getters;
 
 /// A prepared, but not necessarily runnable, job configuration
 #[derive(Debug, Getters)]

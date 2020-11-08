@@ -1,12 +1,12 @@
 //! Utility functions for the UI
 
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
-use std::collections::BTreeMap;
 
-use anyhow::anyhow;
-use anyhow::Result;
 use anyhow::Error;
+use anyhow::Result;
+use anyhow::anyhow;
 use handlebars::Handlebars;
 use itertools::Itertools;
 

@@ -1,11 +1,10 @@
 use std::ops::Deref;
 
-use serde::Serialize;
-use serde::Deserialize;
-use anyhow::anyhow;
-use anyhow::Error;
 use anyhow::Result;
 use pom::parser::Parser as PomParser;
+use serde::Deserialize;
+use serde::Serialize;
+
 use crate::util::parser::*;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]

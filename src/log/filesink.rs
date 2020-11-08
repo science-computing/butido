@@ -1,17 +1,15 @@
-use std::path::Path;
-use std::path::PathBuf;
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::convert::TryInto;
 use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 
-use anyhow::Result;
 use anyhow::Error;
-use anyhow::anyhow;
+use anyhow::Result;
 
-use crate::log::LogSink;
-use crate::log::LogItem;
 use crate::job::Job;
+use crate::log::LogItem;
+use crate::log::LogSink;
 
 pub struct FileSink {
     file: File,

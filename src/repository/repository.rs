@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 use std::path::Path;
-use anyhow::Result;
+use std::path::PathBuf;
+
 use anyhow::Context;
+use anyhow::Result;
 use resiter::Map;
 
 use crate::package::Package;

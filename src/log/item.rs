@@ -1,7 +1,4 @@
-use std::convert::TryInto;
-
 use anyhow::Result;
-use anyhow::Error;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum LogItem {
