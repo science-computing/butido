@@ -11,13 +11,12 @@ use clap::ArgMatches;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
 
-use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
 use crate::db::models;
 
-pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &Configuration) -> Result<()> {
+pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
-        ("cli", Some(matches))        => cli(db_connection_config, matches, config),
+        ("cli", Some(matches))        => cli(db_connection_config, matches),
         ("artifacts", Some(matches))  => artifacts(db_connection_config, matches),
         ("envvars", Some(matches))    => envvars(db_connection_config, matches),
         ("images", Some(matches))     => images(db_connection_config, matches),
@@ -25,7 +24,7 @@ pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches,
     }
 }
 
-fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &Configuration) -> Result<()> {
+fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     trait PgCliCommand {
         fn run_for_uri(&self, dbcc: DbConnectionConfig)  -> Result<()>;
     }

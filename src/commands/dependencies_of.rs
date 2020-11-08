@@ -6,7 +6,7 @@ use crate::config::*;
 use crate::package::PackageName;
 use crate::repository::Repository;
 
-pub async fn dependencies_of<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository, progress: ProgressBar) -> Result<()> {
+pub async fn dependencies_of<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
     use filters::filter::Filter;
 
     let package_filter = {

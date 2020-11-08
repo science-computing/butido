@@ -8,7 +8,7 @@ use crate::config::*;
 use crate::package::PackageName;
 use crate::repository::Repository;
 
-pub async fn what_depends<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository, progress: ProgressBar) -> Result<()> {
+pub async fn what_depends<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
     use filters::failable::filter::FailableFilter;
 
     let print_runtime_deps     = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME);

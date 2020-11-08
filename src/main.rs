@@ -61,7 +61,7 @@ async fn main() -> Result<()> {
 
     let db_connection_config = crate::db::parse_db_connection_config(&config, &cli);
     match cli.subcommand() {
-        ("db", Some(matches))           => db::interface(db_connection_config, matches, &config)?,
+        ("db", Some(matches))           => db::interface(db_connection_config, matches)?,
         ("build", Some(matches))        => {
             let conn = crate::db::establish_connection(db_connection_config)?;
 
@@ -73,14 +73,14 @@ async fn main() -> Result<()> {
             let repo = load_repo()?;
             let bar = progressbars.what_depends();
             bar.set_length(max_packages);
-            crate::commands::what_depends(matches, &config, repo, bar).await?
+            crate::commands::what_depends(matches, &config, repo).await?
         },
 
         ("dependencies-of", Some(matches)) => {
             let repo = load_repo()?;
             let bar = progressbars.what_depends();
             bar.set_length(max_packages);
-            crate::commands::dependencies_of(matches, &config, repo, bar).await?
+            crate::commands::dependencies_of(matches, &config, repo).await?
         },
 
         ("versions-of", Some(matches)) => {
