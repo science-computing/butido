@@ -30,9 +30,6 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
         .collect()
         .convert(|b| String::from_utf8(b.to_vec()))
         .convert(|s| usize::from_str(&s));
-    let space  = one_of(b" \t\r\n")
-        .repeat(0..)
-        .discard();
 
     fn ignored<'a>() -> PomParser<'a, u8, Vec<u8>> {
         none_of(b"\n").repeat(0..)
