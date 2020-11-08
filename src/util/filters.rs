@@ -1,63 +1,93 @@
 use crate::package::Package;
 use crate::package::PackageName;
-use crate::package::StringEqual;
+use crate::package::ParseDependency;
 
-use filters::ops::bool::Bool;
-use filters::filter::Filter;
+use resiter::Map;
+use filters::failable::filter::FailableFilter;
+use anyhow::Error;
+use anyhow::Result;
 
 /// Helper function to build a package filter based on some flags and the package version
 pub fn build_package_filter_by_dependency_name(
-    name: String,
+    name: &PackageName,
     check_system_dep: bool,
     check_system_runtime_dep: bool,
     check_build_dep: bool,
     check_runtime_dep: bool)
-    -> impl filters::filter::Filter<Package>
+    -> impl filters::failable::filter::FailableFilter<Package, Error = Error>
 {
     let n = name.clone(); // clone, so we can move into closure
-    let filter_system_dep = move |p: &Package| {
+    let filter_system_dep = move |p: &Package| -> Result<bool> {
         trace!("Checking whether any system depenency of {:?} is '{}'", p, n);
-        p.dependencies()
-            .system()
-            .iter()
-            .inspect(|d| trace!("Checking {:?}", d))
-            .any(|sys_build_dep| sys_build_dep.str_equal(&n))
+        Ok({
+            check_system_dep && p.dependencies()
+                .system()
+                .iter()
+                .inspect(|d| trace!("Checking {:?}", d))
+                .map(|d| d.parse_as_name_and_version())
+                .map_ok(|(name, _)| name == n)
+                .collect::<Result<Vec<bool>>>()?
+                .into_iter()
+                .inspect(|b| trace!("found: {}", b))
+                .any(|b| b)
+        })
     };
 
     let n = name.clone(); // clone, so we can move into closure
-    let filter_system_runtime_dep = move |p: &Package| {
+    let filter_system_runtime_dep = move |p: &Package| -> Result<bool> {
         trace!("Checking whether any system runtime depenency of {:?} is '{}'", p, n);
-        p.dependencies()
-            .system_runtime()
-            .iter()
-            .inspect(|d| trace!("Checking {:?}", d))
-            .any(|sys_rt_dep| sys_rt_dep.str_equal(&n))
+        Ok({
+            check_system_runtime_dep && p.dependencies()
+                .system_runtime()
+                .iter()
+                .inspect(|d| trace!("Checking {:?}", d))
+                .map(|d| d.parse_as_name_and_version())
+                .map_ok(|(name, _)| name == n)
+                .collect::<Result<Vec<bool>>>()?
+                .into_iter()
+                .inspect(|b| trace!("found: {}", b))
+                .any(|b| b)
+        })
     };
 
     let n = name.clone(); // clone, so we can move into closure
-    let filter_build_dep = move |p: &Package| {
+    let filter_build_dep = move |p: &Package| -> Result<bool> {
         trace!("Checking whether any build depenency of {:?} is '{}'", p, n);
-        p.dependencies()
-            .build()
-            .iter()
-            .inspect(|d| trace!("Checking {:?}", d))
-            .any(|build_dep| build_dep.str_equal(&n))
+        Ok({
+            check_build_dep && p.dependencies()
+                .build()
+                .iter()
+                .inspect(|d| trace!("Checking {:?}", d))
+                .map(|d| d.parse_as_name_and_version())
+                .map_ok(|(name, _)| name == n)
+                .collect::<Result<Vec<bool>>>()?
+                .into_iter()
+                .inspect(|b| trace!("found: {}", b))
+                .any(|b| b)
+        })
     };
 
     let n = name.clone(); // clone, so we can move into closure
-    let filter_rt_dep = move |p: &Package| {
+    let filter_rt_dep = move |p: &Package| -> Result<bool> {
         trace!("Checking whether any runtime depenency of {:?} is '{}'", p, n);
-        p.dependencies()
-            .runtime()
-            .iter()
-            .inspect(|d| trace!("Checking {:?}", d))
-            .any(|rt_dep| rt_dep.str_equal(&n))
+        Ok({
+            check_runtime_dep && p.dependencies()
+                .runtime()
+                .iter()
+                .inspect(|d| trace!("Checking {:?}", d))
+                .map(|d| d.parse_as_name_and_version())
+                .map_ok(|(name, _)| name == n)
+                .collect::<Result<Vec<bool>>>()?
+                .into_iter()
+                .inspect(|b| trace!("found: {}", b))
+                .any(|b| b)
+        })
     };
 
-    (Bool::new(check_system_dep).and(filter_system_dep))
-        .or(Bool::new(check_system_runtime_dep).and(filter_system_runtime_dep))
-        .or(Bool::new(check_build_dep).and(filter_build_dep))
-        .or(Bool::new(check_runtime_dep).and(filter_rt_dep))
+    filter_system_dep
+        .or(filter_system_runtime_dep)
+        .or(filter_build_dep)
+        .or(filter_rt_dep)
 }
 
 pub fn build_package_filter_by_name(name: PackageName) -> impl filters::filter::Filter<Package> {
@@ -76,7 +106,8 @@ mod tests {
 
     use std::collections::BTreeMap;
 
-    use filters::filter::Filter;
+    use resiter::Filter;
+    use resiter::Map;
 
     use crate::package::Dependency;
     use crate::package::Dependencies;
@@ -105,11 +136,14 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, false);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, false);
 
         let found = repo.packages()
-            .filter(|p| f.filter(p))
-            .collect::<Vec<_>>();
+            .map(|p| f.filter(p).map(|b| (b, p)))
+            .filter_ok(|(b, _)| *b)
+            .map_ok(|tpl| tpl.1)
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
 
         assert!(found.is_empty());
     }
@@ -129,11 +163,14 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, false);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, false);
 
         let found = repo.packages()
-            .filter(|p| f.filter(p))
-            .collect::<Vec<_>>();
+            .map(|p| f.filter(p).map(|b| (b, p)))
+            .filter_ok(|(b, _)| *b)
+            .map_ok(|tpl| tpl.1)
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
 
         assert_eq!(found.len(), 0);
     }
@@ -147,22 +184,25 @@ mod tests {
             let name = "a";
             let vers = "1";
             let mut pack = package(name, vers, "https://rust-lang.org", "123");
-            pack.set_dependencies(Dependencies::with_runtime_dependency(Dependency::from(String::from("foo"))));
+            pack.set_dependencies(Dependencies::with_runtime_dependency(Dependency::from(String::from("foo =2.0"))));
             btree.insert((pname(name), pversion(vers)), pack);
         }
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, true);
 
         let found = repo.packages()
-            .filter(|p| f.filter(p))
-            .collect::<Vec<_>>();
+            .map(|p| f.filter(p).map(|b| (b, p)))
+            .filter_ok(|(b, _)| *b)
+            .map_ok(|tpl| tpl.1)
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
 
         assert_eq!(found.len(), 1);
         let p = found.get(0).unwrap();
         assert_eq!(*p.name(), pname("a"));
-        assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo"))]);
+        assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo =2.0"))]);
         assert!(p.dependencies().build().is_empty());
         assert!(p.dependencies().system().is_empty());
         assert!(p.dependencies().system_runtime().is_empty());
@@ -176,17 +216,20 @@ mod tests {
             let name = "a";
             let vers = "1";
             let mut pack = package(name, vers, "https://rust-lang.org", "123");
-            pack.set_dependencies(Dependencies::with_runtime_dependency(Dependency::from(String::from("bar"))));
+            pack.set_dependencies(Dependencies::with_runtime_dependency(Dependency::from(String::from("bar =1337"))));
             btree.insert((pname(name), pversion(vers)), pack);
         }
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, false);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, false);
 
         let found = repo.packages()
-            .filter(|p| f.filter(p))
-            .collect::<Vec<_>>();
+            .map(|p| f.filter(p).map(|b| (b, p)))
+            .filter_ok(|(b, _)| *b)
+            .map_ok(|tpl| tpl.1)
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
 
         assert_eq!(found.len(), 0);
     }
@@ -199,17 +242,20 @@ mod tests {
             let name = "a";
             let vers = "1";
             let mut pack = package(name, vers, "https://rust-lang.org", "123");
-            pack.set_dependencies(Dependencies::with_runtime_dependency(Dependency::from(String::from("bar"))));
+            pack.set_dependencies(Dependencies::with_runtime_dependency(Dependency::from(String::from("bar =1.0"))));
             btree.insert((pname(name), pversion(vers)), pack);
         }
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, true);
 
         let found = repo.packages()
-            .filter(|p| f.filter(p))
-            .collect::<Vec<_>>();
+            .map(|p| f.filter(p).map(|b| (b, p)))
+            .filter_ok(|(b, _)| *b)
+            .map_ok(|tpl| tpl.1)
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
 
         assert_eq!(found.len(), 0);
     }
@@ -225,8 +271,8 @@ mod tests {
             let mut pack = package(name, vers, "https://rust-lang.org", "123");
             pack.set_dependencies({
                 Dependencies::with_runtime_dependencies(vec![
-                                                        Dependency::from(String::from("foo")),
-                                                        Dependency::from(String::from("bar"))
+                                                        Dependency::from(String::from("foo =1")),
+                                                        Dependency::from(String::from("bar =1"))
                                                         ])
             });
             btree.insert((pname(name), pversion(vers)), pack);
@@ -234,16 +280,19 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, true);
 
         let found = repo.packages()
-            .filter(|p| f.filter(p))
-            .collect::<Vec<_>>();
+            .map(|p| f.filter(p).map(|b| (b, p)))
+            .filter_ok(|(b, _)| *b)
+            .map_ok(|tpl| tpl.1)
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
 
         assert_eq!(found.len(), 1);
         let p = found.get(0).unwrap();
         assert_eq!(*p.name(), pname("a"));
-        assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo")), Dependency::from(String::from("bar"))]);
+        assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo =1")), Dependency::from(String::from("bar =1"))]);
         assert!(p.dependencies().build().is_empty());
         assert!(p.dependencies().system().is_empty());
         assert!(p.dependencies().system_runtime().is_empty());
@@ -259,8 +308,8 @@ mod tests {
             let mut pack = package(name, vers, "https://rust-lang.org", "123");
             pack.set_dependencies({
                 Dependencies::with_runtime_dependencies(vec![
-                                                        Dependency::from(String::from("foo")),
-                                                        Dependency::from(String::from("bar"))
+                                                        Dependency::from(String::from("foo =2")),
+                                                        Dependency::from(String::from("bar =3"))
                                                         ])
             });
             btree.insert((pname(name), pversion(vers)), pack);
@@ -272,8 +321,8 @@ mod tests {
             let mut pack = package(name, vers, "https://rust-lang.org", "123");
             pack.set_dependencies({
                 Dependencies::with_runtime_dependencies(vec![
-                                                        Dependency::from(String::from("foo")),
-                                                        Dependency::from(String::from("baz"))
+                                                        Dependency::from(String::from("foo =4")),
+                                                        Dependency::from(String::from("baz =5"))
                                                         ])
             });
             btree.insert((pname(name), pversion(vers)), pack);
@@ -281,18 +330,21 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(String::from("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, true);
 
         let found = repo.packages()
-            .filter(|p| f.filter(p))
-            .collect::<Vec<_>>();
+            .map(|p| f.filter(p).map(|b| (b, p)))
+            .filter_ok(|(b, _)| *b)
+            .map_ok(|tpl| tpl.1)
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
 
         assert_eq!(found.len(), 2);
 
         {
             let p = found.get(0).unwrap();
             assert_eq!(*p.name(), pname("a"));
-            assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo")), Dependency::from(String::from("bar"))]);
+            assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo =2")), Dependency::from(String::from("bar =3"))]);
             assert!(p.dependencies().build().is_empty());
             assert!(p.dependencies().system().is_empty());
             assert!(p.dependencies().system_runtime().is_empty());
@@ -301,7 +353,7 @@ mod tests {
         {
             let p = found.get(1).unwrap();
             assert_eq!(*p.name(), pname("b"));
-            assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo")), Dependency::from(String::from("baz"))]);
+            assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo =4")), Dependency::from(String::from("baz =5"))]);
             assert!(p.dependencies().build().is_empty());
             assert!(p.dependencies().system().is_empty());
             assert!(p.dependencies().system_runtime().is_empty());
