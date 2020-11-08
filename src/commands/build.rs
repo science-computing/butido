@@ -89,8 +89,8 @@ pub async fn build<'a>(matches: &ArgMatches,
     };
     debug!("Found {} relevant packages", packages.len());
 
-    /// We only support building one package per call.
-    /// Everything else is invalid
+    // We only support building one package per call.
+    // Everything else is invalid
     if packages.len() > 1 {
         return Err(anyhow!("Found multiple packages ({}). Cannot decide which one to build", packages.len()))
     }
