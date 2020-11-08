@@ -126,19 +126,6 @@ impl Tree {
         find_package_depth(self, 0, &cmp)
     }
 
-    pub fn debug_print(&self, sink: &mut dyn std::io::Write) -> std::result::Result<(), std::io::Error> {
-        fn print_recursive(tree: &Tree, sink: &mut dyn std::io::Write, indent: usize) -> std::result::Result<(), std::io::Error> {
-            for (k, v) in tree.root.iter() {
-                writeln!(sink, "{:indent$}- {:?}", " ", k, indent = indent*2)?;
-                print_recursive(v, sink, indent + 1)?;
-            }
-
-            Ok(())
-        }
-
-        print_recursive(self, sink, 0)
-    }
-
 }
 
 #[cfg(test)]
