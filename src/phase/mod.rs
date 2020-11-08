@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use serde::Serialize;
 use serde::Deserialize;
+use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Hash)]
 #[serde(transparent)]

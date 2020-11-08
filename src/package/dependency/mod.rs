@@ -1,22 +1,22 @@
-use lazy_static::lazy_static;
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
+use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
-
-mod system;
-pub use system::*;
-
-mod system_runtime;
-pub use system_runtime::*;
 
 mod build;
 pub use build::*;
 
 mod runtime;
 pub use runtime::*;
+
+mod system;
+pub use system::*;
+
+mod system_runtime;
+pub use system_runtime::*;
 
 pub trait StringEqual {
     fn str_equal(&self, s: &str) -> bool;
@@ -56,9 +56,6 @@ pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_
 mod tests {
     use super::*;
 
-    use std::convert::TryInto;
-
-    use crate::package::Package;
     use crate::package::PackageName;
     use crate::package::PackageVersion;
 

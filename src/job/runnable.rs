@@ -1,20 +1,18 @@
-use getset::Getters;
-use uuid::Uuid;
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use resiter::Map;
+use anyhow::anyhow;
+use getset::Getters;
+use uuid::Uuid;
 
+use crate::filestore::MergedStores;
 use crate::job::Job;
 use crate::job::JobResource;
 use crate::package::Package;
+use crate::package::ParseDependency;
 use crate::package::Script;
 use crate::package::ScriptBuilder;
-use crate::phase::PhaseName;
 use crate::util::docker::ImageName;
-use crate::filestore::MergedStores;
-use crate::package::ParseDependency;
 
 /// A job configuration that can be run. All inputs are clear here.
 #[derive(Debug, Getters)]

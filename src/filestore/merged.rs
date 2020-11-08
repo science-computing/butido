@@ -1,14 +1,13 @@
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 
 use crate::filestore::Artifact;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 use crate::package::PackageName;
-use crate::package::PackageVersion;
 use crate::package::PackageVersionConstraint;
 
 /// A type that merges the release store and the staging store

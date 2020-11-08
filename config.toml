@@ -12,6 +12,27 @@ repository = "/tmp/path"
 # This is also the default if the setting is not present.
 progress_format = "[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}"
 
+# The format to print the found packages with.
+#
+# Possible tokens are:
+#     i                         - Incrementing number of package that is printed
+#     name                      - Name of the package
+#     version                   - Version of the package
+#     source_url                - URL from where the source was retrieved
+#     source_hash_type          - Type of hash noted in the package
+#     source_hash               - Hash of the sources
+#     system_deps               - System dependencies, as list
+#     system_runtime_deps       - System runtime dependencies, as list
+#     build_deps                - Build dependencies, as list
+#     runtime_deps              - Runtime dependencies, as list
+#     print_system_deps         - boolean flag to use in format string, true if user wants to see system deps
+#     print_system_runtime_deps - boolean flag to use in format string, true if user wants to see system runtime deps
+#     print_build_deps          - boolean flag to use in format string, true if user wants to see build deps
+#     print_runtime_deps        - boolean flag to use in format string, true if user wants to see runtime deps
+#
+# Handlebars modifiers are available.
+package_print_format = ""
+
 # The position of the release binaries
 #
 # butido checks this location for packages when installing dependencies

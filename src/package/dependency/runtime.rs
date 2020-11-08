@@ -1,12 +1,11 @@
-use serde::Serialize;
-use serde::Deserialize;
 use anyhow::Result;
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
-use crate::package::dependency::StringEqual;
 use crate::package::dependency::ParseDependency;
-
+use crate::package::dependency::StringEqual;
 
 /// A dependency that is packaged and is required during runtime
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]

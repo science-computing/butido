@@ -1,27 +1,25 @@
 use std::fmt::{Debug, Formatter};
+use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::str::FromStr;
-use std::path::PathBuf;
 
-use anyhow::Error;
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use getset::{Getters, CopyGetters};
-use shiplift::ContainerOptions;
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
-use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
 use typed_builder::TypedBuilder;
 
-use crate::util::docker::ImageName;
 use crate::endpoint::EndpointConfiguration;
-use crate::job::RunnableJob;
-use crate::job::JobResource;
-use crate::log::LogItem;
 use crate::filestore::StagingStore;
+use crate::job::JobResource;
+use crate::job::RunnableJob;
+use crate::log::LogItem;
+use crate::util::docker::ImageName;
 
 #[derive(Getters, CopyGetters, TypedBuilder)]
 pub struct Endpoint {

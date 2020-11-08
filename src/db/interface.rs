@@ -1,22 +1,22 @@
-use std::path::PathBuf;
 use std::fmt::Display;
+use std::path::PathBuf;
+use std::process::Command;
 
 use clap_v3 as clap;
-use clap::ArgMatches;
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use itertools::Itertools;
+use anyhow::anyhow;
+use clap::ArgMatches;
 use diesel::RunQueryDsl;
+use itertools::Itertools;
 
-use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
 use crate::db::models;
 
-pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &Configuration) -> Result<()> {
+pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
-        ("cli", Some(matches))        => cli(db_connection_config, matches, config),
+        ("cli", Some(matches))        => cli(db_connection_config, matches),
         ("artifacts", Some(matches))  => artifacts(db_connection_config, matches),
         ("envvars", Some(matches))    => envvars(db_connection_config, matches),
         ("images", Some(matches))     => images(db_connection_config, matches),
@@ -24,9 +24,7 @@ pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches,
     }
 }
 
-fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches, config: &Configuration) -> Result<()> {
-    use std::process::Command;
-
+fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     trait PgCliCommand {
         fn run_for_uri(&self, dbcc: DbConnectionConfig)  -> Result<()>;
     }
@@ -210,7 +208,7 @@ fn display_data<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>
              wtr.write_record(&r)?;
          }
 
-        let mut out = std::io::stdout();
+        let out = std::io::stdout();
         let mut lock = out.lock();
 
          wtr.into_inner()
@@ -235,7 +233,7 @@ fn display_data<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>
             ascii_table.print(data);
             Ok(())
         } else {
-            let mut out = std::io::stdout();
+            let out = std::io::stdout();
             let mut lock = out.lock();
             for list in data {
                 writeln!(lock, "{}", list.iter().map(|d| d.to_string()).join(" "))?;

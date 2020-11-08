@@ -1,7 +1,7 @@
-use url::Url;
-use serde::Serialize;
-use serde::Deserialize;
 use getset::Getters;
+use serde::Deserialize;
+use serde::Serialize;
+use url::Url;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Source {

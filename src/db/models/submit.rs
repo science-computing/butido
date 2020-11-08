@@ -1,20 +1,15 @@
-use std::ops::Deref;
-
-use anyhow::anyhow;
-use anyhow::Error;
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
+use chrono::NaiveDateTime;
 use diesel::PgConnection;
 use diesel::prelude::*;
-use chrono::NaiveDateTime;
-use diesel::sql_types::Uuid;
-use diesel::sql_types::Jsonb;
 
-use crate::schema::submits::*;
-use crate::schema::submits;
+use crate::db::models::GitHash;
 use crate::db::models::Image;
 use crate::db::models::Package;
-use crate::db::models::GitHash;
+use crate::schema::submits::*;
+use crate::schema::submits;
 
 #[derive(Queryable)]
 pub struct Submit {

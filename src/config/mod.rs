@@ -1,14 +1,14 @@
-use std::path::PathBuf;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::ops::Deref;
-use std::collections::BTreeMap;
+use std::path::PathBuf;
 
-use anyhow::Result;
 use anyhow::Context;
-use getset::Getters;
+use anyhow::Result;
 use getset::CopyGetters;
-use serde::Deserialize;
+use getset::Getters;
 use handlebars::Handlebars;
+use serde::Deserialize;
 
 use crate::phase::PhaseName;
 use crate::util::EnvironmentVariableName;
@@ -22,6 +22,10 @@ pub struct NotValidatedConfiguration {
     #[serde(default = "default_progress_format")]
     #[getset(get = "pub")]
     progress_format: String,
+
+    #[serde(default = "default_package_print_format")]
+    #[getset(get = "pub")]
+    package_print_format: String,
 
     #[serde(rename = "releases")]
     releases_directory: String,
@@ -185,3 +189,17 @@ pub enum EndpointType {
 fn default_progress_format() -> String {
     String::from("[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}")
 }
+
+fn default_package_print_format() -> String {
+    String::from(indoc::indoc!(r#"
+            {{i}} - {{name}} : {{version}}
+            Source: {{source_url}}
+            Hash ({{source_hash_type}}): {{source_hash}}"
+            {{#if print_system_deps}}System Deps: {{ system_deps }} {{/if}}
+            {{#if print_system_runtime_deps}}System runtime Deps: {{ system_runtime_deps }} {{/if}}
+            {{#if print_build_deps}}Build Deps: {{ build_deps }} {{/if}}
+            {{#if print_runtime_deps}}Runtime Deps: {{ runtime_deps }} {{/if}}
+
+    "#))
+}
+

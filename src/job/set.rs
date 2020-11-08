@@ -1,12 +1,11 @@
 use anyhow::Result;
 
+use crate::filestore::MergedStores;
 use crate::job::Job;
-use crate::package::Package;
+use crate::job::RunnableJob;
 use crate::package::Tree;
 use crate::phase::PhaseName;
 use crate::util::docker::ImageName;
-use crate::job::RunnableJob;
-use crate::filestore::MergedStores;
 
 /// A set of jobs that could theoretically be run in parallel
 #[derive(Debug)]
@@ -87,7 +86,6 @@ mod tests {
 
     use std::collections::BTreeMap;
 
-    use url::Url;
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
     use crate::package::tests::package;

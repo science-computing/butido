@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use anyhow::anyhow;
-use anyhow::Result;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
+use anyhow::anyhow;
 use git2::Repository;
 
 pub fn repo_is_clean(p: &Path) -> Result<bool> {

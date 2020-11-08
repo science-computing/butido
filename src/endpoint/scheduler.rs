@@ -1,20 +1,20 @@
-use std::ops::DerefMut;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::path::PathBuf;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use futures::FutureExt;
+use itertools::Itertools;
 use tokio::stream::StreamExt;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
-use crate::job::JobSet;
+use crate::filestore::StagingStore;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
-use crate::filestore::StagingStore;
 
 pub struct EndpointScheduler {
     endpoints: Vec<Arc<RwLock<Endpoint>>>,
@@ -34,8 +34,6 @@ impl EndpointScheduler {
     }
 
     async fn setup_endpoints(endpoints: Vec<EndpointConfiguration>) -> Result<Vec<Arc<RwLock<Endpoint>>>> {
-        use futures::FutureExt;
-
         let unordered = futures::stream::FuturesUnordered::new();
 
         for cfg in endpoints.into_iter() {
@@ -66,9 +64,6 @@ impl EndpointScheduler {
     }
 
     async fn select_free_endpoint(&self) -> Result<Arc<RwLock<Endpoint>>> {
-        use itertools::Itertools;
-        use futures::FutureExt;
-
         loop {
             let unordered = futures::stream::FuturesUnordered::new();
             for ep in self.endpoints.iter().cloned() {

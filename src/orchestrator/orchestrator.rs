@@ -1,31 +1,23 @@
 use std::path::PathBuf;
-use std::sync::RwLock;
 use std::sync::Arc;
-use std::collections::BTreeMap;
+use std::sync::RwLock;
 
-use anyhow::anyhow;
-use anyhow::Error;
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
-use typed_builder::TypedBuilder;
+use anyhow::anyhow;
 use diesel::PgConnection;
-use tokio::sync::mpsc::UnboundedReceiver;
-use tokio::sync::mpsc::UnboundedSender;
-use resiter::AndThen;
+use typed_builder::TypedBuilder;
 
+use crate::db::models::Submit;
 use crate::endpoint::EndpointConfiguration;
 use crate::endpoint::EndpointScheduler;
-use crate::job::JobSet;
-use crate::job::RunnableJob;
-use crate::log::LogItem;
-use crate::filestore::StagingStore;
-use crate::filestore::ReleaseStore;
-use crate::log::FileLogSinkFactory;
-use crate::log::LogSink;
-use crate::db::models::Submit;
-use crate::db::models::EnvVar;
-use crate::job::JobResource;
 use crate::filestore::MergedStores;
+use crate::filestore::ReleaseStore;
+use crate::filestore::StagingStore;
+use crate::job::JobSet;
+use crate::log::FileLogSinkFactory;
+use crate::log::LogItem;
 use crate::util::progress::ProgressBars;
 
 pub struct Orchestrator {

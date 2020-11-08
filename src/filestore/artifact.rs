@@ -1,16 +1,15 @@
-use std::path::Path;
-use std::path::PathBuf;
-use std::cmp::PartialOrd;
 use std::cmp::Ord;
 use std::cmp::Ordering;
+use std::cmp::PartialOrd;
+use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Error;
-use anyhow::anyhow;
 use anyhow::Result;
-use pom::*;
-use pom::parser::Parser as PomParser;
+use anyhow::anyhow;
 use getset::Getters;
+use pom::parser::Parser as PomParser;
 
 use crate::package::PackageName;
 use crate::package::PackageVersion;
