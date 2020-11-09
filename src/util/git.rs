@@ -18,11 +18,12 @@ pub fn get_repo_head_commit_hash(p: &Path) -> Result<String> {
 
     let s = r.head()
         .with_context(|| anyhow!("Getting HEAD from repository at {}", p.display()))?
-        .shorthand()
-        .ok_or_else(|| {
+        .peel_to_commit()
+        .with_context(|| {
             anyhow!("Failed to get commit hash: Not valid UTF8")
         })?
-        .to_owned();
+        .id()
+        .to_string();
 
     trace!("Found git commit hash = {}", s);
     Ok(s)
