@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -183,5 +184,12 @@ pub async fn build<'a>(matches: &ArgMatches,
         .await?;
 
     info!("Running orchestrator...");
-    orch.run().await
+    let res         = orch.run().await?;
+    let out         = std::io::stdout();
+    let mut outlock = out.lock();
+
+    writeln!(outlock, "Packages created:")?;
+    res.into_iter()
+        .map(|path| writeln!(outlock, "-> {}", path.display()).map_err(Error::from))
+        .collect::<Result<_>>()
 }

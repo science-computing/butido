@@ -60,9 +60,10 @@ impl OrchestratorSetup {
 
 impl Orchestrator {
 
-    pub async fn run(self) -> Result<()> {
+    pub async fn run(self) -> Result<Vec<PathBuf>> {
         use tokio::stream::StreamExt;
 
+        let mut report_result = vec![];
         let number_of_jobsets = self.jobsets.len();
         let _database = self.database;
 
@@ -172,10 +173,14 @@ impl Orchestrator {
                             .map_err(Error::from)
                     }
                 }
+
             }
+
+            let mut results = results; // rebind!
+            report_result.append(&mut results);
         }
 
-        Ok(())
+        Ok(report_result)
     }
 
 }
