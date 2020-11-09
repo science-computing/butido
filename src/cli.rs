@@ -207,6 +207,23 @@ pub fn cli<'a>() -> App<'a> {
                 .help("A version constraint to search for (optional)")
             )
         )
+        .subcommand(App::new("find-pkg")
+            .about("Find a package by regex")
+            .arg(Arg::with_name("package_name_regex")
+                .required(true)
+                .multiple(false)
+                .index(1)
+                .value_name("REGEX")
+                .help("The regex to match the package name against")
+            )
+            .arg(Arg::with_name("terse")
+                .required(false)
+                .multiple(false)
+                .short('t')
+                .long("terse")
+                .help("Do not use the fancy format, but simply <name> <version>")
+            )
+        )
 
 }
 

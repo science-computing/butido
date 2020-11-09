@@ -4,6 +4,9 @@ pub use build::build;
 mod env_of;
 pub use env_of::env_of;
 
+mod find_pkg;
+pub use find_pkg::find_pkg;
+
 mod dependencies_of;
 pub use dependencies_of::dependencies_of;
 
