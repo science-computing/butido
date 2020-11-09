@@ -102,11 +102,14 @@ impl JobHandle {
             .read()
             .map_err(|_| anyhow!("Lock poisoned"))?;
 
+        let job_id = self.job.uuid().clone();
+        trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let res = ep
             .run_job(self.job, self.sender, self.staging_store)
             .await
             .with_context(|| anyhow!("Running job on '{}'", ep.name()))?;
 
+        trace!("Found result for job {}: {:?}", job_id, res);
         Ok(res)
     }
 

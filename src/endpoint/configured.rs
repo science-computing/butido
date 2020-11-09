@@ -231,10 +231,13 @@ impl Endpoint {
 
         container
             .copy_file_into(script_path, script)
+            .inspect(|r| { trace!("Copying script to container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Copying the script into the container {} on '{}'", container_id, self.name)))
             .then(|_| container.start())
+            .inspect(|r| { trace!("Starting container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Starting the container {} on '{}'", container_id, self.name)))
             .then(|_| {
+                trace!("Moving logs to log sink for container {}", container_id);
                 buffer_stream_to_line_stream(container.exec(&exec_opts))
                     .map(|line| {
                         trace!("['{}':{}] Found log line: {:?}", self.name, container_id, line);
@@ -254,9 +257,11 @@ impl Endpoint {
                     })
                     .collect::<Result<Vec<_>>>()
             })
+            .inspect(|r| { trace!("Fetching log from container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Fetching log from container {} on {}", container_id, self.name)))
             .await?;
 
+        trace!("Fetching /outputs from container {}", container_id);
         let tar_stream = container
             .copy_from(&PathBuf::from("/outputs/"))
             .map(|item| item.map_err(Error::from));
@@ -270,6 +275,7 @@ impl Endpoint {
 
         container.stop(Some(std::time::Duration::new(1, 0))).await?;
 
+        trace!("Returning job {} result = {:?}", job.uuid(), r);
         Ok(r)
     }
 

@@ -96,6 +96,7 @@ impl Orchestrator {
 
                     unordered_results.push(async move {
                         let r = jobhandle.get_result().await;
+                        trace!("Found result in job {}: {:?}", job_id, r);
                         bar.tick();
                         r
                     });
@@ -162,7 +163,7 @@ impl Orchestrator {
                     .read()
                     .map_err(|_| anyhow!("Lock Poisoned"))?;
 
-                trace!("Checking results...");
+                trace!("Checking {} results...", results.len());
                 for path in results.iter() {
                     trace!("Checking path: {}", path.display());
                     if !staging_store_lock.path_exists_in_store_root(&path) {
