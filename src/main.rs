@@ -86,6 +86,11 @@ async fn main() -> Result<()> {
         ("versions-of", Some(matches)) => {
             let repo = load_repo()?;
             crate::commands::versions_of(matches, repo).await?
+        },
+
+        ("env-of", Some(matches)) => {
+            let repo = load_repo()?;
+            crate::commands::env_of(matches, repo).await?
         }
 
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),

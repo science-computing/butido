@@ -1,6 +1,9 @@
 mod build;
 pub use build::build;
 
+mod env_of;
+pub use env_of::env_of;
+
 mod dependencies_of;
 pub use dependencies_of::dependencies_of;
 

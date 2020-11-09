@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use anyhow::Error;
 use anyhow::Result;
 use pom::parser::Parser as PomParser;
 use serde::Deserialize;
