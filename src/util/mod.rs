@@ -9,3 +9,7 @@ pub mod git;
 pub mod parser;
 pub mod progress;
 
+pub fn stdout_is_pipe() -> bool {
+    !atty::is(atty::Stream::Stdout)
+}
+
