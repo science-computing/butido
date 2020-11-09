@@ -16,6 +16,13 @@ pub fn cli<'a>() -> App<'a> {
         .version(crate_version!())
         .about("Generic Build Orchestration System for building linux packages with docker")
 
+        .arg(Arg::with_name("hide_bars")
+            .required(false)
+            .multiple(false)
+            .long("hide-bars")
+            .help("Hide all progress bars")
+        )
+
         .arg(Arg::with_name("database_host")
             .required(false)
             .multiple(false)
