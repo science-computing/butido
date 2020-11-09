@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use anyhow::Error;
 use anyhow::Result;
 use pom::parser::Parser as PomParser;
 use serde::Deserialize;
@@ -14,6 +15,12 @@ pub struct PackageVersionConstraint {
 }
 
 impl PackageVersionConstraint {
+    pub fn new(s: String) -> Result<Self> {
+        Self::parser()
+            .parse(s.as_bytes())
+            .map_err(Error::from)
+    }
+
     pub fn parser<'a>() -> PomParser<'a, u8, Self> {
         (pom::parser::sym(b'=') + PackageVersion::parser())
             .convert(|(constraint, version)| {
