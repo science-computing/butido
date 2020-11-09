@@ -54,8 +54,6 @@ impl StagingStore {
                     })
                     .map_ok(|path| dest.join(path))
                     .inspect(|p| trace!("Path in tar archive: {:?}", p))
-                    .filter_ok(|p| p.is_file())
-                    .inspect(|p| trace!("Taking from archive: {:?}", p))
                     .collect::<Result<Vec<_>>>()
                     .context("Collecting outputs of TAR archive")?;
 
@@ -69,12 +67,18 @@ impl StagingStore {
             .context("Concatenating the output bytestream")?
             .into_iter()
             .inspect(|p| trace!("Trying to load into staging store: {}", p.display()))
-            .map(|path| {
-                self.0.load_from_path(&path)
-                    .inspect(|r| trace!("Loading from path = {:?}", r))
-                    .with_context(|| anyhow!("Loading from path: {}", path.display()))
-                    .map_err(Error::from)
-                    .map(|art| art.path().clone())
+            .filter_map(|path| {
+                if path.is_dir() {
+                    None
+                } else {
+                    Some({
+                        self.0.load_from_path(&path)
+                            .inspect(|r| trace!("Loading from path = {:?}", r))
+                            .with_context(|| anyhow!("Loading from path: {}", path.display()))
+                            .map_err(Error::from)
+                            .map(|art| art.path().clone())
+                    })
+                }
             })
             .collect()
     }
