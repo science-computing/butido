@@ -12,13 +12,22 @@ use crate::repository::Repository;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Tree {
-    root: BTreeMap<Package, Tree>,
+    root: Vec<Mapping>,
+}
+
+/// Helper type
+///
+/// This helper type is required so that the serialized JSON is a bit more readable.
+#[derive(Debug, Serialize, Deserialize)]
+struct Mapping {
+    package: Package,
+    dependencies: Tree,
 }
 
 impl Tree {
 
     pub fn new() -> Self {
-        Tree { root: BTreeMap::new() }
+        Tree { root: Vec::new() }
     }
 
     pub fn add_package(&mut self, p: Package, repo: &Repository, progress: ProgressBar) -> Result<()> {
@@ -50,7 +59,7 @@ impl Tree {
                     .collect::<Result<Vec<()>>>()?;
 
                 trace!("Inserting subtree: {:?} -> {:?}", ($pack), subtree);
-                ($this).root.insert(($pack), subtree);
+                ($this).root.push(Mapping { package: ($pack), dependencies: subtree });
                 Ok(())
             }}
         };
@@ -70,21 +79,21 @@ impl Tree {
     /// This does not yield packages which are dependencies of this tree node.
     /// It yields only packages for this particular Tree instance.
     pub fn packages(&self) -> impl Iterator<Item = &Package> {
-        self.root.keys()
+        self.root.iter().map(|mapping| &mapping.package)
     }
 
     /// Get dependencies stored in this tree
     pub fn dependencies(&self) -> impl Iterator<Item = &Tree> {
-        self.root.values()
+        self.root.iter().map(|mapping| &mapping.dependencies)
     }
 
     pub fn into_iter(self) -> impl IntoIterator<Item = (Package, Tree)> {
-        self.root.into_iter()
+        self.root.into_iter().map(|m| (m.package, m.dependencies))
     }
 
     pub fn has_package(&self, p: &Package) -> bool {
         let name_eq = |k: &Package| k.name() == p.name();
-        self.root.keys().any(name_eq) || self.root.values().any(|t| t.has_package(p))
+        self.packages().any(name_eq) || self.dependencies().any(|t| t.has_package(p))
     }
 
     /// Find how deep the package is in the tree
@@ -113,12 +122,12 @@ impl Tree {
         fn find_package_depth<F>(tree: &Tree, current: usize, cmp: &F) -> Option<usize>
             where F: Fn(&Package) -> bool
         {
-            if tree.root.keys().any(|k| cmp(k)) {
+            if tree.root.iter().any(|m| cmp(&m.package)) {
                 return Some(current)
             } else {
                 tree.root
-                    .values()
-                    .filter_map(|subtree| find_package_depth(subtree, current + 1, cmp))
+                    .iter()
+                    .filter_map(|m| find_package_depth(&m.dependencies, current + 1, cmp))
                     .next()
             }
         }
