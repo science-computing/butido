@@ -60,8 +60,62 @@ pub fn cli<'a>() -> App<'a> {
             .help("Overwrite the database name set via configuration. Can also be overriden via environment, but this setting has presendence.")
         )
 
+        .subcommand(App::new("db")
+            .about("Database CLI interface")
+            .subcommand(App::new("cli")
+                .about("Start a database CLI, if installed on the current host")
+                .long_about(indoc::indoc!(r#"
+                    Starts a database shell on the configured database using one of the following
+                    programs:
+                        - psql
+                        - pgcli
 
-        .subcommand(crate::db::cli())
+                    if installed.
+                "#))
+
+                .arg(Arg::with_name("tool")
+                    .required(false)
+                    .multiple(false)
+                    .long("tool")
+                    .value_name("TOOL")
+                    .possible_values(&["psql", "pgcli"])
+                    .help("Use a specific tool")
+                )
+            )
+
+            .subcommand(App::new("artifacts")
+                .about("List artifacts from the DB")
+                .arg(Arg::with_name("csv")
+                    .required(false)
+                    .multiple(false)
+                    .long("csv")
+                    .takes_value(false)
+                    .help("Format output as CSV")
+                )
+            )
+
+            .subcommand(App::new("envvars")
+                .about("List envvars from the DB")
+                .arg(Arg::with_name("csv")
+                    .required(false)
+                    .multiple(false)
+                    .long("csv")
+                    .takes_value(false)
+                    .help("Format output as CSV")
+                )
+            )
+
+            .subcommand(App::new("images")
+                .about("List images from the DB")
+                .arg(Arg::with_name("csv")
+                    .required(false)
+                    .multiple(false)
+                    .long("csv")
+                    .takes_value(false)
+                    .help("Format output as CSV")
+                )
+            )
+        )
 
         .subcommand(App::new("build")
             .about("Build packages in containers")
