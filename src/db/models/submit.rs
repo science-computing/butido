@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -35,7 +36,7 @@ struct NewSubmit<'a> {
 
 impl Submit {
     pub fn create(database_connection: &PgConnection,
-                  _t: &crate::package::Tree,
+                  t: &crate::package::Tree,
                   submit_datetime: &NaiveDateTime,
                   submit_id: &::uuid::Uuid,
                   requested_image: &Image,
@@ -43,10 +44,9 @@ impl Submit {
                   repo_hash: &GitHash)
         -> Result<Submit>
 {
-        //let tree_json = serde_json::to_value(t)
-        //    .context("Converting tree to JSON string")
-        //    .with_context(|| anyhow!("Tree = {:#?}", t))?;
-        let tree_json = serde_json::Value::default(); // TODO: Fixme
+        let tree_json = serde_json::to_value(t)
+            .context("Converting tree to JSON string")
+            .with_context(|| anyhow!("Tree = {:#?}", t))?;
 
         let new_submit = NewSubmit {
             uuid: submit_id,
