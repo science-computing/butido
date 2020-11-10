@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -118,7 +119,13 @@ pub async fn build<'a>(matches: &ArgMatches,
         bar_staging_loading.set_length(max_packages);
 
         let variables = BTreeMap::new();
-        let p = config.staging_directory(&variables)?;
+        let p = if let Some(staging_dir) = matches.value_of("staging_dir").map(PathBuf::from) {
+            info!("Setting staging dir to {} for this run", staging_dir.display());
+            staging_dir
+        } else {
+            config.staging_directory(&variables)?
+                .join(uuid::Uuid::new_v4().hyphenated().to_string())
+        };
         debug!("Loading staging directory: {}", p.display());
         let r = StagingStore::load(&p, bar_staging_loading.clone());
         if r.is_ok() {
