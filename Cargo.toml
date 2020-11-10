@@ -40,6 +40,8 @@ csv         = "1.1"
 chrono      = "0.4"
 git2	    = "0.13"
 result-inspect = "0.1"
+sha1        = { version = "0.6", features = ["std"] }
+sha2        = "0.9"
 
 url      = { version = "2", features = ["serde"] }
 tokio    = { version = "0.2", features = ["full"] }

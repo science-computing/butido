@@ -1,3 +1,6 @@
+use std::path::Path;
+
+use anyhow::Result;
 use getset::Getters;
 use serde::Deserialize;
 use serde::Serialize;
@@ -30,6 +33,11 @@ pub struct SourceHash {
 }
 
 impl SourceHash {
+    pub fn matches_hash_of(&self, buf: &[u8]) -> Result<bool> {
+        let h = self.hashtype.hash_buffer(&buf)?;
+        Ok(h == self.value)
+    }
+
     #[cfg(test)]
     pub fn new(hashtype: HashType, value: HashValue) -> Self {
         SourceHash { hashtype, value }
@@ -55,6 +63,30 @@ impl std::fmt::Display for HashType {
             HashType::Sha1   => write!(f, "sha1"),
             HashType::Sha256 => write!(f, "sha256"),
             HashType::Sha512 => write!(f, "sha512"),
+        }
+    }
+}
+
+impl HashType {
+    fn hash_buffer(&self, buffer: &[u8]) -> Result<HashValue> {
+        match self {
+            HashType::Sha1 => {
+                let mut m = sha1::Sha1::new();
+                m.update(buffer);
+                Ok(HashValue(m.digest().to_string()))
+            },
+            HashType::Sha256 => {
+                //let mut m = sha2::Sha256::new();
+                //m.update(buffer);
+                //Ok(HashValue(String::from(m.finalize())))
+                unimplemented!()
+            },
+            HashType::Sha512 => {
+                //let mut m = sha2::Sha512::new();
+                //m.update(buffer);
+                //Ok(HashValue(String::from(m.finalize())))
+                unimplemented!()
+            },
         }
     }
 }
