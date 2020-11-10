@@ -14,7 +14,7 @@ use itertools::Itertools;
 use crate::db::DbConnectionConfig;
 use crate::db::models;
 
-pub fn interface(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+pub fn db(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
         ("cli", Some(matches))        => cli(db_connection_config, matches),
         ("artifacts", Some(matches))  => artifacts(db_connection_config, matches),
