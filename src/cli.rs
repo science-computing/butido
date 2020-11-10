@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap_v3 as clap;
 use clap::App;
 use clap::Arg;
@@ -75,6 +77,16 @@ pub fn cli<'a>() -> App<'a> {
                 .required(false)
                 .multiple(false)
                 .index(2)
+            )
+
+            .arg(Arg::with_name("staging_dir")
+                .required(false)
+                .multiple(false)
+                .long("staging-dir")
+                .takes_value(true)
+                .value_name("PATH")
+                .validator(dir_exists_validator)
+                .help("Do not throw dice on staging directory name, but hardcode for this run.")
             )
 
             .arg(Arg::with_name("env")
@@ -277,5 +289,13 @@ fn env_pass_validator(s: String) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn dir_exists_validator(s: String) -> Result<(), String> {
+    if PathBuf::from(&s).is_dir() {
+        Ok(())
+    } else {
+        Err(format!("Directory does not exist: {}", s))
+    }
 }
 
