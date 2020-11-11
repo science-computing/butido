@@ -5,6 +5,7 @@ repository = "/tmp/butido_example_1"
 
 releases = "/tmp/butido-releases"
 staging  = "/tmp/butido-staging"
+source_cache = "/tmp/butido-sources"
 
 # ####
 #

@@ -29,6 +29,10 @@ pub struct NotValidatedConfiguration {
     #[serde(rename = "staging")]
     staging_directory: String,
 
+    #[serde(rename = "source_cache")]
+    #[getset(get = "pub")]
+    source_cache_root: String,
+
     #[getset(get = "pub")]
     #[serde(rename = "database_host")]
     database_host: String,

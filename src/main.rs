@@ -22,6 +22,7 @@ mod package;
 mod phase;
 mod repository;
 mod schema;
+mod source;
 mod ui;
 mod util;
 
@@ -97,6 +98,11 @@ async fn main() -> Result<()> {
         ("find-pkg", Some(matches)) => {
             let repo = load_repo()?;
             crate::commands::find_pkg(matches, &config, repo).await?
+        },
+
+        ("source", Some(matches)) => {
+            let repo = load_repo()?;
+            crate::commands::source(matches, &config, repo, progressbars).await?
         }
 
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),

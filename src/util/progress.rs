@@ -1,5 +1,6 @@
 use indicatif::*;
 use uuid::Uuid;
+use url::Url;
 
 pub struct ProgressBars {
     bar_template: String,
@@ -44,12 +45,27 @@ impl ProgressBars {
         self.bar(&format!("Job: {}", id), &self.bar_template)
     }
 
+    pub fn download_bar(&self, url: &Url) -> ProgressBar {
+        self.bar(&format!("Download: {}", url.as_str()), &self.bar_template)
+    }
+
     fn bar(&self, msg: &str, template: &str) -> ProgressBar {
         if self.hide {
             ProgressBar::hidden()
         } else {
             let b = ProgressBar::new(1);
             b.set_style(ProgressStyle::default_bar().template(template));
+            b.set_message(msg);
+            b
+        }
+    }
+
+    fn spinner(&self, msg: &str, template: &str) -> ProgressBar {
+        if self.hide {
+            ProgressBar::hidden()
+        } else {
+            let b = ProgressBar::new_spinner();
+            b.set_style(ProgressStyle::default_spinner().template(template));
             b.set_message(msg);
             b
         }
