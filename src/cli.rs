@@ -290,6 +290,9 @@ pub fn cli<'a>() -> App<'a> {
                     .help("Verify the sources of this package (optional, if left out, all packages are checked)")
                 )
             )
+            .subcommand(App::new("list-missing")
+                .about("List packages where the source is missing")
+            )
         )
 
 }

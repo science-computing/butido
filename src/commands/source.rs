@@ -1,6 +1,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 
+use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap_v3::ArgMatches;
@@ -12,7 +13,8 @@ use crate::source::*;
 
 pub async fn source<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
     match matches.subcommand() {
-        ("verify", Some(matches))     => verify(matches, config, repo).await,
+        ("verify", Some(matches))       => verify(matches, config, repo).await,
+        ("list-missing", Some(matches)) => list_missing(matches, config, repo).await,
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 }
@@ -47,3 +49,21 @@ pub async fn verify<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: 
         .collect::<Result<()>>()
         .await
 }
+
+pub async fn list_missing<'a>(_: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
+    let sc          = SourceCache::new(PathBuf::from(config.source_cache_root()));
+    let out         = std::io::stdout();
+    let mut outlock = out.lock();
+
+    repo.packages()
+        .map(|p| {
+            let s = sc.source_for(p);
+            if !s.exists() {
+                writeln!(outlock, "{} {} -> {}", p.name(), p.version(), s.path().display())?;
+            }
+
+            Ok(())
+        })
+        .collect()
+}
+
