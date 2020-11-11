@@ -12,6 +12,8 @@ use crate::package::Package;
 use crate::package::ParseDependency;
 use crate::package::Script;
 use crate::package::ScriptBuilder;
+use crate::source::SourceCache;
+use crate::source::SourceEntry;
 use crate::util::docker::ImageName;
 
 /// A job configuration that can be run. All inputs are clear here.
@@ -27,6 +29,9 @@ pub struct RunnableJob {
     image:    ImageName,
 
     #[getset(get = "pub")]
+    source_cache: SourceCache,
+
+    #[getset(get = "pub")]
     script:   Script,
 
     #[getset(get = "pub")]
@@ -34,7 +39,7 @@ pub struct RunnableJob {
 }
 
 impl RunnableJob {
-    pub fn build_from_job(job: Job, merged_stores: &MergedStores) -> Result<Self> {
+    pub fn build_from_job(job: Job, merged_stores: &MergedStores, source_cache: &SourceCache) -> Result<Self> {
         let script = ScriptBuilder::new(&job.script_shebang)
             .build(&job.package, &job.script_phases)?;
 
@@ -60,10 +65,15 @@ impl RunnableJob {
             package: job.package,
             image: job.image,
             resources: job.resources.into_iter().chain(resources.into_iter()).collect(),
+            source_cache: source_cache.clone(),
 
             script,
         })
 
+    }
+
+    pub fn package_source(&self) -> SourceEntry {
+        self.source_cache.source_for(&self.package())
     }
 
     fn build_resource(dep: &dyn ParseDependency, merged_stores: &MergedStores) -> Result<JobResource> {

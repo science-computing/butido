@@ -5,6 +5,7 @@ use crate::job::Job;
 use crate::job::RunnableJob;
 use crate::package::Tree;
 use crate::phase::PhaseName;
+use crate::source::SourceCache;
 use crate::util::docker::ImageName;
 
 /// A set of jobs that could theoretically be run in parallel
@@ -22,8 +23,8 @@ impl JobSet {
         self.set.is_empty()
     }
 
-    pub fn into_runables<'a>(self, merged_stores: &'a MergedStores) -> impl Iterator<Item = Result<RunnableJob>> + 'a {
-        self.set.into_iter().map(move |j| RunnableJob::build_from_job(j, merged_stores))
+    pub fn into_runables<'a>(self, merged_stores: &'a MergedStores, source_cache: &'a SourceCache) -> impl Iterator<Item = Result<RunnableJob>> + 'a {
+        self.set.into_iter().map(move |j| RunnableJob::build_from_job(j, merged_stores, source_cache))
     }
 
     pub fn len(&self) -> usize {
