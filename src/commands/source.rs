@@ -124,6 +124,7 @@ pub async fn download<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo
                         bar.inc(bytes.len() as u64);
                     }
 
+                    file.flush().await?;
                     bar.finish_with_message("Finished download");
                     Ok(())
                 }
