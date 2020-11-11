@@ -204,6 +204,29 @@ impl Endpoint {
             .build();
 
         let container = self.docker.containers().get(&container_id);
+        { // copy source to container
+            use tokio::io::AsyncReadExt;
+
+            let pkgsource   = job.package_source();
+            let source_path = pkgsource.path();
+            let destination = PathBuf::from("/inputs").join({
+                source_path.file_name().ok_or_else(|| anyhow!("Not a file: {}", source_path.display()))?
+            });
+            let mut buf = vec![];
+            tokio::fs::OpenOptions::new()
+                .create(false)
+                .create_new(false)
+                .append(false)
+                .write(false)
+                .read(true)
+                .open(source_path)
+                .await?
+                .read_to_end(&mut buf)
+                .await?;
+
+
+            let _ = container.copy_file_into(destination, &buf).await?;
+        }
         { // Copy all Path artifacts to the container
             job.resources()
                 .into_iter()

@@ -22,6 +22,7 @@ use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::package::Tree;
 use crate::repository::Repository;
+use crate::source::SourceCache;
 use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
 
@@ -181,6 +182,8 @@ pub async fn build<'a>(matches: &ArgMatches,
     let jobsets = JobSet::sets_from_tree(tree, image_name, phases.clone())?;
     trace!("Setting up job sets finished successfully");
 
+    let source_cache = SourceCache::new(PathBuf::from(config.source_cache_root()));
+
     trace!("Setting up Orchestrator");
     let orch = OrchestratorSetup::builder()
         .progress_generator(progressbars)
@@ -188,6 +191,7 @@ pub async fn build<'a>(matches: &ArgMatches,
         .staging_store(staging_dir)
         .release_store(release_dir)
         .database(database_connection)
+        .source_cache(source_cache)
         .submit(submit)
         .file_log_sink_factory(None)
         .jobsets(jobsets)

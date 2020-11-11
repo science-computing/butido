@@ -18,6 +18,7 @@ use crate::filestore::StagingStore;
 use crate::job::JobSet;
 use crate::log::FileLogSinkFactory;
 use crate::log::LogItem;
+use crate::source::SourceCache;
 use crate::util::progress::ProgressBars;
 
 pub struct Orchestrator {
@@ -25,6 +26,7 @@ pub struct Orchestrator {
     scheduler: EndpointScheduler,
     staging_store: Arc<RwLock<StagingStore>>,
     release_store: Arc<RwLock<ReleaseStore>>,
+    source_cache: SourceCache,
     jobsets: Vec<JobSet>,
     database: PgConnection,
     file_log_sink_factory: Option<FileLogSinkFactory>,
@@ -36,6 +38,7 @@ pub struct OrchestratorSetup {
     endpoint_config: Vec<EndpointConfiguration>,
     staging_store: Arc<RwLock<StagingStore>>,
     release_store: Arc<RwLock<ReleaseStore>>,
+    source_cache: SourceCache,
     jobsets: Vec<JobSet>,
     database: PgConnection,
     submit: Submit,
@@ -51,6 +54,7 @@ impl OrchestratorSetup {
             scheduler:             scheduler,
             staging_store:         self.staging_store,
             release_store:         self.release_store,
+            source_cache:          self.source_cache,
             jobsets:               self.jobsets,
             database:              self.database,
             file_log_sink_factory: self.file_log_sink_factory,
@@ -82,7 +86,7 @@ impl Orchestrator {
             let (results, logs) = { // run the jobs in the set
                 let unordered_results   = futures::stream::FuturesUnordered::new();
                 let unordered_receivers = futures::stream::FuturesUnordered::new();
-                for runnable in jobset.into_runables(&merged_store) {
+                for runnable in jobset.into_runables(&merged_store, &self.source_cache) {
                     let runnable = runnable?;
                     let job_id = runnable.uuid().clone();
                     trace!("Runnable {} for package {}", job_id, runnable.package().name());
