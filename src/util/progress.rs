@@ -55,6 +55,17 @@ impl ProgressBars {
         }
     }
 
+    fn spinner(&self, msg: &str, template: &str) -> ProgressBar {
+        if self.hide {
+            ProgressBar::hidden()
+        } else {
+            let b = ProgressBar::new_spinner();
+            b.set_style(ProgressStyle::default_spinner().template(template));
+            b.set_message(msg);
+            b
+        }
+    }
+
 }
 
 
