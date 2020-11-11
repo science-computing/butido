@@ -15,6 +15,7 @@ pub async fn source<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: 
     match matches.subcommand() {
         ("verify", Some(matches))       => verify(matches, config, repo).await,
         ("list-missing", Some(matches)) => list_missing(matches, config, repo).await,
+        ("url", Some(matches))          => url(matches, config, repo).await,
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 }
@@ -64,6 +65,18 @@ pub async fn list_missing<'a>(_: &ArgMatches, config: &Configuration<'a>, repo: 
 
             Ok(())
         })
+        .collect()
+}
+
+pub async fn url<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
+    let out         = std::io::stdout();
+    let mut outlock = out.lock();
+
+    let pname = matches.value_of("package_name").map(String::from).map(PackageName::from);
+
+    repo.packages()
+        .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
+        .map(|p| writeln!(outlock, "{} {} -> {}", p.name(), p.version(), p.source().url()).map_err(Error::from))
         .collect()
 }
 

@@ -293,6 +293,16 @@ pub fn cli<'a>() -> App<'a> {
             .subcommand(App::new("list-missing")
                 .about("List packages where the source is missing")
             )
+            .subcommand(App::new("url")
+                .about("Show the URL of the source of a package")
+                .arg(Arg::with_name("package_name")
+                    .required(false)
+                    .multiple(false)
+                    .index(1)
+                    .value_name("PKG")
+                    .help("Verify the sources of this package (optional, if left out, all packages are checked)")
+                )
+            )
         )
 
 }
