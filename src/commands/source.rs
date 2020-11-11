@@ -8,6 +8,7 @@ use clap_v3::ArgMatches;
 
 use crate::config::*;
 use crate::package::PackageName;
+use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
 use crate::source::*;
 
@@ -26,9 +27,11 @@ pub async fn verify<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: 
     let source_cache_root = PathBuf::from(config.source_cache_root());
     let sc                = SourceCache::new(source_cache_root);
     let pname             = matches.value_of("package_name").map(String::from).map(PackageName::from);
+    let pvers             = matches.value_of("package_version").map(String::from).map(PackageVersionConstraint::new).transpose()?;
 
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
+        .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true))
         .map(|p| {
             let source = sc.source_for(p);
             async move {
@@ -73,9 +76,11 @@ pub async fn url<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Rep
     let mut outlock = out.lock();
 
     let pname = matches.value_of("package_name").map(String::from).map(PackageName::from);
+    let pvers = matches.value_of("package_version").map(String::from).map(PackageVersionConstraint::new).transpose()?;
 
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
+        .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true))
         .map(|p| writeln!(outlock, "{} {} -> {}", p.name(), p.version(), p.source().url()).map_err(Error::from))
         .collect()
 }
