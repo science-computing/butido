@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use anyhow::Error;
+use url::Url;
 
 use crate::package::Package;
 use crate::package::PackageName;
@@ -50,6 +51,10 @@ impl SourceEntry {
 
     pub fn path(&self) -> &PathBuf {
         &self.package_source_path
+    }
+
+    pub fn url(&self) -> &Url {
+        self.package_source.url()
     }
 
     pub async fn verify_hash(&self) -> Result<bool> {
