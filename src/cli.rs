@@ -278,6 +278,16 @@ pub fn cli<'a>() -> App<'a> {
                 .help("Do not use the fancy format, but simply <name> <version>")
             )
         )
+        .subcommand(App::new("verify-sources")
+            .about("Hash-check all source files")
+            .arg(Arg::with_name("package_name")
+                .required(false)
+                .multiple(false)
+                .index(1)
+                .value_name("PKG")
+                .help("Verify the sources of this package (optional, if left out, all packages are checked)")
+            )
+        )
 
 }
 
