@@ -100,9 +100,9 @@ async fn main() -> Result<()> {
             crate::commands::find_pkg(matches, &config, repo).await?
         },
 
-        ("verify-sources", Some(matches)) => {
+        ("source", Some(matches)) => {
             let repo = load_repo()?;
-            crate::commands::verify_sources(matches, &config, repo).await?
+            crate::commands::source(matches, &config, repo).await?
         }
 
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),

@@ -2,6 +2,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use clap_v3::ArgMatches;
 
 use crate::config::*;
@@ -9,7 +10,14 @@ use crate::package::PackageName;
 use crate::repository::Repository;
 use crate::source::*;
 
-pub async fn verify_sources<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
+pub async fn source<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
+    match matches.subcommand() {
+        ("verify", Some(matches))     => verify(matches, config, repo).await,
+        (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
+    }
+}
+
+pub async fn verify<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
     use tokio::stream::StreamExt;
 
     let source_cache_root = PathBuf::from(config.source_cache_root());
@@ -39,4 +47,3 @@ pub async fn verify_sources<'a>(matches: &ArgMatches, config: &Configuration<'a>
         .collect::<Result<()>>()
         .await
 }
-

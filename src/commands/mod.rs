@@ -16,8 +16,8 @@ pub use dependencies_of::dependencies_of;
 mod what_depends;
 pub use what_depends::what_depends;
 
-mod verify_sources;
-pub use verify_sources::verify_sources;
+mod source;
+pub use source::source;
 
 mod versions_of;
 pub use versions_of::versions_of;
