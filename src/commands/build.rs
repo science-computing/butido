@@ -126,6 +126,11 @@ pub async fn build<'a>(matches: &ArgMatches,
             config.staging_directory(&variables)?
                 .join(uuid::Uuid::new_v4().hyphenated().to_string())
         };
+
+        if !p.is_dir() {
+            let _ = tokio::fs::create_dir_all(&p).await?;
+        }
+
         debug!("Loading staging directory: {}", p.display());
         let r = StagingStore::load(&p, bar_staging_loading.clone());
         if r.is_ok() {
