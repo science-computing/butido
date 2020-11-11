@@ -57,6 +57,10 @@ impl SourceEntry {
         self.package_source.url()
     }
 
+    pub async fn remove_file(&self) -> Result<()> {
+        tokio::fs::remove_file(&self.package_source_path).await.map_err(Error::from)
+    }
+
     pub async fn verify_hash(&self) -> Result<bool> {
         use tokio::io::AsyncReadExt;
 
