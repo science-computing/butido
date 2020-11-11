@@ -22,6 +22,7 @@ mod package;
 mod phase;
 mod repository;
 mod schema;
+mod source;
 mod ui;
 mod util;
 
