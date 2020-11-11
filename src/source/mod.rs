@@ -8,6 +8,7 @@ use crate::package::Package;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::package::Source;
+use crate::util::progress::ProgressBars;
 
 pub struct SourceCache {
     root: PathBuf,
@@ -87,4 +88,15 @@ impl SourceEntry {
             .map_err(Error::from)
     }
 
+    pub async fn create(&self) -> Result<tokio::fs::File> {
+        tokio::fs::OpenOptions::new()
+            .create(true)
+            .create_new(true)
+            .write(true)
+            .open(&self.package_source_path)
+            .await
+            .map_err(Error::from)
+    }
+
 }
+

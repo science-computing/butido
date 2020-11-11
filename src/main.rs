@@ -102,7 +102,7 @@ async fn main() -> Result<()> {
 
         ("source", Some(matches)) => {
             let repo = load_repo()?;
-            crate::commands::source(matches, &config, repo).await?
+            crate::commands::source(matches, &config, repo, progressbars).await?
         }
 
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
