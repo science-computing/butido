@@ -40,7 +40,7 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
                 | sym(b'b').map(|_|b'\x08') | sym(b'f').map(|_|b'\x0C')
                 | sym(b'n').map(|_|b'\n') | sym(b'r').map(|_|b'\r') | sym(b't').map(|_|b'\t');
         let escape_sequence = sym(b'\\') * special_char;
-        let string = sym(b'"') * (none_of(b"\\\"") | escape_sequence).repeat(0..) - sym(b'"');
+        let string = (none_of(b"\\\"") | escape_sequence).repeat(0..);
 
         string.convert(String::from_utf8)
     }
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_phase() {
-        let s = "#BUTIDO:PHASE:\"a\"";
+        let s = "#BUTIDO:PHASE:a";
         let p = parser();
         let r = p.parse(s.as_bytes());
 
@@ -136,9 +136,9 @@ mod tests {
 
     #[test]
     fn test_phase_multiline() {
-        let s = "#BUTIDO:PHASE:\"a
+        let s = "#BUTIDO:PHASE:a
 
-            \"";
+            ";
         let p = parser();
         let r = p.parse(s.as_bytes());
 
@@ -152,15 +152,15 @@ mod tests {
         let buffer: &'static str = indoc::indoc! {"
             #BUTIDO:PROGRESS:0
             Some log line
-            #BUTIDO:PHASE:\"configure\"
+            #BUTIDO:PHASE:configure
             Some log line
             Some log line
             Some log line
-            #BUTIDO:PHASE:\"Build\"
+            #BUTIDO:PHASE:Build
             Some other log line
             Some other log line
             Some other log line
-            #BUTIDO:STATE:OK:\"finished successfully\"
+            #BUTIDO:STATE:OK:finished successfully
         "};
 
         let p = parser();
