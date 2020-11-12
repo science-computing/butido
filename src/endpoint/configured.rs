@@ -272,6 +272,7 @@ impl Endpoint {
                                     .with_context(|| anyhow!("Parsing log from {}:{}: {:?}", self.name, container_id, l))
                                     .map_err(Error::from)
                                     .and_then(|item| {
+                                        trace!("Log item: {}", item.display()?);
                                         logsink.send(item)
                                             .with_context(|| anyhow!("Sending log to log sink"))
                                             .map_err(Error::from)
