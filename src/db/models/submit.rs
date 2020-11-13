@@ -12,7 +12,7 @@ use crate::db::models::Package;
 use crate::schema::submits::*;
 use crate::schema::submits;
 
-#[derive(Queryable)]
+#[derive(Clone, Queryable)]
 pub struct Submit {
     pub id: i32,
     pub uuid: ::uuid::Uuid,
