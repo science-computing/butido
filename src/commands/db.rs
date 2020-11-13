@@ -213,7 +213,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::jobs::dsl;
 
     let csv  = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "submit uuid", "time", "endpoint", "success"]);
+    let hdrs = mk_header(vec!["id", "submit uuid", "job uuid", "time", "endpoint", "success"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let jobs = matches.value_of("submit_uuid")
         .map(uuid::Uuid::parse_str)
@@ -244,7 +244,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 })
                 .unwrap_or_else(|| String::from("unknown"));
 
-            Ok(vec![format!("{}", job.id), submit.uuid.to_string(), submit.submit_time.to_string(), ep.name, success])
+            Ok(vec![format!("{}", job.id), submit.uuid.to_string(), job.uuid.to_string(), submit.submit_time.to_string(), ep.name, success])
         })
         .collect::<Result<Vec<_>>>()?;
 

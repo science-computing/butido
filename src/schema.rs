@@ -68,6 +68,7 @@ table! {
         container_hash -> Varchar,
         script_text -> Text,
         log_text -> Text,
+        uuid -> Uuid,
     }
 }
 

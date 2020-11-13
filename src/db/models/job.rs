@@ -19,6 +19,7 @@ pub struct Job {
     pub container_hash: String,
     pub script_text: String,
     pub log_text: String,
+    pub uuid: ::uuid::Uuid,
 }
 
 #[derive(Debug, Insertable)]
@@ -31,10 +32,12 @@ struct NewJob<'a> {
     pub container_hash: &'a str,
     pub script_text: &'a str,
     pub log_text: &'a str,
+    pub uuid: &'a ::uuid::Uuid,
 }
 
 impl Job {
     pub fn create(database_connection: &PgConnection,
+                           job_uuid: &::uuid::Uuid,
                            submit: &Submit,
                            endpoint: &Endpoint,
                            package: &Package,
@@ -44,6 +47,7 @@ impl Job {
                            log: &str,
                            ) -> Result<()> {
         let new_job = NewJob {
+            uuid: job_uuid,
             submit_id: submit.id,
             endpoint_id: endpoint.id,
             package_id: package.id,

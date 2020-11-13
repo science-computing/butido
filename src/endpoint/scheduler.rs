@@ -151,7 +151,7 @@ impl JobHandle {
         let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", ep.name()))?;
         let (paths, container_hash, script) = res.with_context(|| anyhow!("Running job on '{}'", ep.name()))?;
 
-        dbmodels::Job::create(&self.db, &self.submit, &endpoint, &package, &image, &container_hash, &script, &log)?;
+        dbmodels::Job::create(&self.db, &job_id, &self.submit, &endpoint, &package, &image, &container_hash, &script, &log)?;
         Ok(paths)
     }
 
