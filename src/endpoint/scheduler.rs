@@ -118,7 +118,7 @@ impl std::fmt::Debug for JobHandle {
 }
 
 impl JobHandle {
-    pub async fn get_result(self) -> Result<Vec<PathBuf>> {
+    pub async fn run(self) -> Result<Vec<PathBuf>> {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let ep = self.endpoint
             .read()

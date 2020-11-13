@@ -91,7 +91,7 @@ impl Orchestrator {
                     // clone the bar here, so we can give a handle to the async result fetcher closure
                     // where we tick() it as soon as the job returns the result (= is finished)
                     unordered_results.push(async move {
-                        let r = jobhandle.get_result().await;
+                        let r = jobhandle.run().await;
                         trace!("Found result in job {}: {:?}", job_id, r);
                         r
                     });
