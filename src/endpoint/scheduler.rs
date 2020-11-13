@@ -140,8 +140,10 @@ impl JobHandle {
 
         trace!("Found result for job {}: {:?}", job_id, res);
         logres.with_context(|| anyhow!("Collecting logs for job on '{}'", ep.name()))?;
-        res.with_context(|| anyhow!("Running job on '{}'", ep.name()))
-            .map_err(Error::from)
+        let (paths, container_hash) = res.with_context(|| anyhow!("Running job on '{}'", ep.name()))?;
+
+
+        Ok(paths)
     }
 
 }

@@ -19,6 +19,7 @@ use crate::filestore::StagingStore;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
+use crate::util::docker::ContainerHash;
 use crate::util::docker::ImageName;
 
 #[derive(Getters, CopyGetters, TypedBuilder)]
@@ -162,7 +163,7 @@ impl Endpoint {
             .map(|_| ())
     }
 
-    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<Vec<PathBuf>>  {
+    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<(Vec<PathBuf>, ContainerHash)> {
         use crate::log::buffer_stream_to_line_stream;
         use tokio::stream::StreamExt;
         use futures::FutureExt;
@@ -299,8 +300,8 @@ impl Endpoint {
 
         container.stop(Some(std::time::Duration::new(1, 0))).await?;
 
-        trace!("Returning job {} result = {:?}", job.uuid(), r);
-        Ok(r)
+        trace!("Returning job {} result = {:?}, container hash = {}", job.uuid(), r, container_id);
+        Ok((r, ContainerHash::from(container_id)))
     }
 
     pub async fn number_of_running_containers(&self) -> Result<usize> {
