@@ -1,6 +1,9 @@
 mod artifact;
 pub use artifact::*;
 
+mod endpoint;
+pub use endpoint::*;
+
 mod envvar;
 pub use envvar::*;
 
