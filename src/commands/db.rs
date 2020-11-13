@@ -16,6 +16,7 @@ use itertools::Itertools;
 
 use crate::db::DbConnectionConfig;
 use crate::db::models;
+use crate::log::LogItem;
 
 pub fn db(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
@@ -280,7 +281,8 @@ fn job(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .inner_join(schema::images::table)
         .first::<(models::Job, models::Submit, models::Endpoint, models::Package, models::Image)>(&conn)?;
 
-    let success = crate::log::log_is_successfull(&data.0.log_text)?;
+    let parsed_log = crate::log::ParsedLog::build_from(&data.0.log_text)?;
+    let success = parsed_log.is_successfull();
     let s = indoc::formatdoc!(r#"
             Job:        {job_uuid}
             Succeeded:  {succeeded}
@@ -314,9 +316,19 @@ fn job(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         endpoint_name   = data.2.name.cyan(),
         image_name      = data.4.name.cyan(),
         container_hash  = data.0.container_hash.cyan(),
-        script_len      = format!("{:<4}", data.0.script_text).cyan(),
-        log_len         = format!("{:<4}", data.0.log_text).cyan(),
-        log_text        = data.0.log_text,
+        script_len      = format!("{:<4}", data.0.script_text.len()).cyan(),
+        log_len         = format!("{:<4}", data.0.log_text.len()).cyan(),
+        log_text        = parsed_log.iter()
+            .map(|line_item| match line_item {
+                LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
+                LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
+                LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
+                LogItem::State(Ok(s))    => Ok(format!("#BUTIDO:STATE:OK:{}", s).green()),
+                LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
+            })
+            .collect::<Result<Vec<_>>>()?
+            .into_iter() // ugly, but hey... not important right now.
+            .join("\n"),
     );
 
     writeln!(&mut std::io::stdout(), "{}", s).map_err(Error::from)
