@@ -44,6 +44,7 @@ sha1        = { version = "0.6", features = ["std"] }
 sha2        = "0.9"
 reqwest     = { version = "0.10", features = [ "stream" ] }
 colored     = "2"
+syntect     = "4.4"
 
 url      = { version = "2", features = ["serde"] }
 tokio    = { version = "0.2", features = ["full"] }

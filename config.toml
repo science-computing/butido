@@ -12,6 +12,20 @@ repository = "/tmp/path"
 # This is also the default if the setting is not present.
 progress_format = "[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}"
 
+
+# The theme for the highlighting engine when printing the script that ran inside
+# a container.
+#
+# Valid values:
+#   "base16-ocean.dark" (default if key is not present)
+#   "base16-eighties.dark"
+#   "base16-mocha.dark"
+#   "base16-ocean.light"
+#   "InspiredGitHub"
+#   "Solarized (dark)"
+#   "Solarized (light)"
+script_highlight_theme = "Solarized (dark)"
+
 # The format to print the found packages with.
 #
 # Possible tokens are:

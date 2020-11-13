@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
 
     let db_connection_config = crate::db::parse_db_connection_config(&config, &cli);
     match cli.subcommand() {
-        ("db", Some(matches))           => crate::commands::db(db_connection_config, matches)?,
+        ("db", Some(matches))           => crate::commands::db(db_connection_config, &config, matches)?,
         ("build", Some(matches))        => {
             let conn = crate::db::establish_connection(db_connection_config)?;
 

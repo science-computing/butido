@@ -15,3 +15,7 @@ pub fn default_package_print_format() -> String {
     "#))
 }
 
+pub fn default_script_highlight_theme() -> String {
+    String::from("base16-ocean.dark")
+}
+

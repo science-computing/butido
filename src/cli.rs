@@ -176,6 +176,14 @@ pub fn cli<'a>() -> App<'a> {
                     .help("Do not show the log")
                 )
 
+                .arg(Arg::with_name("show_script")
+                    .required(false)
+                    .multiple(false)
+                    .long("script")
+                    .short('s')
+                    .help("Show the script")
+                )
+
             )
         )
 

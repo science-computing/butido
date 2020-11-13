@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use anyhow::anyhow;
 use anyhow::Result;
 use getset::Getters;
 use handlebars::Handlebars;
@@ -22,6 +23,10 @@ pub struct NotValidatedConfiguration {
     #[serde(default = "default_package_print_format")]
     #[getset(get = "pub")]
     package_print_format: String,
+
+    #[serde(default = "default_script_highlight_theme")]
+    #[getset(get = "pub")]
+    script_highlight_theme: String,
 
     #[serde(rename = "releases")]
     releases_directory: String,
@@ -66,6 +71,19 @@ pub struct NotValidatedConfiguration {
 impl<'reg> NotValidatedConfiguration {
     pub fn validate(self) -> Result<Configuration<'reg>> {
         // TODO: Implement proper validation
+        let allowed_theme_present = [
+            "base16-ocean.dark",
+            "base16-eighties.dark",
+            "base16-mocha.dark",
+            "base16-ocean.light",
+            "InspiredGitHub",
+            "Solarized (dark)",
+            "Solarized (light)",
+        ].into_iter().any(|allowed_theme| self.script_highlight_theme == *allowed_theme);
+
+        if !allowed_theme_present {
+            return Err(anyhow!("Theme not known: {}", self.script_highlight_theme))
+        }
 
         let hb = {
             let mut hb = Handlebars::new();

@@ -14,11 +14,12 @@ use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
 
+use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
 use crate::db::models;
 use crate::log::LogItem;
 
-pub fn db(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+pub fn db<'a>(db_connection_config: DbConnectionConfig, config: &Configuration<'a>, matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
         ("cli", Some(matches))        => cli(db_connection_config, matches),
         ("artifacts", Some(matches))  => artifacts(db_connection_config, matches),
@@ -26,7 +27,7 @@ pub fn db(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Res
         ("images", Some(matches))     => images(db_connection_config, matches),
         ("submits", Some(matches))    => submits(db_connection_config, matches),
         ("jobs", Some(matches))       => jobs(db_connection_config, matches),
-        ("job", Some(matches))        => job(db_connection_config, matches),
+        ("job", Some(matches))        => job(db_connection_config, config, matches),
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 }
@@ -260,13 +261,15 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn job(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &ArgMatches) -> Result<()> {
     use std::io::Write;
     use colored::Colorize;
     use crate::schema;
     use crate::schema::jobs::dsl;
 
+    let configured_theme = config.script_highlight_theme();
     let hide_log         = matches.is_present("hide_log");
+    let show_script      = matches.is_present("show_script");
     let csv              = matches.is_present("csv");
     let conn             = crate::db::establish_connection(conn_cfg)?;
     let job_uuid         = matches.value_of("job_uuid")
@@ -298,6 +301,10 @@ fn job(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 
             ---
 
+            {script_text}
+
+            ---
+
             {log_text}
         "#,
 
@@ -319,6 +326,30 @@ fn job(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         container_hash  = data.0.container_hash.cyan(),
         script_len      = format!("{:<4}", data.0.script_text.len()).cyan(),
         log_len         = format!("{:<4}", data.0.log_text.len()).cyan(),
+        script_text     = if show_script {
+            use syntect::easy::HighlightLines;
+            use syntect::parsing::SyntaxSet;
+            use syntect::highlighting::{ThemeSet, Style};
+            use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
+
+            // Load these once at the start of your program
+            let ps = SyntaxSet::load_defaults_newlines();
+            let ts = ThemeSet::load_defaults();
+
+            let syntax = ps.find_syntax_by_first_line(&data.0.script_text).ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
+
+            let theme = ts.themes.get(configured_theme)
+                .ok_or_else(|| anyhow!("Theme not available: {}", configured_theme))?;
+            let mut h = HighlightLines::new(syntax, &theme);
+            LinesWithEndings::from(&data.0.script_text)
+                .map(|line| {
+                    let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
+                    as_24_bit_terminal_escaped(&ranges[..], true)
+                })
+                .join("\n")
+        } else {
+            String::from("<script hidden>")
+        },
         log_text        = if hide_log {
             String::from("<log hidden>")
         } else {
