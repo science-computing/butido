@@ -21,7 +21,7 @@ pub struct Job {
     pub log_text: String,
 }
 
-#[derive(Insertable)]
+#[derive(Debug, Insertable)]
 #[table_name="jobs"]
 struct NewJob<'a> {
     pub submit_id: i32,
@@ -53,6 +53,7 @@ impl Job {
             log_text: log,
         };
 
+        trace!("Creating Job in database: {:?}", new_job);
         diesel::insert_into(jobs::table)
             .values(&new_job)
             .on_conflict_do_nothing()
