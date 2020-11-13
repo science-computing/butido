@@ -6,7 +6,7 @@ use crate::package::Package;
 use crate::phase::Phase;
 use crate::phase::PhaseName;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(transparent)]
 pub struct Script(String);
 

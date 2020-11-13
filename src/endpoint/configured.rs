@@ -19,6 +19,7 @@ use crate::filestore::StagingStore;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
+use crate::package::Script;
 use crate::util::docker::ContainerHash;
 use crate::util::docker::ImageName;
 
@@ -163,7 +164,7 @@ impl Endpoint {
             .map(|_| ())
     }
 
-    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<(Vec<PathBuf>, ContainerHash)> {
+    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<(Vec<PathBuf>, ContainerHash, Script)> {
         use crate::log::buffer_stream_to_line_stream;
         use tokio::stream::StreamExt;
         use futures::FutureExt;
@@ -196,7 +197,6 @@ impl Endpoint {
             (create_info.id, create_info.warnings)
         };
 
-        let script      = job.script().as_ref().as_bytes();
         let script_path = PathBuf::from("/script");
         let exec_opts = ExecContainerOptions::builder()
             .cmd(vec!["/bin/bash", "/script"])
@@ -254,7 +254,7 @@ impl Endpoint {
         }
 
         container
-            .copy_file_into(script_path, script)
+            .copy_file_into(script_path, job.script().as_ref().as_bytes())
             .inspect(|r| { trace!("Copying script to container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Copying the script into the container {} on '{}'", container_id, self.name)))
             .then(|_| container.start())
@@ -301,7 +301,8 @@ impl Endpoint {
         container.stop(Some(std::time::Duration::new(1, 0))).await?;
 
         trace!("Returning job {} result = {:?}, container hash = {}", job.uuid(), r, container_id);
-        Ok((r, ContainerHash::from(container_id)))
+        let script: Script = job.script().clone();
+        Ok((r, ContainerHash::from(container_id), script))
     }
 
     pub async fn number_of_running_containers(&self) -> Result<usize> {
