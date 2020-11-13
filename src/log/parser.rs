@@ -1,11 +1,14 @@
 use std::result::Result as RResult;
 use std::str::FromStr;
 
+use anyhow::Error;
+use anyhow::Result;
 use futures::AsyncBufReadExt;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use pom::parser::Parser as PomParser;
+use resiter::Filter;
 use shiplift::tty::TtyChunk;
 
 use crate::log::LogItem;
@@ -20,6 +23,28 @@ pub fn buffer_stream_to_line_stream<S>(stream: S) -> impl Stream<Item = IoResult
         .map_err(|e| futures::io::Error::new(futures::io::ErrorKind::Other, e))
         .into_async_read()
         .lines()
+}
+
+pub fn log_is_successfull(log: &str) -> Result<Option<bool>> {
+
+    let p = parser();
+    let i = log.lines()
+        .map(|line| p.parse(line.as_bytes()).map_err(Error::from))
+        .filter_ok(|line| match line {
+            LogItem::State(_) => true,
+            _ => false,
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    Ok({ i.into_iter()
+        .rev()
+        .next()
+        .and_then(|ll| match ll {
+            LogItem::State(Ok(_)) => Some(true),
+            LogItem::State(Err(_)) => Some(false),
+            _ => None,
+        })
+    })
 }
 
 pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
