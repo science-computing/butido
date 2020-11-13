@@ -25,6 +25,7 @@ pub fn db(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Res
         ("images", Some(matches))     => images(db_connection_config, matches),
         ("submits", Some(matches))    => submits(db_connection_config, matches),
         ("jobs", Some(matches))       => jobs(db_connection_config, matches),
+        ("job", Some(matches))        => job(db_connection_config, matches),
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 }
@@ -255,6 +256,69 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn job(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+    use std::io::Write;
+    use colored::Colorize;
+    use crate::schema;
+    use crate::schema::jobs::dsl;
+
+    let csv  = matches.is_present("csv");
+    let conn = crate::db::establish_connection(conn_cfg)?;
+    let job_uuid = matches.value_of("job_uuid")
+        .map(uuid::Uuid::parse_str)
+        .transpose()?
+        .unwrap();
+
+    let data = schema::jobs::table
+        .filter(schema::jobs::dsl::uuid.eq(job_uuid))
+        .inner_join(schema::submits::table)
+        .inner_join(schema::endpoints::table)
+        .inner_join(schema::packages::table)
+        .inner_join(schema::images::table)
+        .first::<(models::Job, models::Submit, models::Endpoint, models::Package, models::Image)>(&conn)?;
+
+    let success = crate::log::log_is_successfull(&data.0.log_text)?;
+    let s = indoc::formatdoc!(r#"
+            Job:        {job_uuid}
+            Succeeded:  {succeeded}
+            Package:    {package_name} {package_version}
+
+            Ran on:     {endpoint_name}
+            Image:      {image_name}
+            Container:  {container_hash}
+
+            Script:     {script_len} lines
+            Log:        {log_len} lines
+
+            ---
+
+            {log_text}
+        "#,
+
+        job_uuid = match success {
+            Some(true) => data.0.uuid.to_string().green(),
+            Some(false) => data.0.uuid.to_string().red(),
+            None => data.0.uuid.to_string().cyan(),
+        },
+
+        succeeded = match success {
+            Some(true) => String::from("yes").green(),
+            Some(false) => String::from("no").red(),
+            None => String::from("unknown").cyan(),
+        },
+        package_name    = data.3.name.cyan(),
+        package_version = data.3.version.cyan(),
+        endpoint_name   = data.2.name.cyan(),
+        image_name      = data.4.name.cyan(),
+        container_hash  = data.0.container_hash.cyan(),
+        script_len      = format!("{:<4}", data.0.script_text).cyan(),
+        log_len         = format!("{:<4}", data.0.log_text).cyan(),
+        log_text        = data.0.log_text,
+    );
+
+    writeln!(&mut std::io::stdout(), "{}", s).map_err(Error::from)
 }
 
 

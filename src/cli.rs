@@ -149,6 +149,27 @@ pub fn cli<'a>() -> App<'a> {
                     .help("Only list jobs of a certain submit")
                 )
             )
+
+            .subcommand(App::new("job")
+                .about("Show a specific job from the DB")
+                .arg(Arg::with_name("csv")
+                    .required(false)
+                    .multiple(false)
+                    .long("csv")
+                    .takes_value(false)
+                    .help("Format output as CSV")
+                )
+
+                .arg(Arg::with_name("job_uuid")
+                    .required(true)
+                    .multiple(false)
+                    .index(1)
+                    .takes_value(true)
+                    .value_name("UUID")
+                    .help("The job to show")
+                )
+
+            )
         )
 
         .subcommand(App::new("build")
