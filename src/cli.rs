@@ -128,6 +128,17 @@ pub fn cli<'a>() -> App<'a> {
                     .help("Format output as CSV")
                 )
             )
+
+            .subcommand(App::new("jobs")
+                .about("List jobs from the DB")
+                .arg(Arg::with_name("csv")
+                    .required(false)
+                    .multiple(false)
+                    .long("csv")
+                    .takes_value(false)
+                    .help("Format output as CSV")
+                )
+            )
         )
 
         .subcommand(App::new("build")

@@ -8,6 +8,8 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
+use diesel::ExpressionMethods;
+use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
 
@@ -21,6 +23,7 @@ pub fn db(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Res
         ("envvars", Some(matches))    => envvars(db_connection_config, matches),
         ("images", Some(matches))     => images(db_connection_config, matches),
         ("submits", Some(matches))    => submits(db_connection_config, matches),
+        ("jobs", Some(matches))       => jobs(db_connection_config, matches),
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 }
@@ -195,6 +198,45 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
             vec![format!("{}", submit.id), submit.submit_time.to_string(), submit.uuid.to_string()]
         })
         .collect::<Vec<_>>();
+
+    if data.is_empty() {
+        info!("No submits in database");
+    } else {
+        display_data(hdrs, data, csv)?;
+    }
+
+    Ok(())
+}
+
+fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+    use crate::schema::jobs::dsl;
+
+    let csv  = matches.is_present("csv");
+    let hdrs = mk_header(vec!["id", "submit uuid", "time", "endpoint", "success"]);
+    let conn = crate::db::establish_connection(conn_cfg)?;
+    let data = dsl::jobs
+        .load::<models::Job>(&conn)?
+        .into_iter()
+        .map(|job| {
+            let submit = crate::schema::submits::dsl::submits
+                .filter(crate::schema::submits::dsl::id.eq(job.id))
+                .first::<models::Submit>(&conn)?;
+
+            let ep = crate::schema::endpoints::dsl::endpoints
+                .filter(crate::schema::endpoints::dsl::id.eq(job.endpoint_id))
+                .first::<models::Endpoint>(&conn)?;
+
+            let success = crate::log::log_is_successfull(&job.log_text)?
+                .map(|b| if b {
+                    String::from("yes")
+                } else {
+                    String::from("no")
+                })
+                .unwrap_or_else(|| String::from("unknown"));
+
+            Ok(vec![format!("{}", job.id), submit.uuid.to_string(), submit.submit_time.to_string(), ep.name, success])
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     if data.is_empty() {
         info!("No submits in database");
