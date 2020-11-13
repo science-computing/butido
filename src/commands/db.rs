@@ -13,6 +13,10 @@ use diesel::JoinOnDsl;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
+use syntect::easy::HighlightLines;
+use syntect::highlighting::{ThemeSet, Style};
+use syntect::parsing::SyntaxSet;
+use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
@@ -327,26 +331,25 @@ fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &A
         script_len      = format!("{:<4}", data.0.script_text.len()).cyan(),
         log_len         = format!("{:<4}", data.0.log_text.len()).cyan(),
         script_text     = if show_script {
-            use syntect::easy::HighlightLines;
-            use syntect::parsing::SyntaxSet;
-            use syntect::highlighting::{ThemeSet, Style};
-            use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
+            if let Some(configured_theme) = configured_theme {
+                // Load these once at the start of your program
+                let ps = SyntaxSet::load_defaults_newlines();
+                let ts = ThemeSet::load_defaults();
 
-            // Load these once at the start of your program
-            let ps = SyntaxSet::load_defaults_newlines();
-            let ts = ThemeSet::load_defaults();
+                let syntax = ps.find_syntax_by_first_line(&data.0.script_text).ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
 
-            let syntax = ps.find_syntax_by_first_line(&data.0.script_text).ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
-
-            let theme = ts.themes.get(configured_theme)
-                .ok_or_else(|| anyhow!("Theme not available: {}", configured_theme))?;
-            let mut h = HighlightLines::new(syntax, &theme);
-            LinesWithEndings::from(&data.0.script_text)
-                .map(|line| {
-                    let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
-                    as_24_bit_terminal_escaped(&ranges[..], true)
-                })
-                .join("\n")
+                let theme = ts.themes.get(configured_theme)
+                    .ok_or_else(|| anyhow!("Theme not available: {}", configured_theme))?;
+                let mut h = HighlightLines::new(syntax, &theme);
+                LinesWithEndings::from(&data.0.script_text)
+                    .map(|line| {
+                        let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
+                        as_24_bit_terminal_escaped(&ranges[..], true)
+                    })
+                    .join("\n")
+            } else {
+                data.0.script_text.clone()
+            }
         } else {
             String::from("<script hidden>")
         },

@@ -17,13 +17,15 @@ progress_format = "[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {ms
 # a container.
 #
 # Valid values:
-#   "base16-ocean.dark" (default if key is not present)
+#   "base16-ocean.dark"
 #   "base16-eighties.dark"
 #   "base16-mocha.dark"
 #   "base16-ocean.light"
 #   "InspiredGitHub"
 #   "Solarized (dark)"
 #   "Solarized (light)"
+#
+# If the value is not set, highlighting is disabled.
 script_highlight_theme = "Solarized (dark)"
 
 # The format to print the found packages with.
