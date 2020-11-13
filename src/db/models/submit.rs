@@ -64,7 +64,7 @@ impl Submit {
             .context("Inserting new submit into submits table")?;
 
         dsl::submits
-            .filter(uuid.eq(uuid))
+            .filter(submits::uuid.eq(submit_id))
             .first::<Submit>(database_connection)
             .context("Loading submit")
             .map_err(Error::from)

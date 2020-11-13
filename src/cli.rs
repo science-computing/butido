@@ -138,6 +138,16 @@ pub fn cli<'a>() -> App<'a> {
                     .takes_value(false)
                     .help("Format output as CSV")
                 )
+
+                .arg(Arg::with_name("submit_uuid")
+                    .required(false)
+                    .multiple(false)
+                    .long("of-submit")
+                    .short('S')
+                    .takes_value(true)
+                    .value_name("UUID")
+                    .help("Only list jobs of a certain submit")
+                )
             )
         )
 

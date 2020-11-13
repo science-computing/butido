@@ -9,6 +9,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
 use diesel::ExpressionMethods;
+use diesel::JoinOnDsl;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
@@ -214,18 +215,27 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     let csv  = matches.is_present("csv");
     let hdrs = mk_header(vec!["id", "submit uuid", "time", "endpoint", "success"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
-    let data = dsl::jobs
-        .load::<models::Job>(&conn)?
-        .into_iter()
-        .map(|job| {
-            let submit = crate::schema::submits::dsl::submits
-                .filter(crate::schema::submits::dsl::id.eq(job.id))
-                .first::<models::Submit>(&conn)?;
+    let jobs = matches.value_of("submit_uuid")
+        .map(uuid::Uuid::parse_str)
+        .transpose()?
+        .map(|submit_uuid| {
+            use crate::schema;
 
-            let ep = crate::schema::endpoints::dsl::endpoints
-                .filter(crate::schema::endpoints::dsl::id.eq(job.endpoint_id))
-                .first::<models::Endpoint>(&conn)?;
+            schema::jobs::table.inner_join({
+                schema::submits::table.on(schema::submits::uuid.eq(submit_uuid))
+            })
+            .inner_join(schema::endpoints::table)
+            .load::<(models::Job, models::Submit, models::Endpoint)>(&conn)
+        })
+        .unwrap_or_else(|| {
+            dsl::jobs
+                .inner_join(crate::schema::submits::table)
+                .inner_join(crate::schema::endpoints::table)
+                .load::<(models::Job, models::Submit, models::Endpoint)>(&conn)
+        })?;
 
+    let data = jobs.into_iter()
+        .map(|(job, submit, ep)| {
             let success = crate::log::log_is_successfull(&job.log_text)?
                 .map(|b| if b {
                     String::from("yes")
