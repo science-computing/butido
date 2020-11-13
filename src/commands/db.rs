@@ -266,9 +266,10 @@ fn job(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema;
     use crate::schema::jobs::dsl;
 
-    let csv  = matches.is_present("csv");
-    let conn = crate::db::establish_connection(conn_cfg)?;
-    let job_uuid = matches.value_of("job_uuid")
+    let hide_log         = matches.is_present("hide_log");
+    let csv              = matches.is_present("csv");
+    let conn             = crate::db::establish_connection(conn_cfg)?;
+    let job_uuid         = matches.value_of("job_uuid")
         .map(uuid::Uuid::parse_str)
         .transpose()?
         .unwrap();
@@ -318,17 +319,21 @@ fn job(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         container_hash  = data.0.container_hash.cyan(),
         script_len      = format!("{:<4}", data.0.script_text.len()).cyan(),
         log_len         = format!("{:<4}", data.0.log_text.len()).cyan(),
-        log_text        = parsed_log.iter()
-            .map(|line_item| match line_item {
-                LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
-                LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
-                LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
-                LogItem::State(Ok(s))    => Ok(format!("#BUTIDO:STATE:OK:{}", s).green()),
-                LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
-            })
-            .collect::<Result<Vec<_>>>()?
-            .into_iter() // ugly, but hey... not important right now.
-            .join("\n"),
+        log_text        = if hide_log {
+            String::from("<log hidden>")
+        } else {
+            parsed_log.iter()
+                .map(|line_item| match line_item {
+                    LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
+                    LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
+                    LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
+                    LogItem::State(Ok(s))    => Ok(format!("#BUTIDO:STATE:OK:{}", s).green()),
+                    LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
+                })
+                .collect::<Result<Vec<_>>>()?
+                .into_iter() // ugly, but hey... not important right now.
+                .join("\n")
+        },
     );
 
     writeln!(&mut std::io::stdout(), "{}", s).map_err(Error::from)
