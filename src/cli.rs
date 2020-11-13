@@ -117,6 +117,17 @@ pub fn cli<'a>() -> App<'a> {
                     .help("Format output as CSV")
                 )
             )
+
+            .subcommand(App::new("submits")
+                .about("List submits from the DB")
+                .arg(Arg::with_name("csv")
+                    .required(false)
+                    .multiple(false)
+                    .long("csv")
+                    .takes_value(false)
+                    .help("Format output as CSV")
+                )
+            )
         )
 
         .subcommand(App::new("build")

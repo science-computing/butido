@@ -20,6 +20,7 @@ pub fn db(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Res
         ("artifacts", Some(matches))  => artifacts(db_connection_config, matches),
         ("envvars", Some(matches))    => envvars(db_connection_config, matches),
         ("images", Some(matches))     => images(db_connection_config, matches),
+        ("submits", Some(matches))    => submits(db_connection_config, matches),
         (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
     }
 }
@@ -180,6 +181,30 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 
     Ok(())
 }
+
+fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+    use crate::schema::submits::dsl;
+
+    let csv  = matches.is_present("csv");
+    let hdrs = mk_header(vec!["id", "time", "uuid"]);
+    let conn = crate::db::establish_connection(conn_cfg)?;
+    let data = dsl::submits
+        .load::<models::Submit>(&conn)?
+        .into_iter()
+        .map(|submit| {
+            vec![format!("{}", submit.id), submit.submit_time.to_string(), submit.uuid.to_string()]
+        })
+        .collect::<Vec<_>>();
+
+    if data.is_empty() {
+        info!("No submits in database");
+    } else {
+        display_data(hdrs, data, csv)?;
+    }
+
+    Ok(())
+}
+
 
 fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
     vec.into_iter()
