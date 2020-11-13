@@ -176,7 +176,7 @@ pub async fn build<'a>(matches: &ArgMatches,
         &db_image,
         &db_package,
         &db_githash)?;
-    trace!("Creating Submit in database finished successfully");
+    trace!("Creating Submit in database finished successfully: {:?}", submit);
 
     trace!("Setting up job sets");
     let jobsets = JobSet::sets_from_tree(tree, image_name, phases.clone())?;
