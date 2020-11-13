@@ -2,6 +2,7 @@ use indicatif::*;
 use uuid::Uuid;
 use url::Url;
 
+#[derive(Clone, Debug)]
 pub struct ProgressBars {
     bar_template: String,
     hide: bool,
