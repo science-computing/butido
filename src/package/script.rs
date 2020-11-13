@@ -6,7 +6,7 @@ use crate::package::Package;
 use crate::phase::Phase;
 use crate::phase::PhaseName;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(transparent)]
 pub struct Script(String);
 
@@ -34,13 +34,14 @@ impl<'a> ScriptBuilder<'a> {
         for name in phaseorder {
             match package.phases().get(name) {
                 Some(Phase::Text(text)) => {
-                    script.push_str(&format!(r#"
-                        ### phase {name}
-                        {text}
-                        ### / phase
+                    script.push_str(&indoc::formatdoc!(r#"
+                        ### phase {}
+                        {}
+                        ### / {} phase
                     "#,
-                    name = name.as_str(),
-                    text = text,
+                    name.as_str(),
+                    text,
+                    name.as_str(),
                     ));
 
                     script.push_str("\n");
