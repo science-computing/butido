@@ -169,11 +169,12 @@ pub fn cli<'a>() -> App<'a> {
                     .help("The job to show")
                 )
 
-                .arg(Arg::with_name("hide_log")
+                .arg(Arg::with_name("show_log")
                     .required(false)
                     .multiple(false)
-                    .long("hide-log")
-                    .help("Do not show the log")
+                    .long("log")
+                    .short('L')
+                    .help("Show the log")
                 )
 
                 .arg(Arg::with_name("show_script")

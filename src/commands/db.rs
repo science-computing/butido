@@ -273,7 +273,7 @@ fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &A
 
     let highlighting_disabled = matches.is_present("script_disable_highlighting");
     let configured_theme      = config.script_highlight_theme();
-    let hide_log              = matches.is_present("hide_log");
+    let show_log              = matches.is_present("show_log");
     let show_script           = matches.is_present("show_script");
     let csv                   = matches.is_present("csv");
     let conn                  = crate::db::establish_connection(conn_cfg)?;
@@ -329,8 +329,8 @@ fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &A
         endpoint_name   = data.2.name.cyan(),
         image_name      = data.4.name.cyan(),
         container_hash  = data.0.container_hash.cyan(),
-        script_len      = format!("{:<4}", data.0.script_text.len()).cyan(),
-        log_len         = format!("{:<4}", data.0.log_text.len()).cyan(),
+        script_len      = format!("{:<4}", data.0.script_text.lines().count()).cyan(),
+        log_len         = format!("{:<4}", data.0.log_text.lines().count()).cyan(),
         script_text     = if show_script {
             if let Some(configured_theme) = configured_theme {
                 if highlighting_disabled {
@@ -358,9 +358,7 @@ fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &A
         } else {
             String::from("<script hidden>")
         },
-        log_text        = if hide_log {
-            String::from("<log hidden>")
-        } else {
+        log_text        = if show_log {
             parsed_log.iter()
                 .map(|line_item| match line_item {
                     LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
@@ -372,6 +370,8 @@ fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &A
                 .collect::<Result<Vec<_>>>()?
                 .into_iter() // ugly, but hey... not important right now.
                 .join("\n")
+        } else {
+            String::from("<log hidden>")
         },
     );
 
