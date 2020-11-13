@@ -51,7 +51,7 @@ pub struct OrchestratorSetup {
 impl OrchestratorSetup {
     pub async fn setup(self) -> Result<Orchestrator> {
         let db = Arc::new(self.database);
-        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db.clone(), self.progress_generator.clone()).await?;
+        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db.clone(), self.progress_generator.clone(), self.submit.clone()).await?;
 
         Ok(Orchestrator {
             progress_generator:    self.progress_generator,

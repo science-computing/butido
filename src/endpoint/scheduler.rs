@@ -29,11 +29,12 @@ pub struct EndpointScheduler {
     db: Arc<PgConnection>,
     progressbars: ProgressBars,
     multibar: indicatif::MultiProgress,
+    submit: crate::db::models::Submit,
 }
 
 impl EndpointScheduler {
 
-    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars) -> Result<Self> {
+    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars, submit: crate::db::models::Submit) -> Result<Self> {
         let endpoints = Self::setup_endpoints(endpoints).await?;
 
         Ok(EndpointScheduler {
@@ -42,6 +43,7 @@ impl EndpointScheduler {
             db,
             progressbars,
             multibar: indicatif::MultiProgress::new(),
+            submit,
         })
     }
 
@@ -75,6 +77,7 @@ impl EndpointScheduler {
             job,
             staging_store: self.staging_store.clone(),
             db: self.db.clone(),
+            submit: self.submit.clone(),
         })
     }
 
@@ -109,6 +112,7 @@ pub struct JobHandle {
     bar: ProgressBar,
     db: Arc<PgConnection>,
     staging_store: Arc<RwLock<StagingStore>>,
+    submit: crate::db::models::Submit,
 }
 
 impl std::fmt::Debug for JobHandle {
