@@ -25,26 +25,31 @@ pub fn buffer_stream_to_line_stream<S>(stream: S) -> impl Stream<Item = IoResult
         .lines()
 }
 
-pub fn log_is_successfull(log: &str) -> Result<Option<bool>> {
+pub struct ParsedLog(Vec<LogItem>);
 
-    let p = parser();
-    let i = log.lines()
-        .map(|line| p.parse(line.as_bytes()).map_err(Error::from))
-        .filter_ok(|line| match line {
-            LogItem::State(_) => true,
-            _ => false,
-        })
-        .collect::<Result<Vec<_>>>()?;
+impl ParsedLog {
+    pub fn build_from(s: &str) -> Result<Self> {
+        let p = parser();
+        s.lines()
+            .map(|line| p.parse(line.as_bytes()).map_err(Error::from))
+            .collect::<Result<Vec<_>>>()
+            .map(ParsedLog)
+    }
 
-    Ok({ i.into_iter()
-        .rev()
-        .next()
-        .and_then(|ll| match ll {
-            LogItem::State(Ok(_)) => Some(true),
-            LogItem::State(Err(_)) => Some(false),
-            _ => None,
-        })
-    })
+    pub fn is_successfull(&self) -> Option<bool> {
+        self.0.iter()
+            .rev()
+            .filter_map(|line| match line {
+                LogItem::State(Ok(_)) => Some(true),
+                LogItem::State(Err(_)) => Some(false),
+                _ => None,
+            })
+            .next()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &LogItem> {
+        self.0.iter()
+    }
 }
 
 pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {

@@ -237,7 +237,8 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 
     let data = jobs.into_iter()
         .map(|(job, submit, ep)| {
-            let success = crate::log::log_is_successfull(&job.log_text)?
+            let success = crate::log::ParsedLog::build_from(&job.log_text)?
+                .is_successfull()
                 .map(|b| if b {
                     String::from("yes")
                 } else {
