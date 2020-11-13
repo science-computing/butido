@@ -18,6 +18,23 @@ impl AsRef<str> for ImageName {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[serde(transparent)]
+pub struct ContainerHash(String);
+
+impl From<String> for ContainerHash {
+    fn from(s: String) -> Self {
+        ContainerHash(s)
+    }
+}
+
+impl AsRef<str> for ContainerHash {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+
 /// Check whether a string is a valid docker tag name
 ///
 /// From the docker spec:
