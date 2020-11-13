@@ -184,6 +184,14 @@ pub fn cli<'a>() -> App<'a> {
                     .help("Show the script")
                 )
 
+                .arg(Arg::with_name("script_disable_highlighting")
+                    .required(false)
+                    .multiple(false)
+                    .long("disable-highlighting")
+                    .short('H')
+                    .help("Disable highlighting when showing the script")
+                )
+
             )
         )
 

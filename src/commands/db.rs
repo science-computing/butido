@@ -271,12 +271,13 @@ fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &A
     use crate::schema;
     use crate::schema::jobs::dsl;
 
-    let configured_theme = config.script_highlight_theme();
-    let hide_log         = matches.is_present("hide_log");
-    let show_script      = matches.is_present("show_script");
-    let csv              = matches.is_present("csv");
-    let conn             = crate::db::establish_connection(conn_cfg)?;
-    let job_uuid         = matches.value_of("job_uuid")
+    let highlighting_disabled = matches.is_present("script_disable_highlighting");
+    let configured_theme      = config.script_highlight_theme();
+    let hide_log              = matches.is_present("hide_log");
+    let show_script           = matches.is_present("show_script");
+    let csv                   = matches.is_present("csv");
+    let conn                  = crate::db::establish_connection(conn_cfg)?;
+    let job_uuid              = matches.value_of("job_uuid")
         .map(uuid::Uuid::parse_str)
         .transpose()?
         .unwrap();
@@ -332,21 +333,25 @@ fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &A
         log_len         = format!("{:<4}", data.0.log_text.len()).cyan(),
         script_text     = if show_script {
             if let Some(configured_theme) = configured_theme {
-                // Load these once at the start of your program
-                let ps = SyntaxSet::load_defaults_newlines();
-                let ts = ThemeSet::load_defaults();
+                if highlighting_disabled {
+                    data.0.script_text.clone()
+                } else {
+                    // Load these once at the start of your program
+                    let ps = SyntaxSet::load_defaults_newlines();
+                    let ts = ThemeSet::load_defaults();
 
-                let syntax = ps.find_syntax_by_first_line(&data.0.script_text).ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
+                    let syntax = ps.find_syntax_by_first_line(&data.0.script_text).ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
 
-                let theme = ts.themes.get(configured_theme)
-                    .ok_or_else(|| anyhow!("Theme not available: {}", configured_theme))?;
-                let mut h = HighlightLines::new(syntax, &theme);
-                LinesWithEndings::from(&data.0.script_text)
-                    .map(|line| {
-                        let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
-                        as_24_bit_terminal_escaped(&ranges[..], true)
-                    })
-                    .join("\n")
+                    let theme = ts.themes.get(configured_theme)
+                        .ok_or_else(|| anyhow!("Theme not available: {}", configured_theme))?;
+                    let mut h = HighlightLines::new(syntax, &theme);
+                    LinesWithEndings::from(&data.0.script_text)
+                        .map(|line| {
+                            let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
+                            as_24_bit_terminal_escaped(&ranges[..], true)
+                        })
+                        .join("")
+                }
             } else {
                 data.0.script_text.clone()
             }
