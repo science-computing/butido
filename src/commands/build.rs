@@ -193,7 +193,7 @@ pub async fn build<'a>(matches: &ArgMatches,
         .database(database_connection)
         .source_cache(source_cache)
         .submit(submit)
-        .file_log_sink_factory(None)
+        .log_dir(if matches.is_present("write-log-file") { Some(config.log_dir().clone()) } else { None })
         .jobsets(jobsets)
         .build()
         .setup()

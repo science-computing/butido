@@ -238,6 +238,14 @@ pub fn cli<'a>() -> App<'a> {
                 .long("image")
                 .help("Name of the docker image to use")
             )
+
+            .arg(Arg::with_name("write-log-file")
+                .required(false)
+                .multiple(false)
+                .long("write-log")
+                .short('L')
+                .help("Write the log not only to database, but also in a plain-text-file")
+            )
         )
 
         .subcommand(App::new("what-depends")

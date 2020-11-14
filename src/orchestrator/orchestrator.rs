@@ -32,7 +32,6 @@ pub struct Orchestrator {
     source_cache: SourceCache,
     jobsets: Vec<JobSet>,
     database: Arc<PgConnection>,
-    file_log_sink_factory: Option<FileLogSinkFactory>,
 }
 
 #[derive(TypedBuilder)]
@@ -45,13 +44,13 @@ pub struct OrchestratorSetup {
     jobsets: Vec<JobSet>,
     database: PgConnection,
     submit: Submit,
-    file_log_sink_factory: Option<FileLogSinkFactory>,
+    log_dir: Option<PathBuf>,
 }
 
 impl OrchestratorSetup {
     pub async fn setup(self) -> Result<Orchestrator> {
         let db = Arc::new(self.database);
-        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db.clone(), self.progress_generator.clone(), self.submit.clone()).await?;
+        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db.clone(), self.progress_generator.clone(), self.submit.clone(), self.log_dir).await?;
 
         Ok(Orchestrator {
             progress_generator:    self.progress_generator,
@@ -61,7 +60,6 @@ impl OrchestratorSetup {
             source_cache:          self.source_cache,
             jobsets:               self.jobsets,
             database:              db,
-            file_log_sink_factory: self.file_log_sink_factory,
         })
     }
 }

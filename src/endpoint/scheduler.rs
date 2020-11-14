@@ -10,6 +10,7 @@ use futures::FutureExt;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use tokio::stream::StreamExt;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
@@ -23,6 +24,7 @@ use crate::log::LogItem;
 use crate::util::progress::ProgressBars;
 
 pub struct EndpointScheduler {
+    log_dir: Option<PathBuf>,
     endpoints: Vec<Arc<RwLock<Endpoint>>>,
 
     staging_store: Arc<RwLock<StagingStore>>,
@@ -33,10 +35,11 @@ pub struct EndpointScheduler {
 
 impl EndpointScheduler {
 
-    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars, submit: crate::db::models::Submit) -> Result<Self> {
+    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars, submit: crate::db::models::Submit, log_dir: Option<PathBuf>) -> Result<Self> {
         let endpoints = Self::setup_endpoints(endpoints).await?;
 
         Ok(EndpointScheduler {
+            log_dir,
             endpoints,
             staging_store,
             db,
@@ -70,6 +73,7 @@ impl EndpointScheduler {
         let endpoint = self.select_free_endpoint().await?;
 
         Ok(JobHandle {
+            log_dir: self.log_dir.clone(),
             bar: multibar.add(self.progressbars.job_bar(job.uuid())),
             endpoint,
             job,
@@ -105,6 +109,7 @@ impl EndpointScheduler {
 }
 
 pub struct JobHandle {
+    log_dir: Option<PathBuf>,
     endpoint: Arc<RwLock<Endpoint>>,
     job: RunnableJob,
     bar: ProgressBar,
@@ -137,6 +142,7 @@ impl JobHandle {
             .run_job(self.job, log_sender, self.staging_store);
 
         let logres = LogReceiver {
+            log_dir: self.log_dir.as_ref(),
             job_id,
             log_receiver,
             bar: &self.bar,
@@ -156,6 +162,7 @@ impl JobHandle {
 }
 
 struct LogReceiver<'a> {
+    log_dir: Option<&'a PathBuf>,
     job_id: Uuid,
     log_receiver: UnboundedReceiver<LogItem>,
     bar: &'a ProgressBar,
@@ -166,10 +173,30 @@ impl<'a> LogReceiver<'a> {
     async fn join(mut self) -> Result<String> {
         use resiter::Map;
 
+        let mut logfile = if let Some(log_dir) = self.log_dir.as_ref() {
+            Some({
+                let path = log_dir.join(self.job_id.to_string()).join(".log");
+                tokio::fs::OpenOptions::new()
+                    .create(true)
+                    .create_new(true)
+                    .write(true)
+                    .open(path)
+                    .await
+                    .map(tokio::io::BufWriter::new)?
+            })
+        } else {
+            None
+        };
+
         let mut success = None;
         let mut accu    = vec![];
 
         while let Some(logitem) = self.log_receiver.recv().await {
+            if let Some(lf) = logfile.as_mut() {
+                lf.write_all(logitem.display()?.to_string().as_bytes()).await?;
+                lf.write_all("\n".as_bytes()).await?;
+            }
+
             match logitem {
                 LogItem::Line(ref l) => {
                     // ignore
@@ -205,6 +232,9 @@ impl<'a> LogReceiver<'a> {
         }
 
         drop(self.bar);
+        if let Some(mut lf) = logfile {
+            let _ = lf.flush().await?;
+        }
 
         Ok({
             accu.into_iter()

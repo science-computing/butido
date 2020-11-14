@@ -16,6 +16,9 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     repository: PathBuf,
 
+    #[getset(get = "pub")]
+    log_dir: PathBuf,
+
     #[serde(default = "default_progress_format")]
     #[getset(get = "pub")]
     progress_format: String,
