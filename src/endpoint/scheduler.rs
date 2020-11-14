@@ -205,9 +205,9 @@ impl<'a> LogReceiver<'a> {
 
         trace!("Finishing bar = {:?}", success);
         match success {
-            Some(true) => self.bar.finish_with_message(&format!("{} finished successfully", self.job_id)),
-            Some(false) => self.bar.finish_with_message(&format!("{} finished with error", self.job_id)),
-            None => self.bar.finish_with_message(&format!("{} finished", self.job_id)),
+            Some(true) => self.bar.finish_with_message(&format!("Job: {} finished successfully", self.job_id)),
+            Some(false) => self.bar.finish_with_message(&format!("Job: {} finished with error", self.job_id)),
+            None => self.bar.finish_with_message(&format!("Job: {} finished", self.job_id)),
         }
 
         Ok({
