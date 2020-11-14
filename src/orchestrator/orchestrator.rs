@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::RwLock;
+use tokio::sync::RwLock;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -78,14 +78,15 @@ impl Orchestrator {
         for (i, jobset) in self.jobsets.into_iter().enumerate() {
             let merged_store = MergedStores::new(self.release_store.clone(), self.staging_store.clone());
 
+            let multibar = Arc::new(indicatif::MultiProgress::new());
+
             let results = { // run the jobs in the set
                 let unordered_results   = futures::stream::FuturesUnordered::new();
-                for runnable in jobset.into_runables(&merged_store, &self.source_cache) {
-                    let runnable = runnable?;
+                for runnable in jobset.into_runables(&merged_store, &self.source_cache).await?.into_iter() {
                     let job_id = runnable.uuid().clone();
                     trace!("Runnable {} for package {}", job_id, runnable.package().name());
 
-                    let jobhandle = self.scheduler.schedule_job(runnable).await?;
+                    let jobhandle = self.scheduler.schedule_job(runnable, multibar.clone()).await?;
                     trace!("Jobhandle -> {:?}", jobhandle);
 
                     // clone the bar here, so we can give a handle to the async result fetcher closure
@@ -100,15 +101,17 @@ impl Orchestrator {
                 unordered_results.collect::<Result<Vec<_>>>()
             };
 
-            let results = results.await?
+            let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
+
+            let (results, barres) = tokio::join!(results, multibar_block);
+            let _ = barres?;
+            let results = results?
                 .into_iter()
                 .flatten()
                 .collect::<Vec<PathBuf>>();
 
             { // check if all paths that were written are actually there in the staging store
-                let staging_store_lock = self.staging_store
-                    .read()
-                    .map_err(|_| anyhow!("Lock Poisoned"))?;
+                let staging_store_lock = self.staging_store.read().await;
 
                 trace!("Checking {} results...", results.len());
                 for path in results.iter() {

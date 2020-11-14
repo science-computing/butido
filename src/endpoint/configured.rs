@@ -2,7 +2,6 @@ use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -11,6 +10,7 @@ use anyhow::anyhow;
 use getset::{Getters, CopyGetters};
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
+use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
 use typed_builder::TypedBuilder;
 
@@ -147,7 +147,7 @@ impl Endpoint {
                     .into_iter()
                     .map(ImageName::from)
             })
-            .flatten()
+        .flatten()
             .collect::<Vec<ImageName>>();
 
         trace!("Available images = {:?}", available_names);
@@ -160,7 +160,7 @@ impl Endpoint {
                     Ok(())
                 }
             })
-            .collect::<Result<Vec<_>>>()
+        .collect::<Result<Vec<_>>>()
             .map(|_| ())
     }
 
@@ -175,18 +175,21 @@ impl Endpoint {
                 .filter_map(JobResource::env)
                 .map(|(k, v)| format!("{}={}", k, v))
                 .collect::<Vec<_>>();
+            trace!("Job resources: Environment variables = {:?}", envs);
 
             let builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref())
-                    .env(envs.iter().map(AsRef::as_ref).collect())
-                    .cmd(vec!["/bin/bash"]) // we start the container with /bin/bash, but exec() the script in it later
-                    .attach_stdin(true) // we have to attach, otherwise bash exits
-                    .build();
+                .env(envs.iter().map(AsRef::as_ref).collect())
+                .cmd(vec!["/bin/bash"]) // we start the container with /bin/bash, but exec() the script in it later
+                .attach_stdin(true) // we have to attach, otherwise bash exits
+                .build();
+            trace!("Builder options = {:?}", builder_opts);
 
             let create_info = self.docker
                 .containers()
                 .create(&builder_opts)
                 .await
                 .with_context(|| anyhow!("Creating container on '{}'", self.name))?;
+            trace!("Create info = {:?}", create_info);
 
             if let Some(warnings) = create_info.warnings.as_ref() {
                 for warning in warnings {
@@ -203,8 +206,10 @@ impl Endpoint {
             .attach_stderr(true)
             .attach_stdout(true)
             .build();
+        trace!("Exec options = {:?}", exec_opts);
 
         let container = self.docker.containers().get(&container_id);
+        trace!("Container id = {:?}", container_id);
         { // copy source to container
             use tokio::io::AsyncReadExt;
 
@@ -213,6 +218,9 @@ impl Endpoint {
             let destination = PathBuf::from("/inputs").join({
                 source_path.file_name().ok_or_else(|| anyhow!("Not a file: {}", source_path.display()))?
             });
+            trace!("Package source = {:?}", pkgsource);
+            trace!("Source path    = {:?}", source_path);
+            trace!("Source dest    = {:?}", destination);
             let mut buf = vec![];
             tokio::fs::OpenOptions::new()
                 .create(false)
@@ -221,7 +229,8 @@ impl Endpoint {
                 .write(false)
                 .read(true)
                 .open(source_path)
-                .await?
+                .await
+                .with_context(|| anyhow!("Getting source file: {}", source_path.display()))?
                 .read_to_end(&mut buf)
                 .await?;
 
@@ -248,10 +257,10 @@ impl Endpoint {
                         .await
                         .map_err(Error::from)
                 })
-                .collect::<futures::stream::FuturesUnordered<_>>()
+            .collect::<futures::stream::FuturesUnordered<_>>()
                 .collect::<Result<Vec<_>>>()
                 .await?;
-        }
+            }
 
         container
             .copy_file_into(script_path, job.script().as_ref().as_bytes())
@@ -280,9 +289,9 @@ impl Endpoint {
                                     })
                             })
                     })
-                    .collect::<Result<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()
             })
-            .inspect(|r| { trace!("Fetching log from container {} -> {:?}", container_id, r); })
+        .inspect(|r| { trace!("Fetching log from container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Fetching log from container {} on {}", container_id, self.name)))
             .await?;
 
@@ -291,12 +300,14 @@ impl Endpoint {
             .copy_from(&PathBuf::from("/outputs/"))
             .map(|item| item.map_err(Error::from));
 
-        let r = staging
-            .write()
-            .map_err(|_| anyhow!("Lock poisoned"))?
-            .write_files_from_tar_stream(tar_stream)
-            .await
-            .with_context(|| anyhow!("Copying the TAR stream to the staging store"))?;
+        let r = {
+            let mut writelock = staging.write().await;
+
+            writelock
+                .write_files_from_tar_stream(tar_stream)
+                .await
+                .with_context(|| anyhow!("Copying the TAR stream to the staging store"))?
+        };
 
         container.stop(Some(std::time::Duration::new(1, 0))).await?;
 

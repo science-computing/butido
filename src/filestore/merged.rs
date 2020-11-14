@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::sync::RwLock;
+use tokio::sync::RwLock;
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -25,10 +25,10 @@ impl MergedStores {
         MergedStores { release, staging }
     }
 
-    pub fn get_artifact_by_name(&self, name: &PackageName) -> Result<Vec<Artifact>> {
+    pub async fn get_artifact_by_name(&self, name: &PackageName) -> Result<Vec<Artifact>> {
         let v = self.staging
             .read()
-            .map_err(|_| anyhow!("Lock poisoned"))?
+            .await
             .0
             .values()
             .filter(|a| a.name() == name)
@@ -39,7 +39,7 @@ impl MergedStores {
             Ok({
                 self.release
                     .read()
-                    .map_err(|_| anyhow!("Lock poisoned"))?
+                    .await
                     .0
                     .values()
                     .filter(|a| a.name() == name)
@@ -51,10 +51,10 @@ impl MergedStores {
         }
     }
 
-    pub fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersionConstraint) -> Result<Vec<Artifact>> {
+    pub async fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersionConstraint) -> Result<Vec<Artifact>> {
         let v = self.staging
             .read()
-            .map_err(|_| anyhow!("Lock poisoned"))?
+            .await
             .0
             .values()
             .filter(|a| {
@@ -68,7 +68,7 @@ impl MergedStores {
             Ok({
                 self.release
                     .read()
-                    .map_err(|_| anyhow!("Lock poisoned"))?
+                    .await
                     .0
                     .values()
                     .filter(|a| a.name() == name && version.matches(a.version()))

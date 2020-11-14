@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -11,6 +10,7 @@ use futures::FutureExt;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use tokio::stream::StreamExt;
+use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
 use uuid::Uuid;
@@ -28,7 +28,6 @@ pub struct EndpointScheduler {
     staging_store: Arc<RwLock<StagingStore>>,
     db: Arc<PgConnection>,
     progressbars: ProgressBars,
-    multibar: indicatif::MultiProgress,
     submit: crate::db::models::Submit,
 }
 
@@ -42,7 +41,6 @@ impl EndpointScheduler {
             staging_store,
             db,
             progressbars,
-            multibar: indicatif::MultiProgress::new(),
             submit,
         })
     }
@@ -68,11 +66,11 @@ impl EndpointScheduler {
     /// # Warning
     ///
     /// This function blocks as long as there is no free endpoint available!
-    pub async fn schedule_job(&self, job: RunnableJob) -> Result<JobHandle> {
+    pub async fn schedule_job(&self, job: RunnableJob, multibar: Arc<indicatif::MultiProgress>) -> Result<JobHandle> {
         let endpoint = self.select_free_endpoint().await?;
 
         Ok(JobHandle {
-            bar: self.multibar.add(self.progressbars.job_bar(job.uuid())),
+            bar: multibar.add(self.progressbars.job_bar(job.uuid())),
             endpoint,
             job,
             staging_store: self.staging_store.clone(),
@@ -86,7 +84,7 @@ impl EndpointScheduler {
             let unordered = futures::stream::FuturesUnordered::new();
             for ep in self.endpoints.iter().cloned() {
                 unordered.push(async move {
-                    let wl = ep.write().map_err(|_| anyhow!("Lock poisoned"))?;
+                    let wl = ep.write().await;
                     wl.number_of_running_containers().await.map(|u| (u, ep.clone()))
                 });
             }
@@ -127,7 +125,7 @@ impl JobHandle {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let ep = self.endpoint
             .read()
-            .map_err(|_| anyhow!("Lock poisoned"))?;
+            .await;
 
         let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;
         let package  = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
@@ -139,9 +137,9 @@ impl JobHandle {
             .run_job(self.job, log_sender, self.staging_store);
 
         let logres = LogReceiver {
-            job_id, 
-            log_receiver, 
-            bar: self.bar,
+            job_id,
+            log_receiver,
+            bar: &self.bar,
             db: self.db.clone(),
         }.join();
 
@@ -157,14 +155,14 @@ impl JobHandle {
 
 }
 
-struct LogReceiver {
+struct LogReceiver<'a> {
     job_id: Uuid,
     log_receiver: UnboundedReceiver<LogItem>,
-    bar: ProgressBar,
+    bar: &'a ProgressBar,
     db: Arc<PgConnection>,
 }
 
-impl LogReceiver {
+impl<'a> LogReceiver<'a> {
     async fn join(mut self) -> Result<String> {
         use resiter::Map;
 
@@ -177,28 +175,36 @@ impl LogReceiver {
                     // ignore
                 },
                 LogItem::Progress(u) => {
+                    trace!("Setting bar to {}", u as u64);
                     self.bar.set_position(u as u64);
+                    self.bar.set_message(&format!("Job: {} running...", self.job_id));
                 },
                 LogItem::CurrentPhase(ref phasename) => {
-                    self.bar.set_message(&format!("{} Phase: {}", self.job_id, phasename));
+                    trace!("Setting bar phase to {}", phasename);
+                    self.bar.set_message(&format!("Job: {} Phase: {}", self.job_id, phasename));
                 },
                 LogItem::State(Ok(ref s)) => {
-                    self.bar.set_message(&format!("{} State Ok: {}", self.job_id, s));
+                    trace!("Setting bar state to Ok: {}", s);
+                    self.bar.set_message(&format!("Job: {} State Ok: {}", self.job_id, s));
                     success = Some(true);
                 },
                 LogItem::State(Err(ref e)) => {
-                    self.bar.set_message(&format!("{} State Err: {}", self.job_id, e));
+                    trace!("Setting bar state to Err: {}", e);
+                    self.bar.set_message(&format!("Job: {} State Err: {}", self.job_id, e));
                     success = Some(false);
                 },
             }
             accu.push(logitem);
         }
 
+        trace!("Finishing bar = {:?}", success);
         match success {
-            Some(true) => self.bar.finish_with_message(&format!("{} finished successfully", self.job_id)),
-            Some(false) => self.bar.finish_with_message(&format!("{} finished with error", self.job_id)),
-            None => self.bar.finish_with_message(&format!("{} finished", self.job_id)),
+            Some(true) => self.bar.finish_with_message(&format!("Job: {} finished successfully", self.job_id)),
+            Some(false) => self.bar.finish_with_message(&format!("Job: {} finished with error", self.job_id)),
+            None => self.bar.finish_with_message(&format!("Job: {} finished", self.job_id)),
         }
+
+        drop(self.bar);
 
         Ok({
             accu.into_iter()
