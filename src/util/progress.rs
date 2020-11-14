@@ -43,7 +43,9 @@ impl ProgressBars {
     }
 
     pub fn job_bar(&self, id: &Uuid) -> ProgressBar {
-        self.bar(&format!("Job: {}", id), &self.bar_template)
+        let b = self.bar(&format!("Job: {}", id), &self.bar_template);
+        b.set_length(100);
+        b
     }
 
     pub fn download_bar(&self, url: &Url) -> ProgressBar {
