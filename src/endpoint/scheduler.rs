@@ -28,7 +28,6 @@ pub struct EndpointScheduler {
     staging_store: Arc<RwLock<StagingStore>>,
     db: Arc<PgConnection>,
     progressbars: ProgressBars,
-    multibar: indicatif::MultiProgress,
     submit: crate::db::models::Submit,
 }
 
@@ -42,7 +41,6 @@ impl EndpointScheduler {
             staging_store,
             db,
             progressbars,
-            multibar: indicatif::MultiProgress::new(),
             submit,
         })
     }
@@ -68,11 +66,11 @@ impl EndpointScheduler {
     /// # Warning
     ///
     /// This function blocks as long as there is no free endpoint available!
-    pub async fn schedule_job(&self, job: RunnableJob) -> Result<JobHandle> {
+    pub async fn schedule_job(&self, job: RunnableJob, multibar: &indicatif::MultiProgress) -> Result<JobHandle> {
         let endpoint = self.select_free_endpoint().await?;
 
         Ok(JobHandle {
-            bar: self.multibar.add(self.progressbars.job_bar(job.uuid())),
+            bar: multibar.add(self.progressbars.job_bar(job.uuid())),
             endpoint,
             job,
             staging_store: self.staging_store.clone(),
@@ -104,10 +102,6 @@ impl EndpointScheduler {
         }
     }
 
-    pub fn shutdown(self) -> Result<()> {
-        self.multibar.join()?;
-        Ok(())
-    }
 }
 
 pub struct JobHandle {
