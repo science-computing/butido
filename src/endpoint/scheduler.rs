@@ -170,7 +170,6 @@ impl<'a> LogReceiver<'a> {
         let mut accu    = vec![];
 
         while let Some(logitem) = self.log_receiver.recv().await {
-            self.bar.tick();
             match logitem {
                 LogItem::Line(ref l) => {
                     // ignore
