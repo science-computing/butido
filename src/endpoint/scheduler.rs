@@ -139,9 +139,9 @@ impl JobHandle {
             .run_job(self.job, log_sender, self.staging_store);
 
         let logres = LogReceiver {
-            job_id, 
-            log_receiver, 
-            bar: self.bar,
+            job_id,
+            log_receiver,
+            bar: &self.bar,
             db: self.db.clone(),
         }.join();
 
@@ -157,14 +157,14 @@ impl JobHandle {
 
 }
 
-struct LogReceiver {
+struct LogReceiver<'a> {
     job_id: Uuid,
     log_receiver: UnboundedReceiver<LogItem>,
-    bar: ProgressBar,
+    bar: &'a ProgressBar,
     db: Arc<PgConnection>,
 }
 
-impl LogReceiver {
+impl<'a> LogReceiver<'a> {
     async fn join(mut self) -> Result<String> {
         use resiter::Map;
 
