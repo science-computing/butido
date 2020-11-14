@@ -75,8 +75,6 @@ impl Orchestrator {
         let number_of_jobsets = self.jobsets.len();
         let database = self.database;
 
-        let multibar = indicatif::MultiProgress::new();
-
         for (i, jobset) in self.jobsets.into_iter().enumerate() {
             let merged_store = MergedStores::new(self.release_store.clone(), self.staging_store.clone());
 
@@ -87,7 +85,7 @@ impl Orchestrator {
                     let job_id = runnable.uuid().clone();
                     trace!("Runnable {} for package {}", job_id, runnable.package().name());
 
-                    let jobhandle = self.scheduler.schedule_job(runnable, &multibar).await?;
+                    let jobhandle = self.scheduler.schedule_job(runnable).await?;
                     trace!("Jobhandle -> {:?}", jobhandle);
 
                     // clone the bar here, so we can give a handle to the async result fetcher closure
@@ -127,7 +125,6 @@ impl Orchestrator {
             let mut results = results; // rebind!
             report_result.append(&mut results);
         }
-        multibar.join()?;
 
         Ok(report_result)
     }

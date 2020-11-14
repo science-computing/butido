@@ -25,6 +25,7 @@ impl SourceCache {
     }
 }
 
+#[derive(Debug)]
 pub struct SourceEntry {
     cache_root: PathBuf,
     package_name: PackageName,

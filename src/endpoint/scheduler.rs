@@ -66,11 +66,11 @@ impl EndpointScheduler {
     /// # Warning
     ///
     /// This function blocks as long as there is no free endpoint available!
-    pub async fn schedule_job(&self, job: RunnableJob, multibar: &indicatif::MultiProgress) -> Result<JobHandle> {
+    pub async fn schedule_job(&self, job: RunnableJob) -> Result<JobHandle> {
         let endpoint = self.select_free_endpoint().await?;
 
         Ok(JobHandle {
-            bar: multibar.add(self.progressbars.job_bar(job.uuid())),
+            bar: self.progressbars.job_bar(job.uuid()),
             endpoint,
             job,
             staging_store: self.staging_store.clone(),
