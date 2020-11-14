@@ -177,19 +177,20 @@ impl<'a> LogReceiver<'a> {
                 LogItem::Progress(u) => {
                     trace!("Setting bar to {}", u as u64);
                     self.bar.set_position(u as u64);
+                    self.bar.set_message(&format!("Job: {} running...", self.job_id));
                 },
                 LogItem::CurrentPhase(ref phasename) => {
                     trace!("Setting bar phase to {}", phasename);
-                    self.bar.set_message(&format!("{} Phase: {}", self.job_id, phasename));
+                    self.bar.set_message(&format!("Job: {} Phase: {}", self.job_id, phasename));
                 },
                 LogItem::State(Ok(ref s)) => {
                     trace!("Setting bar state to Ok: {}", s);
-                    self.bar.set_message(&format!("{} State Ok: {}", self.job_id, s));
+                    self.bar.set_message(&format!("Job: {} State Ok: {}", self.job_id, s));
                     success = Some(true);
                 },
                 LogItem::State(Err(ref e)) => {
                     trace!("Setting bar state to Err: {}", e);
-                    self.bar.set_message(&format!("{} State Err: {}", self.job_id, e));
+                    self.bar.set_message(&format!("Job: {} State Err: {}", self.job_id, e));
                     success = Some(false);
                 },
             }
