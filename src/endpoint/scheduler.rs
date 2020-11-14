@@ -176,21 +176,26 @@ impl<'a> LogReceiver<'a> {
         let mut accu    = vec![];
 
         while let Some(logitem) = self.log_receiver.recv().await {
+            self.bar.tick();
             match logitem {
                 LogItem::Line(ref l) => {
                     // ignore
                 },
                 LogItem::Progress(u) => {
+                    trace!("Setting bar to {}", u as u64);
                     self.bar.set_position(u as u64);
                 },
                 LogItem::CurrentPhase(ref phasename) => {
+                    trace!("Setting bar phase to {}", phasename);
                     self.bar.set_message(&format!("{} Phase: {}", self.job_id, phasename));
                 },
                 LogItem::State(Ok(ref s)) => {
+                    trace!("Setting bar state to Ok: {}", s);
                     self.bar.set_message(&format!("{} State Ok: {}", self.job_id, s));
                     success = Some(true);
                 },
                 LogItem::State(Err(ref e)) => {
+                    trace!("Setting bar state to Err: {}", e);
                     self.bar.set_message(&format!("{} State Err: {}", self.job_id, e));
                     success = Some(false);
                 },
@@ -198,6 +203,7 @@ impl<'a> LogReceiver<'a> {
             accu.push(logitem);
         }
 
+        trace!("Finishing bar = {:?}", success);
         match success {
             Some(true) => self.bar.finish_with_message(&format!("{} finished successfully", self.job_id)),
             Some(false) => self.bar.finish_with_message(&format!("{} finished with error", self.job_id)),
