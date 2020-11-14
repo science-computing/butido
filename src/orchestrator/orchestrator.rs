@@ -78,7 +78,7 @@ impl Orchestrator {
         for (i, jobset) in self.jobsets.into_iter().enumerate() {
             let merged_store = MergedStores::new(self.release_store.clone(), self.staging_store.clone());
 
-            let multibar = indicatif::MultiProgress::new();
+            let multibar = Arc::new(indicatif::MultiProgress::new());
 
             let results = { // run the jobs in the set
                 let unordered_results   = futures::stream::FuturesUnordered::new();
@@ -86,7 +86,7 @@ impl Orchestrator {
                     let job_id = runnable.uuid().clone();
                     trace!("Runnable {} for package {}", job_id, runnable.package().name());
 
-                    let jobhandle = self.scheduler.schedule_job(runnable).await?;
+                    let jobhandle = self.scheduler.schedule_job(runnable, multibar.clone()).await?;
                     trace!("Jobhandle -> {:?}", jobhandle);
 
                     // clone the bar here, so we can give a handle to the async result fetcher closure
