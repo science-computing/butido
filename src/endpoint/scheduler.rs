@@ -104,6 +104,10 @@ impl EndpointScheduler {
         }
     }
 
+    pub fn shutdown(self) -> Result<()> {
+        self.multibar.join()?;
+        Ok(())
+    }
 }
 
 pub struct JobHandle {

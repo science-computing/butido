@@ -126,6 +126,7 @@ impl Orchestrator {
             report_result.append(&mut results);
         }
 
+        self.scheduler.shutdown()?;
         Ok(report_result)
     }
 
