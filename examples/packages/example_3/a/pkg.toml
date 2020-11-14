@@ -1,0 +1,17 @@
+name              = "a"
+version           = "1"
+
+[dependencies]
+runtime         = ["b =2", "c =3"]
+
+[phases]
+package.script = '''
+    mkdir /outputs
+    echo "#BUTIDO:PHASE:package"
+    echo "#BUTIDO:PROGRESS:90"
+
+    touch /outputs/a-1.pkg
+
+    echo "#BUTIDO:PROGRESS:100"
+    echo "#BUTIDO:STATE:OK:finished"
+'''

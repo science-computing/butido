@@ -1,0 +1,14 @@
+name              = "b"
+version           = "2"
+
+[phases]
+package.script = '''
+    mkdir /outputs
+    echo "#BUTIDO:PHASE:package"
+    echo "#BUTIDO:PROGRESS:90"
+
+    touch /outputs/b-2.pkg
+
+    echo "#BUTIDO:PROGRESS:100"
+    echo "#BUTIDO:STATE:OK:finished"
+'''
