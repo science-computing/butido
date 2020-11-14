@@ -3,6 +3,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use getset::Getters;
+use tokio::stream::StreamExt;
 use uuid::Uuid;
 
 use crate::filestore::MergedStores;
@@ -39,32 +40,39 @@ pub struct RunnableJob {
 }
 
 impl RunnableJob {
-    pub fn build_from_job(job: Job, merged_stores: &MergedStores, source_cache: &SourceCache) -> Result<Self> {
+    pub async fn build_from_job(job: Job, merged_stores: &MergedStores, source_cache: &SourceCache) -> Result<Self> {
         let script = ScriptBuilder::new(&job.script_shebang)
             .build(&job.package, &job.script_phases)?;
 
         trace!("Preparing build dependencies");
-        let build_resources = job.package()
-            .dependencies()
-            .build()
-            .into_iter()
-            .map(|dep| Self::build_resource(dep, merged_stores));
+        let resources = {
+            let deps = job.package().dependencies();
+            let build = deps
+                .build()
+                .into_iter()
+                .map(|dep| Self::build_resource(dep, merged_stores))
+                .collect::<futures::stream::FuturesUnordered<_>>()
+                .collect::<Result<Vec<JobResource>>>();
 
-        trace!("Preparing runtime dependencies");
-        let runtime_resources = job.package()
-            .dependencies()
-            .runtime()
-            .into_iter()
-            .map(|dep| Self::build_resource(dep, merged_stores));
+            let rt = deps
+                .runtime()
+                .into_iter()
+                .map(|dep| Self::build_resource(dep, merged_stores))
+                .collect::<futures::stream::FuturesUnordered<_>>()
+                .collect::<Result<Vec<JobResource>>>();
 
-        let resources = build_resources.chain(runtime_resources)
-            .collect::<Result<Vec<JobResource>>>()?;
+            let (build, rt)         = tokio::join!(build, rt);
+            let (mut build, mut rt) = (build?, rt?);
+
+            build.append(&mut rt);
+            build
+        };
 
         Ok(RunnableJob {
             uuid: job.uuid,
             package: job.package,
             image: job.image,
-            resources: job.resources.into_iter().chain(resources.into_iter()).collect(),
+            resources,
             source_cache: source_cache.clone(),
 
             script,
@@ -76,10 +84,10 @@ impl RunnableJob {
         self.source_cache.source_for(&self.package())
     }
 
-    fn build_resource(dep: &dyn ParseDependency, merged_stores: &MergedStores) -> Result<JobResource> {
+    async fn build_resource(dep: &dyn ParseDependency, merged_stores: &MergedStores) -> Result<JobResource> {
         let (name, vers) = dep.parse_as_name_and_version()?;
         trace!("Copying dep: {:?} {:?}", name, vers);
-        let mut a = merged_stores.get_artifact_by_name_and_version(&name, &vers)?;
+        let mut a = merged_stores.get_artifact_by_name_and_version(&name, &vers).await?;
 
         if a.is_empty() {
             Err(anyhow!("Cannot find dependency: {:?} {:?}", name, vers))

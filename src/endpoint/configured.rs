@@ -2,7 +2,6 @@ use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -11,6 +10,7 @@ use anyhow::anyhow;
 use getset::{Getters, CopyGetters};
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
+use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
 use typed_builder::TypedBuilder;
 
@@ -300,12 +300,14 @@ impl Endpoint {
             .copy_from(&PathBuf::from("/outputs/"))
             .map(|item| item.map_err(Error::from));
 
-        let r = staging
-            .write()
-            .map_err(|_| anyhow!("Lock poisoned"))?
-            .write_files_from_tar_stream(tar_stream)
-            .await
-            .with_context(|| anyhow!("Copying the TAR stream to the staging store"))?;
+        let r = {
+            let mut writelock = staging.write().await;
+
+            writelock
+                .write_files_from_tar_stream(tar_stream)
+                .await
+                .with_context(|| anyhow!("Copying the TAR stream to the staging store"))?
+        };
 
         container.stop(Some(std::time::Duration::new(1, 0))).await?;
 

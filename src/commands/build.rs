@@ -3,7 +3,6 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -12,6 +11,7 @@ use anyhow::anyhow;
 use clap_v3::ArgMatches;
 use diesel::PgConnection;
 use logcrate::debug;
+use tokio::sync::RwLock;
 
 use crate::config::*;
 use crate::filestore::ReleaseStore;

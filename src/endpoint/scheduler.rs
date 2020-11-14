@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -11,6 +10,7 @@ use futures::FutureExt;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use tokio::stream::StreamExt;
+use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
 use uuid::Uuid;
@@ -84,7 +84,7 @@ impl EndpointScheduler {
             let unordered = futures::stream::FuturesUnordered::new();
             for ep in self.endpoints.iter().cloned() {
                 unordered.push(async move {
-                    let wl = ep.write().map_err(|_| anyhow!("Lock poisoned"))?;
+                    let wl = ep.write().await;
                     wl.number_of_running_containers().await.map(|u| (u, ep.clone()))
                 });
             }
@@ -125,7 +125,7 @@ impl JobHandle {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let ep = self.endpoint
             .read()
-            .map_err(|_| anyhow!("Lock poisoned"))?;
+            .await;
 
         let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;
         let package  = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
