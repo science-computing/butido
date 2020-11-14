@@ -210,6 +210,8 @@ impl<'a> LogReceiver<'a> {
             None => self.bar.finish_with_message(&format!("Job: {} finished", self.job_id)),
         }
 
+        drop(self.bar);
+
         Ok({
             accu.into_iter()
                 .map(|ll| ll.display())
