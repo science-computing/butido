@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
+use std::result::Result as RResult;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -22,6 +23,7 @@ use crate::log::LogItem;
 use crate::package::Script;
 use crate::util::docker::ContainerHash;
 use crate::util::docker::ImageName;
+use crate::endpoint::ContainerError;
 
 #[derive(Getters, CopyGetters, TypedBuilder)]
 pub struct Endpoint {
@@ -169,7 +171,7 @@ impl Endpoint {
             .map(|_| ())
     }
 
-    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<(Vec<PathBuf>, ContainerHash, Script)> {
+    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> RResult<(Vec<PathBuf>, ContainerHash, Script), ContainerError> {
         use crate::log::buffer_stream_to_line_stream;
         use tokio::stream::StreamExt;
         use futures::FutureExt;
@@ -276,7 +278,7 @@ impl Endpoint {
                 .with_context(|| anyhow!("Copying artifacts to container {}", container_id))?;
             }
 
-        container
+        let exited_successfully: Option<bool> = container
             .copy_file_into(script_path, job.script().as_ref().as_bytes())
             .inspect(|r| { trace!("Copying script to container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Copying the script into the container {} on '{}'", container_id, self.name)))
@@ -284,6 +286,7 @@ impl Endpoint {
             .inspect(|r| { trace!("Starting container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Starting the container {} on '{}'", container_id, self.name)))
             .then(|_| {
+                use futures::FutureExt;
                 trace!("Moving logs to log sink for container {}", container_id);
                 buffer_stream_to_line_stream(container.exec(&exec_opts))
                     .map(|line| {
@@ -296,19 +299,39 @@ impl Endpoint {
                                     .with_context(|| anyhow!("Parsing log from {}:{}: {:?}", self.name, container_id, l))
                                     .map_err(Error::from)
                                     .and_then(|item| {
+
+                                        let mut exited_successfully = None;
+                                        {
+                                            match item {
+                                                LogItem::State(Ok(_))    => exited_successfully = Some(true),
+                                                LogItem::State(Err(_))   => exited_successfully = Some(false),
+                                                _ => {
+                                                    // Nothing
+                                                }
+                                            }
+                                        }
+
                                         trace!("Log item: {}", item.display()?);
                                         logsink.send(item)
                                             .with_context(|| anyhow!("Sending log to log sink"))
                                             .map_err(Error::from)
+                                            .map(|_| exited_successfully)
                                     })
                             })
                     })
                     .collect::<Result<Vec<_>>>()
             })
-            .inspect(|r| { trace!("Fetching log from container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Fetching log from container {} on {}", container_id, self.name)))
             .await
-            .with_context(|| anyhow!("Copying script to container, running container and getting logs: {}", container_id))?;
+            .with_context(|| anyhow!("Copying script to container, running container and getting logs: {}", container_id))?
+            .into_iter()
+            .fold(None, |accu, elem| match (accu, elem) {
+                (None        , b)           => b,
+                (Some(false) , _)           => Some(false),
+                (_           , Some(false)) => Some(false),
+                (a           , None)        => a,
+                (Some(true)  , Some(true))  => Some(true),
+            });
 
         trace!("Fetching /outputs from container {}", container_id);
         let tar_stream = container
@@ -327,13 +350,17 @@ impl Endpoint {
                 .with_context(|| anyhow!("Copying the TAR stream to the staging store"))?
         };
 
-        container.stop(Some(std::time::Duration::new(1, 0)))
-            .await
-            .with_context(|| anyhow!("Stopping container {}", container_id))?;
-
-        trace!("Returning job {} result = {:?}, container hash = {}", job.uuid(), r, container_id);
         let script: Script = job.script().clone();
-        Ok((r, ContainerHash::from(container_id), script))
+        match exited_successfully {
+            Some(false)       => Err(ContainerError::container_error(ContainerHash::from(container_id))),
+            Some(true) | None => {
+                container.stop(Some(std::time::Duration::new(1, 0)))
+                    .await
+                    .with_context(|| anyhow!("Stopping container {}", container_id))?;
+
+                Ok((r, ContainerHash::from(container_id), script))
+            },
+        }
     }
 
     pub async fn number_of_running_containers(&self) -> Result<usize> {

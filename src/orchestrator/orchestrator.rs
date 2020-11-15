@@ -1,18 +1,21 @@
+use std::io::Write;
 use std::path::PathBuf;
+use std::result::Result as RResult;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
+use indicatif::ProgressBar;
+use tokio::sync::RwLock;
+use tokio::sync::mpsc::UnboundedReceiver;
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
-use tokio::sync::mpsc::UnboundedReceiver;
-use indicatif::ProgressBar;
 
 use crate::db::models::Submit;
+use crate::endpoint::ContainerError;
 use crate::endpoint::EndpointConfiguration;
 use crate::endpoint::EndpointScheduler;
 use crate::filestore::MergedStores;
@@ -96,17 +99,30 @@ impl Orchestrator {
                     });
                 }
 
-                unordered_results.collect::<Result<Vec<_>>>()
+                unordered_results.collect::<Vec<RResult<_, ContainerError>>>()
             };
 
             let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
 
             let (results, barres) = tokio::join!(results, multibar_block);
             let _ = barres?;
-            let results = results?
+            let (okays, errors): (Vec<_>, Vec<_>) = results
                 .into_iter()
-                .flatten()
-                .collect::<Vec<PathBuf>>();
+                .inspect(|e| trace!("Processing result from jobset run: {:?}", e))
+                .partition(|e| e.is_ok());
+
+            let results = okays.into_iter().filter_map(Result::ok).flatten().collect::<Vec<PathBuf>>();
+
+            {
+                let mut out = std::io::stderr();
+                for error in errors {
+                    if let Err(e) = error {
+                        if let Some(expl) = e.explain_container_error() {
+                            writeln!(out, "{}", expl)?;
+                        }
+                    }
+                }
+            }
 
             { // check if all paths that were written are actually there in the staging store
                 let staging_store_lock = self.staging_store.read().await;

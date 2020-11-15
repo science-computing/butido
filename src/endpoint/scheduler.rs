@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::result::Result as RResult;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -22,6 +23,7 @@ use crate::filestore::StagingStore;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
 use crate::util::progress::ProgressBars;
+use crate::endpoint::ContainerError;
 
 pub struct EndpointScheduler {
     log_dir: Option<PathBuf>,
@@ -125,7 +127,7 @@ impl std::fmt::Debug for JobHandle {
 }
 
 impl JobHandle {
-    pub async fn run(self) -> Result<Vec<PathBuf>> {
+    pub async fn run(self) -> RResult<Vec<PathBuf>, ContainerError> {
         use crate::db::models as dbmodels;
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let ep = self.endpoint
