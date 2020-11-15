@@ -220,7 +220,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::jobs::dsl;
 
     let csv  = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "submit uuid", "job uuid", "time", "endpoint", "success"]);
+    let hdrs = mk_header(vec!["id", "submit uuid", "job uuid", "time", "endpoint", "success", "package", "version"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let jobs = matches.value_of("submit_uuid")
         .map(uuid::Uuid::parse_str)
@@ -232,17 +232,19 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 schema::submits::table.on(schema::submits::uuid.eq(submit_uuid))
             })
             .inner_join(schema::endpoints::table)
-            .load::<(models::Job, models::Submit, models::Endpoint)>(&conn)
+            .inner_join(schema::packages::table)
+            .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)
         })
         .unwrap_or_else(|| {
             dsl::jobs
                 .inner_join(crate::schema::submits::table)
                 .inner_join(crate::schema::endpoints::table)
-                .load::<(models::Job, models::Submit, models::Endpoint)>(&conn)
+                .inner_join(crate::schema::packages::table)
+                .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)
         })?;
 
     let data = jobs.into_iter()
-        .map(|(job, submit, ep)| {
+        .map(|(job, submit, ep, package)| {
             let success = crate::log::ParsedLog::build_from(&job.log_text)?
                 .is_successfull()
                 .map(|b| if b {
@@ -252,7 +254,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 })
                 .unwrap_or_else(|| String::from("unknown"));
 
-            Ok(vec![format!("{}", job.id), submit.uuid.to_string(), job.uuid.to_string(), submit.submit_time.to_string(), ep.name, success])
+            Ok(vec![format!("{}", job.id), submit.uuid.to_string(), job.uuid.to_string(), submit.submit_time.to_string(), ep.name, success, package.name, package.version])
         })
         .collect::<Result<Vec<_>>>()?;
 
