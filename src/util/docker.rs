@@ -34,6 +34,12 @@ impl AsRef<str> for ContainerHash {
     }
 }
 
+impl std::fmt::Display for ContainerHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        self.0.fmt(f)
+    }
+}
+
 
 /// Check whether a string is a valid docker tag name
 ///
