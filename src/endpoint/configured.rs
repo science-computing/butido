@@ -147,7 +147,7 @@ impl Endpoint {
                     .into_iter()
                     .map(ImageName::from)
             })
-        .flatten()
+            .flatten()
             .collect::<Vec<ImageName>>();
 
         trace!("Available images = {:?}", available_names);
@@ -160,7 +160,7 @@ impl Endpoint {
                     Ok(())
                 }
             })
-        .collect::<Result<Vec<_>>>()
+            .collect::<Result<Vec<_>>>()
             .map(|_| ())
     }
 
@@ -257,7 +257,7 @@ impl Endpoint {
                         .await
                         .map_err(Error::from)
                 })
-            .collect::<futures::stream::FuturesUnordered<_>>()
+                .collect::<futures::stream::FuturesUnordered<_>>()
                 .collect::<Result<Vec<_>>>()
                 .await?;
             }
@@ -289,9 +289,9 @@ impl Endpoint {
                                     })
                             })
                     })
-                .collect::<Result<Vec<_>>>()
+                    .collect::<Result<Vec<_>>>()
             })
-        .inspect(|r| { trace!("Fetching log from container {} -> {:?}", container_id, r); })
+            .inspect(|r| { trace!("Fetching log from container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Fetching log from container {} on {}", container_id, self.name)))
             .await?;
 
