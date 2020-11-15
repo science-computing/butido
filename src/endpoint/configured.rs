@@ -38,6 +38,9 @@ pub struct Endpoint {
 
     #[getset(get_copy = "pub")]
     num_max_jobs: usize,
+
+    #[getset(get = "pub")]
+    uri: String,
 }
 
 impl Debug for Endpoint {
@@ -79,6 +82,7 @@ impl Endpoint {
                     .map(|docker| {
                         Endpoint::builder()
                             .name(ep.name().clone())
+                            .uri(ep.uri().clone())
                             .docker(docker)
                             .speed(ep.speed())
                             .num_max_jobs(ep.maxjobs())
@@ -90,6 +94,7 @@ impl Endpoint {
                 Ok({
                     Endpoint::builder()
                         .name(ep.name().clone())
+                        .uri(ep.uri().clone())
                         .speed(ep.speed())
                         .num_max_jobs(ep.maxjobs())
                         .docker(shiplift::Docker::unix(ep.uri()))
@@ -352,7 +357,7 @@ impl Endpoint {
 
         let script: Script = job.script().clone();
         match exited_successfully {
-            Some(false)       => Err(ContainerError::container_error(ContainerHash::from(container_id))),
+            Some(false)       => Err(ContainerError::container_error(ContainerHash::from(container_id), self.uri().clone())),
             Some(true) | None => {
                 container.stop(Some(std::time::Duration::new(1, 0)))
                     .await
