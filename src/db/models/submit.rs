@@ -43,7 +43,7 @@ impl Submit {
                   requested_package: &Package,
                   repo_hash: &GitHash)
         -> Result<Submit>
-{
+    {
         let tree_json = serde_json::to_value(t)
             .context("Converting tree to JSON string")
             .with_context(|| anyhow!("Tree = {:#?}", t))?;
@@ -63,11 +63,16 @@ impl Submit {
             .execute(database_connection)
             .context("Inserting new submit into submits table")?;
 
+        Self::with_id(database_connection, submit_id)
+    }
+
+    pub fn with_id(database_connection: &PgConnection, submit_id: &::uuid::Uuid) -> Result<Submit> {
         dsl::submits
             .filter(submits::uuid.eq(submit_id))
             .first::<Submit>(database_connection)
             .context("Loading submit")
             .map_err(Error::from)
     }
+
 }
 
