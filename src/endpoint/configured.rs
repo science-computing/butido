@@ -176,7 +176,7 @@ impl Endpoint {
             .map(|_| ())
     }
 
-    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> RResult<(Vec<PathBuf>, ContainerHash, Script), ContainerError> {
+    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>, additional_env: Vec<(String, String)>) -> RResult<(Vec<PathBuf>, ContainerHash, Script), ContainerError> {
         use crate::log::buffer_stream_to_line_stream;
         use tokio::stream::StreamExt;
         use futures::FutureExt;
@@ -185,6 +185,7 @@ impl Endpoint {
             let envs = job.environment()
                 .into_iter()
                 .chain(job.package_environment().into_iter())
+                .chain(additional_env.into_iter())
                 .map(|(k, v)| format!("{}={}", k, v))
                 .collect::<Vec<_>>();
             trace!("Job resources: Environment variables = {:?}", envs);

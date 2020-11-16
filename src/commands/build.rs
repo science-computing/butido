@@ -218,6 +218,7 @@ pub async fn build<'a>(matches: &ArgMatches,
         .release_store(release_dir)
         .database(database_connection)
         .source_cache(source_cache)
+        .additional_env(additional_env)
         .submit(submit)
         .log_dir(if matches.is_present("write-log-file") { Some(config.log_dir().clone()) } else { None })
         .jobsets(jobsets)
