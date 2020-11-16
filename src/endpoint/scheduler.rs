@@ -142,6 +142,15 @@ impl JobHandle {
         let package  = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
         let image    = dbmodels::Image::create_or_fetch(&self.db, self.job.image())?;
 
+        let envs = {
+            self.additional_env
+                .iter()
+                .map(|(k, v)| {
+                    dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
+                })
+                .collect::<Result<Vec<_>>>()?
+        };
+
         let job_id = self.job.uuid().clone();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let res = ep
@@ -161,7 +170,11 @@ impl JobHandle {
         let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", ep.name()))?;
         let (paths, container_hash, script) = res.with_context(|| anyhow!("Running job on '{}'", ep.name()))?;
 
-        dbmodels::Job::create(&self.db, &job_id, &self.submit, &endpoint, &package, &image, &container_hash, &script, &log)?;
+        let job = dbmodels::Job::create(&self.db, &job_id, &self.submit, &endpoint, &package, &image, &container_hash, &script, &log)?;
+        for env in envs {
+            let _ = dbmodels::JobEnv::create(&self.db, &job, &env)?;
+        }
+
         Ok(paths)
     }
 
