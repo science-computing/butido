@@ -4,9 +4,13 @@ use diesel::prelude::*;
 
 use crate::schema::job_envs::*;
 use crate::schema::job_envs;
-use crate::db::models::{Job, EnvVar};
+use crate::db::models::Job;
+use crate::db::models::EnvVar;
 
-#[derive(Queryable)]
+#[derive(Identifiable, Queryable, Associations)]
+#[belongs_to(Job)]
+#[belongs_to(EnvVar, foreign_key = "env_id")]
+#[table_name="job_envs"]
 pub struct JobEnv {
     pub id: i32,
     pub job_id: i32,

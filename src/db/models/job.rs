@@ -9,7 +9,8 @@ use crate::schema::jobs::*;
 use crate::schema::jobs;
 use crate::util::docker::ContainerHash;
 
-#[derive(Queryable)]
+#[derive(Identifiable, Queryable)]
+#[table_name="jobs"]
 pub struct Job {
     pub id: i32,
     pub submit_id: i32,
