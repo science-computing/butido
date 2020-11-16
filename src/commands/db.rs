@@ -228,13 +228,16 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .transpose()?
         .map(|submit_uuid| {
             use crate::schema;
+            use diesel::BelongingToDsl;
 
-            schema::jobs::table.inner_join({
-                schema::submits::table.on(schema::submits::uuid.eq(submit_uuid))
-            })
-            .inner_join(schema::endpoints::table)
-            .inner_join(schema::packages::table)
-            .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)
+            let submit = models::Submit::with_id(&conn, &submit_uuid)?;
+
+            models::Job::belonging_to(&submit)
+                .inner_join(schema::submits::table)
+                .inner_join(schema::endpoints::table)
+                .inner_join(schema::packages::table)
+                .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)
+                .map_err(Error::from)
         })
         .unwrap_or_else(|| {
             dsl::jobs
@@ -242,6 +245,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 .inner_join(crate::schema::endpoints::table)
                 .inner_join(crate::schema::packages::table)
                 .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)
+                .map_err(Error::from)
         })?;
 
     let data = jobs.into_iter()
