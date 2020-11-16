@@ -84,6 +84,40 @@ impl RunnableJob {
         self.source_cache.source_for(&self.package())
     }
 
+    pub fn environment(&self) -> Vec<(String, String)> {
+        let iter = self.resources
+            .iter()
+            .filter_map(JobResource::env)
+            .map(|(k, v)| (k.clone(), v.clone()));
+
+        if let Some(hm) = self.package().environment() {
+            iter.chain({
+                hm.iter().map(|(k, v)| (k.clone(), v.clone()))
+            }).collect()
+        } else {
+            iter.collect()
+        }
+    }
+
+    pub fn package_environment(&self) -> Vec<(String, String)> {
+        vec![
+            (
+                String::from("BUTIDO_PACKAGE_NAME"),
+                 self.package().name().clone().to_string()
+            ),
+
+            (
+                String::from("BUTIDO_PACKAGE_VERSION"),
+                self.package().version().clone().to_string()
+            ),
+
+            (
+                String::from("BUTIDO_PACKAGE_VERSION_IS_SEMVER"),
+                String::from(if *self.package().version_is_semver() { "true" } else { "false" })
+            ),
+        ]
+    }
+
     async fn build_resource(dep: &dyn ParseDependency, merged_stores: &MergedStores) -> Result<JobResource> {
         let (name, vers) = dep.parse_as_name_and_version()?;
         trace!("Copying dep: {:?} {:?}", name, vers);

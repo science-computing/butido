@@ -12,6 +12,7 @@ use clap_v3::ArgMatches;
 use diesel::PgConnection;
 use logcrate::debug;
 use tokio::sync::RwLock;
+use tokio::stream::StreamExt;
 
 use crate::config::*;
 use crate::filestore::ReleaseStore;
@@ -36,6 +37,7 @@ pub async fn build<'a>(matches: &ArgMatches,
     -> Result<()>
 {
     use crate::db::models::{
+        EnvVar,
         Package,
         GitHash,
         Image,
@@ -84,6 +86,17 @@ pub async fn build<'a>(matches: &ArgMatches,
         .map(String::from)
         .map(PackageVersion::from);
     info!("We want {} ({:?})", pname, pvers);
+
+    let additional_env = matches.values_of("env")
+        .unwrap_or_default()
+        .map(|s| {
+            let v = s.split("=").collect::<Vec<_>>();
+            Ok((
+                 String::from(*v.get(0).ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?),
+                 String::from(*v.get(1).ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?)
+            ))
+        })
+        .collect::<Result<Vec<(String, String)>>>()?;
 
     let packages = if let Some(pvers) = pvers {
         repo.find(&pname, &pvers)
@@ -157,15 +170,28 @@ pub async fn build<'a>(matches: &ArgMatches,
     let db_package = async { Package::create_or_fetch(&database_connection, &package) };
     let db_githash = async { GitHash::create_or_fetch(&database_connection, &hash_str) };
     let db_image   = async { Image::create_or_fetch(&database_connection, &image_name) };
+    let db_envs    = async {
+        additional_env.clone()
+            .into_iter()
+            .map(|(k, v)| async {
+                let k: String = k; // hack to work around move semantics
+                let v: String = v; // hack to work around move semantics
+                EnvVar::create_or_fetch(&database_connection, &k, &v)
+            })
+            .collect::<futures::stream::FuturesUnordered<_>>()
+            .collect::<Result<Vec<EnvVar>>>()
+            .await
+    };
 
     trace!("Running database jobs for Package, GitHash, Image");
-    let (db_package, db_githash, db_image) = tokio::join!(
+    let (db_package, db_githash, db_image, db_envs) = tokio::join!(
         db_package,
         db_githash,
-        db_image
+        db_image,
+        db_envs
     );
 
-    let (db_package, db_githash, db_image) = (db_package?, db_githash?, db_image?);
+    let (db_package, db_githash, db_image, db_envs) = (db_package?, db_githash?, db_image?, db_envs?);
 
     trace!("Database jobs for Package, GitHash, Image finished successfully");
     trace!("Creating Submit in database");
@@ -192,6 +218,7 @@ pub async fn build<'a>(matches: &ArgMatches,
         .release_store(release_dir)
         .database(database_connection)
         .source_cache(source_cache)
+        .additional_env(additional_env)
         .submit(submit)
         .log_dir(if matches.is_present("write-log-file") { Some(config.log_dir().clone()) } else { None })
         .jobsets(jobsets)

@@ -8,6 +8,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
+use diesel::BelongingToDsl;
 use diesel::ExpressionMethods;
 use diesel::JoinOnDsl;
 use diesel::QueryDsl;
@@ -227,13 +228,16 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .transpose()?
         .map(|submit_uuid| {
             use crate::schema;
+            use diesel::BelongingToDsl;
 
-            schema::jobs::table.inner_join({
-                schema::submits::table.on(schema::submits::uuid.eq(submit_uuid))
-            })
-            .inner_join(schema::endpoints::table)
-            .inner_join(schema::packages::table)
-            .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)
+            let submit = models::Submit::with_id(&conn, &submit_uuid)?;
+
+            models::Job::belonging_to(&submit)
+                .inner_join(schema::submits::table)
+                .inner_join(schema::endpoints::table)
+                .inner_join(schema::packages::table)
+                .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)
+                .map_err(Error::from)
         })
         .unwrap_or_else(|| {
             dsl::jobs
@@ -241,6 +245,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 .inner_join(crate::schema::endpoints::table)
                 .inner_join(crate::schema::packages::table)
                 .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)
+                .map_err(Error::from)
         })?;
 
     let data = jobs.into_iter()
@@ -292,6 +297,21 @@ fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &A
         .inner_join(schema::images::table)
         .first::<(models::Job, models::Submit, models::Endpoint, models::Package, models::Image)>(&conn)?;
 
+    let env_vars = if matches.is_present("show_env") {
+        Some({
+            models::JobEnv::belonging_to(&data.0)
+                .inner_join(schema::envvars::table)
+                .load::<(models::JobEnv, models::EnvVar)>(&conn)?
+                .into_iter()
+                .map(|tpl| tpl.1)
+                .enumerate()
+                .map(|(i, env)| format!("\t{:>3}. {}={}", i, env.name, env.value))
+                .join("\n")
+        })
+    } else {
+        None
+    };
+
     let parsed_log = crate::log::ParsedLog::build_from(&data.0.log_text)?;
     let success = parsed_log.is_successfull();
     let s = indoc::formatdoc!(r#"
@@ -305,6 +325,10 @@ fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &A
 
             Script:     {script_len} lines
             Log:        {log_len} lines
+
+            ---
+
+            {envs}
 
             ---
 
@@ -333,6 +357,7 @@ fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &A
         container_hash  = data.0.container_hash.cyan(),
         script_len      = format!("{:<4}", data.0.script_text.lines().count()).cyan(),
         log_len         = format!("{:<4}", data.0.log_text.lines().count()).cyan(),
+        envs            = env_vars.unwrap_or_else(|| String::from("<env vars hidden>")),
         script_text     = if show_script {
             if let Some(configured_theme) = configured_theme {
                 if highlighting_disabled {

@@ -185,6 +185,14 @@ pub fn cli<'a>() -> App<'a> {
                     .help("Show the script")
                 )
 
+                .arg(Arg::with_name("show_env")
+                    .required(false)
+                    .multiple(false)
+                    .long("env")
+                    .short('E')
+                    .help("Show the environment of the job")
+                )
+
                 .arg(Arg::with_name("script_disable_highlighting")
                     .required(false)
                     .multiple(false)

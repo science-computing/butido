@@ -33,11 +33,12 @@ pub struct EndpointScheduler {
     db: Arc<PgConnection>,
     progressbars: ProgressBars,
     submit: crate::db::models::Submit,
+    additional_env: Vec<(String, String)>,
 }
 
 impl EndpointScheduler {
 
-    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars, submit: crate::db::models::Submit, log_dir: Option<PathBuf>) -> Result<Self> {
+    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars, submit: crate::db::models::Submit, log_dir: Option<PathBuf>, additional_env: Vec<(String, String)>) -> Result<Self> {
         let endpoints = Self::setup_endpoints(endpoints).await?;
 
         Ok(EndpointScheduler {
@@ -47,6 +48,7 @@ impl EndpointScheduler {
             db,
             progressbars,
             submit,
+            additional_env,
         })
     }
 
@@ -82,6 +84,7 @@ impl EndpointScheduler {
             staging_store: self.staging_store.clone(),
             db: self.db.clone(),
             submit: self.submit.clone(),
+            additional_env: self.additional_env.clone(),
         })
     }
 
@@ -118,6 +121,7 @@ pub struct JobHandle {
     db: Arc<PgConnection>,
     staging_store: Arc<RwLock<StagingStore>>,
     submit: crate::db::models::Submit,
+    additional_env: Vec<(String, String)>,
 }
 
 impl std::fmt::Debug for JobHandle {
@@ -138,10 +142,37 @@ impl JobHandle {
         let package  = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
         let image    = dbmodels::Image::create_or_fetch(&self.db, self.job.image())?;
 
+        let envs = {
+            trace!("Creating environment in database");
+            trace!("Hardcoded = {:?}", self.job.package().environment());
+            trace!("Dynamic   = {:?}", self.additional_env);
+            let mut hardcoded_env = if let Some(hm) = self.job.package().environment().as_ref() {
+                hm.iter()
+                    .map(|(k, v)| {
+                        trace!("Creating environment variable in database: {} = {}", k, v);
+                        dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
+                    })
+                    .collect::<Result<Vec<_>>>()?
+            } else {
+                Vec::new()
+            };
+
+            let mut additionals = self.additional_env
+                .iter()
+                .map(|(k, v)| {
+                    trace!("Creating environment variable in database: {} = {}", k, v);
+                    dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
+                })
+                .collect::<Result<Vec<_>>>()?;
+
+            hardcoded_env.append(&mut additionals);
+            hardcoded_env
+        };
+
         let job_id = self.job.uuid().clone();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let res = ep
-            .run_job(self.job, log_sender, self.staging_store);
+            .run_job(self.job, log_sender, self.staging_store, self.additional_env);
 
         let logres = LogReceiver {
             log_dir: self.log_dir.as_ref(),
@@ -157,7 +188,11 @@ impl JobHandle {
         let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", ep.name()))?;
         let (paths, container_hash, script) = res.with_context(|| anyhow!("Running job on '{}'", ep.name()))?;
 
-        dbmodels::Job::create(&self.db, &job_id, &self.submit, &endpoint, &package, &image, &container_hash, &script, &log)?;
+        let job = dbmodels::Job::create(&self.db, &job_id, &self.submit, &endpoint, &package, &image, &container_hash, &script, &log)?;
+        for env in envs {
+            let _ = dbmodels::JobEnv::create(&self.db, &job, &env)?;
+        }
+
         Ok(paths)
     }
 

@@ -1,6 +1,10 @@
 name              = "b"
 version           = "2"
 
+[environment]
+FOO = "bar"
+BAZ = "bla"
+
 [phases]
 package.script = '''
     mkdir /outputs

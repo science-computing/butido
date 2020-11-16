@@ -6,7 +6,8 @@ use diesel::prelude::*;
 use crate::schema::envvars::*;
 use crate::schema::envvars;
 
-#[derive(Queryable)]
+#[derive(Identifiable, Queryable)]
+#[table_name="envvars"]
 pub struct EnvVar {
     pub id: i32,
     pub name: String,

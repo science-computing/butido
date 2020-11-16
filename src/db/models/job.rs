@@ -9,7 +9,12 @@ use crate::schema::jobs::*;
 use crate::schema::jobs;
 use crate::util::docker::ContainerHash;
 
-#[derive(Queryable)]
+#[derive(Identifiable, Queryable, Associations)]
+#[belongs_to(Submit)]
+#[belongs_to(Endpoint)]
+#[belongs_to(Package)]
+#[belongs_to(Image)]
+#[table_name="jobs"]
 pub struct Job {
     pub id: i32,
     pub submit_id: i32,
@@ -45,7 +50,7 @@ impl Job {
                            container: &ContainerHash,
                            script: &Script,
                            log: &str,
-                           ) -> Result<()> {
+                           ) -> Result<Job> {
         let new_job = NewJob {
             uuid: job_uuid,
             submit_id: submit.id,
@@ -61,9 +66,12 @@ impl Job {
         diesel::insert_into(jobs::table)
             .values(&new_job)
             .on_conflict_do_nothing()
-            .execute(database_connection)
+            .execute(database_connection)?;
+
+        dsl::jobs
+            .filter(uuid.eq(job_uuid))
+            .first::<Job>(database_connection)
             .map_err(Error::from)
-            .map(|_| ())
     }
 }
 

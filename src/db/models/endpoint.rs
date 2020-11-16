@@ -6,7 +6,7 @@ use diesel::prelude::*;
 use crate::schema::endpoints::*;
 use crate::schema::endpoints;
 
-#[derive(Queryable)]
+#[derive(Identifiable, Queryable)]
 pub struct Endpoint {
     pub id: i32,
     pub name: String,

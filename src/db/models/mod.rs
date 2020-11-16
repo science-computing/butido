@@ -13,6 +13,9 @@ pub use image::*;
 mod job;
 pub use job::*;
 
+mod job_env;
+pub use job_env::*;
+
 mod githash;
 pub use githash::*;
 
