@@ -182,9 +182,9 @@ impl Endpoint {
         use futures::FutureExt;
 
         let (container_id, _warnings) = {
-            let envs = job.resources()
-                .iter()
-                .filter_map(JobResource::env)
+            let envs = job.environment()
+                .into_iter()
+                .chain(job.package_environment().into_iter())
                 .map(|(k, v)| format!("{}={}", k, v))
                 .collect::<Vec<_>>();
             trace!("Job resources: Environment variables = {:?}", envs);
