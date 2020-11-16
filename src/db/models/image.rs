@@ -7,7 +7,7 @@ use crate::schema::images::*;
 use crate::schema::images;
 use crate::util::docker::ImageName;
 
-#[derive(Queryable)]
+#[derive(Identifiable, Queryable)]
 pub struct Image {
     pub id: i32,
     pub name: String,

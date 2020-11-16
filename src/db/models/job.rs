@@ -9,7 +9,11 @@ use crate::schema::jobs::*;
 use crate::schema::jobs;
 use crate::util::docker::ContainerHash;
 
-#[derive(Identifiable, Queryable)]
+#[derive(Identifiable, Queryable, Associations)]
+#[belongs_to(Submit)]
+#[belongs_to(Endpoint)]
+#[belongs_to(Package)]
+#[belongs_to(Image)]
 #[table_name="jobs"]
 pub struct Job {
     pub id: i32,
