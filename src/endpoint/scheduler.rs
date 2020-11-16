@@ -143,12 +143,30 @@ impl JobHandle {
         let image    = dbmodels::Image::create_or_fetch(&self.db, self.job.image())?;
 
         let envs = {
-            self.additional_env
+            trace!("Creating environment in database");
+            trace!("Hardcoded = {:?}", self.job.package().environment());
+            trace!("Dynamic   = {:?}", self.additional_env);
+            let mut hardcoded_env = if let Some(hm) = self.job.package().environment().as_ref() {
+                hm.iter()
+                    .map(|(k, v)| {
+                        trace!("Creating environment variable in database: {} = {}", k, v);
+                        dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
+                    })
+                    .collect::<Result<Vec<_>>>()?
+            } else {
+                Vec::new()
+            };
+
+            let mut additionals = self.additional_env
                 .iter()
                 .map(|(k, v)| {
+                    trace!("Creating environment variable in database: {} = {}", k, v);
                     dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
                 })
-                .collect::<Result<Vec<_>>>()?
+                .collect::<Result<Vec<_>>>()?;
+
+            hardcoded_env.append(&mut additionals);
+            hardcoded_env
         };
 
         let job_id = self.job.uuid().clone();
