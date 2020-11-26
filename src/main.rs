@@ -38,16 +38,20 @@ async fn main() -> Result<()> {
     let cli = cli::cli();
     let cli = cli.get_matches();
 
-    let mut config = ::config::Config::default();
-    config
-        .merge(::config::File::with_name("config"))?
-        .merge(::config::Environment::with_prefix("BUTIDO"))?;
-        // Add in settings from the environment (with a prefix of YABOS)
-        // Eg.. `YABOS_DEBUG=1 ./target/app` would set the `debug` key
-    //
+    let repo = git2::Repository::discover(PathBuf::from("."))?;
+    let repo_path = repo.workdir()
+        .ok_or_else(|| anyhow!("Not a repository with working directory. Cannot do my job!"))?;
 
-    let config: Configuration = config.try_into::<NotValidatedConfiguration>()?.validate()?;
-    let repo_path             = PathBuf::from(".");
+    let mut config = ::config::Config::default();
+
+    config
+        .merge(::config::File::from(repo_path.join("config.toml")))?
+        .merge(::config::Environment::with_prefix("BUTIDO"))?;
+
+    let config = config
+        .try_into::<NotValidatedConfiguration>()?
+        .validate()?;
+
     let _                     = crate::ui::package_repo_cleanness_check(&repo_path)?;
     let max_packages          = count_pkg_files(&repo_path);
     let hide_bars             = cli.is_present("hide_bars") || crate::util::stdout_is_pipe();
