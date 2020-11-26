@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap_v3::ArgMatches;
+use clap::ArgMatches;
 
 use crate::commands::util::getbool;
 use crate::config::*;

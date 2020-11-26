@@ -1,6 +1,6 @@
 use anyhow::Error;
 use anyhow::Result;
-use clap_v3::ArgMatches;
+use clap::ArgMatches;
 
 use crate::package::PackageName;
 use crate::repository::Repository;

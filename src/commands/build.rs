@@ -8,7 +8,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
-use clap_v3::ArgMatches;
+use clap::ArgMatches;
 use diesel::PgConnection;
 use logcrate::debug;
 use tokio::sync::RwLock;

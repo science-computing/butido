@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
-use clap_v3::ArgMatches;
+use clap::ArgMatches;
 use tokio::stream::StreamExt;
 use tokio::io::AsyncWriteExt;
 use futures::TryStreamExt;
@@ -18,11 +18,12 @@ use crate::util::progress::ProgressBars;
 
 pub async fn source<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository, progressbars: ProgressBars) -> Result<()> {
     match matches.subcommand() {
-        ("verify", Some(matches))       => verify(matches, config, repo).await,
-        ("list-missing", Some(matches)) => list_missing(matches, config, repo).await,
-        ("url", Some(matches))          => url(matches, config, repo).await,
-        ("download", Some(matches))     => download(matches, config, repo, progressbars).await,
-        (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
+        Some(("verify", matches))       => verify(matches, config, repo).await,
+        Some(("list-missing", matches)) => list_missing(matches, config, repo).await,
+        Some(("url", matches))          => url(matches, config, repo).await,
+        Some(("download", matches))     => download(matches, config, repo, progressbars).await,
+        Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
+        None             => return Err(anyhow!("No subcommand")),
     }
 }
 

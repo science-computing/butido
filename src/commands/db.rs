@@ -2,7 +2,6 @@ use std::fmt::Display;
 use std::path::PathBuf;
 use std::process::Command;
 
-use clap_v3 as clap;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -26,14 +25,15 @@ use crate::log::LogItem;
 
 pub fn db<'a>(db_connection_config: DbConnectionConfig, config: &Configuration<'a>, matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
-        ("cli", Some(matches))        => cli(db_connection_config, matches),
-        ("artifacts", Some(matches))  => artifacts(db_connection_config, matches),
-        ("envvars", Some(matches))    => envvars(db_connection_config, matches),
-        ("images", Some(matches))     => images(db_connection_config, matches),
-        ("submits", Some(matches))    => submits(db_connection_config, matches),
-        ("jobs", Some(matches))       => jobs(db_connection_config, matches),
-        ("job", Some(matches))        => job(db_connection_config, config, matches),
-        (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
+        Some(("cli", matches))        => cli(db_connection_config, matches),
+        Some(("artifacts", matches))  => artifacts(db_connection_config, matches),
+        Some(("envvars", matches))    => envvars(db_connection_config, matches),
+        Some(("images", matches))     => images(db_connection_config, matches),
+        Some(("submits", matches))    => submits(db_connection_config, matches),
+        Some(("jobs", matches))       => jobs(db_connection_config, matches),
+        Some(("job", matches))        => job(db_connection_config, config, matches),
+        Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
+        None             => return Err(anyhow!("No subcommand")),
     }
 }
 

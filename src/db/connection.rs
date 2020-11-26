@@ -1,6 +1,6 @@
 use anyhow::Error;
 use anyhow::Result;
-use clap_v3::ArgMatches;
+use clap::ArgMatches;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use getset::Getters;

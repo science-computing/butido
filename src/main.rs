@@ -67,49 +67,50 @@ async fn main() -> Result<()> {
 
     let db_connection_config = crate::db::parse_db_connection_config(&config, &cli);
     match cli.subcommand() {
-        ("db", Some(matches))           => crate::commands::db(db_connection_config, &config, matches)?,
-        ("build", Some(matches))        => {
+        Some(("db", matches))           => crate::commands::db(db_connection_config, &config, matches)?,
+        Some(("build", matches))        => {
             let conn = crate::db::establish_connection(db_connection_config)?;
 
             let repo = load_repo()?;
 
             crate::commands::build(matches, progressbars, conn, &config, repo, &repo_path, max_packages as u64).await?
         },
-        ("what-depends", Some(matches)) => {
+        Some(("what-depends", matches)) => {
             let repo = load_repo()?;
             let bar = progressbars.what_depends();
             bar.set_length(max_packages);
             crate::commands::what_depends(matches, &config, repo).await?
         },
 
-        ("dependencies-of", Some(matches)) => {
+        Some(("dependencies-of", matches)) => {
             let repo = load_repo()?;
             let bar = progressbars.what_depends();
             bar.set_length(max_packages);
             crate::commands::dependencies_of(matches, &config, repo).await?
         },
 
-        ("versions-of", Some(matches)) => {
+        Some(("versions-of", matches)) => {
             let repo = load_repo()?;
             crate::commands::versions_of(matches, repo).await?
         },
 
-        ("env-of", Some(matches)) => {
+        Some(("env-of", matches)) => {
             let repo = load_repo()?;
             crate::commands::env_of(matches, repo).await?
         },
 
-        ("find-pkg", Some(matches)) => {
+        Some(("find-pkg", matches)) => {
             let repo = load_repo()?;
             crate::commands::find_pkg(matches, &config, repo).await?
         },
 
-        ("source", Some(matches)) => {
+        Some(("source", matches)) => {
             let repo = load_repo()?;
             crate::commands::source(matches, &config, repo, progressbars).await?
         }
 
-        (other, _) => return Err(anyhow!("Unknown subcommand: {}", other)),
+        Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
+        None             => return Err(anyhow!("No subcommand")),
     }
 
     Ok(())

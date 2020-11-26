@@ -1,7 +1,7 @@
 use anyhow::Error;
 use anyhow::Context;
 use anyhow::Result;
-use clap_v3::ArgMatches;
+use clap::ArgMatches;
 
 use crate::config::Configuration;
 use crate::package::Package;
