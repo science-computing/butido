@@ -1,7 +1,6 @@
 # Configuration file for BUTIDO for this repository
 
 # repository of package definitions
-repository   = "/tmp/example-3-repo"
 releases     = "/tmp/example-3-releases"
 staging      = "/tmp/example-3-staging"
 source_cache = "/tmp/example-3-sources"

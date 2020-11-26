@@ -1,7 +1,6 @@
 # Configuration file for BUTIDO for this repository
 
 # repository of package definitions
-repository   = "/tmp/tmux-repo"
 releases     = "/tmp/tmux-releases"
 staging      = "/tmp/tmux-staging"
 source_cache = "/tmp/tmux-sources"

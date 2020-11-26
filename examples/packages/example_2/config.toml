@@ -1,7 +1,6 @@
 # Configuration file for BUTIDO for this repository
 
 # repository of package definitions
-repository = "/tmp/butido_example_2"
 releases   = "/dev/null"
 staging    = "/dev/null"
 

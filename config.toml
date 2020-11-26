@@ -1,6 +1,3 @@
-# repository of package definitions
-repository = "/tmp/path"
-
 # Format of the progress bars used.
 # See https://docs.rs/indicatif/0.15.0/indicatif/#templates
 # for how to customize this.

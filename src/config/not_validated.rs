@@ -14,9 +14,6 @@ use crate::phase::PhaseName;
 #[derive(Debug, Getters, Deserialize)]
 pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
-    repository: PathBuf,
-
-    #[getset(get = "pub")]
     log_dir: PathBuf,
 
     #[serde(default = "default_progress_format")]
