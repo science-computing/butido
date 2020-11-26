@@ -27,7 +27,9 @@ pub struct Endpoint {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub enum EndpointType {
+    #[serde(rename  = "socket")]
     Socket,
+    #[serde(rename  = "http")]
     Http,
 }
 
