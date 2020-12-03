@@ -34,10 +34,6 @@ impl JobSet {
             .await
     }
 
-    pub fn len(&self) -> usize {
-        self.set.len()
-    }
-
 }
 
 /// Get the tree as sets of jobs, the deepest level of the tree first
