@@ -80,6 +80,20 @@ impl Tree {
         self.root.iter().map(|mapping| &mapping.package)
     }
 
+    /// Get all packages in the tree by reference
+    ///
+    /// # Warning
+    ///
+    /// The order of the packages is _NOT_ guaranteed by the implementation
+    pub fn all_packages(&self) -> Vec<&Package> {
+        self.root
+            .iter()
+            .map(|m| m.dependencies.all_packages())
+            .flatten()
+            .chain(self.root.iter().map(|m| &m.package))
+            .collect()
+    }
+
     /// Get dependencies stored in this tree
     pub fn dependencies(&self) -> impl Iterator<Item = &Tree> {
         self.root.iter().map(|mapping| &mapping.dependencies)
