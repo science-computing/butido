@@ -166,6 +166,16 @@ pub async fn build<'a>(matches: &ArgMatches,
         tree
     };
 
+    let source_cache = SourceCache::new(PathBuf::from(config.source_cache_root()));
+
+    if matches.is_present("no_verification") {
+        warn!("No hash verification will be performed");
+    } else {
+        let mut out = std::io::stdout();
+        crate::commands::source::verify_impl(tree.all_packages().into_iter(), &source_cache, &mut out)
+            .await?;
+    }
+
     trace!("Setting up database jobs for Package, GitHash, Image");
     let db_package = async { Package::create_or_fetch(&database_connection, &package) };
     let db_githash = async { GitHash::create_or_fetch(&database_connection, &hash_str) };
@@ -207,8 +217,6 @@ pub async fn build<'a>(matches: &ArgMatches,
     trace!("Setting up job sets");
     let jobsets = JobSet::sets_from_tree(tree, image_name, phases.clone())?;
     trace!("Setting up job sets finished successfully");
-
-    let source_cache = SourceCache::new(PathBuf::from(config.source_cache_root()));
 
     trace!("Setting up Orchestrator");
     let orch = OrchestratorSetup::builder()
