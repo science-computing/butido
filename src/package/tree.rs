@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use anyhow::Result;
 use anyhow::anyhow;
 use indicatif::ProgressBar;

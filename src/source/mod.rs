@@ -8,7 +8,6 @@ use crate::package::Package;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::package::Source;
-use crate::util::progress::ProgressBars;
 
 #[derive(Clone, Debug)]
 pub struct SourceCache {

@@ -2,7 +2,6 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use anyhow::Result;
-use anyhow::anyhow;
 
 use crate::filestore::Artifact;
 use crate::filestore::ReleaseStore;

@@ -8,7 +8,6 @@ use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use pom::parser::Parser as PomParser;
-use resiter::Filter;
 use shiplift::tty::TtyChunk;
 
 use crate::log::LogItem;

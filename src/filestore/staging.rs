@@ -8,7 +8,6 @@ use anyhow::Result;
 use anyhow::anyhow;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
-use resiter::Filter;
 use resiter::Map;
 use result_inspect::ResultInspect;
 use tar;

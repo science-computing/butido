@@ -8,11 +8,8 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
-use indicatif::ProgressBar;
 use tokio::sync::RwLock;
-use tokio::sync::mpsc::UnboundedReceiver;
 use typed_builder::TypedBuilder;
-use uuid::Uuid;
 
 use crate::db::models::Submit;
 use crate::endpoint::ContainerError;
@@ -22,7 +19,6 @@ use crate::filestore::MergedStores;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 use crate::job::JobSet;
-use crate::log::LogItem;
 use crate::source::SourceCache;
 use crate::util::progress::ProgressBars;
 

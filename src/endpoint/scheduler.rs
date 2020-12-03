@@ -3,7 +3,6 @@ use std::result::Result as RResult;
 use std::sync::Arc;
 
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
@@ -14,7 +13,6 @@ use tokio::stream::StreamExt;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver;
-use tokio::sync::mpsc::UnboundedSender;
 use uuid::Uuid;
 
 use crate::endpoint::Endpoint;

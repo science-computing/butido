@@ -1,5 +1,4 @@
 use anyhow::Result;
-use futures::future::Future;
 use tokio::stream::StreamExt;
 
 use crate::filestore::MergedStores;
