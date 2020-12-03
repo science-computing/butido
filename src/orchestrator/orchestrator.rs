@@ -27,7 +27,6 @@ use crate::source::SourceCache;
 use crate::util::progress::ProgressBars;
 
 pub struct Orchestrator {
-    progress_generator: ProgressBars,
     scheduler: EndpointScheduler,
     staging_store: Arc<RwLock<StagingStore>>,
     release_store: Arc<RwLock<ReleaseStore>>,
@@ -53,10 +52,9 @@ pub struct OrchestratorSetup {
 impl OrchestratorSetup {
     pub async fn setup(self) -> Result<Orchestrator> {
         let db = Arc::new(self.database);
-        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db.clone(), self.progress_generator.clone(), self.submit.clone(), self.log_dir, self.additional_env).await?;
+        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db.clone(), self.progress_generator, self.submit.clone(), self.log_dir, self.additional_env).await?;
 
         Ok(Orchestrator {
-            progress_generator:    self.progress_generator,
             scheduler:             scheduler,
             staging_store:         self.staging_store,
             release_store:         self.release_store,
