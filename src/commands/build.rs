@@ -229,6 +229,7 @@ pub async fn build(matches: &ArgMatches,
         .submit(submit)
         .log_dir(if matches.is_present("write-log-file") { Some(config.log_dir().clone()) } else { None })
         .jobsets(jobsets)
+        .config(config)
         .build()
         .setup()
         .await?;

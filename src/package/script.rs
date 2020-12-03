@@ -30,7 +30,7 @@ impl<'a> ScriptBuilder<'a> {
         }
     }
 
-    pub fn build(self, package: &Package, phaseorder: &Vec<PhaseName>) -> Result<Script> {
+    pub fn build(self, package: &Package, phaseorder: &Vec<PhaseName>, strict_mode: bool) -> Result<Script> {
         let mut script = format!("{shebang}\n", shebang = self.shebang);
 
         for name in phaseorder {
@@ -71,12 +71,13 @@ impl<'a> ScriptBuilder<'a> {
             }
         }
 
-        Self::interpolate_package(script, package).map(Script)
+        Self::interpolate_package(script, package, strict_mode).map(Script)
     }
 
-    fn interpolate_package(script: String, package: &Package) -> Result<String> {
+    fn interpolate_package(script: String, package: &Package, strict_mode: bool) -> Result<String> {
         let mut hb = Handlebars::new();
         hb.register_template_string("script", script)?;
+        hb.set_strict_mode(strict_mode);
         hb.render("script", package).map_err(Error::from)
     }
 }

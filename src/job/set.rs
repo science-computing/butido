@@ -1,6 +1,7 @@
 use anyhow::Result;
 use tokio::stream::StreamExt;
 
+use crate::config::Configuration;
 use crate::filestore::MergedStores;
 use crate::job::Job;
 use crate::job::RunnableJob;
@@ -24,10 +25,10 @@ impl JobSet {
         self.set.is_empty()
     }
 
-    pub async fn into_runables<'a>(self, merged_stores: &'a MergedStores, source_cache: &'a SourceCache) -> Result<Vec<RunnableJob>> {
+    pub async fn into_runables<'a>(self, merged_stores: &'a MergedStores, source_cache: &'a SourceCache, config: &Configuration) -> Result<Vec<RunnableJob>> {
         self.set
             .into_iter()
-            .map(move |j| RunnableJob::build_from_job(j, merged_stores, source_cache))
+            .map(move |j| RunnableJob::build_from_job(j, merged_stores, source_cache, config))
             .collect::<futures::stream::FuturesUnordered<_>>()
             .collect::<Result<Vec<RunnableJob>>>()
             .await

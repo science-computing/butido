@@ -12,3 +12,7 @@ pub fn default_package_print_format() -> String {
     "#))
 }
 
+pub fn default_strict_script_interpolation() -> bool {
+    true
+}
+

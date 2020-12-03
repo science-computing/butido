@@ -16,6 +16,10 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     log_dir: PathBuf,
 
+    #[serde(default = "default_strict_script_interpolation")]
+    #[getset(get = "pub")]
+    strict_script_interpolation: bool,
+
     #[serde(default = "default_progress_format")]
     #[getset(get = "pub")]
     progress_format: String,

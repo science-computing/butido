@@ -6,6 +6,7 @@ use getset::Getters;
 use tokio::stream::StreamExt;
 use uuid::Uuid;
 
+use crate::config::Configuration;
 use crate::filestore::MergedStores;
 use crate::job::Job;
 use crate::job::JobResource;
@@ -40,9 +41,9 @@ pub struct RunnableJob {
 }
 
 impl RunnableJob {
-    pub async fn build_from_job(job: Job, merged_stores: &MergedStores, source_cache: &SourceCache) -> Result<Self> {
+    pub async fn build_from_job(job: Job, merged_stores: &MergedStores, source_cache: &SourceCache, config: &Configuration) -> Result<Self> {
         let script = ScriptBuilder::new(&job.script_shebang)
-            .build(&job.package, &job.script_phases)?;
+            .build(&job.package, &job.script_phases, *config.strict_script_interpolation())?;
 
         trace!("Preparing build dependencies");
         let resources = {

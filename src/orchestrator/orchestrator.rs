@@ -11,8 +11,9 @@ use diesel::PgConnection;
 use tokio::sync::RwLock;
 use typed_builder::TypedBuilder;
 
-use crate::db::models::Submit;
+use crate::config::Configuration;
 use crate::db::models::Artifact;
+use crate::db::models::Submit;
 use crate::endpoint::ContainerError;
 use crate::endpoint::EndpointConfiguration;
 use crate::endpoint::EndpointScheduler;
@@ -23,16 +24,17 @@ use crate::job::JobSet;
 use crate::source::SourceCache;
 use crate::util::progress::ProgressBars;
 
-pub struct Orchestrator {
+pub struct Orchestrator<'a> {
     scheduler: EndpointScheduler,
     staging_store: Arc<RwLock<StagingStore>>,
     release_store: Arc<RwLock<ReleaseStore>>,
     source_cache: SourceCache,
     jobsets: Vec<JobSet>,
+    config: &'a Configuration,
 }
 
 #[derive(TypedBuilder)]
-pub struct OrchestratorSetup {
+pub struct OrchestratorSetup<'a> {
     progress_generator: ProgressBars,
     endpoint_config: Vec<EndpointConfiguration>,
     staging_store: Arc<RwLock<StagingStore>>,
@@ -43,10 +45,11 @@ pub struct OrchestratorSetup {
     database: PgConnection,
     submit: Submit,
     log_dir: Option<PathBuf>,
+    config: &'a Configuration,
 }
 
-impl OrchestratorSetup {
-    pub async fn setup(self) -> Result<Orchestrator> {
+impl<'a> OrchestratorSetup<'a> {
+    pub async fn setup(self) -> Result<Orchestrator<'a>> {
         let db = Arc::new(self.database);
         let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db, self.progress_generator, self.submit.clone(), self.log_dir, self.additional_env).await?;
 
@@ -56,11 +59,12 @@ impl OrchestratorSetup {
             release_store:         self.release_store,
             source_cache:          self.source_cache,
             jobsets:               self.jobsets,
+            config:                self.config,
         })
     }
 }
 
-impl Orchestrator {
+impl<'a> Orchestrator<'a> {
 
     pub async fn run(self) -> Result<Vec<Artifact>> {
         use tokio::stream::StreamExt;
@@ -74,7 +78,7 @@ impl Orchestrator {
 
             let results = { // run the jobs in the set
                 let unordered_results   = futures::stream::FuturesUnordered::new();
-                for runnable in jobset.into_runables(&merged_store, &self.source_cache).await?.into_iter() {
+                for runnable in jobset.into_runables(&merged_store, &self.source_cache, &self.config).await?.into_iter() {
                     let job_id = runnable.uuid().clone();
                     trace!("Runnable {} for package {}", job_id, runnable.package().name());
 

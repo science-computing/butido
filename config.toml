@@ -82,6 +82,17 @@ releases = "/tmp/releases"
 #
 staging  = "/tmp/staging"
 
+# Enable strict script interpolation
+#
+# If this is set to true, the variable interpolation for the packaging script
+# will be done in strict mode.
+# Strict mode means, that referencing a variable that does not exist, will
+# result in a rendering error.
+#
+# Default if this setting is missing is true
+#
+strict_script_interpolation = true
+
 # ####
 #
 # Log database configuration
