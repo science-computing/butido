@@ -2,6 +2,7 @@ table! {
     artifacts (id) {
         id -> Int4,
         path -> Varchar,
+        released -> Bool,
     }
 }
 
