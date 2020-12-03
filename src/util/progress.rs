@@ -36,12 +36,6 @@ impl ProgressBars {
         self.bar("Crawling dependencies", &self.bar_template)
     }
 
-    pub fn jobset_bar(&self, jobset_num: usize, number_of_jobsets: usize, jobs_in_jobset: usize) -> ProgressBar {
-        let b = self.bar(&format!("Jobset {}/{} ({} Jobs)", jobset_num, number_of_jobsets, jobs_in_jobset), &self.bar_template);
-        b.set_length(jobs_in_jobset as u64);
-        b
-    }
-
     pub fn job_bar(&self, id: &Uuid) -> ProgressBar {
         let b = self.bar(&format!("Job: {}", id), &self.bar_template);
         b.set_length(100);
