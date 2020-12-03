@@ -71,10 +71,8 @@ impl Orchestrator {
         use tokio::stream::StreamExt;
 
         let mut report_result = vec![];
-        let number_of_jobsets = self.jobsets.len();
-        let database = self.database;
 
-        for (i, jobset) in self.jobsets.into_iter().enumerate() {
+        for jobset in self.jobsets.into_iter() {
             let merged_store = MergedStores::new(self.release_store.clone(), self.staging_store.clone());
 
             let multibar = Arc::new(indicatif::MultiProgress::new());
