@@ -12,7 +12,7 @@ use crate::db::models::Job;
 use crate::schema::artifacts::*;
 use crate::schema::artifacts;
 
-#[derive(Identifiable, Queryable, Associations)]
+#[derive(Debug, Identifiable, Queryable, Associations)]
 #[belongs_to(Job)]
 pub struct Artifact {
     pub id: i32,
