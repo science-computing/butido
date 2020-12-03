@@ -215,6 +215,14 @@ pub fn cli<'a>() -> App<'a> {
                 .index(2)
             )
 
+            .arg(Arg::new("no_verification")
+                .required(false)
+                .multiple(false)
+                .takes_value(false)
+                .long("no-verify")
+                .about("Do not perform a hash sum check on all packages in the dependency tree before starting the build")
+            )
+
             .arg(Arg::new("staging_dir")
                 .required(false)
                 .multiple(false)

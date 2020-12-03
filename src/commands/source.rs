@@ -9,6 +9,7 @@ use tokio::stream::StreamExt;
 use tokio::io::AsyncWriteExt;
 
 use crate::config::*;
+use crate::package::Package;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
@@ -32,31 +33,43 @@ pub async fn verify<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: 
     let pname             = matches.value_of("package_name").map(String::from).map(PackageName::from);
     let pvers             = matches.value_of("package_version").map(String::from).map(PackageVersionConstraint::new).transpose()?;
 
-    repo.packages()
+    let packages = repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
-        .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true))
-        .map(|p| {
-            sc.sources_for(p)
-                .into_iter()
-                .map(|source| async move {
-                    let path = source.path();
-                    let mut out = std::io::stdout();
-                    if path.exists() {
-                        if source.verify_hash().await? {
-                            writeln!(out, "Ok: {}", source.path().display())
-                        } else {
-                            writeln!(out, "Hash Mismatch: {}", source.path().display())
-                        }
-                    } else {
-                        writeln!(out, "Source missing: {}", source.path().display())
-                    }
-                    .map_err(Error::from)
-                })
-        })
+        .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true));
+
+    let mut out = std::io::stdout();
+    verify_impl(packages, &sc, &mut out).await
+}
+
+pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCache, output: &mut Write) -> Result<()>
+    where I: Iterator<Item = &'a Package> + 'a
+{
+    if let Err(_) = packages
+        .map(|p| sc.sources_for(p).into_iter())
         .flatten()
+        .map(|source| async move {
+            if source.path().exists() {
+                match source.verify_hash().await {
+                    Ok(true)  => Ok(format!("Ok: {}", source.path().display())),
+                    Ok(false) => Err(format!("Hash Mismatch: {}", source.path().display())),
+                    Err(e)    => Err(format!("Hash verification failed: {}", e.to_string())), // TODO: make me nice
+                }
+            } else {
+                Err(format!("Source missing: {}", source.path().display()))
+            }
+        })
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Result<()>>()
+        .collect::<Vec<std::result::Result<String, String>>>()
         .await
+        .into_iter()
+        .inspect(|r| { let _ = writeln!(output, "{}", match r { Ok(s) | Err(s) => s }); })
+        .map(|r| r.map(|_| ()).map_err(|_| ()))
+        .collect::<std::result::Result<(), ()>>()
+    {
+        Err(anyhow!("At least one package failed with source verification"))
+    } else {
+        Ok(())
+    }
 }
 
 pub async fn list_missing<'a>(_: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
