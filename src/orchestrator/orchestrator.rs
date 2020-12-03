@@ -12,6 +12,7 @@ use tokio::sync::RwLock;
 use typed_builder::TypedBuilder;
 
 use crate::db::models::Submit;
+use crate::db::models::Artifact;
 use crate::endpoint::ContainerError;
 use crate::endpoint::EndpointConfiguration;
 use crate::endpoint::EndpointScheduler;
@@ -61,7 +62,7 @@ impl OrchestratorSetup {
 
 impl Orchestrator {
 
-    pub async fn run(self) -> Result<Vec<PathBuf>> {
+    pub async fn run(self) -> Result<Vec<Artifact>> {
         use tokio::stream::StreamExt;
 
         let mut report_result = vec![];
@@ -89,7 +90,7 @@ impl Orchestrator {
                     });
                 }
 
-                unordered_results.collect::<Vec<RResult<_, ContainerError>>>()
+                unordered_results.collect::<Vec<RResult<Vec<Artifact>, ContainerError>>>()
             };
 
             let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
@@ -101,7 +102,7 @@ impl Orchestrator {
                 .inspect(|e| trace!("Processing result from jobset run: {:?}", e))
                 .partition(|e| e.is_ok());
 
-            let results = okays.into_iter().filter_map(Result::ok).flatten().collect::<Vec<PathBuf>>();
+            let results = okays.into_iter().filter_map(Result::ok).flatten().collect::<Vec<Artifact>>();
 
             {
                 let mut out = std::io::stderr();
@@ -118,11 +119,12 @@ impl Orchestrator {
                 let staging_store_lock = self.staging_store.read().await;
 
                 trace!("Checking {} results...", results.len());
-                for path in results.iter() {
-                    trace!("Checking path: {}", path.display());
-                    if !staging_store_lock.path_exists_in_store_root(&path) {
-                        return Err(anyhow!("Result path {} is missing from staging store", path.display()))
-                            .with_context(|| anyhow!("Should be: {}/{}", staging_store_lock.root_path().display(), path.display()))
+                for artifact in results.iter() {
+                    let a_path = artifact.path_buf();
+                    trace!("Checking path: {}", a_path.display());
+                    if !staging_store_lock.path_exists_in_store_root(&a_path) {
+                        return Err(anyhow!("Result path {} is missing from staging store", a_path.display()))
+                            .with_context(|| anyhow!("Should be: {}/{}", staging_store_lock.root_path().display(), a_path.display()))
                             .map_err(Error::from)
                     }
                 }
