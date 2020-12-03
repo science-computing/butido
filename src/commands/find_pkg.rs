@@ -43,8 +43,6 @@ pub async fn find_pkg<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo
             format,
             iter,
             true,
-            true,
-            true,
             true)
     }
 }

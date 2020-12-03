@@ -11,46 +11,10 @@ use crate::package::ParseDependency;
 /// Helper function to build a package filter based on some flags and the package version
 pub fn build_package_filter_by_dependency_name(
     name: &PackageName,
-    check_system_dep: bool,
-    check_system_runtime_dep: bool,
     check_build_dep: bool,
     check_runtime_dep: bool)
     -> impl filters::failable::filter::FailableFilter<Package, Error = Error>
 {
-    let n = name.clone(); // clone, so we can move into closure
-    let filter_system_dep = move |p: &Package| -> Result<bool> {
-        trace!("Checking whether any system depenency of {:?} is '{}'", p, n);
-        Ok({
-            check_system_dep && p.dependencies()
-                .system()
-                .iter()
-                .inspect(|d| trace!("Checking {:?}", d))
-                .map(|d| d.parse_as_name_and_version())
-                .map_ok(|(name, _)| name == n)
-                .collect::<Result<Vec<bool>>>()?
-                .into_iter()
-                .inspect(|b| trace!("found: {}", b))
-                .any(|b| b)
-        })
-    };
-
-    let n = name.clone(); // clone, so we can move into closure
-    let filter_system_runtime_dep = move |p: &Package| -> Result<bool> {
-        trace!("Checking whether any system runtime depenency of {:?} is '{}'", p, n);
-        Ok({
-            check_system_runtime_dep && p.dependencies()
-                .system_runtime()
-                .iter()
-                .inspect(|d| trace!("Checking {:?}", d))
-                .map(|d| d.parse_as_name_and_version())
-                .map_ok(|(name, _)| name == n)
-                .collect::<Result<Vec<bool>>>()?
-                .into_iter()
-                .inspect(|b| trace!("found: {}", b))
-                .any(|b| b)
-        })
-    };
-
     let n = name.clone(); // clone, so we can move into closure
     let filter_build_dep = move |p: &Package| -> Result<bool> {
         trace!("Checking whether any build depenency of {:?} is '{}'", p, n);
@@ -85,10 +49,7 @@ pub fn build_package_filter_by_dependency_name(
         })
     };
 
-    filter_system_dep
-        .or(filter_system_runtime_dep)
-        .or(filter_build_dep)
-        .or(filter_rt_dep)
+    filter_build_dep.or(filter_rt_dep)
 }
 
 pub fn build_package_filter_by_name(name: PackageName) -> impl filters::filter::Filter<Package> {
@@ -144,7 +105,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, false);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false);
 
         let found = repo.packages()
             .map(|p| f.filter(p).map(|b| (b, p)))
@@ -171,7 +132,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, false);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false);
 
         let found = repo.packages()
             .map(|p| f.filter(p).map(|b| (b, p)))
@@ -198,7 +159,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, true);
 
         let found = repo.packages()
             .map(|p| f.filter(p).map(|b| (b, p)))
@@ -212,8 +173,6 @@ mod tests {
         assert_eq!(*p.name(), pname("a"));
         assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo =2.0"))]);
         assert!(p.dependencies().build().is_empty());
-        assert!(p.dependencies().system().is_empty());
-        assert!(p.dependencies().system_runtime().is_empty());
     }
 
     #[test]
@@ -230,7 +189,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, false);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false);
 
         let found = repo.packages()
             .map(|p| f.filter(p).map(|b| (b, p)))
@@ -256,7 +215,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, true);
 
         let found = repo.packages()
             .map(|p| f.filter(p).map(|b| (b, p)))
@@ -288,7 +247,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, true);
 
         let found = repo.packages()
             .map(|p| f.filter(p).map(|b| (b, p)))
@@ -302,8 +261,6 @@ mod tests {
         assert_eq!(*p.name(), pname("a"));
         assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo =1")), Dependency::from(String::from("bar =1"))]);
         assert!(p.dependencies().build().is_empty());
-        assert!(p.dependencies().system().is_empty());
-        assert!(p.dependencies().system_runtime().is_empty());
     }
 
     #[test]
@@ -338,7 +295,7 @@ mod tests {
 
         let repo = Repository::from(btree);
 
-        let f = build_package_filter_by_dependency_name(&pname("foo"), false, false, false, true);
+        let f = build_package_filter_by_dependency_name(&pname("foo"), false, true);
 
         let found = repo.packages()
             .map(|p| f.filter(p).map(|b| (b, p)))
@@ -354,8 +311,6 @@ mod tests {
             assert_eq!(*p.name(), pname("a"));
             assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo =2")), Dependency::from(String::from("bar =3"))]);
             assert!(p.dependencies().build().is_empty());
-            assert!(p.dependencies().system().is_empty());
-            assert!(p.dependencies().system_runtime().is_empty());
         }
 
         {
@@ -363,8 +318,6 @@ mod tests {
             assert_eq!(*p.name(), pname("b"));
             assert_eq!(*p.dependencies().runtime(), vec![Dependency::from(String::from("foo =4")), Dependency::from(String::from("baz =5"))]);
             assert!(p.dependencies().build().is_empty());
-            assert!(p.dependencies().system().is_empty());
-            assert!(p.dependencies().system_runtime().is_empty());
         }
     }
 

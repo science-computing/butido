@@ -25,9 +25,7 @@ pub fn print_packages<'a, I>(out: &mut dyn Write,
                              format: &str,
                              iter: I,
                              print_runtime_deps: bool,
-                             print_build_deps: bool,
-                             print_sys_deps: bool,
-                             print_sys_runtime_deps: bool)
+                             print_build_deps: bool)
 -> Result<()>
     where I: Iterator<Item = &'a Package>
 {
@@ -41,8 +39,6 @@ pub fn print_packages<'a, I>(out: &mut dyn Write,
                       package,
                       print_runtime_deps,
                       print_build_deps,
-                      print_sys_deps,
-                      print_sys_runtime_deps
                       )?;
     }
 
@@ -55,8 +51,6 @@ fn print_package(out: &mut dyn Write,
                  package: &Package,
                  print_runtime_deps: bool,
                  print_build_deps: bool,
-                 print_sys_deps: bool,
-                 print_sys_runtime_deps: bool
                  )
     -> Result<()>
 {
@@ -71,12 +65,6 @@ fn print_package(out: &mut dyn Write,
     }
     if print_build_deps {
         data.insert("print_build_deps", serde_json::Value::Bool(print_build_deps));
-    }
-    if print_sys_deps {
-        data.insert("print_system_deps", serde_json::Value::Bool(print_sys_deps));
-    }
-    if print_sys_runtime_deps {
-        data.insert("print_system_runtime_deps", serde_json::Value::Bool(print_sys_runtime_deps));
     }
 
     hb.render("package", &data)

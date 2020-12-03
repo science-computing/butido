@@ -12,8 +12,6 @@ environment.BAZ = "bla"
 patches = []
 
 [dependencies]
-system          = []
-system_runtime  = []
 build           = []
 runtime         = []
 

@@ -12,8 +12,6 @@ hash.hash = "5e8bcaa3c758f84f01935a914e2bbf01309462ae"
 
 
 [dependencies]
-system          = ["libevent"]
-system_runtime  = []
 build           = []
 runtime         = []
 

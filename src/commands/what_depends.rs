@@ -13,16 +13,12 @@ pub async fn what_depends<'a>(matches: &ArgMatches, config: &Configuration<'a>, 
 
     let print_runtime_deps     = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME);
     let print_build_deps       = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_BUILD);
-    let print_sys_deps         = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM);
-    let print_sys_runtime_deps = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME);
 
     let package_filter = {
         let name = matches.value_of("package_name").map(String::from).map(PackageName::from).unwrap();
 
         crate::util::filters::build_package_filter_by_dependency_name(
             &name,
-            print_sys_deps,
-            print_sys_runtime_deps,
             print_build_deps,
             print_runtime_deps
         )
@@ -42,8 +38,6 @@ pub async fn what_depends<'a>(matches: &ArgMatches, config: &Configuration<'a>, 
                        format,
                        packages.into_iter(),
                        print_runtime_deps,
-                       print_build_deps,
-                       print_sys_deps,
-                       print_sys_runtime_deps)
+                       print_build_deps)
 }
 

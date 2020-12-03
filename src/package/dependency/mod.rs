@@ -12,12 +12,6 @@ pub use build::*;
 mod runtime;
 pub use runtime::*;
 
-mod system;
-pub use system::*;
-
-mod system_runtime;
-pub use system_runtime::*;
-
 pub trait StringEqual {
     fn str_equal(&self, s: &str) -> bool;
 }

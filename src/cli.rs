@@ -6,8 +6,6 @@ use clap::crate_authors;
 use clap::crate_version;
 
 // Helper types to ship around stringly typed clap API.
-pub const IDENT_DEPENDENCY_TYPE_SYSTEM: &'static str         = "system";
-pub const IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME: &'static str = "system-runtime";
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &'static str          = "build";
 pub const IDENT_DEPENDENCY_TYPE_RUNTIME: &'static str        = "runtime";
 
@@ -271,14 +269,10 @@ pub fn cli<'a>() -> App<'a> {
                 .long("type")
                 .value_name("DEPENDENCY_TYPE")
                 .possible_values(&[
-                    IDENT_DEPENDENCY_TYPE_SYSTEM,
-                    IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME,
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
                 .default_values(&[
-                    IDENT_DEPENDENCY_TYPE_SYSTEM,
-                    IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME,
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
@@ -310,14 +304,10 @@ pub fn cli<'a>() -> App<'a> {
                 .long("type")
                 .value_name("DEPENDENCY_TYPE")
                 .possible_values(&[
-                    IDENT_DEPENDENCY_TYPE_SYSTEM,
-                    IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME,
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
                 .default_values(&[
-                    IDENT_DEPENDENCY_TYPE_SYSTEM,
-                    IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME,
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])

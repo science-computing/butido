@@ -73,30 +73,6 @@ impl Package {
         self.dependencies = dependencies;
     }
 
-    /// Get all dependencies of the package
-    ///
-    /// Either return the list of dependencies or, if available, run the dependencies_script to
-    /// read the dependencies from there.
-    pub fn get_all_dependencies<'a>(&'a self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
-        self.get_system_dependencies().chain(self.get_self_packaged_dependencies())
-    }
-
-    pub fn get_system_dependencies<'a>(&'a self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
-        let system_iter = self.dependencies()
-            .system()
-            .iter()
-            .cloned()
-            .map(|d| d.parse_as_name_and_version());
-
-        let system_runtime_iter = self.dependencies()
-            .system_runtime()
-            .iter()
-            .cloned()
-            .map(|d| d.parse_as_name_and_version());
-
-        system_iter.chain(system_runtime_iter)
-    }
-
     pub fn get_self_packaged_dependencies<'a>(&'a self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
         let build_iter = self.dependencies()
             .build()
@@ -154,12 +130,6 @@ pub struct PackageFlags {
 #[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Dependencies {
     #[getset(get = "pub")]
-    system: Vec<SystemBuildDependency>,
-
-    #[getset(get = "pub")]
-    system_runtime: Vec<SystemDependency>,
-
-    #[getset(get = "pub")]
     build: Vec<BuildDependency>,
 
     #[getset(get = "pub")]
@@ -170,8 +140,6 @@ pub struct Dependencies {
 impl Dependencies {
     pub fn empty() -> Self {
         Dependencies {
-            system: vec![],
-            system_runtime: vec![],
             build: vec![],
             runtime: vec![],
         }
@@ -183,8 +151,6 @@ impl Dependencies {
 
     pub fn with_runtime_dependencies(runtime_dependencies: Vec<Dependency>) -> Self {
         Dependencies {
-            system: vec![],
-            system_runtime: vec![],
             build: vec![],
             runtime: runtime_dependencies,
         }

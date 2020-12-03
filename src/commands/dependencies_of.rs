@@ -23,22 +23,16 @@ pub async fn dependencies_of<'a>(matches: &ArgMatches, config: &Configuration<'a
 
     let print_runtime_deps     = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME);
     let print_build_deps       = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_BUILD);
-    let print_sys_deps         = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM);
-    let print_sys_runtime_deps = getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_SYSTEM_RUNTIME);
 
-    trace!("Printing packages with format = '{}', runtime: {}, build: {}, sys: {}, sys_rt: {}",
+    trace!("Printing packages with format = '{}', runtime: {}, build: {}",
            format,
            print_runtime_deps,
-           print_build_deps,
-           print_sys_deps,
-           print_sys_runtime_deps);
+           print_build_deps);
 
     crate::ui::print_packages(&mut stdout,
                        format,
                        iter,
                        print_runtime_deps,
-                       print_build_deps,
-                       print_sys_deps,
-                       print_sys_runtime_deps)
+                       print_build_deps)
 }
 

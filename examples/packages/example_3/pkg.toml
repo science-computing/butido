@@ -10,8 +10,6 @@ hash.type = "sha1"
 hash.hash = "5e8bcaa3c758f84f01935a914e2bbf01309462ae"
 
 [dependencies]
-system          = []
-system_runtime  = []
 build           = []
 runtime         = []
 
