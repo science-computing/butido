@@ -135,7 +135,7 @@ pub async fn build(matches: &ArgMatches,
             info!("Setting staging dir to {} for this run", staging_dir.display());
             staging_dir
         } else {
-            config.staging_directory().join(uuid::Uuid::new_v4().hyphenated().to_string())
+            config.staging_directory().join(submit_id.hyphenated().to_string())
         };
 
         if !p.is_dir() {
