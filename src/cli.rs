@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use clap::App;
 use clap::Arg;
+use clap::ArgGroup;
 use clap::crate_authors;
 use clap::crate_version;
 
@@ -432,6 +433,43 @@ pub fn cli<'a>() -> App<'a> {
                     .value_name("VERSION")
                     .about("Verify the sources of this package version (optional, if left out, all packages are checked)")
                 )
+            )
+        )
+
+        .subcommand(App::new("release")
+            .about("Release artifacts")
+            .arg(Arg::new("submit_uuid")
+                .required(true)
+                .multiple(false)
+                .index(1)
+                .value_name("SUBMIT")
+                .about("The submit uuid from which to release a package")
+            )
+            .arg(Arg::new("package_name")
+                .required(false)
+                .multiple(false)
+                .index(2)
+                .value_name("PKG")
+                .about("The name of the package")
+                .conflicts_with("all-packages")
+            )
+            .arg(Arg::new("all-packages")
+                .required(false)
+                .multiple(false)
+                .long("all")
+                .about("Release all packages")
+                .conflicts_with("package_name")
+            )
+            .group(ArgGroup::new("package")
+                .args(&["package_name", "all-packages"])
+                .required(true) // one of these is required
+            )
+            .arg(Arg::new("package_version")
+                .required(false)
+                .multiple(false)
+                .index(3)
+                .value_name("VERSION")
+                .about("The version of the package")
             )
         )
 
