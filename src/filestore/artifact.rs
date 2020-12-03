@@ -40,10 +40,11 @@ impl Ord for Artifact {
 
 
 impl Artifact {
-    pub fn load(path: &Path) -> Result<Self> {
-        if path.is_file() {
-            let (name, version) = Self::parse_path(path)
-                .with_context(|| anyhow!("Pathing artifact path: '{}'", path.display()))?;
+    pub fn load(root: &Path, path: &Path) -> Result<Self> {
+        let joined = root.join(path);
+        if joined.is_file() {
+            let (name, version) = Self::parse_path(root, path)
+                .with_context(|| anyhow!("Pathing artifact path: '{}'", joined.display()))?;
 
             Ok(Artifact {
                 path: path.to_path_buf(),
@@ -60,12 +61,12 @@ impl Artifact {
         }
     }
 
-    fn parse_path(path: &Path) -> Result<(PackageName, PackageVersion)> {
+    fn parse_path(root: &Path, path: &Path) -> Result<(PackageName, PackageVersion)> {
         path.file_stem()
-            .ok_or_else(|| anyhow!("Cannot get filename from {}", path.display()))?
+            .ok_or_else(|| anyhow!("Cannot get filename from {}", (root.join(path)).display()))?
             .to_owned()
             .into_string()
-            .map_err(|_| anyhow!("Internal conversion of '{}' to UTF-8", path.display()))
+            .map_err(|_| anyhow!("Internal conversion of '{}' to UTF-8", (root.join(path)).display()))
             .and_then(|s| Self::parser().parse(s.as_bytes()).map_err(Error::from))
     }
 
@@ -108,7 +109,8 @@ mod tests {
     #[test]
     fn test_parser_one_letter_name() {
         let p = PathBuf::from("a-1.ext");
-        let r = Artifact::parse_path(&p);
+        let root = PathBuf::from("/");
+        let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -120,7 +122,8 @@ mod tests {
     #[test]
     fn test_parser_multi_letter_name() {
         let p = PathBuf::from("foo-1.ext");
-        let r = Artifact::parse_path(&p);
+        let root = PathBuf::from("/");
+        let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -132,7 +135,8 @@ mod tests {
     #[test]
     fn test_parser_multi_char_version() {
         let p = PathBuf::from("foo-1123.ext");
-        let r = Artifact::parse_path(&p);
+        let root = PathBuf::from("/");
+        let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -144,7 +148,8 @@ mod tests {
     #[test]
     fn test_parser_multi_char_version_dashed() {
         let p = PathBuf::from("foo-1-1-2-3.ext");
-        let r = Artifact::parse_path(&p);
+        let root = PathBuf::from("/");
+        let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -156,7 +161,8 @@ mod tests {
     #[test]
     fn test_parser_multi_char_version_dashed_and_dotted() {
         let p = PathBuf::from("foo-1-1.2-3.ext");
-        let r = Artifact::parse_path(&p);
+        let root = PathBuf::from("/");
+        let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -168,7 +174,8 @@ mod tests {
     #[test]
     fn test_parser_alnum_version() {
         let p = PathBuf::from("foo-1-1.2a3.ext");
-        let r = Artifact::parse_path(&p);
+        let root = PathBuf::from("/");
+        let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -180,7 +187,8 @@ mod tests {
     #[test]
     fn test_parser_package_name_with_number() {
         let p = PathBuf::from("foo2-1-1.2a3.ext");
-        let r = Artifact::parse_path(&p);
+        let root = PathBuf::from("/");
+        let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();

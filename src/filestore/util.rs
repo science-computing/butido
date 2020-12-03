@@ -40,7 +40,8 @@ impl FileStoreImpl {
                 .map_ok(|f| f.path().to_path_buf())
                 .and_then_ok(|pb| {
                     progress.tick();
-                    Artifact::load(&pb).map(|a| (pb, a))
+                    let p = pb.strip_prefix(root)?;
+                    Artifact::load(root, &p).map(|a| (pb, a))
                 })
                 .collect::<Result<BTreeMap<PathBuf, Artifact>>>()?;
 
@@ -69,7 +70,8 @@ impl FileStoreImpl {
             if self.store.get(pb).is_some() {
                 Err(anyhow!("Entry exists: {}", pb.display()))
             } else {
-                Ok(self.store.entry(pb.to_path_buf()).or_insert(Artifact::load(pb)?))
+                let p = pb.strip_prefix(&self.root)?;
+                Ok(self.store.entry(pb.to_path_buf()).or_insert(Artifact::load(&self.root, p)?))
             }
         }
     }

@@ -51,7 +51,6 @@ impl StagingStore {
                         let p = ent?.path().context("Getting path of TAR entry")?.into_owned();
                         Ok(p)
                     })
-                    .map_ok(|path| dest.join(path))
                     .inspect(|p| trace!("Path in tar archive: {:?}", p))
                     .collect::<Result<Vec<_>>>()
                     .context("Collecting outputs of TAR archive")?;
@@ -67,13 +66,14 @@ impl StagingStore {
             .into_iter()
             .inspect(|p| trace!("Trying to load into staging store: {}", p.display()))
             .filter_map(|path| {
-                if path.is_dir() {
+                let fullpath = self.0.root.join(&path);
+                if fullpath.is_dir() {
                     None
                 } else {
                     Some({
-                        self.0.load_from_path(&path)
-                            .inspect(|r| trace!("Loading from path = {:?}", r))
-                            .with_context(|| anyhow!("Loading from path: {}", path.display()))
+                        self.0.load_from_path(&fullpath)
+                            .inspect(|r| trace!("Loaded from path {} = {:?}", fullpath.display(), r))
+                            .with_context(|| anyhow!("Loading from path: {}", fullpath.display()))
                             .map_err(Error::from)
                             .map(|art| art.path().clone())
                     })
