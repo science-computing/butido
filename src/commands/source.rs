@@ -16,7 +16,7 @@ use crate::repository::Repository;
 use crate::source::*;
 use crate::util::progress::ProgressBars;
 
-pub async fn source<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository, progressbars: ProgressBars) -> Result<()> {
+pub async fn source(matches: &ArgMatches, config: &Configuration, repo: Repository, progressbars: ProgressBars) -> Result<()> {
     match matches.subcommand() {
         Some(("verify", matches))       => verify(matches, config, repo).await,
         Some(("list-missing", matches)) => list_missing(matches, config, repo).await,
@@ -27,7 +27,7 @@ pub async fn source<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: 
     }
 }
 
-pub async fn verify<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
+pub async fn verify(matches: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
     let source_cache_root = PathBuf::from(config.source_cache_root());
     let sc                = SourceCache::new(source_cache_root);
     let pname             = matches.value_of("package_name").map(String::from).map(PackageName::from);
@@ -72,7 +72,7 @@ pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCac
     }
 }
 
-pub async fn list_missing<'a>(_: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
+pub async fn list_missing(_: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
     let sc          = SourceCache::new(PathBuf::from(config.source_cache_root()));
     let out         = std::io::stdout();
     let mut outlock = out.lock();
@@ -90,7 +90,7 @@ pub async fn list_missing<'a>(_: &ArgMatches, config: &Configuration<'a>, repo: 
         .collect()
 }
 
-pub async fn url<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
+pub async fn url(matches: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
     let out         = std::io::stdout();
     let mut outlock = out.lock();
 
@@ -109,7 +109,7 @@ pub async fn url<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Rep
         .collect()
 }
 
-pub async fn download<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository, progressbars: ProgressBars) -> Result<()> {
+pub async fn download(matches: &ArgMatches, config: &Configuration, repo: Repository, progressbars: ProgressBars) -> Result<()> {
     let force = matches.is_present("force");
     let cache = PathBuf::from(config.source_cache_root());
     let sc    = SourceCache::new(cache);

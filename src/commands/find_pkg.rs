@@ -6,7 +6,7 @@ use crate::config::Configuration;
 use crate::package::Package;
 use crate::repository::Repository;
 
-pub async fn find_pkg<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Repository) -> Result<()> {
+pub async fn find_pkg(matches: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
     use filters::filter::Filter;
     use std::io::Write;
 

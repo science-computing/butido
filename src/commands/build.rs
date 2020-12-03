@@ -27,10 +27,10 @@ use crate::source::SourceCache;
 use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
 
-pub async fn build<'a>(matches: &ArgMatches,
+pub async fn build(matches: &ArgMatches,
                progressbars: ProgressBars,
                database_connection: PgConnection,
-               config: &Configuration<'a>,
+               config: &Configuration,
                repo: Repository,
                repo_path: &Path,
                max_packages: u64)
@@ -116,8 +116,7 @@ pub async fn build<'a>(matches: &ArgMatches,
         let bar_release_loading = progressbars.release_loading();
         bar_release_loading.set_length(max_packages);
 
-        let variables = BTreeMap::new();
-        let p = config.releases_directory(&variables)?;
+        let p = config.releases_directory();
         debug!("Loading release directory: {}", p.display());
         let r = ReleaseStore::load(&p, bar_release_loading.clone());
         if r.is_ok() {
@@ -132,13 +131,11 @@ pub async fn build<'a>(matches: &ArgMatches,
         let bar_staging_loading = progressbars.staging_loading();
         bar_staging_loading.set_length(max_packages);
 
-        let variables = BTreeMap::new();
         let p = if let Some(staging_dir) = matches.value_of("staging_dir").map(PathBuf::from) {
             info!("Setting staging dir to {} for this run", staging_dir.display());
             staging_dir
         } else {
-            config.staging_directory(&variables)?
-                .join(uuid::Uuid::new_v4().hyphenated().to_string())
+            config.staging_directory().join(uuid::Uuid::new_v4().hyphenated().to_string())
         };
 
         if !p.is_dir() {

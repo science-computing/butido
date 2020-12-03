@@ -25,7 +25,7 @@ use crate::db::models;
 use crate::log::LogItem;
 use crate::schema;
 
-pub fn db<'a>(db_connection_config: DbConnectionConfig, config: &Configuration<'a>, matches: &ArgMatches) -> Result<()> {
+pub fn db(db_connection_config: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
         Some(("cli", matches))        => cli(db_connection_config, matches),
         Some(("artifacts", matches))  => artifacts(db_connection_config, matches),
@@ -271,7 +271,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &ArgMatches) -> Result<()> {
+fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
 
     let highlighting_disabled = matches.is_present("script_disable_highlighting");
     let configured_theme      = config.script_highlight_theme();

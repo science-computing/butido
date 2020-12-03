@@ -28,10 +28,12 @@ pub struct NotValidatedConfiguration {
     script_highlight_theme: Option<String>,
 
     #[serde(rename = "releases")]
-    releases_directory: String,
+    #[getset(get = "pub")]
+    releases_directory: PathBuf,
 
     #[serde(rename = "staging")]
-    staging_directory: String,
+    #[getset(get = "pub")]
+    staging_directory: PathBuf,
 
     #[serde(rename = "source_cache")]
     #[getset(get = "pub")]
@@ -67,8 +69,8 @@ pub struct NotValidatedConfiguration {
     available_phases: Vec<PhaseName>,
 }
 
-impl<'reg> NotValidatedConfiguration {
-    pub fn validate(self) -> Result<Configuration<'reg>> {
+impl NotValidatedConfiguration {
+    pub fn validate(self) -> Result<Configuration> {
         // TODO: Implement proper validation
         if let Some(configured_theme) = self.script_highlight_theme.as_ref() {
             let allowed_theme_present = [
@@ -86,17 +88,7 @@ impl<'reg> NotValidatedConfiguration {
             }
         }
 
-        let hb = {
-            let mut hb = Handlebars::new();
-            hb.register_template_string("releases", &self.releases_directory)?;
-            hb.register_template_string("staging", &self.staging_directory)?;
-            hb
-        };
-
-        Ok(Configuration {
-            inner: self,
-            hb,
-        })
+        Ok(Configuration { inner: self })
     }
 }
 
