@@ -153,6 +153,8 @@ impl Tree {
 mod tests {
     use super::*;
 
+    use std::collections::BTreeMap;
+
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
     use crate::package::tests::package;
