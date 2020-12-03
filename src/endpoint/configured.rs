@@ -34,9 +34,6 @@ pub struct Endpoint {
     docker: Docker,
 
     #[getset(get_copy = "pub")]
-    speed: usize,
-
-    #[getset(get_copy = "pub")]
     num_max_jobs: usize,
 
     #[getset(get = "pub")]
@@ -84,7 +81,6 @@ impl Endpoint {
                             .name(ep.name().clone())
                             .uri(ep.uri().clone())
                             .docker(docker)
-                            .speed(ep.speed())
                             .num_max_jobs(ep.maxjobs())
                             .build()
                     })
@@ -95,7 +91,6 @@ impl Endpoint {
                     Endpoint::builder()
                         .name(ep.name().clone())
                         .uri(ep.uri().clone())
-                        .speed(ep.speed())
                         .num_max_jobs(ep.maxjobs())
                         .docker(shiplift::Docker::unix(ep.uri()))
                         .build()
