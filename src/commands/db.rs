@@ -133,31 +133,27 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::artifacts::dsl;
 
     let csv  = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "path"]);
+    let hdrs = mk_header(vec!["id", "path", "released", "job id"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let data = matches.value_of("job_uuid")
         .map(uuid::Uuid::parse_str)
         .transpose()?
         .map(|job_uuid| -> Result<_> {
-            Ok({
-                dsl::artifacts
-                    .inner_join(schema::jobs::table)
-                    .filter(schema::jobs::dsl::uuid.eq(job_uuid))
-                    .load::<(models::Artifact, models::Job)>(&conn)?
-                    .into_iter()
-                    .map(|(artifact, _)| vec![format!("{}", artifact.id), artifact.path])
-                    .collect::<Vec<_>>()
-            })
+            dsl::artifacts
+                .inner_join(schema::jobs::table)
+                .filter(schema::jobs::dsl::uuid.eq(job_uuid))
+                .load::<(models::Artifact, models::Job)>(&conn)
+                .map_err(Error::from)
         })
         .unwrap_or_else(|| {
-            Ok({
-                dsl::artifacts
-                    .load::<models::Artifact>(&conn)?
-                    .into_iter()
-                    .map(|artifact| vec![format!("{}", artifact.id), artifact.path])
-                    .collect::<Vec<_>>()
-            })
-        })?;
+            dsl::artifacts
+                .inner_join(schema::jobs::table)
+                .load::<(models::Artifact, models::Job)>(&conn)
+                .map_err(Error::from)
+        })?
+        .into_iter()
+        .map(|(artifact, job)| vec![format!("{}", artifact.id), artifact.path, artifact.released.to_string(), job.uuid.to_string()])
+        .collect::<Vec<_>>();
 
     if data.is_empty() {
         info!("No artifacts in database");
