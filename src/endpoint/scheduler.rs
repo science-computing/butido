@@ -15,6 +15,7 @@ use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver;
 use uuid::Uuid;
 
+use crate::db::models as dbmodels;
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::StagingStore;
@@ -129,7 +130,7 @@ impl std::fmt::Debug for JobHandle {
 }
 
 impl JobHandle {
-    pub async fn run(self) -> RResult<Vec<PathBuf>, ContainerError> {
+    pub async fn run(self) -> RResult<Vec<dbmodels::Artifact>, ContainerError> {
         use crate::db::models as dbmodels;
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let ep = self.endpoint
@@ -191,7 +192,12 @@ impl JobHandle {
             let _ = dbmodels::JobEnv::create(&self.db, &job, &env)?;
         }
 
-        Ok(paths)
+        // Have to do it the ugly way here because of borrowing semantics
+        let mut r = vec![];
+        for p in paths.iter() {
+            r.push(dbmodels::Artifact::create(&self.db, p, false, &job)?);
+        }
+        Ok(r)
     }
 
 }

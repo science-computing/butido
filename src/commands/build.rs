@@ -238,6 +238,6 @@ pub async fn build(matches: &ArgMatches,
 
     writeln!(outlock, "Packages created:")?;
     res.into_iter()
-        .map(|path| writeln!(outlock, "-> {}", path.display()).map_err(Error::from))
+        .map(|artifact| writeln!(outlock, "-> {}", artifact.path_buf().display()).map_err(Error::from))
         .collect::<Result<_>>()
 }
