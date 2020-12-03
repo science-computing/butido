@@ -127,7 +127,7 @@ pub async fn build(matches: &ArgMatches,
         r.map(RwLock::new).map(Arc::new)?
     };
 
-    let staging_dir = {
+    let (staging_store, staging_dir) = {
         let bar_staging_loading = progressbars.staging_loading();
         bar_staging_loading.set_length(max_packages);
 
@@ -149,7 +149,9 @@ pub async fn build(matches: &ArgMatches,
         } else {
             bar_staging_loading.finish_with_message("Failed to load staging");
         }
-        r.map(RwLock::new).map(Arc::new)?
+        r.map(RwLock::new)
+            .map(Arc::new)
+            .map(|store| (store, p))?
     };
 
     let tree = {
@@ -219,7 +221,7 @@ pub async fn build(matches: &ArgMatches,
     let orch = OrchestratorSetup::builder()
         .progress_generator(progressbars)
         .endpoint_config(endpoint_configurations)
-        .staging_store(staging_dir)
+        .staging_store(staging_store)
         .release_store(release_dir)
         .database(database_connection)
         .source_cache(source_cache)
@@ -238,6 +240,6 @@ pub async fn build(matches: &ArgMatches,
 
     writeln!(outlock, "Packages created:")?;
     res.into_iter()
-        .map(|artifact| writeln!(outlock, "-> {}", artifact.path_buf().display()).map_err(Error::from))
+        .map(|artifact| writeln!(outlock, "-> {}", staging_dir.join(artifact.path).display()).map_err(Error::from))
         .collect::<Result<_>>()
 }
