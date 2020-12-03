@@ -22,7 +22,6 @@ use crate::filestore::MergedStores;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 use crate::job::JobSet;
-use crate::log::FileLogSinkFactory;
 use crate::log::LogItem;
 use crate::source::SourceCache;
 use crate::util::progress::ProgressBars;
