@@ -48,7 +48,7 @@ syntect     = "4.4"
 thiserror   = "1"
 
 url      = { version = "2", features = ["serde"] }
-tokio    = { version = "0.2", features = ["full"] }
+tokio    = { version = "0.2", features = ["macros", "fs"] }
 shiplift = { git = "https://github.com/softprops/shiplift", branch = "master" }
 
 
