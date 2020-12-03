@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -7,9 +8,9 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
+use colored::Colorize;
 use diesel::BelongingToDsl;
 use diesel::ExpressionMethods;
-use diesel::JoinOnDsl;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
@@ -22,6 +23,7 @@ use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
 use crate::db::models;
 use crate::log::LogItem;
+use crate::schema;
 
 pub fn db<'a>(db_connection_config: DbConnectionConfig, config: &Configuration<'a>, matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
@@ -227,9 +229,6 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .map(uuid::Uuid::parse_str)
         .transpose()?
         .map(|submit_uuid| {
-            use crate::schema;
-            use diesel::BelongingToDsl;
-
             let submit = models::Submit::with_id(&conn, &submit_uuid)?;
 
             models::Job::belonging_to(&submit)
@@ -273,10 +272,6 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 }
 
 fn job<'a>(conn_cfg: DbConnectionConfig, config: &Configuration<'a>, matches: &ArgMatches) -> Result<()> {
-    use std::io::Write;
-    use colored::Colorize;
-    use crate::schema;
-    use crate::schema::jobs::dsl;
 
     let highlighting_disabled = matches.is_present("script_disable_highlighting");
     let configured_theme      = config.script_highlight_theme();
@@ -420,8 +415,6 @@ fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
 /// Display the passed data as nice ascii table,
 /// or, if stdout is a pipe, print it nicely parseable
 fn display_data<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>, csv: bool) -> Result<()> {
-    use std::io::Write;
-
     if csv {
          use csv::WriterBuilder;
          let mut wtr = WriterBuilder::new().from_writer(vec![]);

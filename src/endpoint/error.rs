@@ -1,7 +1,6 @@
 use thiserror::Error as ThisError;
 
 use crate::util::docker::ContainerHash;
-use crate::package::Script;
 
 #[derive(ThisError, Debug)]
 pub enum ContainerError {

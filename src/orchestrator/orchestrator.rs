@@ -8,11 +8,8 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
-use indicatif::ProgressBar;
 use tokio::sync::RwLock;
-use tokio::sync::mpsc::UnboundedReceiver;
 use typed_builder::TypedBuilder;
-use uuid::Uuid;
 
 use crate::db::models::Submit;
 use crate::endpoint::ContainerError;
@@ -22,19 +19,15 @@ use crate::filestore::MergedStores;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 use crate::job::JobSet;
-use crate::log::FileLogSinkFactory;
-use crate::log::LogItem;
 use crate::source::SourceCache;
 use crate::util::progress::ProgressBars;
 
 pub struct Orchestrator {
-    progress_generator: ProgressBars,
     scheduler: EndpointScheduler,
     staging_store: Arc<RwLock<StagingStore>>,
     release_store: Arc<RwLock<ReleaseStore>>,
     source_cache: SourceCache,
     jobsets: Vec<JobSet>,
-    database: Arc<PgConnection>,
 }
 
 #[derive(TypedBuilder)]
@@ -54,16 +47,14 @@ pub struct OrchestratorSetup {
 impl OrchestratorSetup {
     pub async fn setup(self) -> Result<Orchestrator> {
         let db = Arc::new(self.database);
-        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db.clone(), self.progress_generator.clone(), self.submit.clone(), self.log_dir, self.additional_env).await?;
+        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db, self.progress_generator, self.submit.clone(), self.log_dir, self.additional_env).await?;
 
         Ok(Orchestrator {
-            progress_generator:    self.progress_generator,
             scheduler:             scheduler,
             staging_store:         self.staging_store,
             release_store:         self.release_store,
             source_cache:          self.source_cache,
             jobsets:               self.jobsets,
-            database:              db,
         })
     }
 }
@@ -74,10 +65,8 @@ impl Orchestrator {
         use tokio::stream::StreamExt;
 
         let mut report_result = vec![];
-        let number_of_jobsets = self.jobsets.len();
-        let database = self.database;
 
-        for (i, jobset) in self.jobsets.into_iter().enumerate() {
+        for jobset in self.jobsets.into_iter() {
             let merged_store = MergedStores::new(self.release_store.clone(), self.staging_store.clone());
 
             let multibar = Arc::new(indicatif::MultiProgress::new());

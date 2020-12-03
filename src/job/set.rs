@@ -1,5 +1,4 @@
 use anyhow::Result;
-use futures::future::Future;
 use tokio::stream::StreamExt;
 
 use crate::filestore::MergedStores;
@@ -32,10 +31,6 @@ impl JobSet {
             .collect::<futures::stream::FuturesUnordered<_>>()
             .collect::<Result<Vec<RunnableJob>>>()
             .await
-    }
-
-    pub fn len(&self) -> usize {
-        self.set.len()
     }
 
 }

@@ -7,7 +7,6 @@ use anyhow::anyhow;
 use clap::ArgMatches;
 use tokio::stream::StreamExt;
 use tokio::io::AsyncWriteExt;
-use futures::TryStreamExt;
 
 use crate::config::*;
 use crate::package::PackageName;

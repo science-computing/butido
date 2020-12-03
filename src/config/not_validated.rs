@@ -79,7 +79,7 @@ impl<'reg> NotValidatedConfiguration {
                 "InspiredGitHub",
                 "Solarized (dark)",
                 "Solarized (light)",
-            ].into_iter().any(|allowed_theme| configured_theme == *allowed_theme);
+            ].iter().any(|allowed_theme| configured_theme == *allowed_theme);
 
             if !allowed_theme_present {
                 return Err(anyhow!("Theme not known: {}", configured_theme))

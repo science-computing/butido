@@ -8,22 +8,25 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
+use futures::FutureExt;
 use getset::{Getters, CopyGetters};
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
+use tokio::stream::StreamExt;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
 use typed_builder::TypedBuilder;
 
+use crate::endpoint::ContainerError;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::StagingStore;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
+use crate::log::buffer_stream_to_line_stream;
 use crate::package::Script;
 use crate::util::docker::ContainerHash;
 use crate::util::docker::ImageName;
-use crate::endpoint::ContainerError;
 
 #[derive(Getters, CopyGetters, TypedBuilder)]
 pub struct Endpoint {
@@ -32,9 +35,6 @@ pub struct Endpoint {
 
     #[getset(get = "pub")]
     docker: Docker,
-
-    #[getset(get_copy = "pub")]
-    speed: usize,
 
     #[getset(get_copy = "pub")]
     num_max_jobs: usize,
@@ -84,7 +84,6 @@ impl Endpoint {
                             .name(ep.name().clone())
                             .uri(ep.uri().clone())
                             .docker(docker)
-                            .speed(ep.speed())
                             .num_max_jobs(ep.maxjobs())
                             .build()
                     })
@@ -95,7 +94,6 @@ impl Endpoint {
                     Endpoint::builder()
                         .name(ep.name().clone())
                         .uri(ep.uri().clone())
-                        .speed(ep.speed())
                         .num_max_jobs(ep.maxjobs())
                         .docker(shiplift::Docker::unix(ep.uri()))
                         .build()
@@ -177,9 +175,6 @@ impl Endpoint {
     }
 
     pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>, additional_env: Vec<(String, String)>) -> RResult<(Vec<PathBuf>, ContainerHash, Script), ContainerError> {
-        use crate::log::buffer_stream_to_line_stream;
-        use tokio::stream::StreamExt;
-        use futures::FutureExt;
 
         let (container_id, _warnings) = {
             let envs = job.environment()
@@ -292,7 +287,6 @@ impl Endpoint {
             .inspect(|r| { trace!("Starting container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Starting the container {} on '{}'", container_id, self.name)))
             .then(|_| {
-                use futures::FutureExt;
                 trace!("Moving logs to log sink for container {}", container_id);
                 buffer_stream_to_line_stream(container.exec(&exec_opts))
                     .map(|line| {

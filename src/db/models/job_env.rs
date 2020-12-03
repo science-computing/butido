@@ -2,7 +2,6 @@ use anyhow::Result;
 use diesel::PgConnection;
 use diesel::prelude::*;
 
-use crate::schema::job_envs::*;
 use crate::schema::job_envs;
 use crate::db::models::Job;
 use crate::db::models::EnvVar;
