@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Error;
@@ -29,6 +30,10 @@ struct NewArtifact<'a> {
 }
 
 impl Artifact {
+    pub fn path_buf(&self) -> PathBuf {
+        PathBuf::from(&self.path)
+    }
+
     pub fn create(database_connection: &PgConnection, art_path: &Path, art_released: bool, job: &Job) -> Result<Artifact> {
         let path_str = art_path.to_str()
                 .ok_or_else(|| anyhow!("Path is not valid UTF-8: {}",  art_path.display()))
