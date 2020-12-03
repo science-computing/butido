@@ -3,6 +3,7 @@ table! {
         id -> Int4,
         path -> Varchar,
         released -> Bool,
+        job_id -> Int4,
     }
 }
 
@@ -101,6 +102,7 @@ table! {
     }
 }
 
+joinable!(artifacts -> jobs (job_id));
 joinable!(job_envs -> envvars (env_id));
 joinable!(job_envs -> jobs (job_id));
 joinable!(job_input_artifacts -> artifacts (artifact_id));
