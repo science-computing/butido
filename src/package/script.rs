@@ -77,6 +77,6 @@ impl<'a> ScriptBuilder<'a> {
     fn interpolate_package(script: String, package: &Package) -> Result<String> {
         let mut hb = Handlebars::new();
         hb.register_template_string("script", script)?;
-        hb.render("releases", package).map_err(Error::from)
+        hb.render("script", package).map_err(Error::from)
     }
 }
