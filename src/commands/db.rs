@@ -135,11 +135,29 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     let csv  = matches.is_present("csv");
     let hdrs = mk_header(vec!["id", "path"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
-    let data = dsl::artifacts
-        .load::<models::Artifact>(&conn)?
-        .into_iter()
-        .map(|artifact| vec![format!("{}", artifact.id), artifact.path])
-        .collect::<Vec<_>>();
+    let data = matches.value_of("job_uuid")
+        .map(uuid::Uuid::parse_str)
+        .transpose()?
+        .map(|job_uuid| -> Result<_> {
+            Ok({
+                dsl::artifacts
+                    .inner_join(schema::jobs::table)
+                    .filter(schema::jobs::dsl::uuid.eq(job_uuid))
+                    .load::<(models::Artifact, models::Job)>(&conn)?
+                    .into_iter()
+                    .map(|(artifact, _)| vec![format!("{}", artifact.id), artifact.path])
+                    .collect::<Vec<_>>()
+            })
+        })
+        .unwrap_or_else(|| {
+            Ok({
+                dsl::artifacts
+                    .load::<models::Artifact>(&conn)?
+                    .into_iter()
+                    .map(|artifact| vec![format!("{}", artifact.id), artifact.path])
+                    .collect::<Vec<_>>()
+            })
+        })?;
 
     if data.is_empty() {
         info!("No artifacts in database");
