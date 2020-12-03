@@ -1,4 +1,6 @@
+use anyhow::Error;
 use anyhow::Result;
+use handlebars::Handlebars;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -69,6 +71,12 @@ impl<'a> ScriptBuilder<'a> {
             }
         }
 
-        Ok(Script(script))
+        Self::interpolate_package(script, package).map(Script)
+    }
+
+    fn interpolate_package(script: String, package: &Package) -> Result<String> {
+        let mut hb = Handlebars::new();
+        hb.register_template_string("script", script)?;
+        hb.render("releases", package).map_err(Error::from)
     }
 }
