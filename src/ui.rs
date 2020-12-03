@@ -61,56 +61,23 @@ fn print_package(out: &mut dyn Write,
     -> Result<()>
 {
     let mut data = BTreeMap::new();
-    data.insert("i", i.to_string());
-    data.insert("name",             format!("{}", package.name()));
-    data.insert("version",          format!("{}", package.version()));
-    data.insert("source_url",       format!("{}", package.source().url()));
-    data.insert("source_hash_type", format!("{}", package.source().hash().hashtype()));
-    data.insert("source_hash",      format!("{}", package.source().hash().value()));
+    data.insert("i", serde_json::Value::Number(serde_json::Number::from(i)));
+    data.insert("p", serde_json::to_value(package)?);
 
     // This is an ugly hack. Because the `data` is a <String, String>, we do only insert the flag
     // if it is set, because handlebars renders a non-present value as false
     if print_runtime_deps {
-        data.insert("print_runtime_deps",     format!("{}", print_runtime_deps));
+        data.insert("print_runtime_deps", serde_json::Value::Bool(print_runtime_deps));
     }
     if print_build_deps {
-        data.insert("print_build_deps",       format!("{}", print_build_deps));
+        data.insert("print_build_deps", serde_json::Value::Bool(print_build_deps));
     }
     if print_sys_deps {
-        data.insert("print_system_deps",         format!("{}", print_sys_deps));
+        data.insert("print_system_deps", serde_json::Value::Bool(print_sys_deps));
     }
     if print_sys_runtime_deps {
-        data.insert("print_system_runtime_deps", format!("{}", print_sys_runtime_deps));
+        data.insert("print_system_runtime_deps", serde_json::Value::Bool(print_sys_runtime_deps));
     }
-
-    data.insert("runtime_deps",     {
-        format!("[{}]", package.dependencies()
-                .runtime()
-                .iter()
-                .map(|p| p.as_ref())
-                .join(", "))
-    });
-    data.insert("build_deps",     {
-        format!("[{}]", package.dependencies()
-                .build()
-                .iter()
-                .map(|p| p.as_ref())
-                .join(", "))
-    });
-    data.insert("system_deps",     {
-        format!("[{}]", package.dependencies()
-                .system()
-                .iter()
-                .map(|p| p.as_ref())
-                .join(", "))
-    });
-    data.insert("system_runtime_deps",     {
-        format!("[{}]", package.dependencies()
-                .system_runtime()
-                .iter()
-                .map(|p| p.as_ref())
-                .join(", "))
-    });
 
     hb.render("package", &data)
         .map_err(Error::from)

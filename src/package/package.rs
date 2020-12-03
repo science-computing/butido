@@ -26,7 +26,7 @@ pub struct Package {
     version_is_semver: bool,
 
     #[getset(get = "pub")]
-    source: Source,
+    sources: Vec<Source>,
 
     #[getset(get = "pub")]
     dependencies: Dependencies,
@@ -53,12 +53,12 @@ pub struct Package {
 impl Package {
 
     #[cfg(test)]
-    pub fn new(name: PackageName, version: PackageVersion, version_is_semver: bool, source: Source, dependencies: Dependencies) -> Self {
+    pub fn new(name: PackageName, version: PackageVersion, version_is_semver: bool, sources: Vec<Source>, dependencies: Dependencies) -> Self {
         Package {
             name,
             version,
             version_is_semver,
-            source,
+            sources,
             dependencies,
             patches: vec![],
             environment: None,
@@ -216,13 +216,13 @@ pub mod tests {
         let name    = pname(name);
         let version = pversion(vers);
         let version_is_semver = false;
-        let source = {
+        let sources = {
             let url       = Url::parse(srcurl).unwrap();
             let hashvalue = HashValue::from(String::from(hash));
-            Source::new(url, SourceHash::new(HashType::Sha1, hashvalue))
+            vec![Source::new(url, SourceHash::new(HashType::Sha1, hashvalue))]
         };
         let dependencies = Dependencies::empty();
-        Package::new(name, version, version_is_semver, source, dependencies)
+        Package::new(name, version, version_is_semver, sources, dependencies)
     }
 
 }

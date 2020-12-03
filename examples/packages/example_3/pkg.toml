@@ -4,7 +4,7 @@ version_is_semver = false
 # no patches by default
 patches = []
 
-[source]
+[[sources]]
 url       = "https://github.com/user/repo/archive/sources.tar.gz"
 hash.type = "sha1"
 hash.hash = "5e8bcaa3c758f84f01935a914e2bbf01309462ae"

@@ -19,7 +19,7 @@ impl SourceCache {
         SourceCache { root }
     }
 
-    pub fn source_for(&self, p: &Package) -> SourceEntry {
+    pub fn sources_for(&self, p: &Package) -> Vec<SourceEntry> {
         SourceEntry::for_package(self.root.clone(), p)
     }
 }
@@ -30,29 +30,35 @@ pub struct SourceEntry {
     package_name: PackageName,
     package_version: PackageVersion,
     package_source: Source,
-    package_source_path: PathBuf,
 }
 
 impl SourceEntry {
 
-    fn for_package(cache_root: PathBuf, package: &Package) -> Self {
-        let package_source_path = cache_root.join(format!("{}-{}.source", package.name(), package.version()));
+    fn source_file_path(&self) -> PathBuf {
+        self.cache_root.join(format!("{}-{}/{}.source", self.package_name, self.package_version, self.package_source.hash().value()))
+    }
 
-        SourceEntry {
-            cache_root,
-            package_name: package.name().clone(),
-            package_version: package.version().clone(),
-            package_source: package.source().clone(),
-            package_source_path
-        }
+    fn for_package(cache_root: PathBuf, package: &Package) -> Vec<Self> {
+        package.sources()
+            .clone()
+            .into_iter()
+            .map(|source| {
+                SourceEntry {
+                    cache_root: cache_root.clone(),
+                    package_name: package.name().clone(),
+                    package_version: package.version().clone(),
+                    package_source: source,
+                }
+            })
+            .collect()
     }
 
     pub fn exists(&self) -> bool {
-        self.package_source_path.exists()
+        self.source_file_path().exists()
     }
 
-    pub fn path(&self) -> &PathBuf {
-        &self.package_source_path
+    pub fn path(&self) -> PathBuf {
+        self.source_file_path()
     }
 
     pub fn url(&self) -> &Url {
@@ -60,41 +66,50 @@ impl SourceEntry {
     }
 
     pub async fn remove_file(&self) -> Result<()> {
-        tokio::fs::remove_file(&self.package_source_path).await.map_err(Error::from)
+        let p = self.source_file_path();
+        tokio::fs::remove_file(&p).await?;
+        Ok(())
     }
 
     pub async fn verify_hash(&self) -> Result<bool> {
         use tokio::io::AsyncReadExt;
 
+        let p = self.source_file_path();
         let mut buf = vec![];
         tokio::fs::OpenOptions::new()
             .create(false)
             .create_new(false)
             .read(true)
-            .open(&self.package_source_path)
+            .open(&p)
             .await?
             .read_to_end(&mut buf)
             .await?;
 
-        self.package_source.hash().matches_hash_of(&buf)
+        self.package_source
+            .hash()
+            .matches_hash_of(&buf)
     }
 
     pub async fn open(&self) -> Result<tokio::fs::File> {
+        let p = self.source_file_path();
+
         tokio::fs::OpenOptions::new()
             .create(false)
             .create_new(false)
             .read(true)
-            .open(&self.package_source_path)
+            .open(&p)
             .await
             .map_err(Error::from)
     }
 
     pub async fn create(&self) -> Result<tokio::fs::File> {
+        let p = self.source_file_path();
+
         tokio::fs::OpenOptions::new()
             .create(true)
             .create_new(true)
             .write(true)
-            .open(&self.package_source_path)
+            .open(&p)
             .await
             .map_err(Error::from)
     }

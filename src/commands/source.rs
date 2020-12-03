@@ -36,22 +36,24 @@ pub async fn verify<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: 
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true))
         .map(|p| {
-            let source = sc.source_for(p);
-            async move {
-                let out = std::io::stdout();
-                if source.exists() {
-                    if source.verify_hash().await? {
-                        writeln!(out.lock(), "Ok: {}", source.path().display())?;
+            sc.sources_for(p)
+                .into_iter()
+                .map(|source| async move {
+                    let path = source.path();
+                    let mut out = std::io::stdout();
+                    if path.exists() {
+                        if source.verify_hash().await? {
+                            writeln!(out, "Ok: {}", source.path().display())
+                        } else {
+                            writeln!(out, "Hash Mismatch: {}", source.path().display())
+                        }
                     } else {
-                        writeln!(out.lock(), "Hash Mismatch: {}", source.path().display())?;
+                        writeln!(out, "Source missing: {}", source.path().display())
                     }
-                } else {
-                    writeln!(out.lock(), "Source missing: {}", source.path().display())?;
-                }
-
-                Ok(())
-            }
+                    .map_err(Error::from)
+                })
         })
+        .flatten()
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Result<()>>()
         .await
@@ -64,9 +66,10 @@ pub async fn list_missing<'a>(_: &ArgMatches, config: &Configuration<'a>, repo: 
 
     repo.packages()
         .map(|p| {
-            let s = sc.source_for(p);
-            if !s.exists() {
-                writeln!(outlock, "{} {} -> {}", p.name(), p.version(), s.path().display())?;
+            for source in sc.sources_for(p) {
+                if !source.exists() {
+                    writeln!(outlock, "{} {} -> {}", p.name(), p.version(), source.path().display())?;
+                }
             }
 
             Ok(())
@@ -84,7 +87,12 @@ pub async fn url<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo: Rep
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true))
-        .map(|p| writeln!(outlock, "{} {} -> {}", p.name(), p.version(), p.source().url()).map_err(Error::from))
+        .map(|p| {
+            p.sources()
+                .iter()
+                .map(|source| writeln!(outlock, "{} {} -> {}", p.name(), p.version(), source.url()).map_err(Error::from))
+                .collect()
+        })
         .collect()
 }
 
@@ -100,36 +108,40 @@ pub async fn download<'a>(matches: &ArgMatches, config: &Configuration<'a>, repo
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true))
         .map(|p| {
-            let source = sc.source_for(p);
-            let bar = multi.add(progressbars.download_bar(source.url()));
-            async move {
-                if source.exists() && !force {
-                    Err(anyhow!("Source exists: {}", source.path().display()))
-                } else {
-                    if source.exists() {
-                        let _ = source.remove_file().await?;
-                    }
+            sc.sources_for(p)
+                .into_iter()
+                .map(|source| {
+                    let bar = multi.add(progressbars.download_bar(source.url()));
+                    async move {
+                        if source.exists() && !force {
+                            Err(anyhow!("Source exists: {}", source.path().display()))
+                        } else {
+                            if source.exists() {
+                                let _ = source.remove_file().await?;
+                            }
 
-                    trace!("Starting download...");
-                    let file = source.create().await?;
-                    let mut file = tokio::io::BufWriter::new(file);
-                    let response = reqwest::get(source.url().as_ref()).await?;
-                    if let Some(len) = response.content_length() {
-                        bar.set_length(len);
-                    }
-                    let mut stream = reqwest::get(source.url().as_ref()).await?.bytes_stream();
-                    while let Some(bytes) = stream.next().await {
-                        let bytes = bytes?;
-                        file.write_all(bytes.as_ref()).await?;
-                        bar.inc(bytes.len() as u64);
-                    }
+                            trace!("Starting download...");
+                            let file = source.create().await?;
+                            let mut file = tokio::io::BufWriter::new(file);
+                            let response = reqwest::get(source.url().as_ref()).await?;
+                            if let Some(len) = response.content_length() {
+                                bar.set_length(len);
+                            }
+                            let mut stream = reqwest::get(source.url().as_ref()).await?.bytes_stream();
+                            while let Some(bytes) = stream.next().await {
+                                let bytes = bytes?;
+                                file.write_all(bytes.as_ref()).await?;
+                                bar.inc(bytes.len() as u64);
+                            }
 
-                    file.flush().await?;
-                    bar.finish_with_message("Finished download");
-                    Ok(())
-                }
-            }
+                            file.flush().await?;
+                            bar.finish_with_message("Finished download");
+                            Ok(())
+                        }
+                    }
+                })
         })
+        .flatten()
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Result<()>>()
         .await;

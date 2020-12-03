@@ -1,7 +1,7 @@
 name              = "pkgB"
 version           = "1.0.0"
 
-[source]
+[[sources]]
 url  = "http://somerandomthi.ng/foo/bar.tar.gz"
 hash.type = "sha1"
 hash.hash = "23465"

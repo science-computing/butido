@@ -80,8 +80,8 @@ impl RunnableJob {
 
     }
 
-    pub fn package_source(&self) -> SourceEntry {
-        self.source_cache.source_for(&self.package())
+    pub fn package_sources(&self) -> Vec<SourceEntry> {
+        self.source_cache.sources_for(&self.package())
     }
 
     pub fn environment(&self) -> Vec<(String, String)> {

@@ -9,6 +9,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use futures::FutureExt;
+use futures::future::TryFutureExt;
 use getset::{Getters, CopyGetters};
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
@@ -221,33 +222,39 @@ impl Endpoint {
         { // copy source to container
             use tokio::io::AsyncReadExt;
 
-            let pkgsource   = job.package_source();
-            let source_path = pkgsource.path();
-            let destination = PathBuf::from("/inputs").join({
-                source_path.file_name()
-                    .ok_or_else(|| anyhow!("Not a file: {}", source_path.display()))
-                    .with_context(|| anyhow!("Copying package source from {} to container {}", source_path.display(), self.name))?
-            });
-            trace!("Package source = {:?}", pkgsource);
-            trace!("Source path    = {:?}", source_path);
-            trace!("Source dest    = {:?}", destination);
-            let mut buf = vec![];
-            tokio::fs::OpenOptions::new()
-                .create(false)
-                .create_new(false)
-                .append(false)
-                .write(false)
-                .read(true)
-                .open(source_path)
-                .await
-                .with_context(|| anyhow!("Getting source file: {}", source_path.display()))?
-                .read_to_end(&mut buf)
-                .await
-                .with_context(|| anyhow!("Reading file {}", source_path.display()))?;
+            job.package_sources()
+                .into_iter()
+                .map(|entry| async {
+                    let source_path = entry.path();
+                    let destination = PathBuf::from("/inputs").join({
+                        source_path.file_name()
+                            .ok_or_else(|| anyhow!("Not a file: {}", source_path.display()))
+                            .with_context(|| anyhow!("Copying package source from {} to container {}", source_path.display(), self.name))?
+                    });
+                    trace!("Source path    = {:?}", source_path);
+                    trace!("Source dest    = {:?}", destination);
+                    let mut buf = vec![];
+                    tokio::fs::OpenOptions::new()
+                        .create(false)
+                        .create_new(false)
+                        .append(false)
+                        .write(false)
+                        .read(true)
+                        .open(&source_path)
+                        .await
+                        .with_context(|| anyhow!("Getting source file: {}", source_path.display()))?
+                        .read_to_end(&mut buf)
+                        .await
+                        .with_context(|| anyhow!("Reading file {}", source_path.display()))?;
 
-            let _ = container.copy_file_into(destination, &buf)
+                    drop(entry);
+                    let _ = container.copy_file_into(destination, &buf).await?;
+                    Ok(())
+                })
+                .collect::<futures::stream::FuturesUnordered<_>>()
+                .collect::<Result<()>>()
                 .await
-                .with_context(|| anyhow!("Copying {} to container {}", source_path.display(), container_id))?;
+                .with_context(|| anyhow!("Copying sources to container {}", container_id))?;
         }
         { // Copy all Path artifacts to the container
             job.resources()
