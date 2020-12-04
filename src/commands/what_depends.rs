@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use log::trace;
 use resiter::Filter;
 use resiter::Map;
 

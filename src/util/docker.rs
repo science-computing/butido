@@ -78,7 +78,8 @@ pub fn is_valid_tag_name(s: &str) -> Result<()> {
 
 #[cfg(test)]
 mod docker_test {
-    extern crate env_logger;
+    use log::debug;
+
     fn setup_logging() {
         let _ = env_logger::try_init();
     }

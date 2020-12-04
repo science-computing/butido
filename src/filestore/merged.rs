@@ -1,4 +1,6 @@
 use std::sync::Arc;
+
+use log::trace;
 use tokio::sync::RwLock;
 
 use anyhow::Result;

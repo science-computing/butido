@@ -4,7 +4,7 @@
     deprecated_in_future,
     explicit_outlives_requirements,
     keyword_idents,
-    // macro_use_extern_crate,
+    macro_use_extern_crate,
     // missing_copy_implementations,
     // missing_debug_implementations,
     non_ascii_idents,
@@ -25,7 +25,9 @@
     while_true,
 )]
 
-#[macro_use] extern crate log as logcrate;
+extern crate log as logcrate;
+
+#[allow(macro_use_extern_crate)]
 #[macro_use] extern crate diesel;
 
 use std::path::Path;

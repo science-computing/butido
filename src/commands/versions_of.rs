@@ -1,6 +1,7 @@
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
+use log::trace;
 
 use crate::package::PackageName;
 use crate::repository::Repository;

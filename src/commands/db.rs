@@ -14,6 +14,7 @@ use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
+use log::info;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{ThemeSet, Style};
 use syntect::parsing::SyntaxSet;

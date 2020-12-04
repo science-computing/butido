@@ -9,9 +9,9 @@ use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
 use diesel::PgConnection;
-use logcrate::debug;
-use tokio::sync::RwLock;
+use log::{debug, info, warn, trace};
 use tokio::stream::StreamExt;
+use tokio::sync::RwLock;
 
 use crate::config::*;
 use crate::filestore::ReleaseStore;

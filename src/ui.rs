@@ -7,6 +7,7 @@ use std::path::Path;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
+use log::error;
 use handlebars::Handlebars;
 
 use crate::package::Package;

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use anyhow::anyhow;
 use indicatif::ProgressBar;
+use log::trace;
 use resiter::AndThen;
 use serde::Deserialize;
 use serde::Serialize;

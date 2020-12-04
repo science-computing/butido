@@ -10,6 +10,7 @@ use diesel::PgConnection;
 use futures::FutureExt;
 use indicatif::ProgressBar;
 use itertools::Itertools;
+use log::trace;
 use tokio::stream::StreamExt;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::RwLock;

@@ -5,6 +5,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
+use log::trace;
 use tokio::stream::StreamExt;
 use tokio::io::AsyncWriteExt;
 

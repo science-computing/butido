@@ -8,6 +8,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
+use log::trace;
 use result_inspect::ResultInspect;
 use tar;
 

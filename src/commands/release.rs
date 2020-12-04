@@ -4,8 +4,9 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
-use tokio::stream::StreamExt;
 use diesel::prelude::*;
+use log::{debug, trace};
+use tokio::stream::StreamExt;
 
 use crate::db::models as dbmodels;
 use crate::config::Configuration;

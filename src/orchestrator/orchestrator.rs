@@ -8,6 +8,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
+use log::trace;
 use tokio::sync::RwLock;
 use typed_builder::TypedBuilder;
 

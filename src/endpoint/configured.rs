@@ -10,6 +10,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use futures::FutureExt;
 use getset::{Getters, CopyGetters};
+use log::{warn, trace};
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
 use tokio::stream::StreamExt;

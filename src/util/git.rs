@@ -5,6 +5,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use git2::Repository;
+use log::trace;
 
 pub fn repo_is_clean(p: &Path) -> Result<bool> {
     Repository::open(p)
