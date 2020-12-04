@@ -139,10 +139,7 @@ impl JobHandle {
     pub async fn run(self) -> RResult<Vec<dbmodels::Artifact>, ContainerError> {
         use crate::db::models as dbmodels;
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
-        let ep = self.endpoint
-            .read()
-            .await;
-
+        let ep       = self.endpoint.read().await;
         let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;
         let package  = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
         let image    = dbmodels::Image::create_or_fetch(&self.db, self.job.image())?;
@@ -261,11 +258,12 @@ impl<'a> LogReceiver<'a> {
         }
 
         trace!("Finishing bar = {:?}", success);
-        match success {
-            Some(true) => self.bar.finish_with_message(&format!("Job: {} finished successfully", self.job_id)),
-            Some(false) => self.bar.finish_with_message(&format!("Job: {} finished with error", self.job_id)),
-            None => self.bar.finish_with_message(&format!("Job: {} finished", self.job_id)),
-        }
+        let finish_msg = match success {
+            Some(true)  => format!("Job: {} finished successfully", self.job_id),
+            Some(false) => format!("Job: {} finished with error", self.job_id),
+            None        => format!("Job: {} finished", self.job_id),
+        };
+        self.bar.finish_with_message(&finish_msg);
 
         drop(self.bar);
         if let Some(mut lf) = logfile {
@@ -273,9 +271,9 @@ impl<'a> LogReceiver<'a> {
         }
 
         Ok({
-            accu.into_iter()
-                .map(|ll| ll.display())
-                .map_ok(|d| d.to_string())
+            accu.iter()
+                .map(crate::log::LogItem::display)
+                .map_ok(crate::log::Display::to_string)
                 .collect::<Result<Vec<String>>>()?
                 .join("\n")
         })
