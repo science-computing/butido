@@ -151,7 +151,6 @@ impl JobHandle {
             job_id,
             log_receiver,
             bar: &self.bar,
-            db: self.db.clone(),
         }.join();
 
         let (res, logres) = tokio::join!(res, logres);
@@ -209,7 +208,6 @@ struct LogReceiver<'a> {
     job_id: Uuid,
     log_receiver: UnboundedReceiver<LogItem>,
     bar: &'a ProgressBar,
-    db: Arc<PgConnection>,
 }
 
 impl<'a> LogReceiver<'a> {
