@@ -30,12 +30,6 @@ impl LogItem {
 
 pub struct Display(String);
 
-impl Display {
-    pub fn to_string(self) -> String {
-        self.0
-    }
-}
-
 impl std::fmt::Display for Display {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         write!(f, "{}", self.0)

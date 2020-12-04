@@ -273,7 +273,7 @@ impl<'a> LogReceiver<'a> {
         Ok({
             accu.iter()
                 .map(crate::log::LogItem::display)
-                .map_ok(crate::log::Display::to_string)
+                .map_ok(|d| d.to_string())
                 .collect::<Result<Vec<String>>>()?
                 .join("\n")
         })
