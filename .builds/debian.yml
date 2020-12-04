@@ -7,6 +7,14 @@ packages:
   - pkg-config
 tasks:
   - install: curl https://sh.rustup.rs -sSf | sh -s -- -y
+  - prepare_lint: |
+      PATH="$HOME/.cargo/bin:$PATH" cargo install cargo-deny
+  - lint-licenses: |
+      cd butido
+      PATH="$HOME/.cargo/bin:$PATH" cargo deny check licenses
+  - lint-sources: |
+      cd butido
+      PATH="$HOME/.cargo/bin:$PATH" cargo deny check sources
   - build: |
       cd butido
       PATH="$HOME/.cargo/bin:$PATH" cargo build --all --all-features
