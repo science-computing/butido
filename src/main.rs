@@ -12,7 +12,7 @@
     unsafe_code,
     // non_snake_case,
     path_statements,
-    // trivial_numeric_casts,
+    trivial_numeric_casts,
     unstable_features,
     // unused_crate_dependencies,
     unused_extern_crates,
@@ -102,7 +102,7 @@ async fn main() -> Result<()> {
 
             let repo = load_repo()?;
 
-            crate::commands::build(matches, progressbars, conn, &config, repo, &repo_path, max_packages as u64).await?
+            crate::commands::build(matches, progressbars, conn, &config, repo, &repo_path, max_packages).await?
         },
         Some(("what-depends", matches)) => {
             let repo = load_repo()?;
