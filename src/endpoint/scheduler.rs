@@ -145,35 +145,8 @@ impl JobHandle {
         let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;
         let package  = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
         let image    = dbmodels::Image::create_or_fetch(&self.db, self.job.image())?;
-
-        let envs = {
-            trace!("Creating environment in database");
-            trace!("Hardcoded = {:?}", self.job.package().environment());
-            trace!("Dynamic   = {:?}", self.additional_env);
-            let mut hardcoded_env = if let Some(hm) = self.job.package().environment().as_ref() {
-                hm.iter()
-                    .map(|(k, v)| {
-                        trace!("Creating environment variable in database: {} = {}", k, v);
-                        dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
-                    })
-                    .collect::<Result<Vec<_>>>()?
-            } else {
-                Vec::new()
-            };
-
-            let mut additionals = self.additional_env
-                .iter()
-                .map(|(k, v)| {
-                    trace!("Creating environment variable in database: {} = {}", k, v);
-                    dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
-                })
-                .collect::<Result<Vec<_>>>()?;
-
-            hardcoded_env.append(&mut additionals);
-            hardcoded_env
-        };
-
-        let job_id = self.job.uuid().clone();
+        let envs     = self.create_env_in_db()?;
+        let job_id   = self.job.uuid().clone();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let res = ep
             .run_job(self.job, log_sender, self.staging_store, self.additional_env);
@@ -203,6 +176,33 @@ impl JobHandle {
             r.push(dbmodels::Artifact::create(&self.db, p, false, &job)?);
         }
         Ok(r)
+    }
+
+    fn create_env_in_db(&self) -> Result<Vec<dbmodels::EnvVar>> {
+        trace!("Creating environment in database");
+        trace!("Hardcoded = {:?}", self.job.package().environment());
+        trace!("Dynamic   = {:?}", self.additional_env);
+        let mut hardcoded_env = if let Some(hm) = self.job.package().environment().as_ref() {
+            hm.iter()
+                .map(|(k, v)| {
+                    trace!("Creating environment variable in database: {} = {}", k, v);
+                    dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
+                })
+                .collect::<Result<Vec<_>>>()?
+        } else {
+            Vec::new()
+        };
+
+        let mut additionals = self.additional_env
+            .iter()
+            .map(|(k, v)| {
+                trace!("Creating environment variable in database: {} = {}", k, v);
+                dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        hardcoded_env.append(&mut additionals);
+        Ok(hardcoded_env)
     }
 
 }
