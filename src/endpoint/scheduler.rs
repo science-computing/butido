@@ -89,23 +89,28 @@ impl EndpointScheduler {
 
     async fn select_free_endpoint(&self) -> Result<Arc<RwLock<Endpoint>>> {
         loop {
-            let unordered = futures::stream::FuturesUnordered::new();
-            for ep in self.endpoints.iter().cloned() {
-                unordered.push(async move {
-                    let wl = ep.write().await;
-                    wl.number_of_running_containers().await.map(|u| (u, ep.clone()))
-                });
-            }
-
-            let endpoints = unordered.collect::<Result<Vec<_>>>().await?;
-
-            if let Some(endpoint) = endpoints
+            let ep = self.endpoints
+                .iter()
+                .cloned()
+                .map(|ep| async move {
+                    ep.write()
+                        .await
+                        .number_of_running_containers()
+                        .await
+                        .map(|num_running| (num_running, ep.clone()))
+                })
+                .collect::<futures::stream::FuturesUnordered<_>>()
+                .collect::<Result<Vec<_>>>()
+                .await?
                 .iter()
                 .sorted_by(|tpla, tplb| tpla.0.cmp(&tplb.0))
                 .map(|tpl| tpl.1.clone())
-                .next()
-            {
+                .next();
+
+            if let Some(endpoint) = ep {
                 return Ok(endpoint)
+            } else {
+                trace!("No free endpoint found, retry...");
             }
         }
     }
