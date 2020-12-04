@@ -306,112 +306,134 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
         .inner_join(schema::images::table)
         .first::<(models::Job, models::Submit, models::Endpoint, models::Package, models::Image)>(&conn)?;
 
-    let env_vars = if matches.is_present("show_env") {
-        Some({
-            models::JobEnv::belonging_to(&data.0)
-                .inner_join(schema::envvars::table)
-                .load::<(models::JobEnv, models::EnvVar)>(&conn)?
-                .into_iter()
-                .map(|tpl| tpl.1)
-                .enumerate()
-                .map(|(i, env)| format!("\t{:>3}. {}={}", i, env.name, env.value))
-                .join("\n")
-        })
-    } else {
-        None
-    };
-
     let parsed_log = crate::log::ParsedLog::build_from(&data.0.log_text)?;
     let success = parsed_log.is_successfull();
-    let s = indoc::formatdoc!(r#"
-            Job:        {job_uuid}
-            Succeeded:  {succeeded}
-            Package:    {package_name} {package_version}
 
-            Ran on:     {endpoint_name}
-            Image:      {image_name}
-            Container:  {container_hash}
+    if csv {
+        let hdrs = mk_header(vec!["UUID", "success", "Package Name", "Package Version", "Ran on", "Image Name", "Container"]);
 
-            Script:     {script_len} lines
-            Log:        {log_len} lines
+        let data = vec![
+            vec![
+                data.0.uuid.to_string(),
+                String::from(match success {
+                    Some(true)  => "yes",
+                    Some(false) => "no",
+                    None        => "unknown",
+                }),
+                data.3.name.to_string(),
+                data.3.version.to_string(),
+                data.2.name.to_string(),
+                data.4.name.to_string(),
+                data.0.container_hash.to_string(),
+            ]
+        ];
+        display_data(hdrs, data, csv)
+    } else {
+        let env_vars = if matches.is_present("show_env") {
+            Some({
+                models::JobEnv::belonging_to(&data.0)
+                    .inner_join(schema::envvars::table)
+                    .load::<(models::JobEnv, models::EnvVar)>(&conn)?
+                    .into_iter()
+                    .map(|tpl| tpl.1)
+                    .enumerate()
+                    .map(|(i, env)| format!("\t{:>3}. {}={}", i, env.name, env.value))
+                    .join("\n")
+            })
+        } else {
+            None
+        };
 
-            ---
+        let s = indoc::formatdoc!(r#"
+                Job:        {job_uuid}
+                Succeeded:  {succeeded}
+                Package:    {package_name} {package_version}
 
-            {envs}
+                Ran on:     {endpoint_name}
+                Image:      {image_name}
+                Container:  {container_hash}
 
-            ---
+                Script:     {script_len} lines
+                Log:        {log_len} lines
 
-            {script_text}
+                ---
 
-            ---
+                {envs}
 
-            {log_text}
-        "#,
+                ---
 
-        job_uuid = match success {
-            Some(true) => data.0.uuid.to_string().green(),
-            Some(false) => data.0.uuid.to_string().red(),
-            None => data.0.uuid.to_string().cyan(),
-        },
+                {script_text}
 
-        succeeded = match success {
-            Some(true) => String::from("yes").green(),
-            Some(false) => String::from("no").red(),
-            None => String::from("unknown").cyan(),
-        },
-        package_name    = data.3.name.cyan(),
-        package_version = data.3.version.cyan(),
-        endpoint_name   = data.2.name.cyan(),
-        image_name      = data.4.name.cyan(),
-        container_hash  = data.0.container_hash.cyan(),
-        script_len      = format!("{:<4}", data.0.script_text.lines().count()).cyan(),
-        log_len         = format!("{:<4}", data.0.log_text.lines().count()).cyan(),
-        envs            = env_vars.unwrap_or_else(|| String::from("<env vars hidden>")),
-        script_text     = if show_script {
-            if let Some(configured_theme) = configured_theme {
-                if highlighting_disabled {
-                    data.0.script_text.clone()
+                ---
+
+                {log_text}
+            "#,
+
+            job_uuid = match success {
+                Some(true) => data.0.uuid.to_string().green(),
+                Some(false) => data.0.uuid.to_string().red(),
+                None => data.0.uuid.to_string().cyan(),
+            },
+
+            succeeded = match success {
+                Some(true) => String::from("yes").green(),
+                Some(false) => String::from("no").red(),
+                None => String::from("unknown").cyan(),
+            },
+            package_name    = data.3.name.cyan(),
+            package_version = data.3.version.cyan(),
+            endpoint_name   = data.2.name.cyan(),
+            image_name      = data.4.name.cyan(),
+            container_hash  = data.0.container_hash.cyan(),
+            script_len      = format!("{:<4}", data.0.script_text.lines().count()).cyan(),
+            log_len         = format!("{:<4}", data.0.log_text.lines().count()).cyan(),
+            envs            = env_vars.unwrap_or_else(|| String::from("<env vars hidden>")),
+            script_text     = if show_script {
+                if let Some(configured_theme) = configured_theme {
+                    if highlighting_disabled {
+                        data.0.script_text.clone()
+                    } else {
+                        // Load these once at the start of your program
+                        let ps = SyntaxSet::load_defaults_newlines();
+                        let ts = ThemeSet::load_defaults();
+
+                        let syntax = ps.find_syntax_by_first_line(&data.0.script_text).ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
+
+                        let theme = ts.themes.get(configured_theme)
+                            .ok_or_else(|| anyhow!("Theme not available: {}", configured_theme))?;
+                        let mut h = HighlightLines::new(syntax, &theme);
+                        LinesWithEndings::from(&data.0.script_text)
+                            .map(|line| {
+                                let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
+                                as_24_bit_terminal_escaped(&ranges[..], true)
+                            })
+                            .join("")
+                    }
                 } else {
-                    // Load these once at the start of your program
-                    let ps = SyntaxSet::load_defaults_newlines();
-                    let ts = ThemeSet::load_defaults();
-
-                    let syntax = ps.find_syntax_by_first_line(&data.0.script_text).ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
-
-                    let theme = ts.themes.get(configured_theme)
-                        .ok_or_else(|| anyhow!("Theme not available: {}", configured_theme))?;
-                    let mut h = HighlightLines::new(syntax, &theme);
-                    LinesWithEndings::from(&data.0.script_text)
-                        .map(|line| {
-                            let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
-                            as_24_bit_terminal_escaped(&ranges[..], true)
-                        })
-                        .join("")
+                    data.0.script_text.clone()
                 }
             } else {
-                data.0.script_text.clone()
-            }
-        } else {
-            String::from("<script hidden>")
-        },
-        log_text        = if show_log {
-            parsed_log.iter()
-                .map(|line_item| match line_item {
-                    LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
-                    LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
-                    LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
-                    LogItem::State(Ok(s))    => Ok(format!("#BUTIDO:STATE:OK:{}", s).green()),
-                    LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
-                })
-                .collect::<Result<Vec<_>>>()?
-                .into_iter() // ugly, but hey... not important right now.
-                .join("\n")
-        } else {
-            String::from("<log hidden>")
-        },
-    );
+                String::from("<script hidden>")
+            },
+            log_text        = if show_log {
+                parsed_log.iter()
+                    .map(|line_item| match line_item {
+                        LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
+                        LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
+                        LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
+                        LogItem::State(Ok(s))    => Ok(format!("#BUTIDO:STATE:OK:{}", s).green()),
+                        LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
+                    })
+                    .collect::<Result<Vec<_>>>()?
+                    .into_iter() // ugly, but hey... not important right now.
+                    .join("\n")
+            } else {
+                String::from("<log hidden>")
+            },
+        );
 
-    writeln!(&mut std::io::stdout(), "{}", s).map_err(Error::from)
+        writeln!(&mut std::io::stdout(), "{}", s).map_err(Error::from)
+    }
 }
 
 
