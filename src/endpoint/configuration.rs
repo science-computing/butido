@@ -23,9 +23,3 @@ pub struct EndpointConfiguration {
     required_docker_api_versions: Option<Vec<String>>,
 }
 
-impl EndpointConfiguration {
-    pub async fn connect(self) -> Result<Endpoint> {
-        Endpoint::setup(self).await
-    }
-}
-
