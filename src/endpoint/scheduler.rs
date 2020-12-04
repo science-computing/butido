@@ -3,6 +3,7 @@ use std::result::Result as RResult;
 use std::sync::Arc;
 
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
@@ -216,26 +217,15 @@ struct LogReceiver<'a> {
 }
 
 impl<'a> LogReceiver<'a> {
+
     async fn join(mut self) -> Result<String> {
         use resiter::Map;
 
-        let mut logfile = if let Some(log_dir) = self.log_dir.as_ref() {
-            Some({
-                let path = log_dir.join(self.job_id.to_string()).join(".log");
-                tokio::fs::OpenOptions::new()
-                    .create(true)
-                    .create_new(true)
-                    .write(true)
-                    .open(path)
-                    .await
-                    .map(tokio::io::BufWriter::new)?
-            })
-        } else {
-            None
-        };
-
         let mut success = None;
         let mut accu    = vec![];
+        let mut logfile = self.get_logfile()
+            .await
+            .transpose()?;
 
         while let Some(logitem) = self.log_receiver.recv().await {
             if let Some(lf) = logfile.as_mut() {
@@ -290,5 +280,24 @@ impl<'a> LogReceiver<'a> {
                 .join("\n")
         })
     }
+
+    async fn get_logfile(&self) -> Option<Result<tokio::io::BufWriter<tokio::fs::File>>> {
+        if let Some(log_dir) = self.log_dir.as_ref() {
+            Some({
+                let path = log_dir.join(self.job_id.to_string()).join(".log");
+                tokio::fs::OpenOptions::new()
+                    .create(true)
+                    .create_new(true)
+                    .write(true)
+                    .open(path)
+                    .await
+                    .map(tokio::io::BufWriter::new)
+                    .map_err(Error::from)
+            })
+        } else {
+            None
+        }
+    }
+
 }
 
