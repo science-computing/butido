@@ -201,7 +201,7 @@ pub async fn build(matches: &ArgMatches,
         db_envs
     );
 
-    let (db_package, db_githash, db_image, db_envs) = (db_package?, db_githash?, db_image?, db_envs?);
+    let (db_package, db_githash, db_image, _) = (db_package?, db_githash?, db_image?, db_envs?);
 
     trace!("Database jobs for Package, GitHash, Image finished successfully");
     trace!("Creating Submit in database");
