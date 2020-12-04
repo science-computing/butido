@@ -8,11 +8,9 @@ use anyhow::Result;
 use anyhow::anyhow;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
-use resiter::Map;
 use result_inspect::ResultInspect;
 use tar;
 
-use crate::filestore::Artifact;
 use crate::filestore::util::FileStoreImpl;
 
 // The implementation of this type must be available in the merged filestore.

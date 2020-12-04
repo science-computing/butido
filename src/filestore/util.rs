@@ -14,8 +14,6 @@ use resiter::Map;
 use walkdir::WalkDir;
 
 use crate::filestore::Artifact;
-use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
 
 /// The actual filestore implementation
 ///

@@ -8,7 +8,6 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use handlebars::Handlebars;
-use itertools::Itertools;
 
 use crate::package::Package;
 

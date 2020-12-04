@@ -2,7 +2,6 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use anyhow::Result;
 use getset::Getters;
-use handlebars::Handlebars;
 use serde::Deserialize;
 
 use crate::config::Configuration;

@@ -9,7 +9,6 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use futures::FutureExt;
-use futures::future::TryFutureExt;
 use getset::{Getters, CopyGetters};
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;

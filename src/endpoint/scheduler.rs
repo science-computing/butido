@@ -134,7 +134,6 @@ impl std::fmt::Debug for JobHandle {
 
 impl JobHandle {
     pub async fn run(self) -> RResult<Vec<dbmodels::Artifact>, ContainerError> {
-        use crate::db::models as dbmodels;
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let ep       = self.endpoint.read().await;
         let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;

@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::Error;
@@ -6,18 +5,9 @@ use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
 use tokio::stream::StreamExt;
-use tokio::io::AsyncWriteExt;
 use diesel::prelude::*;
 
-use crate::config::*;
-use crate::package::Package;
-use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
-use crate::repository::Repository;
-use crate::source::*;
-use crate::util::progress::ProgressBars;
 use crate::db::models as dbmodels;
-use crate::schema::submits::dsl;
 use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
 
