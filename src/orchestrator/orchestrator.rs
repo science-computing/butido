@@ -40,7 +40,6 @@ pub struct OrchestratorSetup<'a> {
     staging_store: Arc<RwLock<StagingStore>>,
     release_store: Arc<RwLock<ReleaseStore>>,
     source_cache: SourceCache,
-    additional_env: Vec<(String, String)>,
     jobsets: Vec<JobSet>,
     database: PgConnection,
     submit: Submit,
@@ -51,7 +50,7 @@ pub struct OrchestratorSetup<'a> {
 impl<'a> OrchestratorSetup<'a> {
     pub async fn setup(self) -> Result<Orchestrator<'a>> {
         let db = Arc::new(self.database);
-        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db, self.progress_generator, self.submit.clone(), self.log_dir, self.additional_env).await?;
+        let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db, self.progress_generator, self.submit.clone(), self.log_dir).await?;
 
         Ok(Orchestrator {
             scheduler:             scheduler,

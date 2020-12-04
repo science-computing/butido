@@ -20,6 +20,7 @@ use crate::db::models as dbmodels;
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::StagingStore;
+use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
 use crate::util::progress::ProgressBars;
@@ -33,12 +34,11 @@ pub struct EndpointScheduler {
     db: Arc<PgConnection>,
     progressbars: ProgressBars,
     submit: crate::db::models::Submit,
-    additional_env: Vec<(String, String)>,
 }
 
 impl EndpointScheduler {
 
-    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars, submit: crate::db::models::Submit, log_dir: Option<PathBuf>, additional_env: Vec<(String, String)>) -> Result<Self> {
+    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars, submit: crate::db::models::Submit, log_dir: Option<PathBuf>) -> Result<Self> {
         let endpoints = Self::setup_endpoints(endpoints).await?;
 
         Ok(EndpointScheduler {
@@ -48,7 +48,6 @@ impl EndpointScheduler {
             db,
             progressbars,
             submit,
-            additional_env,
         })
     }
 
@@ -84,7 +83,6 @@ impl EndpointScheduler {
             staging_store: self.staging_store.clone(),
             db: self.db.clone(),
             submit: self.submit.clone(),
-            additional_env: self.additional_env.clone(),
         })
     }
 
@@ -126,7 +124,6 @@ pub struct JobHandle {
     db: Arc<PgConnection>,
     staging_store: Arc<RwLock<StagingStore>>,
     submit: crate::db::models::Submit,
-    additional_env: Vec<(String, String)>,
 }
 
 impl std::fmt::Debug for JobHandle {
@@ -147,7 +144,7 @@ impl JobHandle {
         let job_id   = self.job.uuid().clone();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let res = ep
-            .run_job(self.job, log_sender, self.staging_store, self.additional_env);
+            .run_job(self.job, log_sender, self.staging_store);
 
         let logres = LogReceiver {
             log_dir: self.log_dir.as_ref(),
@@ -179,7 +176,7 @@ impl JobHandle {
     fn create_env_in_db(&self) -> Result<Vec<dbmodels::EnvVar>> {
         trace!("Creating environment in database");
         trace!("Hardcoded = {:?}", self.job.package().environment());
-        trace!("Dynamic   = {:?}", self.additional_env);
+        trace!("Dynamic   = {:?}", self.job.resources());
         self.job
             .package()
             .environment()
@@ -195,8 +192,10 @@ impl JobHandle {
             .into_iter()
             .map(Ok)
             .chain({
-                self.additional_env
+                self.job
+                    .resources()
                     .iter()
+                    .filter_map(JobResource::env)
                     .inspect(|(k, v)| trace!("Creating environment variable in database: {} = {}", k, v))
                     .map(|(k, v)| dbmodels::EnvVar::create_or_fetch(&self.db, k, v))
             })

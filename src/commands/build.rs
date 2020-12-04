@@ -17,6 +17,7 @@ use tokio::stream::StreamExt;
 use crate::config::*;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
+use crate::job::JobResource;
 use crate::job::JobSet;
 use crate::orchestrator::OrchestratorSetup;
 use crate::package::PackageName;
@@ -214,7 +215,8 @@ pub async fn build(matches: &ArgMatches,
     trace!("Creating Submit in database finished successfully: {:?}", submit);
 
     trace!("Setting up job sets");
-    let jobsets = JobSet::sets_from_tree(tree, image_name, phases.clone())?;
+    let resources: Vec<JobResource> = additional_env.into_iter().map(JobResource::from).collect();
+    let jobsets = JobSet::sets_from_tree(tree, image_name, phases.clone(), resources)?;
     trace!("Setting up job sets finished successfully");
 
     trace!("Setting up Orchestrator");
@@ -225,7 +227,6 @@ pub async fn build(matches: &ArgMatches,
         .release_store(release_dir)
         .database(database_connection)
         .source_cache(source_cache)
-        .additional_env(additional_env)
         .submit(submit)
         .log_dir(if matches.is_present("write-log-file") { Some(config.log_dir().clone()) } else { None })
         .jobsets(jobsets)
