@@ -82,10 +82,6 @@ impl StagingStore {
             .collect()
     }
 
-    pub fn load_from_path(&mut self, pb: &PathBuf) -> Result<&Artifact> {
-        self.0.load_from_path(pb)
-    }
-
     pub fn root_path(&self) -> &Path {
         self.0.root_path()
     }
