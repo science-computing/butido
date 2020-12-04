@@ -20,7 +20,7 @@ pub async fn source(matches: &ArgMatches, config: &Configuration, repo: Reposito
     match matches.subcommand() {
         Some(("verify", matches))       => verify(matches, config, repo).await,
         Some(("list-missing", matches)) => list_missing(matches, config, repo).await,
-        Some(("url", matches))          => url(matches, config, repo).await,
+        Some(("url", matches))          => url(matches, repo).await,
         Some(("download", matches))     => download(matches, config, repo, progressbars).await,
         Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
         None             => return Err(anyhow!("No subcommand")),
@@ -90,7 +90,7 @@ pub async fn list_missing(_: &ArgMatches, config: &Configuration, repo: Reposito
         .collect()
 }
 
-pub async fn url(matches: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
+pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
     let out         = std::io::stdout();
     let mut outlock = out.lock();
 
