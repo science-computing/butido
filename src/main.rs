@@ -1,3 +1,30 @@
+#![deny(
+    dead_code,
+    anonymous_parameters,
+    deprecated_in_future,
+    explicit_outlives_requirements,
+    keyword_idents,
+    // macro_use_extern_crate,
+    // missing_copy_implementations,
+    // missing_debug_implementations,
+    non_ascii_idents,
+    // non_camel_case_types,
+    unsafe_code,
+    // non_snake_case,
+    path_statements,
+    // trivial_numeric_casts,
+    unstable_features,
+    // unused_crate_dependencies,
+    unused_extern_crates,
+    unused_allocation,
+    unused_import_braces,
+    unused_imports,
+    unused_must_use,
+    unused_mut,
+    // unused_qualifications,
+    while_true,
+)]
+
 #[macro_use] extern crate log as logcrate;
 #[macro_use] extern crate diesel;
 
