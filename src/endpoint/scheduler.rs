@@ -228,7 +228,7 @@ impl<'a> LogReceiver<'a> {
             }
 
             match logitem {
-                LogItem::Line(ref l) => {
+                LogItem::Line(_) => {
                     // ignore
                 },
                 LogItem::Progress(u) => {
