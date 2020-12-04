@@ -46,9 +46,5 @@ impl Job {
 
     }
 
-    pub fn add_resource(&mut self, res: JobResource) {
-        self.resources.push(res)
-    }
-
 }
 
