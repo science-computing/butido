@@ -41,7 +41,7 @@ pub async fn verify(matches: &ArgMatches, config: &Configuration, repo: Reposito
     verify_impl(packages, &sc, &mut out).await
 }
 
-pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCache, output: &mut Write) -> Result<()>
+pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCache, output: &mut dyn Write) -> Result<()>
     where I: Iterator<Item = &'a Package> + 'a
 {
     if let Err(_) = packages
