@@ -82,23 +82,5 @@ impl FileStoreImpl {
             .map_err(Error::from)
     }
 
-    pub fn get(&self, p: &Path) -> Option<&Artifact> {
-        self.store.get(p)
-    }
-
-    pub fn get_artifact_by_name(&self, name: &PackageName) -> Vec<&Artifact> {
-        self.store
-            .values()
-            .filter(|a| a.name() == name)
-            .collect()
-    }
-
-    pub fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersionConstraint) -> Vec<&Artifact> {
-        self.store
-            .values()
-            .filter(|a| a.name() == name && version.matches(a.version()))
-            .collect()
-    }
-
 }
 
