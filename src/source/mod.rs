@@ -90,18 +90,6 @@ impl SourceEntry {
             .matches_hash_of(&buf)
     }
 
-    pub async fn open(&self) -> Result<tokio::fs::File> {
-        let p = self.source_file_path();
-
-        tokio::fs::OpenOptions::new()
-            .create(false)
-            .create_new(false)
-            .read(true)
-            .open(&p)
-            .await
-            .map_err(Error::from)
-    }
-
     pub async fn create(&self) -> Result<tokio::fs::File> {
         let p = self.source_file_path();
 
