@@ -110,7 +110,6 @@ async fn main() -> Result<()> {
         },
 
         Some(("release", matches)) => {
-            let repo = load_repo()?;
             crate::commands::release(db_connection_config, &config, matches).await?
         }
 
