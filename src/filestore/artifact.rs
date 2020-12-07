@@ -77,9 +77,9 @@ mod tests {
 
     #[test]
     fn test_parser_one_letter_name() {
-        let p = ArtifactPath::new(PathBuf::from("a-1.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("a-1.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -90,9 +90,9 @@ mod tests {
 
     #[test]
     fn test_parser_multi_letter_name() {
-        let p = ArtifactPath::new(PathBuf::from("foo-1.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo-1.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -103,9 +103,9 @@ mod tests {
 
     #[test]
     fn test_parser_multi_char_version() {
-        let p = ArtifactPath::new(PathBuf::from("foo-1123.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo-1123.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -116,9 +116,9 @@ mod tests {
 
     #[test]
     fn test_parser_multi_char_version_dashed() {
-        let p = ArtifactPath::new(PathBuf::from("foo-1-1-2-3.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo-1-1-2-3.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -129,9 +129,9 @@ mod tests {
 
     #[test]
     fn test_parser_multi_char_version_dashed_and_dotted() {
-        let p = ArtifactPath::new(PathBuf::from("foo-1-1.2-3.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo-1-1.2-3.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -142,9 +142,9 @@ mod tests {
 
     #[test]
     fn test_parser_alnum_version() {
-        let p = ArtifactPath::new(PathBuf::from("foo-1-1.2a3.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo-1-1.2a3.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -155,9 +155,9 @@ mod tests {
 
     #[test]
     fn test_parser_package_name_with_number() {
-        let p = ArtifactPath::new(PathBuf::from("foo2-1-1.2a3.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo2-1-1.2a3.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();

@@ -25,6 +25,16 @@ impl StoreRoot {
         }
     }
 
+    /// Unchecked variant of StoreRoot::new()
+    ///
+    /// Because StoreRoot::new() accesses the filesystem, this method is necessary to construct an
+    /// object of StoreRoot for a non-existing path, so that we can test its implementation without
+    /// the need to create objects on the filesystem.
+    #[cfg(test)]
+    pub fn new_unchecked(root: PathBuf) -> Self {
+        StoreRoot(root)
+    }
+
     pub fn join<'a>(&'a self, ap: &'a ArtifactPath) -> Result<FullArtifactPath<'a>> {
         let join = self.0.join(&ap.0);
 
@@ -37,6 +47,16 @@ impl StoreRoot {
                 Err(anyhow!("Path does not exist: {}", join.display()))
             }
         }
+    }
+
+    /// Unchecked variant of StoreRoot::join()
+    ///
+    /// This function is needed (like StoreRoot::new_unchecked()) to perform a construction of
+    /// FullArtifactPath like StoreRoot::join() in without its side effects (accessing the
+    /// filesystem) for testing purposes
+    #[cfg(test)]
+    pub fn join_unchecked<'a>(&'a self, ap: &'a ArtifactPath) -> FullArtifactPath<'a> {
+        FullArtifactPath(self, ap)
     }
 
     pub fn is_file(&self, subpath: &Path) -> bool {
@@ -80,6 +100,16 @@ impl ArtifactPath {
         } else {
             Err(anyhow!("Path is not relative: {}", p.display()))
         }
+    }
+
+    /// Unchecked variant of ArtifactPath::new()
+    ///
+    /// Because ArtifactPath::new() accesses the filesystem, this method is necessary to construct an
+    /// object of ArtifactPath for a non-existing path, so that we can test its implementation without
+    /// the need to create objects on the filesystem.
+    #[cfg(test)]
+    pub fn new_unchecked(root: PathBuf) -> Self {
+        ArtifactPath(root)
     }
 
     pub fn display(&self) -> std::path::Display {
