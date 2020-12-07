@@ -1,8 +1,4 @@
-use std::cmp::Ord;
 use std::cmp::Ordering;
-use std::cmp::PartialOrd;
-use std::path::Path;
-use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -13,11 +9,12 @@ use pom::parser::Parser as PomParser;
 
 use crate::package::PackageName;
 use crate::package::PackageVersion;
+use crate::filestore::path::*;
 
 #[derive(Clone, PartialEq, Eq, Debug, Getters)]
 pub struct Artifact {
     #[getset(get = "pub")]
-    path: PathBuf,
+    path: ArtifactPath,
 
     #[getset(get = "pub")]
     name: PackageName,
@@ -40,33 +37,24 @@ impl Ord for Artifact {
 
 
 impl Artifact {
-    pub fn load(root: &Path, path: &Path) -> Result<Self> {
-        let joined = root.join(path);
-        if joined.is_file() {
-            let (name, version) = Self::parse_path(root, path)
-                .with_context(|| anyhow!("Pathing artifact path: '{}'", joined.display()))?;
+    pub fn load(root: &StoreRoot, path: ArtifactPath) -> Result<Self> {
+        let joined_fullpath = root.join(&path)?;
+        let (name, version) = Self::parse_path(&joined_fullpath)
+            .with_context(|| anyhow!("Pathing artifact path: '{}'", joined_fullpath.display()))?;
 
-            Ok(Artifact {
-                path: path.to_path_buf(),
-
-                name,
-                version
-            })
-        } else {
-            if path.is_dir() {
-                Err(anyhow!("Cannot load non-file path: {}", path.display()))
-            } else {
-                Err(anyhow!("Path does not exist: {}", path.display()))
-            }
-        }
+        Ok(Artifact {
+            path,
+            name,
+            version
+        })
     }
 
-    fn parse_path(root: &Path, path: &Path) -> Result<(PackageName, PackageVersion)> {
+    fn parse_path(path: &FullArtifactPath) -> Result<(PackageName, PackageVersion)> {
         path.file_stem()
-            .ok_or_else(|| anyhow!("Cannot get filename from {}", (root.join(path)).display()))?
+            .ok_or_else(|| anyhow!("Cannot get filename from {}", path.display()))?
             .to_owned()
             .into_string()
-            .map_err(|_| anyhow!("Internal conversion of '{}' to UTF-8", (root.join(path)).display()))
+            .map_err(|_| anyhow!("Internal conversion of '{}' to UTF-8", path.display()))
             .and_then(|s| Self::parser().parse(s.as_bytes()).map_err(Error::from))
     }
 
@@ -83,12 +71,15 @@ mod tests {
     use super::*;
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
+    use crate::filestore::path::StoreRoot;
+    use crate::filestore::path::ArtifactPath;
+    use std::path::PathBuf;
 
     #[test]
     fn test_parser_one_letter_name() {
-        let p = PathBuf::from("a-1.ext");
-        let root = PathBuf::from("/");
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("a-1.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -99,9 +90,9 @@ mod tests {
 
     #[test]
     fn test_parser_multi_letter_name() {
-        let p = PathBuf::from("foo-1.ext");
-        let root = PathBuf::from("/");
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo-1.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -112,9 +103,9 @@ mod tests {
 
     #[test]
     fn test_parser_multi_char_version() {
-        let p = PathBuf::from("foo-1123.ext");
-        let root = PathBuf::from("/");
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo-1123.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -125,9 +116,9 @@ mod tests {
 
     #[test]
     fn test_parser_multi_char_version_dashed() {
-        let p = PathBuf::from("foo-1-1-2-3.ext");
-        let root = PathBuf::from("/");
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo-1-1-2-3.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -138,9 +129,9 @@ mod tests {
 
     #[test]
     fn test_parser_multi_char_version_dashed_and_dotted() {
-        let p = PathBuf::from("foo-1-1.2-3.ext");
-        let root = PathBuf::from("/");
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo-1-1.2-3.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -151,9 +142,9 @@ mod tests {
 
     #[test]
     fn test_parser_alnum_version() {
-        let p = PathBuf::from("foo-1-1.2a3.ext");
-        let root = PathBuf::from("/");
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo-1-1.2a3.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();
@@ -164,9 +155,9 @@ mod tests {
 
     #[test]
     fn test_parser_package_name_with_number() {
-        let p = PathBuf::from("foo2-1-1.2a3.ext");
-        let root = PathBuf::from("/");
-        let r = Artifact::parse_path(&root, &p);
+        let p = ArtifactPath::new_unchecked(PathBuf::from("foo2-1-1.2a3.ext"));
+        let root = StoreRoot::new_unchecked(PathBuf::from("/"));
+        let r = Artifact::parse_path(&root.join_unchecked(&p));
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
         let (name, version) = r.unwrap();

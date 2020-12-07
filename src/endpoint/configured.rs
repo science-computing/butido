@@ -20,6 +20,7 @@ use typed_builder::TypedBuilder;
 
 use crate::endpoint::ContainerError;
 use crate::endpoint::EndpointConfiguration;
+use crate::filestore::path::ArtifactPath;
 use crate::filestore::StagingStore;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
@@ -175,9 +176,7 @@ impl Endpoint {
             .map(|_| ())
     }
 
-    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> RResult<(Vec<PathBuf>, ContainerHash, Script), ContainerError> {
-
-        let staging_store_path = staging.read().await.root_path().to_path_buf();
+    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> RResult<(Vec<ArtifactPath>, ContainerHash, Script), ContainerError> {
         let (container_id, _warnings) = {
             let envs = job.environment()
                 .into_iter()
@@ -267,11 +266,14 @@ impl Endpoint {
                         .with_context(|| anyhow!("Collecting artifacts for copying to container {}", container_id))?;
                     let destination = PathBuf::from("/inputs/").join(artifact_file_name);
                     trace!("Copying {} to container: {}:{}", art.path().display(), container_id, destination.display());
-                    let buf = tokio::fs::read(staging_store_path.join(art.path()))
+                    let buf = staging
+                        .read()
                         .await
-                        .map(Vec::from)
-                        .with_context(|| anyhow!("Reading artifact {}, so it can be copied to container", art.path().display()))
-                        .map_err(Error::from)?;
+                        .root_path()
+                        .join(art.path())?
+                        .read()
+                        .await
+                        .with_context(|| anyhow!("Reading artifact {}, so it can be copied to container", art.path().display()))?;
 
                     let r = container.copy_file_into(&destination, &buf)
                         .await

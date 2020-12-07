@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use std::path::Path;
-use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -12,6 +11,8 @@ use log::trace;
 use result_inspect::ResultInspect;
 use tar;
 
+use crate::filestore::path::ArtifactPath;
+use crate::filestore::path::StoreRoot;
 use crate::filestore::util::FileStoreImpl;
 
 // The implementation of this type must be available in the merged filestore.
@@ -24,7 +25,7 @@ impl Debug for StagingStore {
 }
 
 impl StagingStore {
-    pub fn load(root: &Path, progress: ProgressBar) -> Result<Self> {
+    pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
         FileStoreImpl::load(root, progress).map(StagingStore)
     }
 
@@ -33,7 +34,7 @@ impl StagingStore {
     /// # Returns
     ///
     /// Returns a list of Artifacts that were written from the stream
-    pub async fn write_files_from_tar_stream<S>(&mut self, stream: S) -> Result<Vec<PathBuf>>
+    pub async fn write_files_from_tar_stream<S>(&mut self, stream: S) -> Result<Vec<ArtifactPath>>
         where S: Stream<Item = Result<Vec<u8>>>
     {
         use futures::stream::TryStreamExt;
@@ -55,8 +56,7 @@ impl StagingStore {
                     .context("Collecting outputs of TAR archive")?;
 
                 trace!("Unpacking archive to {}", dest.display());
-                tar::Archive::new(&bytes[..])
-                    .unpack(dest)
+                dest.unpack_archive_here(tar::Archive::new(&bytes[..]))
                     .context("Unpacking TAR")
                     .map_err(Error::from)
                     .map(|_| outputs)
@@ -65,23 +65,25 @@ impl StagingStore {
             .into_iter()
             .inspect(|p| trace!("Trying to load into staging store: {}", p.display()))
             .filter_map(|path| {
-                let fullpath = self.0.root.join(&path);
-                if fullpath.is_dir() {
+                if self.0.root.is_dir(&path) {
                     None
                 } else {
                     Some({
-                        self.0.load_from_path(&fullpath)
-                            .inspect(|r| trace!("Loaded from path {} = {:?}", fullpath.display(), r))
-                            .with_context(|| anyhow!("Loading from path: {}", fullpath.display()))
-                            .map_err(Error::from)
-                            .map(|art| art.path().clone())
+                        ArtifactPath::new(path)
+                            .and_then(|ap| {
+                                self.0.load_from_path(&ap)
+                                    .inspect(|r| trace!("Loaded from path {} = {:?}", ap.display(), r))
+                                    .with_context(|| anyhow!("Loading from path: {}", ap.display()))
+                                    .map_err(Error::from)
+                                    .map(|art| art.path().clone())
+                            })
                     })
                 }
             })
             .collect()
     }
 
-    pub fn root_path(&self) -> &Path {
+    pub fn root_path(&self) -> &StoreRoot {
         self.0.root_path()
     }
 
