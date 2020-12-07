@@ -11,8 +11,12 @@ use anyhow::Context;
 pub struct StoreRoot(PathBuf);
 
 impl StoreRoot {
-    pub (in crate::filestore) fn new(root: PathBuf) -> Self {
-        StoreRoot(root)
+    pub (in crate::filestore) fn new(root: PathBuf) -> Result<Self> {
+        if root.is_absolute() {
+            Ok(StoreRoot(root))
+        } else {
+            Err(anyhow!("StoreRoot path is not absolute: {}", root.display()))
+        }
     }
 
     pub (in crate::filestore) fn stripped_from(&self, pb: &Path) -> Result<ArtifactPath> {

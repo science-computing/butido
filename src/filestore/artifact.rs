@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn test_parser_one_letter_name() {
         let p = ArtifactPath::new(PathBuf::from("a-1.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/"));
+        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
         let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn test_parser_multi_letter_name() {
         let p = ArtifactPath::new(PathBuf::from("foo-1.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/"));
+        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
         let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -112,7 +112,7 @@ mod tests {
     #[test]
     fn test_parser_multi_char_version() {
         let p = ArtifactPath::new(PathBuf::from("foo-1123.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/"));
+        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
         let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_parser_multi_char_version_dashed() {
         let p = ArtifactPath::new(PathBuf::from("foo-1-1-2-3.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/"));
+        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
         let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn test_parser_multi_char_version_dashed_and_dotted() {
         let p = ArtifactPath::new(PathBuf::from("foo-1-1.2-3.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/"));
+        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
         let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn test_parser_alnum_version() {
         let p = ArtifactPath::new(PathBuf::from("foo-1-1.2a3.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/"));
+        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
         let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);
@@ -164,7 +164,7 @@ mod tests {
     #[test]
     fn test_parser_package_name_with_number() {
         let p = ArtifactPath::new(PathBuf::from("foo2-1-1.2a3.ext")).unwrap();
-        let root = StoreRoot::new(PathBuf::from("/"));
+        let root = StoreRoot::new(PathBuf::from("/")).unwrap();
         let r = Artifact::parse_path(&root, &p);
 
         assert!(r.is_ok(), "Expected to be Ok(_): {:?}", r);

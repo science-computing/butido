@@ -30,7 +30,7 @@ impl FileStoreImpl {
     /// Loads the passed path recursively into a Path => Artifact mapping
     pub fn load(path: &Path, progress: ProgressBar) -> Result<Self> {
         if path.is_dir() {
-            let root = StoreRoot::new(path.to_path_buf());
+            let root = StoreRoot::new(path.to_path_buf())?;
 
             let store = WalkDir::new(&path)
                 .follow_links(false)
