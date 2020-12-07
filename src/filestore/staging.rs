@@ -66,7 +66,7 @@ impl StagingStore {
             .into_iter()
             .inspect(|p| trace!("Trying to load into staging store: {}", p.display()))
             .filter_map(|path| {
-                if self.0.root.join_path(&path).is_dir() {
+                if self.0.root.is_dir(&path) {
                     None
                 } else {
                     Some({

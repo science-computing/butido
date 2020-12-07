@@ -25,9 +25,12 @@ impl StoreRoot {
         FullArtifactPath(&self, ap)
     }
 
-    // Needed for FileStoreImpl::path_exists_in_store_root()
-    pub (in crate::filestore) fn join_path(&self, p: &Path) -> PathBuf {
-        self.0.join(p)
+    pub fn is_file(&self, subpath: &Path) -> bool {
+        self.0.join(subpath).is_file()
+    }
+
+    pub fn is_dir(&self, subpath: &Path) -> bool {
+        self.0.join(subpath).is_dir()
     }
 
     pub fn display(&self) -> std::path::Display {
