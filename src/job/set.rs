@@ -1,9 +1,11 @@
 use anyhow::Result;
+use log::{debug, trace};
 use tokio::stream::StreamExt;
 
 use crate::config::Configuration;
 use crate::filestore::MergedStores;
 use crate::job::Job;
+use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::package::Tree;
 use crate::phase::PhaseName;
@@ -17,8 +19,8 @@ pub struct JobSet {
 }
 
 impl JobSet {
-    pub fn sets_from_tree(t: Tree, image: ImageName, phases: Vec<PhaseName>) -> Result<Vec<JobSet>> {
-        tree_into_jobsets(t, image, phases)
+    pub fn sets_from_tree(t: Tree, image: ImageName, phases: Vec<PhaseName>, resources: Vec<JobResource>) -> Result<Vec<JobSet>> {
+        tree_into_jobsets(t, image, phases, resources)
     }
 
     fn is_empty(&self) -> bool {
@@ -37,8 +39,8 @@ impl JobSet {
 }
 
 /// Get the tree as sets of jobs, the deepest level of the tree first
-fn tree_into_jobsets(tree: Tree, image: ImageName, phases: Vec<PhaseName>) -> Result<Vec<JobSet>> {
-    fn inner(tree: Tree, image: &ImageName, phases: &Vec<PhaseName>) -> Result<Vec<JobSet>> {
+fn tree_into_jobsets(tree: Tree, image: ImageName, phases: Vec<PhaseName>, resources: Vec<JobResource>) -> Result<Vec<JobSet>> {
+    fn inner(tree: Tree, image: &ImageName, phases: &Vec<PhaseName>, resources: &Vec<JobResource>) -> Result<Vec<JobSet>> {
         trace!("Creating jobsets for tree: {:?}", tree);
 
         let mut sets = vec![];
@@ -46,7 +48,7 @@ fn tree_into_jobsets(tree: Tree, image: ImageName, phases: Vec<PhaseName>) -> Re
 
         for (package, dep) in tree.into_iter() {
             trace!("Recursing for package: {:?}", package);
-            let mut sub_sets = inner(dep, image, phases)?; // recursion!
+            let mut sub_sets = inner(dep, image, phases, resources)?; // recursion!
             sets.append(&mut sub_sets);
             current_set.push(package);
         }
@@ -56,7 +58,7 @@ fn tree_into_jobsets(tree: Tree, image: ImageName, phases: Vec<PhaseName>) -> Re
             set: current_set
                 .into_iter()
                 .map(|package| {
-                    Job::new(package, image.clone(), phases.clone())
+                    Job::new(package, image.clone(), phases.clone(), resources.clone())
                 })
                 .collect(),
         };
@@ -74,7 +76,7 @@ fn tree_into_jobsets(tree: Tree, image: ImageName, phases: Vec<PhaseName>) -> Re
         Ok(result)
     }
 
-    inner(tree, &image, &phases).map(|mut v| {
+    inner(tree, &image, &phases, &resources).map(|mut v| {
         // reverse, because the highest level in the tree is added as first element in the vector
         // and the deepest level is last.
         //
@@ -128,7 +130,7 @@ mod tests {
         let image  = ImageName::from(String::from("test"));
         let phases = vec![PhaseName::from(String::from("testphase"))];
 
-        let js = JobSet::sets_from_tree(tree, image, phases);
+        let js = JobSet::sets_from_tree(tree, image, phases, vec![]);
         assert!(js.is_ok());
         let js = js.unwrap();
 
@@ -175,7 +177,7 @@ mod tests {
         let image  = ImageName::from(String::from("test"));
         let phases = vec![PhaseName::from(String::from("testphase"))];
 
-        let js = JobSet::sets_from_tree(tree, image, phases);
+        let js = JobSet::sets_from_tree(tree, image, phases, vec![]);
         assert!(js.is_ok());
         let js = js.unwrap();
 
@@ -209,7 +211,7 @@ mod tests {
             pack
         };
 
-        let p2 = {
+        let _ = {
             let name = "b";
             let vers = "2";
             let pack = package(name, vers, "https://rust-lang.org", "124");
@@ -227,7 +229,7 @@ mod tests {
         let image  = ImageName::from(String::from("test"));
         let phases = vec![PhaseName::from(String::from("testphase"))];
 
-        let js = JobSet::sets_from_tree(tree, image, phases);
+        let js = JobSet::sets_from_tree(tree, image, phases, vec![]);
         assert!(js.is_ok());
         let js = js.unwrap();
 

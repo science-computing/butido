@@ -76,28 +76,6 @@ impl Artifact {
             .map(|((name, _), vers)| (name, vers))
     }
 
-    pub fn create(root: &Path, name: PackageName, version: PackageVersion) -> Result<Self> {
-        let path = Self::create_path(root, &name, &version)?;
-        if !path.exists() {
-            Ok(Artifact {
-                path,
-                name,
-                version
-            })
-        } else {
-            Err(anyhow!("Path exists: {}", path.display()))
-        }
-    }
-
-    fn create_path(root: &Path, name: &PackageName, version: &PackageVersion) -> Result<PathBuf> {
-        if !root.is_dir() {
-            return Err(anyhow!("Cannot create file path for {}-{} when root is file path: {}",
-                    name, version, root.display()))
-        }
-
-        Ok(root.join(format!("{}-{}", name, version)))
-    }
-
 }
 
 #[cfg(test)]

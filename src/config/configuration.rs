@@ -1,10 +1,4 @@
-use std::collections::BTreeMap;
 use std::ops::Deref;
-use std::path::PathBuf;
-
-use anyhow::Context;
-use anyhow::Result;
-use handlebars::Handlebars;
 
 use crate::config::NotValidatedConfiguration;
 

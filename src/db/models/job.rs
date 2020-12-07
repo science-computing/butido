@@ -2,6 +2,7 @@ use anyhow::Error;
 use anyhow::Result;
 use diesel::PgConnection;
 use diesel::prelude::*;
+use log::trace;
 
 use crate::db::models::{Submit, Endpoint, Package, Image};
 use crate::package::Script;

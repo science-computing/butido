@@ -9,8 +9,8 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use futures::FutureExt;
-use futures::future::TryFutureExt;
 use getset::{Getters, CopyGetters};
+use log::{warn, trace};
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
 use tokio::stream::StreamExt;
@@ -175,14 +175,13 @@ impl Endpoint {
             .map(|_| ())
     }
 
-    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>, additional_env: Vec<(String, String)>) -> RResult<(Vec<PathBuf>, ContainerHash, Script), ContainerError> {
+    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> RResult<(Vec<PathBuf>, ContainerHash, Script), ContainerError> {
 
         let staging_store_path = staging.read().await.root_path().to_path_buf();
         let (container_id, _warnings) = {
             let envs = job.environment()
                 .into_iter()
                 .chain(job.package_environment().into_iter())
-                .chain(additional_env.into_iter())
                 .map(|(k, v)| format!("{}={}", k, v))
                 .collect::<Vec<_>>();
             trace!("Job resources: Environment variables = {:?}", envs);

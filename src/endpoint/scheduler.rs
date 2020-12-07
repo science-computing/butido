@@ -3,12 +3,14 @@ use std::result::Result as RResult;
 use std::sync::Arc;
 
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
 use futures::FutureExt;
 use indicatif::ProgressBar;
 use itertools::Itertools;
+use log::trace;
 use tokio::stream::StreamExt;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::RwLock;
@@ -19,6 +21,7 @@ use crate::db::models as dbmodels;
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::StagingStore;
+use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
 use crate::util::progress::ProgressBars;
@@ -32,12 +35,11 @@ pub struct EndpointScheduler {
     db: Arc<PgConnection>,
     progressbars: ProgressBars,
     submit: crate::db::models::Submit,
-    additional_env: Vec<(String, String)>,
 }
 
 impl EndpointScheduler {
 
-    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars, submit: crate::db::models::Submit, log_dir: Option<PathBuf>, additional_env: Vec<(String, String)>) -> Result<Self> {
+    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars, submit: crate::db::models::Submit, log_dir: Option<PathBuf>) -> Result<Self> {
         let endpoints = Self::setup_endpoints(endpoints).await?;
 
         Ok(EndpointScheduler {
@@ -47,7 +49,6 @@ impl EndpointScheduler {
             db,
             progressbars,
             submit,
-            additional_env,
         })
     }
 
@@ -83,29 +84,33 @@ impl EndpointScheduler {
             staging_store: self.staging_store.clone(),
             db: self.db.clone(),
             submit: self.submit.clone(),
-            additional_env: self.additional_env.clone(),
         })
     }
 
     async fn select_free_endpoint(&self) -> Result<Arc<RwLock<Endpoint>>> {
         loop {
-            let unordered = futures::stream::FuturesUnordered::new();
-            for ep in self.endpoints.iter().cloned() {
-                unordered.push(async move {
-                    let wl = ep.write().await;
-                    wl.number_of_running_containers().await.map(|u| (u, ep.clone()))
-                });
-            }
-
-            let endpoints = unordered.collect::<Result<Vec<_>>>().await?;
-
-            if let Some(endpoint) = endpoints
+            let ep = self.endpoints
+                .iter()
+                .cloned()
+                .map(|ep| async move {
+                    ep.write()
+                        .await
+                        .number_of_running_containers()
+                        .await
+                        .map(|num_running| (num_running, ep.clone()))
+                })
+                .collect::<futures::stream::FuturesUnordered<_>>()
+                .collect::<Result<Vec<_>>>()
+                .await?
                 .iter()
                 .sorted_by(|tpla, tplb| tpla.0.cmp(&tplb.0))
                 .map(|tpl| tpl.1.clone())
-                .next()
-            {
+                .next();
+
+            if let Some(endpoint) = ep {
                 return Ok(endpoint)
+            } else {
+                trace!("No free endpoint found, retry...");
             }
         }
     }
@@ -120,7 +125,6 @@ pub struct JobHandle {
     db: Arc<PgConnection>,
     staging_store: Arc<RwLock<StagingStore>>,
     submit: crate::db::models::Submit,
-    additional_env: Vec<(String, String)>,
 }
 
 impl std::fmt::Debug for JobHandle {
@@ -131,54 +135,22 @@ impl std::fmt::Debug for JobHandle {
 
 impl JobHandle {
     pub async fn run(self) -> RResult<Vec<dbmodels::Artifact>, ContainerError> {
-        use crate::db::models as dbmodels;
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
-        let ep = self.endpoint
-            .read()
-            .await;
-
+        let ep       = self.endpoint.read().await;
         let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;
         let package  = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
         let image    = dbmodels::Image::create_or_fetch(&self.db, self.job.image())?;
-
-        let envs = {
-            trace!("Creating environment in database");
-            trace!("Hardcoded = {:?}", self.job.package().environment());
-            trace!("Dynamic   = {:?}", self.additional_env);
-            let mut hardcoded_env = if let Some(hm) = self.job.package().environment().as_ref() {
-                hm.iter()
-                    .map(|(k, v)| {
-                        trace!("Creating environment variable in database: {} = {}", k, v);
-                        dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
-                    })
-                    .collect::<Result<Vec<_>>>()?
-            } else {
-                Vec::new()
-            };
-
-            let mut additionals = self.additional_env
-                .iter()
-                .map(|(k, v)| {
-                    trace!("Creating environment variable in database: {} = {}", k, v);
-                    dbmodels::EnvVar::create_or_fetch(&self.db, k, v)
-                })
-                .collect::<Result<Vec<_>>>()?;
-
-            hardcoded_env.append(&mut additionals);
-            hardcoded_env
-        };
-
-        let job_id = self.job.uuid().clone();
+        let envs     = self.create_env_in_db()?;
+        let job_id   = self.job.uuid().clone();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let res = ep
-            .run_job(self.job, log_sender, self.staging_store, self.additional_env);
+            .run_job(self.job, log_sender, self.staging_store);
 
         let logres = LogReceiver {
             log_dir: self.log_dir.as_ref(),
             job_id,
             log_receiver,
             bar: &self.bar,
-            db: self.db.clone(),
         }.join();
 
         let (res, logres) = tokio::join!(res, logres);
@@ -200,6 +172,35 @@ impl JobHandle {
         Ok(r)
     }
 
+    fn create_env_in_db(&self) -> Result<Vec<dbmodels::EnvVar>> {
+        trace!("Creating environment in database");
+        trace!("Hardcoded = {:?}", self.job.package().environment());
+        trace!("Dynamic   = {:?}", self.job.resources());
+        self.job
+            .package()
+            .environment()
+            .as_ref()
+            .map(|hm| {
+                hm.iter()
+                    .inspect(|(k, v)| trace!("Creating environment variable in database: {} = {}", k, v))
+                    .map(|(k, v)| dbmodels::EnvVar::create_or_fetch(&self.db, k, v))
+                    .collect::<Result<Vec<_>>>()
+            })
+            .transpose()?
+            .unwrap_or_default()
+            .into_iter()
+            .map(Ok)
+            .chain({
+                self.job
+                    .resources()
+                    .iter()
+                    .filter_map(JobResource::env)
+                    .inspect(|(k, v)| trace!("Creating environment variable in database: {} = {}", k, v))
+                    .map(|(k, v)| dbmodels::EnvVar::create_or_fetch(&self.db, k, v))
+            })
+            .collect()
+    }
+
 }
 
 struct LogReceiver<'a> {
@@ -207,30 +208,18 @@ struct LogReceiver<'a> {
     job_id: Uuid,
     log_receiver: UnboundedReceiver<LogItem>,
     bar: &'a ProgressBar,
-    db: Arc<PgConnection>,
 }
 
 impl<'a> LogReceiver<'a> {
+
     async fn join(mut self) -> Result<String> {
         use resiter::Map;
 
-        let mut logfile = if let Some(log_dir) = self.log_dir.as_ref() {
-            Some({
-                let path = log_dir.join(self.job_id.to_string()).join(".log");
-                tokio::fs::OpenOptions::new()
-                    .create(true)
-                    .create_new(true)
-                    .write(true)
-                    .open(path)
-                    .await
-                    .map(tokio::io::BufWriter::new)?
-            })
-        } else {
-            None
-        };
-
         let mut success = None;
         let mut accu    = vec![];
+        let mut logfile = self.get_logfile()
+            .await
+            .transpose()?;
 
         while let Some(logitem) = self.log_receiver.recv().await {
             if let Some(lf) = logfile.as_mut() {
@@ -239,7 +228,7 @@ impl<'a> LogReceiver<'a> {
             }
 
             match logitem {
-                LogItem::Line(ref l) => {
+                LogItem::Line(_) => {
                     // ignore
                 },
                 LogItem::Progress(u) => {
@@ -266,11 +255,12 @@ impl<'a> LogReceiver<'a> {
         }
 
         trace!("Finishing bar = {:?}", success);
-        match success {
-            Some(true) => self.bar.finish_with_message(&format!("Job: {} finished successfully", self.job_id)),
-            Some(false) => self.bar.finish_with_message(&format!("Job: {} finished with error", self.job_id)),
-            None => self.bar.finish_with_message(&format!("Job: {} finished", self.job_id)),
-        }
+        let finish_msg = match success {
+            Some(true)  => format!("Job: {} finished successfully", self.job_id),
+            Some(false) => format!("Job: {} finished with error", self.job_id),
+            None        => format!("Job: {} finished", self.job_id),
+        };
+        self.bar.finish_with_message(&finish_msg);
 
         drop(self.bar);
         if let Some(mut lf) = logfile {
@@ -278,12 +268,31 @@ impl<'a> LogReceiver<'a> {
         }
 
         Ok({
-            accu.into_iter()
-                .map(|ll| ll.display())
+            accu.iter()
+                .map(crate::log::LogItem::display)
                 .map_ok(|d| d.to_string())
                 .collect::<Result<Vec<String>>>()?
                 .join("\n")
         })
     }
+
+    async fn get_logfile(&self) -> Option<Result<tokio::io::BufWriter<tokio::fs::File>>> {
+        if let Some(log_dir) = self.log_dir.as_ref() {
+            Some({
+                let path = log_dir.join(self.job_id.to_string()).join(".log");
+                tokio::fs::OpenOptions::new()
+                    .create(true)
+                    .create_new(true)
+                    .write(true)
+                    .open(path)
+                    .await
+                    .map(tokio::io::BufWriter::new)
+                    .map_err(Error::from)
+            })
+        } else {
+            None
+        }
+    }
+
 }
 

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use log::trace;
 
 use crate::commands::util::getbool;
 use crate::config::*;

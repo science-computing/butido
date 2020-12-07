@@ -1,4 +1,33 @@
-#[macro_use] extern crate log as logcrate;
+#![deny(
+    dead_code,
+    anonymous_parameters,
+    deprecated_in_future,
+    explicit_outlives_requirements,
+    keyword_idents,
+    macro_use_extern_crate,
+    // missing_copy_implementations,
+    // missing_debug_implementations,
+    non_ascii_idents,
+    // non_camel_case_types,
+    unsafe_code,
+    // non_snake_case,
+    path_statements,
+    trivial_numeric_casts,
+    unstable_features,
+    // unused_crate_dependencies,
+    unused_extern_crates,
+    unused_allocation,
+    unused_import_braces,
+    unused_imports,
+    unused_must_use,
+    unused_mut,
+    // unused_qualifications,
+    while_true,
+)]
+
+extern crate log as logcrate;
+
+#[allow(macro_use_extern_crate)]
 #[macro_use] extern crate diesel;
 
 use std::path::Path;
@@ -73,7 +102,7 @@ async fn main() -> Result<()> {
 
             let repo = load_repo()?;
 
-            crate::commands::build(matches, progressbars, conn, &config, repo, &repo_path, max_packages as u64).await?
+            crate::commands::build(matches, progressbars, conn, &config, repo, &repo_path, max_packages).await?
         },
         Some(("what-depends", matches)) => {
             let repo = load_repo()?;
@@ -110,7 +139,6 @@ async fn main() -> Result<()> {
         },
 
         Some(("release", matches)) => {
-            let repo = load_repo()?;
             crate::commands::release(db_connection_config, &config, matches).await?
         }
 

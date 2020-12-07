@@ -1,10 +1,15 @@
 use crate::filestore::Artifact;
 
-/// TODO implement
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum JobResource {
     Environment(String, String),
     Artifact(Artifact)
+}
+
+impl From<(String, String)> for JobResource {
+    fn from(tpl: (String, String)) -> Self {
+        JobResource::Environment(tpl.0, tpl.1)
+    }
 }
 
 impl JobResource {

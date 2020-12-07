@@ -8,11 +8,10 @@ use anyhow::Result;
 use anyhow::anyhow;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
-use resiter::Map;
+use log::trace;
 use result_inspect::ResultInspect;
 use tar;
 
-use crate::filestore::Artifact;
 use crate::filestore::util::FileStoreImpl;
 
 // The implementation of this type must be available in the merged filestore.
@@ -80,10 +79,6 @@ impl StagingStore {
                 }
             })
             .collect()
-    }
-
-    pub fn load_from_path(&mut self, pb: &PathBuf) -> Result<&Artifact> {
-        self.0.load_from_path(pb)
     }
 
     pub fn root_path(&self) -> &Path {

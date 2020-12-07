@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
@@ -10,13 +9,14 @@ use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
 use diesel::PgConnection;
-use logcrate::debug;
-use tokio::sync::RwLock;
+use log::{debug, info, warn, trace};
 use tokio::stream::StreamExt;
+use tokio::sync::RwLock;
 
 use crate::config::*;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
+use crate::job::JobResource;
 use crate::job::JobSet;
 use crate::orchestrator::OrchestratorSetup;
 use crate::package::PackageName;
@@ -165,7 +165,7 @@ pub async fn build(matches: &ArgMatches,
         tree
     };
 
-    let source_cache = SourceCache::new(PathBuf::from(config.source_cache_root()));
+    let source_cache = SourceCache::new(config.source_cache_root().clone());
 
     if matches.is_present("no_verification") {
         warn!("No hash verification will be performed");
@@ -200,7 +200,7 @@ pub async fn build(matches: &ArgMatches,
         db_envs
     );
 
-    let (db_package, db_githash, db_image, db_envs) = (db_package?, db_githash?, db_image?, db_envs?);
+    let (db_package, db_githash, db_image, _) = (db_package?, db_githash?, db_image?, db_envs?);
 
     trace!("Database jobs for Package, GitHash, Image finished successfully");
     trace!("Creating Submit in database");
@@ -214,7 +214,8 @@ pub async fn build(matches: &ArgMatches,
     trace!("Creating Submit in database finished successfully: {:?}", submit);
 
     trace!("Setting up job sets");
-    let jobsets = JobSet::sets_from_tree(tree, image_name, phases.clone())?;
+    let resources: Vec<JobResource> = additional_env.into_iter().map(JobResource::from).collect();
+    let jobsets = JobSet::sets_from_tree(tree, image_name, phases.clone(), resources)?;
     trace!("Setting up job sets finished successfully");
 
     trace!("Setting up Orchestrator");
@@ -225,7 +226,6 @@ pub async fn build(matches: &ArgMatches,
         .release_store(release_dir)
         .database(database_connection)
         .source_cache(source_cache)
-        .additional_env(additional_env)
         .submit(submit)
         .log_dir(if matches.is_present("write-log-file") { Some(config.log_dir().clone()) } else { None })
         .jobsets(jobsets)

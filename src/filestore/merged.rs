@@ -1,4 +1,6 @@
 use std::sync::Arc;
+
+use log::trace;
 use tokio::sync::RwLock;
 
 use anyhow::Result;
@@ -22,32 +24,6 @@ pub struct MergedStores {
 impl MergedStores {
     pub fn new(release: Arc<RwLock<ReleaseStore>>, staging: Arc<RwLock<StagingStore>>) -> Self {
         MergedStores { release, staging }
-    }
-
-    pub async fn get_artifact_by_name(&self, name: &PackageName) -> Result<Vec<Artifact>> {
-        let v = self.staging
-            .read()
-            .await
-            .0
-            .values()
-            .filter(|a| a.name() == name)
-            .cloned()
-            .collect::<Vec<_>>();
-
-        if v.is_empty() {
-            Ok({
-                self.release
-                    .read()
-                    .await
-                    .0
-                    .values()
-                    .filter(|a| a.name() == name)
-                    .cloned()
-                    .collect()
-            })
-        } else {
-            Ok(v)
-        }
     }
 
     pub async fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersionConstraint) -> Result<Vec<Artifact>> {

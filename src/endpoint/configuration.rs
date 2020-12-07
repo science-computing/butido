@@ -1,8 +1,6 @@
-use anyhow::Result;
 use getset::Getters;
 use typed_builder::TypedBuilder;
 
-use crate::endpoint::Endpoint;
 use crate::util::docker::ImageName;
 
 #[derive(Getters, TypedBuilder)]
@@ -21,11 +19,5 @@ pub struct EndpointConfiguration {
     #[getset(get = "pub")]
     #[builder(default)]
     required_docker_api_versions: Option<Vec<String>>,
-}
-
-impl EndpointConfiguration {
-    pub async fn connect(self) -> Result<Endpoint> {
-        Endpoint::setup(self).await
-    }
 }
 

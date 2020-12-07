@@ -4,6 +4,7 @@ use clap::ArgMatches;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use getset::Getters;
+use log::debug;
 
 use crate::config::Configuration;
 

@@ -32,7 +32,7 @@ pub struct Job {
 
 impl Job {
 
-    pub fn new(pkg: Package, image: ImageName, phases: Vec<PhaseName>) -> Self {
+    pub fn new(pkg: Package, image: ImageName, phases: Vec<PhaseName>, resources: Vec<JobResource>) -> Self {
         let uuid = Uuid::new_v4();
 
         Job {
@@ -41,13 +41,9 @@ impl Job {
             image,
             script_shebang: String::from("#!/bin/bash"), // TODO Dont hardcode
             script_phases: phases,
-            resources: Vec::new(),
+            resources,
         }
 
-    }
-
-    pub fn add_resource(&mut self, res: JobResource) {
-        self.resources.push(res)
     }
 
 }

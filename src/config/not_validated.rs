@@ -2,7 +2,6 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use anyhow::Result;
 use getset::Getters;
-use handlebars::Handlebars;
 use serde::Deserialize;
 
 use crate::config::Configuration;
@@ -41,7 +40,7 @@ pub struct NotValidatedConfiguration {
 
     #[serde(rename = "source_cache")]
     #[getset(get = "pub")]
-    source_cache_root: String,
+    source_cache_root: PathBuf,
 
     #[getset(get = "pub")]
     #[serde(rename = "database_host")]
@@ -75,7 +74,22 @@ pub struct NotValidatedConfiguration {
 
 impl NotValidatedConfiguration {
     pub fn validate(self) -> Result<Configuration> {
-        // TODO: Implement proper validation
+        if !self.staging_directory.is_dir() {
+            return Err(anyhow!("Not a directory: staging = {}", self.staging_directory.display()))
+        }
+
+        if !self.releases_directory.is_dir() {
+            return Err(anyhow!("Not a directory: releases = {}", self.releases_directory.display()))
+        }
+
+        if !self.source_cache_root.is_dir() {
+            return Err(anyhow!("Not a directory: releases = {}", self.source_cache_root.display()))
+        }
+
+        if self.available_phases.is_empty() {
+            return Err(anyhow!("No phases configured"))
+        }
+
         if let Some(configured_theme) = self.script_highlight_theme.as_ref() {
             let allowed_theme_present = [
                 "base16-ocean.dark",
