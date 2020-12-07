@@ -479,45 +479,29 @@ pub fn cli<'a>() -> App<'a> {
 ///
 /// TODO: Clean up this spaghetti code
 fn env_pass_validator(s: &str) -> Result<(), String> {
-    let v = s.split("=").collect::<Vec<_>>();
+    use crate::util::parser::*;
+    let parser = {
+        let key = (letters() + ((letters() | numbers() | under()).repeat(0..)))
+            .collect()
+            .convert(|b| String::from_utf8(b.to_vec()));
 
-    if v.len() != 2 {
-        if v.len() == 1 {
-            if let Some(name) = v.get(0) {
-                match std::env::var(name) {
-                    Err(std::env::VarError::NotPresent) => {
-                        return Err(format!("Environment variable '{}' not present", name))
-                    },
-                    Err(std::env::VarError::NotUnicode(_)) => {
-                        return Err(format!("Environment variable '{}' not unicode", name))
-                    },
-                    Ok(_) => return Ok(()),
-                }
-            } else {
-                return Err(format!("BUG")) // TODO: Make nice, not runtime error
-            }
-        } else {
-            return Err(format!("Expected a 'key=value' string, got something different: '{}'", s))
-        }
-    } else {
-        if let Some(key) = v.get(0) {
-            if key.chars().any(|c| c == ' ' || c == '\t' || c == '\n') {
-                return Err(format!("Invalid characters found in key: '{}'", s))
-            }
-        } else {
-            return Err(format!("No key found in '{}'", s))
-        }
+        let val = nonempty_string_with_optional_quotes()
+            .collect()
+            .convert(|b| String::from_utf8(b.to_vec()));
 
-        if let Some(value) = v.get(1) {
-            if value.chars().any(|c| c == ' ' || c == '\t' || c == '\n') {
-                return Err(format!("Invalid characters found in value: '{}'", s))
-            }
-        } else {
-            return Err(format!("No value found in '{}'", s))
-        }
+        (key + equal() + val).map(|((k, _), v)| (k, v))
+    };
+
+    match parser.parse(s.as_bytes()).map_err(|e| e.to_string()) {
+        Err(s) => {
+            log::error!("Error during validation: '{}' is not a key-value pair", s);
+            Err(s)
+        },
+        Ok((k, v)) => {
+            log::debug!("Env pass valiation: '{}={}'", k, v);
+            Ok(())
+        },
     }
-
-    Ok(())
 }
 
 fn dir_exists_validator(s: &str) -> Result<(), String> {
@@ -525,6 +509,86 @@ fn dir_exists_validator(s: &str) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("Directory does not exist: {}", s))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::env_pass_validator;
+
+    #[test]
+    fn test_env_pass_validator_1() {
+        assert!(env_pass_validator("foo=\"bar\"").is_ok());
+    }
+
+    #[test]
+    fn test_env_pass_validator_2() {
+        assert!(env_pass_validator("foo=bar").is_ok());
+    }
+
+    #[test]
+    fn test_env_pass_validator_3() {
+        assert!(env_pass_validator("foo=\"1\"").is_ok());
+    }
+
+    #[test]
+    fn test_env_pass_validator_4() {
+        assert!(env_pass_validator("foo=1").is_ok());
+    }
+
+    #[test]
+    fn test_env_pass_validator_5() {
+        assert!(env_pass_validator("FOO=\"bar\"").is_ok());
+    }
+
+    #[test]
+    fn test_env_pass_validator_6() {
+        assert!(env_pass_validator("FOO=bar").is_ok());
+    }
+
+    #[test]
+    fn test_env_pass_validator_7() {
+        assert!(env_pass_validator("FOO=\"1\"").is_ok());
+    }
+
+    #[test]
+    fn test_env_pass_validator_8() {
+        assert!(env_pass_validator("FOO=1").is_ok());
+    }
+
+    #[test]
+    fn test_env_pass_validator_9() {
+        assert!(env_pass_validator("1=1").is_err());
+    }
+
+    #[test]
+    fn test_env_pass_validator_10() {
+        assert!(env_pass_validator("=").is_err());
+    }
+
+    #[test]
+    fn test_env_pass_validator_11() {
+        assert!(env_pass_validator("a=").is_err());
+    }
+
+    #[test]
+    fn test_env_pass_validator_12() {
+        assert!(env_pass_validator("=a").is_err());
+    }
+
+    #[test]
+    fn test_env_pass_validator_13() {
+        assert!(env_pass_validator("a").is_err());
+    }
+
+    #[test]
+    fn test_env_pass_validator_14() {
+        assert!(env_pass_validator("avjasva").is_err());
+    }
+
+    #[test]
+    fn test_env_pass_validator_15() {
+        assert!(env_pass_validator("123").is_err());
     }
 }
 
