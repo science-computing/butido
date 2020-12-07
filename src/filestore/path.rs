@@ -48,14 +48,15 @@ impl StoreRoot {
     pub (in crate::filestore) fn walk(&self) -> walkdir::WalkDir {
         walkdir::WalkDir::new(&self.0)
     }
-}
 
-impl AsRef<Path> for StoreRoot {
-    fn as_ref(&self) -> &Path {
-        &self.0
+    pub (in crate::filestore) fn unpack_archive_here<R>(&self, mut ar: tar::Archive<R>) -> Result<()>
+        where R: std::io::Read
+    {
+        ar.unpack(&self.0)
+            .map_err(Error::from)
+            .map(|_| ())
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ArtifactPath(PathBuf);

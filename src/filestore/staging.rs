@@ -56,8 +56,7 @@ impl StagingStore {
                     .context("Collecting outputs of TAR archive")?;
 
                 trace!("Unpacking archive to {}", dest.display());
-                tar::Archive::new(&bytes[..])
-                    .unpack(dest)
+                dest.unpack_archive_here(tar::Archive::new(&bytes[..]))
                     .context("Unpacking TAR")
                     .map_err(Error::from)
                     .map(|_| outputs)
