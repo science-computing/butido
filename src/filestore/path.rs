@@ -87,10 +87,6 @@ impl ArtifactPath {
     pub (in crate::filestore) fn file_stem(&self) -> Option<&OsStr> {
         self.0.file_stem()
     }
-
-    pub (in crate::filestore) fn is_dir(&self) -> bool {
-        self.0.is_dir()
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -103,6 +99,10 @@ impl<'a> FullArtifactPath<'a> {
 
     pub (in crate::filestore) fn is_file(&self) -> bool {
         self.joined().is_file()
+    }
+
+    pub (in crate::filestore) fn is_dir(&self) -> bool {
+        self.joined().is_dir()
     }
 
     pub fn display(&self) -> FullArtifactPathDisplay<'a> {

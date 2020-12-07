@@ -49,7 +49,7 @@ impl Artifact {
                 version
             })
         } else {
-            if path.is_dir() {
+            if root.join(&path).is_dir() {
                 Err(anyhow!("Cannot load non-file path: {}", path.display()))
             } else {
                 Err(anyhow!("Path does not exist: {}", path.display()))
