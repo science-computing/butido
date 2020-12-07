@@ -70,12 +70,14 @@ impl StagingStore {
                     None
                 } else {
                     Some({
-                        let path = ArtifactPath::new(path);
-                        self.0.load_from_path(&path)
-                            .inspect(|r| trace!("Loaded from path {} = {:?}", path.display(), r))
-                            .with_context(|| anyhow!("Loading from path: {}", path.display()))
-                            .map_err(Error::from)
-                            .map(|art| art.path().clone())
+                        ArtifactPath::new(path)
+                            .and_then(|ap| {
+                                self.0.load_from_path(&ap)
+                                    .inspect(|r| trace!("Loaded from path {} = {:?}", ap.display(), r))
+                                    .with_context(|| anyhow!("Loading from path: {}", ap.display()))
+                                    .map_err(Error::from)
+                                    .map(|art| art.path().clone())
+                            })
                     })
                 }
             })

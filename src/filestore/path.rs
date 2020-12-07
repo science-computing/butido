@@ -17,8 +17,8 @@ impl StoreRoot {
 
     pub (in crate::filestore) fn stripped_from(&self, pb: &Path) -> Result<ArtifactPath> {
         pb.strip_prefix(&self.0)
-            .map(|p| ArtifactPath::new(p.to_path_buf()))
             .map_err(Error::from)
+            .and_then(|p| ArtifactPath::new(p.to_path_buf()))
     }
 
     pub fn join<'a>(&'a self, ap: &'a ArtifactPath) -> FullArtifactPath<'a> {
@@ -49,8 +49,12 @@ impl AsRef<Path> for StoreRoot {
 pub struct ArtifactPath(PathBuf);
 
 impl ArtifactPath {
-    pub (in crate::filestore) fn new(p: PathBuf) -> Self {
-        ArtifactPath(p)
+    pub (in crate::filestore) fn new(p: PathBuf) -> Result<Self> {
+        if p.is_relative() {
+            Ok(ArtifactPath(p))
+        } else {
+            Err(anyhow!("Path is not relative: {}", p.display()))
+        }
     }
 
     pub fn display(&self) -> std::path::Display {
