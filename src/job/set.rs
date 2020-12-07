@@ -211,7 +211,7 @@ mod tests {
             pack
         };
 
-        let p2 = {
+        let _ = {
             let name = "b";
             let vers = "2";
             let pack = package(name, vers, "https://rust-lang.org", "124");
