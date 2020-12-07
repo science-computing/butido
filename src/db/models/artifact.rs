@@ -1,5 +1,5 @@
-use std::path::Path;
 use std::path::PathBuf;
+use crate::filestore::path::ArtifactPath;
 
 use anyhow::anyhow;
 use anyhow::Error;
@@ -34,7 +34,7 @@ impl Artifact {
         PathBuf::from(&self.path)
     }
 
-    pub fn create(database_connection: &PgConnection, art_path: &Path, art_released: bool, job: &Job) -> Result<Artifact> {
+    pub fn create(database_connection: &PgConnection, art_path: &ArtifactPath, art_released: bool, job: &Job) -> Result<Artifact> {
         let path_str = art_path.to_str()
                 .ok_or_else(|| anyhow!("Path is not valid UTF-8: {}",  art_path.display()))
                 .context("Writing artifact to database")?;

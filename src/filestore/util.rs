@@ -14,6 +14,7 @@ use resiter::Map;
 use walkdir::WalkDir;
 
 use crate::filestore::Artifact;
+use crate::filestore::path::*;
 
 /// The actual filestore implementation
 ///
@@ -22,53 +23,54 @@ use crate::filestore::Artifact;
 ///
 /// It can then be wrapped into the actual interface of this module with specialized functionality.
 pub struct FileStoreImpl {
-    pub(in crate::filestore) root: PathBuf,
+    pub(in crate::filestore) root: StoreRoot,
     store: BTreeMap<PathBuf, Artifact>,
 }
 
 impl FileStoreImpl {
     /// Loads the passed path recursively into a Path => Artifact mapping
-    pub fn load(root: &Path, progress: ProgressBar) -> Result<Self> {
-        if root.is_dir() {
-            let store = WalkDir::new(root)
+    pub fn load(path: &Path, progress: ProgressBar) -> Result<Self> {
+        if path.is_dir() {
+            let root = StoreRoot::new(path.to_path_buf());
+
+            let store = WalkDir::new(&path)
                 .follow_links(false)
                 .into_iter()
                 .filter_entry(|e| e.file_type().is_file())
                 .map_err(Error::from)
-                .map_ok(|f| f.path().to_path_buf())
-                .and_then_ok(|pb| {
+                .and_then_ok(|f| {
                     progress.tick();
-                    let p = pb.strip_prefix(root)?;
-                    Artifact::load(root, &p).map(|a| (pb, a))
+                    let p = root.stripped_from(f.path())?;
+                    Artifact::load(&root, p).map(|a| (f.path().to_path_buf(), a))
                 })
                 .collect::<Result<BTreeMap<PathBuf, Artifact>>>()?;
 
-            Ok(FileStoreImpl { root: root.to_path_buf(), store })
+            Ok(FileStoreImpl { root, store })
         } else {
-            Err(anyhow!("File store cannot be loaded from non-directory: {}", root.display()))
+            Err(anyhow!("File store cannot be loaded from non-directory: {}", path.display()))
         }
     }
 
-    pub fn root_path(&self) -> &Path {
+    pub fn root_path(&self) -> &StoreRoot {
         &self.root
     }
 
     pub fn path_exists_in_store_root(&self, p: &Path) -> bool {
-        self.root.join(p).is_file()
+        self.root.join_path(p).is_file()
     }
 
     pub (in crate::filestore) fn values(&self) -> impl Iterator<Item = &Artifact> {
         self.store.values()
     }
 
-    pub (in crate::filestore) fn load_from_path(&mut self, pb: &PathBuf) -> Result<&Artifact> {
+    pub (in crate::filestore) fn load_from_path(&mut self, pb: &Path) -> Result<&Artifact> {
         if !self.is_sub_path(pb)? {
             Err(anyhow!("Not a sub-path of {}: {}", self.root.display(), pb.display()))
         } else {
             if self.store.get(pb).is_some() {
                 Err(anyhow!("Entry exists: {}", pb.display()))
             } else {
-                let p = pb.strip_prefix(&self.root)?;
+                let p = self.root.stripped_from(pb)?;
                 Ok(self.store.entry(pb.to_path_buf()).or_insert(Artifact::load(&self.root, p)?))
             }
         }
@@ -76,7 +78,7 @@ impl FileStoreImpl {
 
     fn is_sub_path(&self, p: &Path) -> Result<bool> {
         p.canonicalize()
-            .map(|c| c.starts_with(&self.root))
+            .map(|c| c.starts_with(self.root.as_ref()))
             .map_err(Error::from)
     }
 

@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use std::path::Path;
-use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -12,6 +11,8 @@ use log::trace;
 use result_inspect::ResultInspect;
 use tar;
 
+use crate::filestore::path::ArtifactPath;
+use crate::filestore::path::StoreRoot;
 use crate::filestore::util::FileStoreImpl;
 
 // The implementation of this type must be available in the merged filestore.
@@ -33,7 +34,7 @@ impl StagingStore {
     /// # Returns
     ///
     /// Returns a list of Artifacts that were written from the stream
-    pub async fn write_files_from_tar_stream<S>(&mut self, stream: S) -> Result<Vec<PathBuf>>
+    pub async fn write_files_from_tar_stream<S>(&mut self, stream: S) -> Result<Vec<ArtifactPath>>
         where S: Stream<Item = Result<Vec<u8>>>
     {
         use futures::stream::TryStreamExt;
@@ -64,13 +65,14 @@ impl StagingStore {
             .context("Concatenating the output bytestream")?
             .into_iter()
             .inspect(|p| trace!("Trying to load into staging store: {}", p.display()))
+            .map(ArtifactPath::new)
             .filter_map(|path| {
                 let fullpath = self.0.root.join(&path);
                 if fullpath.is_dir() {
                     None
                 } else {
                     Some({
-                        self.0.load_from_path(&fullpath)
+                        self.0.load_from_path(fullpath.as_ref())
                             .inspect(|r| trace!("Loaded from path {} = {:?}", fullpath.display(), r))
                             .with_context(|| anyhow!("Loading from path: {}", fullpath.display()))
                             .map_err(Error::from)
@@ -81,7 +83,7 @@ impl StagingStore {
             .collect()
     }
 
-    pub fn root_path(&self) -> &Path {
+    pub fn root_path(&self) -> &StoreRoot {
         self.0.root_path()
     }
 

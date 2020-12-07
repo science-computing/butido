@@ -10,4 +10,6 @@ pub use staging::*;
 mod merged;
 pub use merged::*;
 
+pub mod path;
+
 mod util;
