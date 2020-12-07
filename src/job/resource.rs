@@ -1,6 +1,5 @@
 use crate::filestore::Artifact;
 
-/// TODO implement
 #[derive(Clone, Debug)]
 pub enum JobResource {
     Environment(String, String),
