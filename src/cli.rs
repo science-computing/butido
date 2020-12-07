@@ -354,7 +354,7 @@ pub fn cli<'a>() -> App<'a> {
                 .about("The name of the package")
             )
             .arg(Arg::new("package_version_constraint")
-                .required(false)
+                .required(true)
                 .multiple(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
