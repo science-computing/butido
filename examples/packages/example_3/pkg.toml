@@ -32,33 +32,34 @@ unpack.script = '''
 # repo where we prepare a build container.
 # This is, of course, not be the way it would be done in a real-world scenario!
 depinst.script = '''
-    echo "#BUTIDO:PHASE:depinst"
-    echo "#BUTIDO:PROGRESS:0"
+    {{phase "depinst"}}
+    {{progress 0}}
     for n in {1..10}; do sleep 0.1; done
-    echo "#BUTIDO:PROGRESS:10"
+    {{progress 10}}
 '''
 
 configure.script = '''
-    echo "#BUTIDO:PHASE:configure-preparing"
+    {{phase "configure-preparing"}}
     for n in {1..10}; do sleep 0.1; done
 
-    echo "#BUTIDO:PROGRESS:20"
+    {{progress 20}}
     for n in {1..10}; do sleep 0.1; done
 '''
 
 build.script = '''
-    echo "#BUTIDO:PHASE:build"
+    {{phase "build"}}
 
     for n in {1..10}; do sleep 0.1; done
 
     echo "#BUTIDO:PROGRESS:60"
+    {{progress 60}}
 '''
 
 install.script = '''
-    echo "#BUTIDO:PHASE:install"
+    {{phase "install"}}
     for n in {1..10}; do sleep 0.1; done
 
-    echo "#BUTIDO:PROGRESS:80"
+    {{progress 80}}
 '''
 
 

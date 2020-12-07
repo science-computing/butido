@@ -1,6 +1,6 @@
 use anyhow::Error;
 use anyhow::Result;
-use handlebars::Handlebars;
+use handlebars::{Handlebars, HelperDef, RenderContext, Helper, Context, JsonRender, HelperResult, Output, RenderError};
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -85,7 +85,78 @@ impl<'a> ScriptBuilder<'a> {
     fn interpolate_package(script: String, package: &Package, strict_mode: bool) -> Result<String> {
         let mut hb = Handlebars::new();
         hb.register_template_string("script", script)?;
+        hb.register_helper("phase", Box::new(PhaseHelper));
+        hb.register_helper("state", Box::new(StateHelper));
+        hb.register_helper("progress", Box::new(ProgressHelper));
         hb.set_strict_mode(strict_mode);
         hb.render("script", package).map_err(Error::from)
     }
 }
+
+#[derive(Clone, Copy)]
+struct PhaseHelper;
+
+impl HelperDef for PhaseHelper {
+    fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
+        h.param(0)
+            .ok_or_else(|| RenderError::new("Required parameter missing: phase name"))?
+            .value()
+            .as_str()
+            .ok_or_else(|| RenderError::new("Required parameter must be a string: phase name"))
+            .and_then(|phase_name| {
+                out.write("echo '#BUTIDO:PHASE:")?;
+                out.write(phase_name)?;
+                out.write("'\n")?;
+                Ok(())
+            })
+    }
+}
+
+#[derive(Clone, Copy)]
+struct StateHelper;
+
+impl HelperDef for StateHelper {
+    fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
+        let state_msg = h.param(1).ok_or_else(|| RenderError::new("Required parameter missing: state message"))?;
+        h.param(0)
+            .ok_or_else(|| RenderError::new("Required parameter missing: state"))?
+            .value()
+            .as_str()
+            .ok_or_else(|| RenderError::new("Required parameter must be a string: state"))
+            .and_then(|state| match state {
+                "OK" => {
+                    out.write("echo '#BUTIDO:STATE:OK:")?;
+                    out.write(state_msg.value().render().as_ref())?;
+                    out.write("'\n")?;
+                    Ok(())
+                },
+                "ERR" => {
+                    out.write("echo '#BUTIDO:STATE:ERR:")?;
+                    out.write(state_msg.value().render().as_ref())?;
+                    out.write("'\n")?;
+                    Ok(())
+                },
+                other => Err(RenderError::new(format!("Parameter must bei either 'OK' or 'ERR', '{}' is invalid", other))),
+            })
+    }
+}
+
+#[derive(Clone, Copy)]
+struct ProgressHelper;
+
+impl HelperDef for ProgressHelper {
+    fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
+        h.param(0)
+            .ok_or_else(|| RenderError::new("Required parameter missing: progress"))?
+            .value()
+            .as_i64()
+            .ok_or_else(|| RenderError::new("Required parameter must be a number: progress"))
+            .and_then(|progress| {
+                out.write("echo '#BUTIDO:PROGRESS:")?;
+                out.write(&progress.to_string())?;
+                out.write("'\n")?;
+                Ok(())
+            })
+    }
+}
+
