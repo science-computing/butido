@@ -47,6 +47,22 @@ colored     = "2"
 syntect     = "4.4"
 thiserror   = "1"
 
+# Hard-code rand to 0.4.4
+#
+# Reason for this is this dependency chain:
+# diesel -> uuid (0.6) -> rand (0.4)
+# but rand 0.4.5 depends on fuchsia-cprng which has an unclear license
+# rand 0.4.4 is yanked, rand 0.4.3 does not contain this dependency.
+#
+# We do not explicitely need this dependency, we just want to force cargo not to
+# link against rand 0.4.5 because of this licensing issue.
+#
+# The proper solution for this would be to update "uuid" in diesel or
+# to update "rand" in uuid 0.6.
+#
+# Upstream issue: https://github.com/rust-random/rand/issues/1071
+rand = "=0.4.3"
+
 url      = { version = "2", features = ["serde"] }
 tokio    = { version = "0.2", features = ["macros", "fs"] }
 shiplift = { git = "https://github.com/softprops/shiplift", branch = "master" }
