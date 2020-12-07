@@ -10,7 +10,6 @@ use anyhow::anyhow;
 use indicatif::ProgressBar;
 use resiter::AndThen;
 use resiter::Map;
-use walkdir::WalkDir;
 
 use crate::filestore::Artifact;
 use crate::filestore::path::*;
@@ -29,7 +28,7 @@ pub struct FileStoreImpl {
 impl FileStoreImpl {
     /// Loads the passed path recursively into a Path => Artifact mapping
     pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
-        let store = WalkDir::new(root.as_path())
+        let store = root.walk()
             .follow_links(false)
             .into_iter()
             .filter_entry(|e| e.file_type().is_file())

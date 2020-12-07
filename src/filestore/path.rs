@@ -41,12 +41,12 @@ impl StoreRoot {
         self.0.join(subpath).is_dir()
     }
 
-    pub (in crate::filestore) fn as_path(&self) -> &Path {
-        self.0.as_ref()
-    }
-
     pub fn display(&self) -> std::path::Display {
         self.0.display()
+    }
+
+    pub (in crate::filestore) fn walk(&self) -> walkdir::WalkDir {
+        walkdir::WalkDir::new(&self.0)
     }
 }
 
