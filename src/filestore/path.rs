@@ -6,6 +6,8 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::Context;
+use resiter::AndThen;
+use resiter::Map;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StoreRoot(PathBuf);
@@ -21,12 +23,6 @@ impl StoreRoot {
         } else {
             Err(anyhow!("StoreRoot path is not absolute: {}", root.display()))
         }
-    }
-
-    pub (in crate::filestore) fn stripped_from(&self, pb: &Path) -> Result<ArtifactPath> {
-        pb.strip_prefix(&self.0)
-            .map_err(Error::from)
-            .and_then(|p| ArtifactPath::new(p.to_path_buf()))
     }
 
     pub fn join<'a>(&'a self, ap: &'a ArtifactPath) -> FullArtifactPath<'a> {
@@ -45,8 +41,14 @@ impl StoreRoot {
         self.0.display()
     }
 
-    pub (in crate::filestore) fn walk(&self) -> walkdir::WalkDir {
+    pub fn find_artifacts_recursive(&self) -> impl Iterator<Item = Result<ArtifactPath>> {
         walkdir::WalkDir::new(&self.0)
+            .follow_links(false)
+            .into_iter()
+            .filter_entry(|e| e.file_type().is_file())
+            .map_err(Error::from)
+            .map_ok(|de| de.into_path())
+            .and_then_ok(ArtifactPath::new)
     }
 
     pub (in crate::filestore) fn unpack_archive_here<R>(&self, mut ar: tar::Archive<R>) -> Result<()>

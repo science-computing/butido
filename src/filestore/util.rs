@@ -4,12 +4,10 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use indicatif::ProgressBar;
 use resiter::AndThen;
-use resiter::Map;
 
 use crate::filestore::Artifact;
 use crate::filestore::path::*;
@@ -28,15 +26,12 @@ pub struct FileStoreImpl {
 impl FileStoreImpl {
     /// Loads the passed path recursively into a Path => Artifact mapping
     pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
-        let store = root.walk()
-            .follow_links(false)
-            .into_iter()
-            .filter_entry(|e| e.file_type().is_file())
-            .map_err(Error::from)
-            .and_then_ok(|f| {
+        let store = root
+            .find_artifacts_recursive()
+            .and_then_ok(|artifact_path| {
                 progress.tick();
-                let p = root.stripped_from(f.path())?;
-                Artifact::load(&root, p.clone()).map(|a| (p, a))
+                Artifact::load(&root, artifact_path.clone())
+                    .map(|a| (artifact_path, a))
             })
             .collect::<Result<BTreeMap<ArtifactPath, Artifact>>>()?;
 
