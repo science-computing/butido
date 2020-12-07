@@ -18,6 +18,12 @@ runtime         = []
 [phases]
 
 unpack.script = '''
+    {{#each sources}}
+    echo "{{@key}}  {{this.url}}"
+    echo "          {{this.hash.hash}}"
+    ls /inputs/{{@key}}-{{this.hash.hash}}.source
+    {{/each}}
+
     mkdir /build
     echo "#BUTIDO:PHASE:unpack"
 '''
