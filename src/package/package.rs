@@ -26,7 +26,7 @@ pub struct Package {
     version_is_semver: bool,
 
     #[getset(get = "pub")]
-    sources: Vec<Source>,
+    sources: HashMap<String, Source>,
 
     #[getset(get = "pub")]
     dependencies: Dependencies,
