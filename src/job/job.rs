@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use crate::job::JobResource;
 use crate::package::Package;
+use crate::package::Shebang;
 use crate::phase::PhaseName;
 use crate::util::docker::ImageName;
 
@@ -19,9 +20,8 @@ pub struct Job {
     #[getset(get = "pub")]
     pub(in super) image: ImageName,
 
-
     #[getset(get = "pub")]
-    pub(in super) script_shebang: String,
+    pub(in super) script_shebang: Shebang,
 
     #[getset(get = "pub")]
     pub(in super) script_phases: Vec<PhaseName>,
@@ -32,14 +32,14 @@ pub struct Job {
 
 impl Job {
 
-    pub fn new(pkg: Package, image: ImageName, phases: Vec<PhaseName>, resources: Vec<JobResource>) -> Self {
+    pub fn new(pkg: Package, script_shebang: Shebang, image: ImageName, phases: Vec<PhaseName>, resources: Vec<JobResource>) -> Self {
         let uuid = Uuid::new_v4();
 
         Job {
             uuid,
             package: pkg,
             image,
-            script_shebang: String::from("#!/bin/bash"), // TODO Dont hardcode
+            script_shebang,
             script_phases: phases,
             resources,
         }

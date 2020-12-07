@@ -10,6 +10,11 @@
 progress_format = "[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}"
 
 
+# The shebang line used when compiling the packaging scripts
+# Default if this value is not set is "#!/bin/bash".
+# Can be overwritten temporarily via CLI
+script_shebang = "#!/bin/bash"
+
 # The theme for the highlighting engine when printing the script that ran inside
 # a container.
 #

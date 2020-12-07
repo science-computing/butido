@@ -30,6 +30,10 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     script_highlight_theme: Option<String>,
 
+    #[serde(default = "default_script_shebang")]
+    #[getset(get = "pub")]
+    shebang: String,
+
     #[serde(rename = "releases")]
     #[getset(get = "pub")]
     releases_directory: PathBuf,

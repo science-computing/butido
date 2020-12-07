@@ -21,6 +21,7 @@ use crate::job::JobSet;
 use crate::orchestrator::OrchestratorSetup;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
+use crate::package::Shebang;
 use crate::package::Tree;
 use crate::repository::Repository;
 use crate::source::SourceCache;
@@ -47,6 +48,12 @@ pub async fn build(matches: &ArgMatches,
     let now = chrono::offset::Local::now().naive_local();
     let submit_id = uuid::Uuid::new_v4();
     info!("Submit {}, started {}", submit_id, now);
+
+    let shebang = Shebang::from({
+        matches.value_of("shebang")
+            .map(String::from)
+            .unwrap_or_else(|| config.shebang().clone())
+    });
 
     let image_name = matches.value_of("image").map(String::from).map(ImageName::from).unwrap(); // safe by clap
     if config.docker().verify_images_present() {
@@ -215,7 +222,7 @@ pub async fn build(matches: &ArgMatches,
 
     trace!("Setting up job sets");
     let resources: Vec<JobResource> = additional_env.into_iter().map(JobResource::from).collect();
-    let jobsets = JobSet::sets_from_tree(tree, image_name, phases.clone(), resources)?;
+    let jobsets = JobSet::sets_from_tree(tree, shebang, image_name, phases.clone(), resources)?;
     trace!("Setting up job sets finished successfully");
 
     trace!("Setting up Orchestrator");

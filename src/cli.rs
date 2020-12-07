@@ -243,6 +243,15 @@ pub fn cli<'a>() -> App<'a> {
                 .about("Do not throw dice on staging directory name, but hardcode for this run.")
             )
 
+            .arg(Arg::new("shebang")
+                .required(false)
+                .multiple(false)
+                .long("shebang")
+                .takes_value(true)
+                .value_name("BANG")
+                .about("Overwrite the configured shebang line")
+            )
+
             .arg(Arg::new("env")
                 .required(false)
                 .multiple(true)

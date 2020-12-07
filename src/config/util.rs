@@ -16,3 +16,7 @@ pub fn default_strict_script_interpolation() -> bool {
     true
 }
 
+pub fn default_script_shebang() -> String {
+    String::from("#!/bin/bash")
+}
+

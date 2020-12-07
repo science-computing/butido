@@ -12,6 +12,15 @@ use crate::phase::PhaseName;
 #[serde(transparent)]
 pub struct Script(String);
 
+#[derive(Clone, Debug)]
+pub struct Shebang(String);
+
+impl From<String> for Shebang {
+    fn from(s: String) -> Self {
+        Shebang(s)
+    }
+}
+
 impl AsRef<str> for Script {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
@@ -19,19 +28,18 @@ impl AsRef<str> for Script {
 }
 
 pub struct ScriptBuilder<'a> {
-    shebang : &'a String,
+    shebang: &'a Shebang,
 }
 
 impl<'a> ScriptBuilder<'a> {
-    // TODO: Use handlebars and templating instead of hardcoding
-    pub fn new(shebang: &'a String) -> Self {
+    pub fn new(shebang: &'a Shebang) -> Self {
         ScriptBuilder {
             shebang,
         }
     }
 
     pub fn build(self, package: &Package, phaseorder: &Vec<PhaseName>, strict_mode: bool) -> Result<Script> {
-        let mut script = format!("{shebang}\n", shebang = self.shebang);
+        let mut script = format!("{shebang}\n", shebang = self.shebang.0);
 
         for name in phaseorder {
             match package.phases().get(name) {
