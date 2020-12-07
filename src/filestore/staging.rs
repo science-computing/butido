@@ -65,16 +65,15 @@ impl StagingStore {
             .context("Concatenating the output bytestream")?
             .into_iter()
             .inspect(|p| trace!("Trying to load into staging store: {}", p.display()))
-            .map(ArtifactPath::new)
             .filter_map(|path| {
-                let fullpath = self.0.root.join(&path);
-                if fullpath.is_dir() {
+                if self.0.root.join_path(&path).is_dir() {
                     None
                 } else {
                     Some({
-                        self.0.load_from_path(&fullpath)
-                            .inspect(|r| trace!("Loaded from path {} = {:?}", fullpath.display(), r))
-                            .with_context(|| anyhow!("Loading from path: {}", fullpath.display()))
+                        let path = ArtifactPath::new(path);
+                        self.0.load_from_path(&path)
+                            .inspect(|r| trace!("Loaded from path {} = {:?}", path.display(), r))
+                            .with_context(|| anyhow!("Loading from path: {}", path.display()))
                             .map_err(Error::from)
                             .map(|art| art.path().clone())
                     })

@@ -7,7 +7,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::Context;
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StoreRoot(PathBuf);
 
 impl StoreRoot {
@@ -21,9 +21,8 @@ impl StoreRoot {
             .map_err(Error::from)
     }
 
-    pub fn join(&self, ap: &ArtifactPath) -> FullArtifactPath {
-        let join = self.0.join(&ap.0);
-        FullArtifactPath(join)
+    pub fn join<'a>(&'a self, ap: &'a ArtifactPath) -> FullArtifactPath<'a> {
+        FullArtifactPath(&self, ap)
     }
 
     // Needed for FileStoreImpl::path_exists_in_store_root()
@@ -73,31 +72,35 @@ impl ArtifactPath {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FullArtifactPath(PathBuf);
+pub struct FullArtifactPath<'a>(&'a StoreRoot, &'a ArtifactPath);
 
-impl FullArtifactPath {
-    pub (in crate::filestore) fn is_dir(&self) -> bool {
-        self.0.is_dir()
-    }
-
-    pub (in crate::filestore) fn as_path(&self) -> &Path {
-        self.0.as_ref()
+impl<'a> FullArtifactPath<'a> {
+    fn joined(&self) -> PathBuf {
+        self.0.0.join(&self.1.0)
     }
 
     pub (in crate::filestore) fn is_file(&self) -> bool {
-        self.0.is_file()
+        self.joined().is_file()
     }
 
-    pub fn display(&self) -> std::path::Display {
-        self.0.display()
+    pub fn display(&self) -> FullArtifactPathDisplay<'a> {
+        FullArtifactPathDisplay(self.0, self.1)
     }
 
     pub async fn read(self) -> Result<Vec<u8>> {
-        tokio::fs::read(&self.0)
+        tokio::fs::read(self.joined())
             .await
             .map(Vec::from)
             .with_context(|| anyhow!("Reading artifact from path {}", self.0.display()))
             .map_err(Error::from)
+    }
+}
+
+pub struct FullArtifactPathDisplay<'a>(&'a StoreRoot, &'a ArtifactPath);
+
+impl<'a> std::fmt::Display for FullArtifactPathDisplay<'a> {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "{}/{}", self.0.display(), self.1.display())
     }
 }
 

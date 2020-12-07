@@ -62,23 +62,12 @@ impl FileStoreImpl {
         self.store.values()
     }
 
-    pub (in crate::filestore) fn load_from_path(&mut self, pb: &FullArtifactPath) -> Result<&Artifact> {
-        if !self.is_sub_path(pb.as_path())? {
-            Err(anyhow!("Not a sub-path of {}: {}", self.root.display(), pb.display()))
+    pub (in crate::filestore) fn load_from_path(&mut self, artifact_path: &ArtifactPath) -> Result<&Artifact> {
+        if self.store.get(&artifact_path).is_some() {
+            Err(anyhow!("Entry exists: {}", artifact_path.display()))
         } else {
-            let art_path = self.root.stripped_from(pb.as_path())?;
-            if self.store.get(&art_path).is_some() {
-                Err(anyhow!("Entry exists: {}", pb.display()))
-            } else {
-                Ok(self.store.entry(art_path.clone()).or_insert(Artifact::load(&self.root, art_path)?))
-            }
+            Ok(self.store.entry(artifact_path.clone()).or_insert(Artifact::load(&self.root, artifact_path.clone())?))
         }
-    }
-
-    fn is_sub_path(&self, p: &Path) -> Result<bool> {
-        p.canonicalize()
-            .map(|c| c.starts_with(self.root.as_ref()))
-            .map_err(Error::from)
     }
 
 }
