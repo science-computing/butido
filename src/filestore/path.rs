@@ -59,11 +59,11 @@ impl StoreRoot {
         FullArtifactPath(self, ap)
     }
 
-    pub fn is_file(&self, subpath: &Path) -> bool {
+    pub (in crate::filestore) fn is_file(&self, subpath: &Path) -> bool {
         self.0.join(subpath).is_file()
     }
 
-    pub fn is_dir(&self, subpath: &Path) -> bool {
+    pub (in crate::filestore) fn is_dir(&self, subpath: &Path) -> bool {
         self.0.join(subpath).is_dir()
     }
 
@@ -71,7 +71,7 @@ impl StoreRoot {
         self.0.display()
     }
 
-    pub fn find_artifacts_recursive(&self) -> impl Iterator<Item = Result<ArtifactPath>> {
+    pub (in crate::filestore) fn find_artifacts_recursive(&self) -> impl Iterator<Item = Result<ArtifactPath>> {
         walkdir::WalkDir::new(&self.0)
             .follow_links(false)
             .into_iter()
