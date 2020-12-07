@@ -165,7 +165,7 @@ pub async fn build(matches: &ArgMatches,
         tree
     };
 
-    let source_cache = SourceCache::new(PathBuf::from(config.source_cache_root()));
+    let source_cache = SourceCache::new(config.source_cache_root().clone());
 
     if matches.is_present("no_verification") {
         warn!("No hash verification will be performed");

@@ -29,8 +29,7 @@ pub async fn source(matches: &ArgMatches, config: &Configuration, repo: Reposito
 }
 
 pub async fn verify(matches: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
-    let source_cache_root = PathBuf::from(config.source_cache_root());
-    let sc                = SourceCache::new(source_cache_root);
+    let sc                = SourceCache::new(config.source_cache_root().clone());
     let pname             = matches.value_of("package_name").map(String::from).map(PackageName::from);
     let pvers             = matches.value_of("package_version").map(String::from).map(PackageVersionConstraint::new).transpose()?;
 
@@ -74,7 +73,7 @@ pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCac
 }
 
 pub async fn list_missing(_: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
-    let sc          = SourceCache::new(PathBuf::from(config.source_cache_root()));
+    let sc          = SourceCache::new(config.source_cache_root().clone());
     let out         = std::io::stdout();
     let mut outlock = out.lock();
 

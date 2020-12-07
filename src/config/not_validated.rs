@@ -40,7 +40,7 @@ pub struct NotValidatedConfiguration {
 
     #[serde(rename = "source_cache")]
     #[getset(get = "pub")]
-    source_cache_root: String,
+    source_cache_root: PathBuf,
 
     #[getset(get = "pub")]
     #[serde(rename = "database_host")]
