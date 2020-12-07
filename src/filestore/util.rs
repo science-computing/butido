@@ -28,26 +28,20 @@ pub struct FileStoreImpl {
 
 impl FileStoreImpl {
     /// Loads the passed path recursively into a Path => Artifact mapping
-    pub fn load(path: &Path, progress: ProgressBar) -> Result<Self> {
-        if path.is_dir() {
-            let root = StoreRoot::new(path.to_path_buf())?;
+    pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
+        let store = WalkDir::new(root.as_path())
+            .follow_links(false)
+            .into_iter()
+            .filter_entry(|e| e.file_type().is_file())
+            .map_err(Error::from)
+            .and_then_ok(|f| {
+                progress.tick();
+                let p = root.stripped_from(f.path())?;
+                Artifact::load(&root, p.clone()).map(|a| (p, a))
+            })
+            .collect::<Result<BTreeMap<ArtifactPath, Artifact>>>()?;
 
-            let store = WalkDir::new(&path)
-                .follow_links(false)
-                .into_iter()
-                .filter_entry(|e| e.file_type().is_file())
-                .map_err(Error::from)
-                .and_then_ok(|f| {
-                    progress.tick();
-                    let p = root.stripped_from(f.path())?;
-                    Artifact::load(&root, p.clone()).map(|a| (p, a))
-                })
-                .collect::<Result<BTreeMap<ArtifactPath, Artifact>>>()?;
-
-            Ok(FileStoreImpl { root, store })
-        } else {
-            Err(anyhow!("File store cannot be loaded from non-directory: {}", path.display()))
-        }
+        Ok(FileStoreImpl { root, store })
     }
 
     pub fn root_path(&self) -> &StoreRoot {

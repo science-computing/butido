@@ -11,9 +11,13 @@ use anyhow::Context;
 pub struct StoreRoot(PathBuf);
 
 impl StoreRoot {
-    pub (in crate::filestore) fn new(root: PathBuf) -> Result<Self> {
+    pub fn new(root: PathBuf) -> Result<Self> {
         if root.is_absolute() {
-            Ok(StoreRoot(root))
+            if root.is_dir() {
+                Ok(StoreRoot(root))
+            } else {
+                Err(anyhow!("StoreRoot path does not point to directory: {}", root.display()))
+            }
         } else {
             Err(anyhow!("StoreRoot path is not absolute: {}", root.display()))
         }
@@ -35,6 +39,10 @@ impl StoreRoot {
 
     pub fn is_dir(&self, subpath: &Path) -> bool {
         self.0.join(subpath).is_dir()
+    }
+
+    pub (in crate::filestore) fn as_path(&self) -> &Path {
+        self.0.as_ref()
     }
 
     pub fn display(&self) -> std::path::Display {

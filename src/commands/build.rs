@@ -16,6 +16,7 @@ use tokio::sync::RwLock;
 use crate::config::*;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
+use crate::filestore::path::StoreRoot;
 use crate::job::JobResource;
 use crate::job::JobSet;
 use crate::orchestrator::OrchestratorSetup;
@@ -125,7 +126,7 @@ pub async fn build(matches: &ArgMatches,
 
         let p = config.releases_directory();
         debug!("Loading release directory: {}", p.display());
-        let r = ReleaseStore::load(&p, bar_release_loading.clone());
+        let r = ReleaseStore::load(StoreRoot::new(p.clone())?, bar_release_loading.clone());
         if r.is_ok() {
             bar_release_loading.finish_with_message("Loaded releases successfully");
         } else {
@@ -150,7 +151,7 @@ pub async fn build(matches: &ArgMatches,
         }
 
         debug!("Loading staging directory: {}", p.display());
-        let r = StagingStore::load(&p, bar_staging_loading.clone());
+        let r = StagingStore::load(StoreRoot::new(p.clone())?, bar_staging_loading.clone());
         if r.is_ok() {
             bar_staging_loading.finish_with_message("Loaded staging successfully");
         } else {
