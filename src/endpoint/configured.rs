@@ -270,7 +270,7 @@ impl Endpoint {
                         .read()
                         .await
                         .root_path()
-                        .join(art.path())
+                        .join(art.path())?
                         .read()
                         .await
                         .with_context(|| anyhow!("Reading artifact {}, so it can be copied to container", art.path().display()))?;

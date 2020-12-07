@@ -25,8 +25,18 @@ impl StoreRoot {
         }
     }
 
-    pub fn join<'a>(&'a self, ap: &'a ArtifactPath) -> FullArtifactPath<'a> {
-        FullArtifactPath(&self, ap)
+    pub fn join<'a>(&'a self, ap: &'a ArtifactPath) -> Result<FullArtifactPath<'a>> {
+        let join = self.0.join(&ap.0);
+
+        if join.is_file() {
+            Ok(FullArtifactPath(&self, ap))
+        } else {
+            if join.is_dir() {
+                Err(anyhow!("Cannot load non-file path: {}", join.display()))
+            } else {
+                Err(anyhow!("Path does not exist: {}", join.display()))
+            }
+        }
     }
 
     pub fn is_file(&self, subpath: &Path) -> bool {
@@ -83,10 +93,6 @@ impl ArtifactPath {
     pub fn to_str(&self) -> Option<&str> {
         self.0.to_str()
     }
-
-    pub (in crate::filestore) fn file_stem(&self) -> Option<&OsStr> {
-        self.0.file_stem()
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -97,16 +103,12 @@ impl<'a> FullArtifactPath<'a> {
         self.0.0.join(&self.1.0)
     }
 
-    pub (in crate::filestore) fn is_file(&self) -> bool {
-        self.joined().is_file()
-    }
-
-    pub (in crate::filestore) fn is_dir(&self) -> bool {
-        self.joined().is_dir()
-    }
-
     pub fn display(&self) -> FullArtifactPathDisplay<'a> {
         FullArtifactPathDisplay(self.0, self.1)
+    }
+
+    pub (in crate::filestore) fn file_stem(&self) -> Option<&OsStr> {
+        self.1.0.file_stem()
     }
 
     pub async fn read(self) -> Result<Vec<u8>> {

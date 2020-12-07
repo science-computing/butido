@@ -38,31 +38,23 @@ impl Ord for Artifact {
 
 impl Artifact {
     pub fn load(root: &StoreRoot, path: ArtifactPath) -> Result<Self> {
-        let joined_fullpath = root.join(&path);
-        if joined_fullpath.is_file() {
-            let (name, version) = Self::parse_path(root, &path)
-                .with_context(|| anyhow!("Pathing artifact path: '{}'", joined_fullpath.display()))?;
+        let joined_fullpath = root.join(&path)?;
+        let (name, version) = Self::parse_path(&joined_fullpath)
+            .with_context(|| anyhow!("Pathing artifact path: '{}'", joined_fullpath.display()))?;
 
-            Ok(Artifact {
-                path,
-                name,
-                version
-            })
-        } else {
-            if root.join(&path).is_dir() {
-                Err(anyhow!("Cannot load non-file path: {}", path.display()))
-            } else {
-                Err(anyhow!("Path does not exist: {}", path.display()))
-            }
-        }
+        Ok(Artifact {
+            path,
+            name,
+            version
+        })
     }
 
-    fn parse_path(root: &StoreRoot, path: &ArtifactPath) -> Result<(PackageName, PackageVersion)> {
+    fn parse_path(path: &FullArtifactPath) -> Result<(PackageName, PackageVersion)> {
         path.file_stem()
-            .ok_or_else(|| anyhow!("Cannot get filename from {}", (root.join(path)).display()))?
+            .ok_or_else(|| anyhow!("Cannot get filename from {}", path.display()))?
             .to_owned()
             .into_string()
-            .map_err(|_| anyhow!("Internal conversion of '{}' to UTF-8", (root.join(path)).display()))
+            .map_err(|_| anyhow!("Internal conversion of '{}' to UTF-8", path.display()))
             .and_then(|s| Self::parser().parse(s.as_bytes()).map_err(Error::from))
     }
 
