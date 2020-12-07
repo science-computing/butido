@@ -266,11 +266,14 @@ impl Endpoint {
                         .with_context(|| anyhow!("Collecting artifacts for copying to container {}", container_id))?;
                     let destination = PathBuf::from("/inputs/").join(artifact_file_name);
                     trace!("Copying {} to container: {}:{}", art.path().display(), container_id, destination.display());
-                    let buf = tokio::fs::read(staging.read().await.root_path().join(art.path()))
+                    let buf = staging
+                        .read()
                         .await
-                        .map(Vec::from)
-                        .with_context(|| anyhow!("Reading artifact {}, so it can be copied to container", art.path().display()))
-                        .map_err(Error::from)?;
+                        .root_path()
+                        .join(art.path())
+                        .read()
+                        .await
+                        .with_context(|| anyhow!("Reading artifact {}, so it can be copied to container", art.path().display()))?;
 
                     let r = container.copy_file_into(&destination, &buf)
                         .await

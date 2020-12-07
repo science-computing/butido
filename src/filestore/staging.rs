@@ -72,7 +72,7 @@ impl StagingStore {
                     None
                 } else {
                     Some({
-                        self.0.load_from_path(fullpath.as_ref())
+                        self.0.load_from_path(&fullpath)
                             .inspect(|r| trace!("Loaded from path {} = {:?}", fullpath.display(), r))
                             .with_context(|| anyhow!("Loading from path: {}", fullpath.display()))
                             .map_err(Error::from)

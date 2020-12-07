@@ -2,8 +2,10 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::ffi::OsStr;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::Context;
 
 #[derive(Debug)]
 pub struct StoreRoot(PathBuf);
@@ -41,7 +43,7 @@ impl AsRef<Path> for StoreRoot {
 }
 
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ArtifactPath(PathBuf);
 
 impl ArtifactPath {
@@ -73,15 +75,13 @@ impl ArtifactPath {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FullArtifactPath(PathBuf);
 
-impl AsRef<Path> for FullArtifactPath {
-    fn as_ref(&self) -> &Path {
-        self.0.as_ref()
-    }
-}
-
 impl FullArtifactPath {
     pub (in crate::filestore) fn is_dir(&self) -> bool {
         self.0.is_dir()
+    }
+
+    pub (in crate::filestore) fn as_path(&self) -> &Path {
+        self.0.as_ref()
     }
 
     pub (in crate::filestore) fn is_file(&self) -> bool {
@@ -90,6 +90,14 @@ impl FullArtifactPath {
 
     pub fn display(&self) -> std::path::Display {
         self.0.display()
+    }
+
+    pub async fn read(self) -> Result<Vec<u8>> {
+        tokio::fs::read(&self.0)
+            .await
+            .map(Vec::from)
+            .with_context(|| anyhow!("Reading artifact from path {}", self.0.display()))
+            .map_err(Error::from)
     }
 }
 
