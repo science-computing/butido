@@ -40,9 +40,6 @@ impl Tree {
                         trace!("Found: {:?}", pack);
 
                         if pack.iter().any(|p| ($root).has_package(p)) {
-                            // package already exists in tree, which is unfortunate
-                            // TODO: Handle gracefully
-                            //
                             return Err(anyhow!("Duplicate version of some package in {:?} found", pack))
                         }
                         trace!("All dependecies available...");
