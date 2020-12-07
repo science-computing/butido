@@ -103,7 +103,7 @@ pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
         .map(|p| {
             p.sources()
                 .iter()
-                .map(|source| writeln!(outlock, "{} {} -> {}", p.name(), p.version(), source.url()).map_err(Error::from))
+                .map(|(source_name, source)| writeln!(outlock, "{} {} -> {} = {}", p.name(), p.version(), source_name, source.url()).map_err(Error::from))
                 .collect()
         })
         .collect()

@@ -29,24 +29,26 @@ pub struct SourceEntry {
     cache_root: PathBuf,
     package_name: PackageName,
     package_version: PackageVersion,
+    package_source_name: String,
     package_source: Source,
 }
 
 impl SourceEntry {
 
     fn source_file_path(&self) -> PathBuf {
-        self.cache_root.join(format!("{}-{}/{}.source", self.package_name, self.package_version, self.package_source.hash().value()))
+        self.cache_root.join(format!("{}-{}/{}-{}.source", self.package_name, self.package_version, self.package_source_name, self.package_source.hash().value()))
     }
 
     fn for_package(cache_root: PathBuf, package: &Package) -> Vec<Self> {
         package.sources()
             .clone()
             .into_iter()
-            .map(|source| {
+            .map(|(source_name, source)| {
                 SourceEntry {
                     cache_root: cache_root.clone(),
                     package_name: package.name().clone(),
                     package_version: package.version().clone(),
+                    package_source_name: source_name,
                     package_source: source,
                 }
             })

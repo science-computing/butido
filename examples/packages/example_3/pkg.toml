@@ -4,7 +4,7 @@ version_is_semver = false
 # no patches by default
 patches = []
 
-[[sources]]
+[sources.src]
 url       = "https://github.com/user/repo/archive/sources.tar.gz"
 hash.type = "sha1"
 hash.hash = "5e8bcaa3c758f84f01935a914e2bbf01309462ae"
@@ -18,6 +18,12 @@ runtime         = []
 [phases]
 
 unpack.script = '''
+    {{#each sources}}
+    echo "{{@key}}  {{this.url}}"
+    echo "          {{this.hash.hash}}"
+    ls /inputs/{{@key}}-{{this.hash.hash}}.source
+    {{/each}}
+
     mkdir /build
     echo "#BUTIDO:PHASE:unpack"
 '''
