@@ -1,19 +1,20 @@
 use crate::filestore::Artifact;
+use crate::util::EnvironmentVariableName;
 
 #[derive(Clone, Debug)]
 pub enum JobResource {
-    Environment(String, String),
+    Environment(EnvironmentVariableName, String),
     Artifact(Artifact)
 }
 
-impl From<(String, String)> for JobResource {
-    fn from(tpl: (String, String)) -> Self {
+impl From<(EnvironmentVariableName, String)> for JobResource {
+    fn from(tpl: (EnvironmentVariableName, String)) -> Self {
         JobResource::Environment(tpl.0, tpl.1)
     }
 }
 
 impl JobResource {
-    pub fn env(&self) -> Option<(&String, &String)> {
+    pub fn env(&self) -> Option<(&EnvironmentVariableName, &String)> {
         match self {
             JobResource::Environment(k, v) => Some((k, v)),
             _ => None

@@ -26,6 +26,7 @@ use crate::package::Shebang;
 use crate::package::Tree;
 use crate::repository::Repository;
 use crate::source::SourceCache;
+use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
 
@@ -100,11 +101,11 @@ pub async fn build(matches: &ArgMatches,
         .map(|s| {
             let v = s.split("=").collect::<Vec<_>>();
             Ok((
-                 String::from(*v.get(0).ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?),
+                 EnvironmentVariableName::from(*v.get(0).ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?),
                  String::from(*v.get(1).ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?)
             ))
         })
-        .collect::<Result<Vec<(String, String)>>>()?;
+        .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
 
     let packages = if let Some(pvers) = pvers {
         repo.find(&pname, &pvers)
@@ -191,7 +192,7 @@ pub async fn build(matches: &ArgMatches,
         additional_env.clone()
             .into_iter()
             .map(|(k, v)| async {
-                let k: String = k; // hack to work around move semantics
+                let k: EnvironmentVariableName = k; // hack to work around move semantics
                 let v: String = v; // hack to work around move semantics
                 EnvVar::create_or_fetch(&database_connection, &k, &v)
             })

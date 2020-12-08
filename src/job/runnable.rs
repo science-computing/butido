@@ -17,6 +17,7 @@ use crate::package::Script;
 use crate::package::ScriptBuilder;
 use crate::source::SourceCache;
 use crate::source::SourceEntry;
+use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 
 /// A job configuration that can be run. All inputs are clear here.
@@ -86,7 +87,7 @@ impl RunnableJob {
         self.source_cache.sources_for(&self.package())
     }
 
-    pub fn environment(&self) -> Vec<(String, String)> {
+    pub fn environment(&self) -> Vec<(EnvironmentVariableName, String)> {
         let iter = self.resources
             .iter()
             .filter_map(JobResource::env)

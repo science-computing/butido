@@ -12,6 +12,7 @@ use crate::package::name::*;
 use crate::package::source::*;
 use crate::package::version::*;
 use crate::phase::{PhaseName, Phase};
+use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 
 #[derive(Clone, Serialize, Deserialize, Getters)]
@@ -36,7 +37,7 @@ pub struct Package {
 
     #[getset(get = "pub")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    environment: Option<HashMap<String, String>>,
+    environment: Option<HashMap<EnvironmentVariableName, String>>,
 
     #[getset(get = "pub")]
     #[serde(skip_serializing_if = "Option::is_none")]
