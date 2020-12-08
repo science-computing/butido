@@ -28,8 +28,7 @@ use crate::util::progress::ProgressBars;
 
 pub struct Orchestrator<'a> {
     scheduler: EndpointScheduler,
-    staging_store: Arc<RwLock<StagingStore>>,
-    release_store: Arc<RwLock<ReleaseStore>>,
+    merged_stores: MergedStores,
     source_cache: SourceCache,
     jobsets: Vec<JobSet>,
     config: &'a Configuration,
@@ -55,12 +54,11 @@ impl<'a> OrchestratorSetup<'a> {
         let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), db, self.progress_generator, self.submit.clone(), self.log_dir).await?;
 
         Ok(Orchestrator {
-            scheduler:             scheduler,
-            staging_store:         self.staging_store,
-            release_store:         self.release_store,
-            source_cache:          self.source_cache,
-            jobsets:               self.jobsets,
-            config:                self.config,
+            scheduler:     scheduler,
+            merged_stores: MergedStores::new(self.release_store, self.staging_store),
+            source_cache:  self.source_cache,
+            jobsets:       self.jobsets,
+            config:        self.config,
         })
     }
 }
@@ -69,12 +67,9 @@ impl<'a> Orchestrator<'a> {
 
     pub async fn run(self) -> Result<Vec<Artifact>> {
         let mut report_result = vec![];
-        let scheduler = self.scheduler; // moved here because of partial-move semantics
-        let merged_store = MergedStores::new(self.release_store.clone(), self.staging_store.clone());
-
         for jobset in self.jobsets.into_iter() {
-            let mut results = Self::run_jobset(&scheduler,
-                &merged_store,
+            let mut results = Self::run_jobset(&self.scheduler,
+                &self.merged_stores,
                 &self.source_cache,
                 &self.config,
                 jobset)
