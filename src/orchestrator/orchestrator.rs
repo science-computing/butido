@@ -22,6 +22,7 @@ use crate::filestore::MergedStores;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 use crate::job::JobSet;
+use crate::job::RunnableJob;
 use crate::source::SourceCache;
 use crate::util::progress::ProgressBars;
 
@@ -83,16 +84,9 @@ impl<'a> Orchestrator<'a> {
                 .into_iter()
                 .map(|runnable| {
                     let multibar = multibar.clone();
+
                     async {
-                        let job_id = runnable.uuid().clone();
-                        trace!("Runnable {} for package {}", job_id, runnable.package().name());
-
-                        let jobhandle = scheduler.schedule_job(runnable, multibar).await?;
-                        trace!("Jobhandle -> {:?}", jobhandle);
-
-                        let r = jobhandle.run().await;
-                        trace!("Found result in job {}: {:?}", job_id, r);
-                        r
+                        Self::run_runnable(multibar, runnable, &scheduler).await
                     }
                 })
                 .collect::<futures::stream::FuturesUnordered<_>>()
@@ -141,6 +135,20 @@ impl<'a> Orchestrator<'a> {
         }
 
         Ok(report_result)
+    }
+
+    async fn run_runnable(multibar: Arc<indicatif::MultiProgress>, runnable: RunnableJob, scheduler: &EndpointScheduler)
+        -> RResult<Vec<Artifact>, ContainerError>
+    {
+        let job_id = runnable.uuid().clone();
+        trace!("Runnable {} for package {}", job_id, runnable.package().name());
+
+        let jobhandle = scheduler.schedule_job(runnable, multibar).await?;
+        trace!("Jobhandle -> {:?}", jobhandle);
+
+        let r = jobhandle.run().await;
+        trace!("Found result in job {}: {:?}", job_id, r);
+        r
     }
 
 }
