@@ -70,11 +70,11 @@ impl<'a> Orchestrator<'a> {
     pub async fn run(self) -> Result<Vec<Artifact>> {
         let mut report_result = vec![];
         let scheduler = self.scheduler; // moved here because of partial-move semantics
+        let merged_store = MergedStores::new(self.release_store.clone(), self.staging_store.clone());
 
         for jobset in self.jobsets.into_iter() {
             let mut results = Self::run_jobset(&scheduler,
-                self.release_store.clone(),
-                self.staging_store.clone(),
+                &merged_store,
                 &self.source_cache,
                 &self.config,
                 jobset)
@@ -88,8 +88,7 @@ impl<'a> Orchestrator<'a> {
 
     async fn run_jobset(
         scheduler: &EndpointScheduler,
-        release_store: Arc<RwLock<ReleaseStore>>,
-        staging_store: Arc<RwLock<StagingStore>>,
+        merged_store: &MergedStores,
         source_cache: &SourceCache,
         config: &Configuration,
         jobset: JobSet)
@@ -97,7 +96,6 @@ impl<'a> Orchestrator<'a> {
     {
         use tokio::stream::StreamExt;
 
-        let merged_store = MergedStores::new(release_store, staging_store);
         let multibar = Arc::new(indicatif::MultiProgress::new());
         let results = jobset // run the jobs in the set
             .into_runables(&merged_store, source_cache, config)
