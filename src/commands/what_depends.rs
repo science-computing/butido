@@ -35,22 +35,21 @@ pub async fn what_depends(matches: &ArgMatches, config: &Configuration, repo: Re
         .inspect(|pkg| trace!("Found package: {:?}", pkg))
         .collect::<Result<Vec<_>>>()?;
 
-    crate::ui::print_packages(&mut stdout,
-                       format,
-                       packages.into_iter(),
-                       config,
-                       print_runtime_deps,
-                       print_build_deps,
-                       false, // "print_sources"
-                       true,  // "print_dependencies"
-                       false, // "print_patches"
-                       false, // "print_env"
-                       false, // "print_flags"
-                       false, // "print_deny_images"
-                       false, // "print_phases"
-                       false, // "print_script"
-                       false, // script_line_numbers
-                       false, // script_highlighting
-                       )
+    let flags = crate::ui::PackagePrintFlags {
+        print_runtime_deps,
+        print_build_deps,
+        print_sources: false,
+        print_dependencies: true,
+        print_patches: false,
+        print_env: false,
+        print_flags: false,
+        print_deny_images: false,
+        print_phases: false,
+        print_script: false,
+        script_line_numbers: false,
+        script_highlighting: false,
+    };
+
+    crate::ui::print_packages(&mut stdout, format, packages.into_iter(), config, &flags)
 }
 

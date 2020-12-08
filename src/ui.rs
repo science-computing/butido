@@ -29,22 +29,26 @@ pub fn package_repo_cleanness_check(repo_path: &Path) -> Result<()> {
     }
 }
 
+pub struct PackagePrintFlags {
+    pub print_runtime_deps: bool,
+    pub print_build_deps: bool,
+    pub print_sources: bool,
+    pub print_dependencies: bool,
+    pub print_patches: bool,
+    pub print_env: bool,
+    pub print_flags: bool,
+    pub print_deny_images: bool,
+    pub print_phases: bool,
+    pub print_script: bool,
+    pub script_line_numbers: bool,
+    pub script_highlighting: bool,
+}
+
 pub fn print_packages<'a, I>(out: &mut dyn Write,
                              format: &str,
                              iter: I,
                              config: &Configuration,
-                             print_runtime_deps: bool,
-                             print_build_deps: bool,
-                             print_sources: bool,
-                             print_dependencies: bool,
-                             print_patches: bool,
-                             print_env: bool,
-                             print_flags: bool,
-                             print_deny_images: bool,
-                             print_phases: bool,
-                             print_script: bool,
-                             script_line_numbers: bool,
-                             script_highlighting: bool)
+                             flags: &PackagePrintFlags)
 -> Result<()>
     where I: Iterator<Item = &'a Package>
 {
@@ -52,24 +56,7 @@ pub fn print_packages<'a, I>(out: &mut dyn Write,
     hb.register_template_string("package", format)?;
 
     for (i, package) in iter.enumerate() {
-        print_package(out,
-                      &hb,
-                      i,
-                      package,
-                      config,
-                      print_runtime_deps,
-                      print_build_deps,
-                      print_sources,
-                      print_dependencies,
-                      print_patches,
-                      print_env,
-                      print_flags,
-                      print_deny_images,
-                      print_phases,
-                      print_script,
-                      script_line_numbers,
-                      script_highlighting
-                      )?;
+        print_package(out, &hb, i, package, config, flags)?;
     }
 
     Ok(())
@@ -80,42 +67,31 @@ fn print_package(out: &mut dyn Write,
                  i: usize,
                  package: &Package,
                  config: &Configuration,
-                 print_runtime_deps: bool,
-                 print_build_deps: bool,
-                 print_sources: bool,
-                 print_dependencies: bool,
-                 print_patches: bool,
-                 print_env: bool,
-                 print_flags: bool,
-                 print_deny_images: bool,
-                 print_phases: bool,
-                 print_script: bool,
-                 script_line_numbers: bool,
-                 script_highlighting: bool)
+                 flags: &PackagePrintFlags)
     -> Result<()>
 {
     let script = ScriptBuilder::new(&Shebang::from(config.shebang().clone()))
         .build(package, config.available_phases(), *config.strict_script_interpolation())?;
 
     let script = crate::ui::script_to_printable(script.as_ref(),
-        script_highlighting,
+        flags.script_highlighting,
         config.script_highlight_theme().as_ref(),
-        script_line_numbers)?;
+        flags.script_line_numbers)?;
 
     let mut data = BTreeMap::new();
     data.insert("i"                  , serde_json::Value::Number(serde_json::Number::from(i)));
     data.insert("p"                  , serde_json::to_value(package)?);
     data.insert("script"             , serde_json::Value::String(script));
-    data.insert("print_runtime_deps" , serde_json::Value::Bool(print_runtime_deps));
-    data.insert("print_build_deps"   , serde_json::Value::Bool(print_build_deps));
-    data.insert("print_sources"      , serde_json::Value::Bool(print_sources));
-    data.insert("print_dependencies" , serde_json::Value::Bool(print_dependencies));
-    data.insert("print_patches"      , serde_json::Value::Bool(print_patches));
-    data.insert("print_env"          , serde_json::Value::Bool(print_env));
-    data.insert("print_flags"        , serde_json::Value::Bool(print_flags));
-    data.insert("print_deny_images"  , serde_json::Value::Bool(print_deny_images));
-    data.insert("print_phases"       , serde_json::Value::Bool(print_phases));
-    data.insert("print_script"       , serde_json::Value::Bool(print_script));
+    data.insert("print_runtime_deps" , serde_json::Value::Bool(flags.print_runtime_deps));
+    data.insert("print_build_deps"   , serde_json::Value::Bool(flags.print_build_deps));
+    data.insert("print_sources"      , serde_json::Value::Bool(flags.print_sources));
+    data.insert("print_dependencies" , serde_json::Value::Bool(flags.print_dependencies));
+    data.insert("print_patches"      , serde_json::Value::Bool(flags.print_patches));
+    data.insert("print_env"          , serde_json::Value::Bool(flags.print_env));
+    data.insert("print_flags"        , serde_json::Value::Bool(flags.print_flags));
+    data.insert("print_deny_images"  , serde_json::Value::Bool(flags.print_deny_images));
+    data.insert("print_phases"       , serde_json::Value::Bool(flags.print_phases));
+    data.insert("print_script"       , serde_json::Value::Bool(flags.print_script));
 
 
     hb.render("package", &data)

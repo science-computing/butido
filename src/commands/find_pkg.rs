@@ -39,24 +39,23 @@ pub async fn find_pkg(matches: &ArgMatches, config: &Configuration, repo: Reposi
         }
         Ok(())
     } else {
+        let flags = crate::ui::PackagePrintFlags {
+            print_runtime_deps  : crate::commands::util::getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME),
+            print_build_deps    : crate::commands::util::getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_BUILD),
+            print_sources       : matches.is_present("show_sources"),
+            print_dependencies  : matches.is_present("show_dependencies"),
+            print_patches       : matches.is_present("show_patches"),
+            print_env           : matches.is_present("show_env"),
+            print_flags         : matches.is_present("show_flags"),
+            print_deny_images   : matches.is_present("show_deny_images"),
+            print_phases        : matches.is_present("show_phases"),
+            print_script        : matches.is_present("show_script"),
+            script_line_numbers : !matches.is_present("no_script_line_numbers"),
+            script_highlighting : !matches.is_present("no_script_highlight"),
+        };
+
         let format = config.package_print_format();
-        crate::ui::print_packages(&mut outlock,
-            format,
-            iter,
-            config,
-            crate::commands::util::getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME),
-            crate::commands::util::getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_BUILD),
-            matches.is_present("show_sources"),
-            matches.is_present("show_dependencies"),
-            matches.is_present("show_patches"),
-            matches.is_present("show_env"),
-            matches.is_present("show_flags"),
-            matches.is_present("show_deny_images"),
-            matches.is_present("show_phases"),
-            matches.is_present("show_script"),
-            !matches.is_present("no_script_line_numbers"),
-            !matches.is_present("no_script_highlight")
-            )
+        crate::ui::print_packages(&mut outlock, format, iter, config, &flags)
     }
 }
 
