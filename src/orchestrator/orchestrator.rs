@@ -97,7 +97,7 @@ impl<'a> Orchestrator<'a> {
     {
         use tokio::stream::StreamExt;
 
-        let merged_store = MergedStores::new(release_store.clone(), staging_store.clone());
+        let merged_store = MergedStores::new(release_store, staging_store);
         let multibar = Arc::new(indicatif::MultiProgress::new());
         let results = jobset // run the jobs in the set
             .into_runables(&merged_store, source_cache, config)
@@ -136,7 +136,7 @@ impl<'a> Orchestrator<'a> {
         }
 
         { // check if all paths that were written are actually there in the staging store
-            let staging_store_lock = staging_store.read().await;
+            let staging_store_lock = merged_store.staging().read().await;
 
             trace!("Checking {} results...", results.len());
             for artifact in results.iter() {

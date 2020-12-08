@@ -4,6 +4,7 @@ use log::trace;
 use tokio::sync::RwLock;
 
 use anyhow::Result;
+use getset::Getters;
 
 use crate::filestore::Artifact;
 use crate::filestore::ReleaseStore;
@@ -16,8 +17,11 @@ use crate::package::PackageVersionConstraint;
 /// The stores are not actually merged (on disk or in memory), but the querying mechanism works in
 /// a way where it _always_ preferes the staging store over the release store.
 ///
+#[derive(Getters)]
 pub struct MergedStores {
     release: Arc<RwLock<ReleaseStore>>,
+
+    #[getset(get = "pub")]
     staging: Arc<RwLock<StagingStore>>,
 }
 
