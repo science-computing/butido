@@ -5,7 +5,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use getset::Getters;
-use log::{warn, trace};
+use log::{debug, warn, trace};
 use tokio::stream::StreamExt;
 use uuid::Uuid;
 
@@ -46,9 +46,6 @@ pub struct RunnableJob {
 
 impl RunnableJob {
     pub async fn build_from_job(job: Job, merged_stores: &MergedStores, source_cache: &SourceCache, config: &Configuration) -> Result<Self> {
-        let script = ScriptBuilder::new(&job.script_shebang)
-            .build(&job.package, &job.script_phases, *config.strict_script_interpolation())?;
-
         trace!("Preparing build dependencies");
         let resources = {
             let deps = job.package().dependencies();
@@ -72,6 +69,28 @@ impl RunnableJob {
             build.append(&mut rt);
             build
         };
+
+        if config.containers().check_env_names() {
+            debug!("Checking environment if all variables are allowed!");
+            let _ = Self::env_resources(job.resources(), job.package().environment().as_ref())
+                .into_iter()
+                .inspect(|(name, _)| debug!("Checking: {}", name))
+                .map(|(name, _)| {
+                    if !config.containers().allowed_env().contains(&name) {
+                        Err(anyhow!("Environment variable name not allowed: {}", name))
+                    } else {
+                        Ok(())
+                    }
+                })
+                .collect::<Result<()>>()
+                .with_context(|| anyhow!("Checking allowed variables for package {} {}", job.package().name(), job.package().version()))
+                .context("Checking allowed variable names")?;
+        } else {
+            debug!("Environment checking disabled");
+        }
+
+        let script = ScriptBuilder::new(&job.script_shebang)
+            .build(&job.package, &job.script_phases, *config.strict_script_interpolation())?;
 
         Ok(RunnableJob {
             uuid: job.uuid,
