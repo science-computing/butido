@@ -7,8 +7,13 @@ use std::path::Path;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
-use log::error;
 use handlebars::Handlebars;
+use itertools::Itertools;
+use log::error;
+use syntect::easy::HighlightLines;
+use syntect::highlighting::{ThemeSet, Style};
+use syntect::parsing::SyntaxSet;
+use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 use crate::package::Package;
 use crate::package::ScriptBuilder;
@@ -105,5 +110,58 @@ fn print_package(out: &mut dyn Write,
     hb.render("package", &data)
         .map_err(Error::from)
         .and_then(|r| writeln!(out, "{}", r).map_err(Error::from))
+}
+
+pub fn script_to_printable(script: &str,
+                          highlight: bool,
+                          highlight_theme: Option<&String>,
+                          line_numbers: bool)
+    -> Result<String>
+{
+    if highlight {
+        if let Some(configured_theme) = highlight_theme {
+            // Load these once at the start of your program
+            let ps = SyntaxSet::load_defaults_newlines();
+            let ts = ThemeSet::load_defaults();
+
+            let syntax = ps
+                .find_syntax_by_first_line(script)
+                .ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
+
+            let theme = ts
+                .themes
+                .get(configured_theme)
+                .ok_or_else(|| anyhow!("Theme not available: {}", configured_theme))?;
+
+            let mut h = HighlightLines::new(syntax, &theme);
+
+            let output = LinesWithEndings::from(script)
+                .enumerate()
+                .map(|(i, line)| {
+                    let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
+                    if line_numbers {
+                        format!("{:>4} | {}", i, as_24_bit_terminal_escaped(&ranges[..], true))
+                    } else {
+                        as_24_bit_terminal_escaped(&ranges[..], true)
+                    }
+                })
+                .join("");
+
+            Ok(output)
+        } else {
+            Err(anyhow!("Highlighting for script enabled, but no theme configured"))
+        }
+    } else {
+        if line_numbers {
+            Ok({
+                script.lines()
+                    .enumerate()
+                    .map(|(i, s)| format!("{:>4} | {}", i, s))
+                    .join("\n")
+            })
+        } else {
+            Ok(script.to_string())
+        }
+    }
 }
 
