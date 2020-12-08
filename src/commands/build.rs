@@ -48,7 +48,7 @@ pub async fn build(matches: &ArgMatches,
 
     let now = chrono::offset::Local::now().naive_local();
     let submit_id = uuid::Uuid::new_v4();
-    info!("Submit {}, started {}", submit_id, now);
+    println!("Submit {}, started {}", submit_id, now);
 
     let shebang = Shebang::from({
         matches.value_of("shebang")
