@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -88,12 +90,20 @@ impl RunnableJob {
     }
 
     pub fn environment(&self) -> Vec<(EnvironmentVariableName, String)> {
-        let iter = self.resources
+        Self::env_resources(&self.resources, self.package().environment().as_ref())
+    }
+
+    /// Helper function to collect a list of resources and the result of package.environment() into
+    /// a Vec of environment variables
+    fn env_resources(resources: &Vec<JobResource>, pkgenv: Option<&HashMap<EnvironmentVariableName, String>>)
+        -> Vec<(EnvironmentVariableName, String)>
+    {
+        let iter = resources
             .iter()
             .filter_map(JobResource::env)
             .map(|(k, v)| (k.clone(), v.clone()));
 
-        if let Some(hm) = self.package().environment() {
+        if let Some(hm) = pkgenv {
             iter.chain({
                 hm.iter().map(|(k, v)| (k.clone(), v.clone()))
             }).collect()
