@@ -24,7 +24,6 @@ use crate::filestore::StagingStore;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
-use crate::util::progress::ProgressBars;
 use crate::endpoint::ContainerError;
 
 pub struct EndpointScheduler {
@@ -33,13 +32,12 @@ pub struct EndpointScheduler {
 
     staging_store: Arc<RwLock<StagingStore>>,
     db: Arc<PgConnection>,
-    progressbars: ProgressBars,
     submit: crate::db::models::Submit,
 }
 
 impl EndpointScheduler {
 
-    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, progressbars: ProgressBars, submit: crate::db::models::Submit, log_dir: Option<PathBuf>) -> Result<Self> {
+    pub async fn setup(endpoints: Vec<EndpointConfiguration>, staging_store: Arc<RwLock<StagingStore>>, db: Arc<PgConnection>, submit: crate::db::models::Submit, log_dir: Option<PathBuf>) -> Result<Self> {
         let endpoints = Self::setup_endpoints(endpoints).await?;
 
         Ok(EndpointScheduler {
@@ -47,7 +45,6 @@ impl EndpointScheduler {
             endpoints,
             staging_store,
             db,
-            progressbars,
             submit,
         })
     }
@@ -73,12 +70,12 @@ impl EndpointScheduler {
     /// # Warning
     ///
     /// This function blocks as long as there is no free endpoint available!
-    pub async fn schedule_job(&self, job: RunnableJob, multibar: Arc<indicatif::MultiProgress>) -> Result<JobHandle> {
+    pub async fn schedule_job(&self, job: RunnableJob, bar: indicatif::ProgressBar) -> Result<JobHandle> {
         let endpoint = self.select_free_endpoint().await?;
 
         Ok(JobHandle {
             log_dir: self.log_dir.clone(),
-            bar: multibar.add(self.progressbars.job_bar(job.uuid())),
+            bar,
             endpoint,
             job,
             staging_store: self.staging_store.clone(),
