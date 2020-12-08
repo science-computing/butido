@@ -5,6 +5,7 @@ pub fn default_progress_format() -> String {
 pub fn default_package_print_format() -> String {
     String::from(indoc::indoc!(r#"
             {{i}} - {{p.name}} : {{p.version}}
+            {{~ #if print_any }}
             ==================================
 
             {{~#if print_sources}}
@@ -54,6 +55,7 @@ pub fn default_package_print_format() -> String {
             {{~#if print_script}}
             {{script}}
             {{/if~}}
+            {{~ /if ~}}
     "#))
 }
 

@@ -44,6 +44,24 @@ pub struct PackagePrintFlags {
     pub script_highlighting: bool,
 }
 
+impl PackagePrintFlags {
+    // Helper to check whether any of the CLI args requested one of these flags.
+    //
+    // The print_build_deps and print_runtime_deps as well as the script_highlighting and
+    // script_line_numbers is not included, because these only modify what to print and not whether
+    // to print.
+    fn print_any(&self) -> bool {
+        self.print_sources
+        || self.print_dependencies
+        || self.print_patches
+        || self.print_env
+        || self.print_flags
+        || self.print_deny_images
+        || self.print_phases
+        || self.print_script
+    }
+}
+
 pub fn print_packages<'a, I>(out: &mut dyn Write,
                              format: &str,
                              iter: I,
@@ -82,6 +100,7 @@ fn print_package(out: &mut dyn Write,
     data.insert("i"                  , serde_json::Value::Number(serde_json::Number::from(i)));
     data.insert("p"                  , serde_json::to_value(package)?);
     data.insert("script"             , serde_json::Value::String(script));
+    data.insert("print_any"          , serde_json::Value::Bool(flags.print_any()));
     data.insert("print_runtime_deps" , serde_json::Value::Bool(flags.print_runtime_deps));
     data.insert("print_build_deps"   , serde_json::Value::Bool(flags.print_build_deps));
     data.insert("print_sources"      , serde_json::Value::Bool(flags.print_sources));
