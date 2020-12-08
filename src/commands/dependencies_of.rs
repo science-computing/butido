@@ -44,6 +44,8 @@ pub async fn dependencies_of(matches: &ArgMatches, config: &Configuration, repo:
                        false, // "print_deny_images"
                        false, // "print_phases"
                        false, // "print_script"
+                       false, // script_line_numbers
+                       false, // script_highlighting
                        )
 }
 

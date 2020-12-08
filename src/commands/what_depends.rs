@@ -49,6 +49,8 @@ pub async fn what_depends(matches: &ArgMatches, config: &Configuration, repo: Re
                        false, // "print_deny_images"
                        false, // "print_phases"
                        false, // "print_script"
+                       false, // script_line_numbers
+                       false, // script_highlighting
                        )
 }
 

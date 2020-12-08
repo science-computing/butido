@@ -53,7 +53,9 @@ pub async fn find_pkg(matches: &ArgMatches, config: &Configuration, repo: Reposi
             matches.is_present("show_flags"),
             matches.is_present("show_deny_images"),
             matches.is_present("show_phases"),
-            matches.is_present("show_script")
+            matches.is_present("show_script"),
+            !matches.is_present("no_script_line_numbers"),
+            !matches.is_present("no_script_highlight")
             )
     }
 }

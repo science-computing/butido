@@ -42,7 +42,9 @@ pub fn print_packages<'a, I>(out: &mut dyn Write,
                              print_flags: bool,
                              print_deny_images: bool,
                              print_phases: bool,
-                             print_script: bool)
+                             print_script: bool,
+                             script_line_numbers: bool,
+                             script_highlighting: bool)
 -> Result<()>
     where I: Iterator<Item = &'a Package>
 {
@@ -64,7 +66,9 @@ pub fn print_packages<'a, I>(out: &mut dyn Write,
                       print_flags,
                       print_deny_images,
                       print_phases,
-                      print_script
+                      print_script,
+                      script_line_numbers,
+                      script_highlighting
                       )?;
     }
 
@@ -85,16 +89,23 @@ fn print_package(out: &mut dyn Write,
                  print_flags: bool,
                  print_deny_images: bool,
                  print_phases: bool,
-                 print_script: bool)
+                 print_script: bool,
+                 script_line_numbers: bool,
+                 script_highlighting: bool)
     -> Result<()>
 {
     let script = ScriptBuilder::new(&Shebang::from(config.shebang().clone()))
         .build(package, config.available_phases(), *config.strict_script_interpolation())?;
 
+    let script = crate::ui::script_to_printable(script.as_ref(),
+        script_highlighting,
+        config.script_highlight_theme().as_ref(),
+        script_line_numbers)?;
+
     let mut data = BTreeMap::new();
     data.insert("i"                  , serde_json::Value::Number(serde_json::Number::from(i)));
     data.insert("p"                  , serde_json::to_value(package)?);
-    data.insert("script"             , serde_json::to_value(script)?);
+    data.insert("script"             , serde_json::Value::String(script));
     data.insert("print_runtime_deps" , serde_json::Value::Bool(print_runtime_deps));
     data.insert("print_build_deps"   , serde_json::Value::Bool(print_build_deps));
     data.insert("print_sources"      , serde_json::Value::Bool(print_sources));
