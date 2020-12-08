@@ -31,6 +31,7 @@ pub async fn dependencies_of(matches: &ArgMatches, config: &Configuration, repo:
            print_build_deps);
 
     let flags = crate::ui::PackagePrintFlags {
+        print_all: false,
         print_runtime_deps,
         print_build_deps,
         print_sources: false,

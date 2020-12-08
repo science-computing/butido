@@ -40,6 +40,7 @@ pub async fn find_pkg(matches: &ArgMatches, config: &Configuration, repo: Reposi
         Ok(())
     } else {
         let flags = crate::ui::PackagePrintFlags {
+            print_all           : matches.is_present("show_all"),
             print_runtime_deps  : crate::commands::util::getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_RUNTIME),
             print_build_deps    : crate::commands::util::getbool(matches, "dependency_type", crate::cli::IDENT_DEPENDENCY_TYPE_BUILD),
             print_sources       : matches.is_present("show_sources"),

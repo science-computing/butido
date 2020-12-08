@@ -36,6 +36,7 @@ pub async fn what_depends(matches: &ArgMatches, config: &Configuration, repo: Re
         .collect::<Result<Vec<_>>>()?;
 
     let flags = crate::ui::PackagePrintFlags {
+        print_all: false,
         print_runtime_deps,
         print_build_deps,
         print_sources: false,

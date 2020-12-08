@@ -395,6 +395,14 @@ pub fn cli<'a>() -> App<'a> {
                 .about("Do not use the fancy format, but simply <name> <version>")
             )
 
+            .arg(Arg::new("show_all")
+                .required(false)
+                .multiple(false)
+                .long("all")
+                .short('A')
+                .about("Same as: -SDpEFPs --deny-images (all flags enabled)")
+            )
+
             .arg(Arg::new("show_sources")
                 .required(false)
                 .multiple(false)

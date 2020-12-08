@@ -30,6 +30,7 @@ pub fn package_repo_cleanness_check(repo_path: &Path) -> Result<()> {
 }
 
 pub struct PackagePrintFlags {
+    pub print_all: bool,
     pub print_runtime_deps: bool,
     pub print_build_deps: bool,
     pub print_sources: bool,
@@ -51,14 +52,16 @@ impl PackagePrintFlags {
     // script_line_numbers is not included, because these only modify what to print and not whether
     // to print.
     fn print_any(&self) -> bool {
-        self.print_sources
-        || self.print_dependencies
-        || self.print_patches
-        || self.print_env
-        || self.print_flags
-        || self.print_deny_images
-        || self.print_phases
-        || self.print_script
+        self.print_all || {
+            self.print_sources
+            || self.print_dependencies
+            || self.print_patches
+            || self.print_env
+            || self.print_flags
+            || self.print_deny_images
+            || self.print_phases
+            || self.print_script
+        }
     }
 }
 
@@ -103,14 +106,15 @@ fn print_package(out: &mut dyn Write,
     data.insert("print_any"          , serde_json::Value::Bool(flags.print_any()));
     data.insert("print_runtime_deps" , serde_json::Value::Bool(flags.print_runtime_deps));
     data.insert("print_build_deps"   , serde_json::Value::Bool(flags.print_build_deps));
-    data.insert("print_sources"      , serde_json::Value::Bool(flags.print_sources));
-    data.insert("print_dependencies" , serde_json::Value::Bool(flags.print_dependencies));
-    data.insert("print_patches"      , serde_json::Value::Bool(flags.print_patches));
-    data.insert("print_env"          , serde_json::Value::Bool(flags.print_env));
-    data.insert("print_flags"        , serde_json::Value::Bool(flags.print_flags));
-    data.insert("print_deny_images"  , serde_json::Value::Bool(flags.print_deny_images));
-    data.insert("print_phases"       , serde_json::Value::Bool(flags.print_phases));
-    data.insert("print_script"       , serde_json::Value::Bool(flags.print_script));
+
+    data.insert("print_sources"      , serde_json::Value::Bool(flags.print_all || flags.print_sources));
+    data.insert("print_dependencies" , serde_json::Value::Bool(flags.print_all || flags.print_dependencies));
+    data.insert("print_patches"      , serde_json::Value::Bool(flags.print_all || flags.print_patches));
+    data.insert("print_env"          , serde_json::Value::Bool(flags.print_all || flags.print_env));
+    data.insert("print_flags"        , serde_json::Value::Bool(flags.print_all || flags.print_flags));
+    data.insert("print_deny_images"  , serde_json::Value::Bool(flags.print_all || flags.print_deny_images));
+    data.insert("print_phases"       , serde_json::Value::Bool(flags.print_all || flags.print_phases));
+    data.insert("print_script"       , serde_json::Value::Bool(flags.print_all || flags.print_script));
 
 
     hb.render("package", &data)
