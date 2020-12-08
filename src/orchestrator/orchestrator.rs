@@ -70,32 +70,33 @@ impl<'a> Orchestrator<'a> {
         use tokio::stream::StreamExt;
 
         let mut report_result = vec![];
+        let scheduler = self.scheduler; // moved here because of partial-move semantics
 
         for jobset in self.jobsets.into_iter() {
             let merged_store = MergedStores::new(self.release_store.clone(), self.staging_store.clone());
 
             let multibar = Arc::new(indicatif::MultiProgress::new());
 
-            let results = { // run the jobs in the set
-                let unordered_results   = futures::stream::FuturesUnordered::new();
-                for runnable in jobset.into_runables(&merged_store, &self.source_cache, &self.config).await?.into_iter() {
-                    let job_id = runnable.uuid().clone();
-                    trace!("Runnable {} for package {}", job_id, runnable.package().name());
+            let results = jobset // run the jobs in the set
+                .into_runables(&merged_store, &self.source_cache, &self.config)
+                .await?
+                .into_iter()
+                .map(|runnable| {
+                    let multibar = multibar.clone();
+                    async {
+                        let job_id = runnable.uuid().clone();
+                        trace!("Runnable {} for package {}", job_id, runnable.package().name());
 
-                    let jobhandle = self.scheduler.schedule_job(runnable, multibar.clone()).await?;
-                    trace!("Jobhandle -> {:?}", jobhandle);
+                        let jobhandle = scheduler.schedule_job(runnable, multibar).await?;
+                        trace!("Jobhandle -> {:?}", jobhandle);
 
-                    // clone the bar here, so we can give a handle to the async result fetcher closure
-                    // where we tick() it as soon as the job returns the result (= is finished)
-                    unordered_results.push(async move {
                         let r = jobhandle.run().await;
                         trace!("Found result in job {}: {:?}", job_id, r);
                         r
-                    });
-                }
-
-                unordered_results.collect::<Vec<RResult<Vec<Artifact>, ContainerError>>>()
-            };
+                    }
+                })
+                .collect::<futures::stream::FuturesUnordered<_>>()
+                .collect::<Vec<RResult<Vec<Artifact>, ContainerError>>>();
 
             let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
 
