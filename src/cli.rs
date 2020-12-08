@@ -412,6 +412,22 @@ pub fn cli<'a>() -> App<'a> {
                 .short('D')
                 .about("Show the dependencies of the package")
             )
+            .arg(Arg::new("dependency_type")
+                .required(false)
+                .multiple(true)
+                .takes_value(true)
+                .long("dependency-type")
+                .value_name("DEPENDENCY_TYPE")
+                .possible_values(&[
+                    IDENT_DEPENDENCY_TYPE_BUILD,
+                    IDENT_DEPENDENCY_TYPE_RUNTIME,
+                ])
+                .default_values(&[
+                    IDENT_DEPENDENCY_TYPE_BUILD,
+                    IDENT_DEPENDENCY_TYPE_RUNTIME,
+                ])
+                .about("Specify which dependency types are to print.")
+            )
 
             .arg(Arg::new("show_patches")
                 .required(false)
