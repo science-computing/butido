@@ -43,8 +43,18 @@ pub async fn find_pkg(matches: &ArgMatches, config: &Configuration, repo: Reposi
         crate::ui::print_packages(&mut outlock,
             format,
             iter,
+            config,
             true,
-            true)
+            true,
+            matches.is_present("show_sources"),
+            matches.is_present("show_dependencies"),
+            matches.is_present("show_patches"),
+            matches.is_present("show_env"),
+            matches.is_present("show_flags"),
+            matches.is_present("show_deny_images"),
+            matches.is_present("show_phases"),
+            matches.is_present("show_script")
+            )
     }
 }
 
