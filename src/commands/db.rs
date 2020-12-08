@@ -15,10 +15,6 @@ use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
 use log::info;
-use syntect::easy::HighlightLines;
-use syntect::highlighting::{ThemeSet, Style};
-use syntect::parsing::SyntaxSet;
-use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
@@ -390,29 +386,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
             log_len         = format!("{:<4}", data.0.log_text.lines().count()).cyan(),
             envs            = env_vars.unwrap_or_else(|| String::from("<env vars hidden>")),
             script_text     = if show_script {
-                if let Some(configured_theme) = configured_theme {
-                    if highlighting_disabled {
-                        data.0.script_text.clone()
-                    } else {
-                        // Load these once at the start of your program
-                        let ps = SyntaxSet::load_defaults_newlines();
-                        let ts = ThemeSet::load_defaults();
-
-                        let syntax = ps.find_syntax_by_first_line(&data.0.script_text).ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
-
-                        let theme = ts.themes.get(configured_theme)
-                            .ok_or_else(|| anyhow!("Theme not available: {}", configured_theme))?;
-                        let mut h = HighlightLines::new(syntax, &theme);
-                        LinesWithEndings::from(&data.0.script_text)
-                            .map(|line| {
-                                let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
-                                as_24_bit_terminal_escaped(&ranges[..], true)
-                            })
-                            .join("")
-                    }
-                } else {
-                    data.0.script_text.clone()
-                }
+                crate::ui::script_to_printable(&data.0.script_text, !highlighting_disabled, configured_theme.as_ref(), false)?
             } else {
                 String::from("<script hidden>")
             },

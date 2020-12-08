@@ -5,10 +5,57 @@ pub fn default_progress_format() -> String {
 pub fn default_package_print_format() -> String {
     String::from(indoc::indoc!(r#"
             {{i}} - {{p.name}} : {{p.version}}
-            {{#each p.sources}}Source: {{this.url}} - {{this.hash.hash}} ({{this.hash.type}}){{/each}}
-            {{#if print_build_deps}}Build Deps: {{ p.dependencies.build }} {{/if}}
-            {{#if print_runtime_deps}}Runtime Deps: {{ p.dependencies.runtime }} {{/if}}
+            {{~ #if print_any }}
+            ==================================
 
+            {{~#if print_sources}}
+            Sources:
+                {{#each p.sources ~}}
+                    {{~@key}} = {{this.url}} - {{this.hash.hash}} ({{this.hash.type}})
+                {{/each~}}
+            {{/if~}}
+            {{~#if print_dependencies}}
+            Dependencies:
+                {{#if print_build_deps ~}}
+                    {{~ #each p.dependencies.build}}
+                        {{~ this}} (build)
+                {{/each ~}}
+                {{/if ~}}
+                {{~ #if print_runtime_deps ~}}
+                    {{~ #each p.dependencies.runtime}}
+                        {{~ this}} (runtime)
+                {{/each ~}}
+                {{/if ~}}
+            {{/if}}
+            {{~#if print_patches}}
+            Patches:
+                {{#each p.patches}}{{this}},
+                {{/each~}}
+            {{/if}}
+            {{~#if print_env}}
+            Environment:
+                {{#each p.environment}}{{@key}}={{this}}
+                {{/each~}}
+            {{/if~}}
+            {{~#if print_flags}}
+            Flags:
+                {{#each p.flags}}{{this}}
+                {{/each~}}
+            {{/if~}}
+            {{~#if print_deny_images}}
+            Denied on:
+                {{#each p.deny_on_images}}{{this}}
+                {{/each~}}
+            {{/if~}}
+            {{~#if print_phases}}
+            Phases:
+                {{#each p.phases}}{{@key}}
+                {{/each~}}
+            {{/if~}}
+            {{~#if print_script}}
+            {{script}}
+            {{/if~}}
+            {{~ /if ~}}
     "#))
 }
 
