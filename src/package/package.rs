@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use getset::Getters;
+use itertools::Itertools;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -86,7 +87,9 @@ impl Package {
             .cloned()
             .map(|d| d.parse_as_name_and_version());
 
-        build_iter.chain(runtime_iter)
+        build_iter
+            .chain(runtime_iter)
+            .unique_by(|res| res.as_ref().ok().map(|tpl| tpl.clone()))
     }
 }
 
