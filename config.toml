@@ -125,7 +125,21 @@ maxjobs       = 1
 
 
 [containers]
-# environment variables which are allowed during container start
-# This way, errors (typos) when passing environment to a build can be prevented
-allowed_env = [ "PATH" ]
+
+# Restrict the environment that can be passed to the containers
+#
+# This is a security mechansim to prevent typos when passing environment
+# variables (either from package definition or from CLI) to the build jobs in
+# the containers.
+#
+# If this is set to `true`, only the variables named in `allowed_env` will be
+# allowed to be passed to the container. If a variable is not in this list,
+# butido will fail with an error message.
+#
+check_env_names = true
+
+# Environment variables which are allowed to be passed to a container.
+# This way, errors (typos) when passing environment to a build can be prevented.
+# Double-check this list
+allowed_env = [ "FOO", "BAR" ]
 

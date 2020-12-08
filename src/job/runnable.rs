@@ -1,9 +1,11 @@
+use std::collections::HashMap;
+
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use getset::Getters;
-use log::{warn, trace};
+use log::{debug, warn, trace};
 use tokio::stream::StreamExt;
 use uuid::Uuid;
 
@@ -17,6 +19,7 @@ use crate::package::Script;
 use crate::package::ScriptBuilder;
 use crate::source::SourceCache;
 use crate::source::SourceEntry;
+use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 
 /// A job configuration that can be run. All inputs are clear here.
@@ -43,9 +46,6 @@ pub struct RunnableJob {
 
 impl RunnableJob {
     pub async fn build_from_job(job: Job, merged_stores: &MergedStores, source_cache: &SourceCache, config: &Configuration) -> Result<Self> {
-        let script = ScriptBuilder::new(&job.script_shebang)
-            .build(&job.package, &job.script_phases, *config.strict_script_interpolation())?;
-
         trace!("Preparing build dependencies");
         let resources = {
             let deps = job.package().dependencies();
@@ -70,6 +70,28 @@ impl RunnableJob {
             build
         };
 
+        if config.containers().check_env_names() {
+            debug!("Checking environment if all variables are allowed!");
+            let _ = Self::env_resources(job.resources(), job.package().environment().as_ref())
+                .into_iter()
+                .inspect(|(name, _)| debug!("Checking: {}", name))
+                .map(|(name, _)| {
+                    if !config.containers().allowed_env().contains(&name) {
+                        Err(anyhow!("Environment variable name not allowed: {}", name))
+                    } else {
+                        Ok(())
+                    }
+                })
+                .collect::<Result<()>>()
+                .with_context(|| anyhow!("Checking allowed variables for package {} {}", job.package().name(), job.package().version()))
+                .context("Checking allowed variable names")?;
+        } else {
+            debug!("Environment checking disabled");
+        }
+
+        let script = ScriptBuilder::new(&job.script_shebang)
+            .build(&job.package, &job.script_phases, *config.strict_script_interpolation())?;
+
         Ok(RunnableJob {
             uuid: job.uuid,
             package: job.package,
@@ -86,13 +108,21 @@ impl RunnableJob {
         self.source_cache.sources_for(&self.package())
     }
 
-    pub fn environment(&self) -> Vec<(String, String)> {
-        let iter = self.resources
+    pub fn environment(&self) -> Vec<(EnvironmentVariableName, String)> {
+        Self::env_resources(&self.resources, self.package().environment().as_ref())
+    }
+
+    /// Helper function to collect a list of resources and the result of package.environment() into
+    /// a Vec of environment variables
+    fn env_resources(resources: &Vec<JobResource>, pkgenv: Option<&HashMap<EnvironmentVariableName, String>>)
+        -> Vec<(EnvironmentVariableName, String)>
+    {
+        let iter = resources
             .iter()
             .filter_map(JobResource::env)
             .map(|(k, v)| (k.clone(), v.clone()));
 
-        if let Some(hm) = self.package().environment() {
+        if let Some(hm) = pkgenv {
             iter.chain({
                 hm.iter().map(|(k, v)| (k.clone(), v.clone()))
             }).collect()

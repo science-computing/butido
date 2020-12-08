@@ -180,8 +180,12 @@ impl Endpoint {
         let (container_id, _warnings) = {
             let envs = job.environment()
                 .into_iter()
-                .chain(job.package_environment().into_iter())
-                .map(|(k, v)| format!("{}={}", k, v))
+                .map(|(k, v)| format!("{}={}", k.as_ref(), v))
+                .chain({
+                    job.package_environment()
+                        .into_iter()
+                        .map(|(k, v)| format!("{}={}", k, v))
+                })
                 .collect::<Vec<_>>();
             trace!("Job resources: Environment variables = {:?}", envs);
 
