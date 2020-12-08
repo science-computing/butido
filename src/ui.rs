@@ -11,6 +11,9 @@ use log::error;
 use handlebars::Handlebars;
 
 use crate::package::Package;
+use crate::package::ScriptBuilder;
+use crate::package::Shebang;
+use crate::config::Configuration;
 
 pub fn package_repo_cleanness_check(repo_path: &Path) -> Result<()> {
     if !crate::util::git::repo_is_clean(&repo_path)? {
@@ -24,8 +27,17 @@ pub fn package_repo_cleanness_check(repo_path: &Path) -> Result<()> {
 pub fn print_packages<'a, I>(out: &mut dyn Write,
                              format: &str,
                              iter: I,
+                             config: &Configuration,
                              print_runtime_deps: bool,
-                             print_build_deps: bool)
+                             print_build_deps: bool,
+                             print_sources: bool,
+                             print_dependencies: bool,
+                             print_patches: bool,
+                             print_env: bool,
+                             print_flags: bool,
+                             print_deny_images: bool,
+                             print_phases: bool,
+                             print_script: bool)
 -> Result<()>
     where I: Iterator<Item = &'a Package>
 {
@@ -37,8 +49,17 @@ pub fn print_packages<'a, I>(out: &mut dyn Write,
                       &hb,
                       i,
                       package,
+                      config,
                       print_runtime_deps,
                       print_build_deps,
+                      print_sources,
+                      print_dependencies,
+                      print_patches,
+                      print_env,
+                      print_flags,
+                      print_deny_images,
+                      print_phases,
+                      print_script
                       )?;
     }
 
@@ -49,23 +70,37 @@ fn print_package(out: &mut dyn Write,
                  hb: &Handlebars,
                  i: usize,
                  package: &Package,
+                 config: &Configuration,
                  print_runtime_deps: bool,
                  print_build_deps: bool,
-                 )
+                 print_sources: bool,
+                 print_dependencies: bool,
+                 print_patches: bool,
+                 print_env: bool,
+                 print_flags: bool,
+                 print_deny_images: bool,
+                 print_phases: bool,
+                 print_script: bool)
     -> Result<()>
 {
-    let mut data = BTreeMap::new();
-    data.insert("i", serde_json::Value::Number(serde_json::Number::from(i)));
-    data.insert("p", serde_json::to_value(package)?);
+    let script = ScriptBuilder::new(&Shebang::from(config.shebang().clone()))
+        .build(package, config.available_phases(), *config.strict_script_interpolation())?;
 
-    // This is an ugly hack. Because the `data` is a <String, String>, we do only insert the flag
-    // if it is set, because handlebars renders a non-present value as false
-    if print_runtime_deps {
-        data.insert("print_runtime_deps", serde_json::Value::Bool(print_runtime_deps));
-    }
-    if print_build_deps {
-        data.insert("print_build_deps", serde_json::Value::Bool(print_build_deps));
-    }
+    let mut data = BTreeMap::new();
+    data.insert("i"                  , serde_json::Value::Number(serde_json::Number::from(i)));
+    data.insert("p"                  , serde_json::to_value(package)?);
+    data.insert("script"             , serde_json::to_value(script)?);
+    data.insert("print_runtime_deps" , serde_json::Value::Bool(print_runtime_deps));
+    data.insert("print_build_deps"   , serde_json::Value::Bool(print_build_deps));
+    data.insert("print_sources"      , serde_json::Value::Bool(print_sources));
+    data.insert("print_dependencies" , serde_json::Value::Bool(print_dependencies));
+    data.insert("print_patches"      , serde_json::Value::Bool(print_patches));
+    data.insert("print_env"          , serde_json::Value::Bool(print_env));
+    data.insert("print_flags"        , serde_json::Value::Bool(print_flags));
+    data.insert("print_deny_images"  , serde_json::Value::Bool(print_deny_images));
+    data.insert("print_phases"       , serde_json::Value::Bool(print_phases));
+    data.insert("print_script"       , serde_json::Value::Bool(print_script));
+
 
     hb.render("package", &data)
         .map_err(Error::from)

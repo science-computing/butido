@@ -33,7 +33,17 @@ pub async fn dependencies_of(matches: &ArgMatches, config: &Configuration, repo:
     crate::ui::print_packages(&mut stdout,
                        format,
                        iter,
+                       config,
                        print_runtime_deps,
-                       print_build_deps)
+                       print_build_deps,
+                       false, // "print_sources"
+                       true,  // "print_dependencies"
+                       false, // "print_patches"
+                       false, // "print_env"
+                       false, // "print_flags"
+                       false, // "print_deny_images"
+                       false, // "print_phases"
+                       false, // "print_script"
+                       )
 }
 
