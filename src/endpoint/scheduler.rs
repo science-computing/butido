@@ -18,13 +18,13 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use uuid::Uuid;
 
 use crate::db::models as dbmodels;
+use crate::endpoint::ContainerError;
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::StagingStore;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
-use crate::endpoint::ContainerError;
 
 pub struct EndpointScheduler {
     log_dir: Option<PathBuf>,
@@ -144,6 +144,8 @@ impl JobHandle {
             .run_job(self.job, log_sender, self.staging_store);
 
         let logres = LogReceiver {
+            package_name: &package.name,
+            package_version: &package.version,
             log_dir: self.log_dir.as_ref(),
             job_id,
             log_receiver,
@@ -201,6 +203,8 @@ impl JobHandle {
 }
 
 struct LogReceiver<'a> {
+    package_name: &'a str,
+    package_version: &'a str,
     log_dir: Option<&'a PathBuf>,
     job_id: Uuid,
     log_receiver: UnboundedReceiver<LogItem>,
@@ -231,20 +235,20 @@ impl<'a> LogReceiver<'a> {
                 LogItem::Progress(u) => {
                     trace!("Setting bar to {}", u as u64);
                     self.bar.set_position(u as u64);
-                    self.bar.set_message(&format!("Job: {} running...", self.job_id));
+                    self.bar.set_message(&format!("Job ({} {}): {} running...", self.package_name, self.package_version, self.job_id));
                 },
                 LogItem::CurrentPhase(ref phasename) => {
                     trace!("Setting bar phase to {}", phasename);
-                    self.bar.set_message(&format!("Job: {} Phase: {}", self.job_id, phasename));
+                    self.bar.set_message(&format!("Job ({} {}): {} Phase: {}", self.package_name, self.package_version, self.job_id, phasename));
                 },
                 LogItem::State(Ok(ref s)) => {
                     trace!("Setting bar state to Ok: {}", s);
-                    self.bar.set_message(&format!("Job: {} State Ok: {}", self.job_id, s));
+                    self.bar.set_message(&format!("Job ({} {}): {} State Ok: {}", self.package_name, self.package_version, self.job_id, s));
                     success = Some(true);
                 },
                 LogItem::State(Err(ref e)) => {
                     trace!("Setting bar state to Err: {}", e);
-                    self.bar.set_message(&format!("Job: {} State Err: {}", self.job_id, e));
+                    self.bar.set_message(&format!("Job ({} {}): {} State Err: {}", self.package_name, self.package_version, self.job_id, e));
                     success = Some(false);
                 },
             }
@@ -253,9 +257,9 @@ impl<'a> LogReceiver<'a> {
 
         trace!("Finishing bar = {:?}", success);
         let finish_msg = match success {
-            Some(true)  => format!("Job: {} finished successfully", self.job_id),
-            Some(false) => format!("Job: {} finished with error", self.job_id),
-            None        => format!("Job: {} finished", self.job_id),
+            Some(true)  => format!("Job ({} {}): {} finished successfully", self.package_name, self.package_version, self.job_id),
+            Some(false) => format!("Job ({} {}): {} finished with error", self.package_name, self.package_version, self.job_id),
+            None        => format!("Job ({} {}): {} finished", self.package_name, self.package_version, self.job_id),
         };
         self.bar.finish_with_message(&finish_msg);
 
