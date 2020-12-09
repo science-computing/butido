@@ -1,3 +1,5 @@
+use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
@@ -16,6 +18,7 @@ pub async fn find_pkg(matches: &ArgMatches, config: &Configuration, repo: Reposi
         .map(|mut builder| {
             builder.size_limit(1 * 1024 * 1024); // max size for the regex is 1MB. Should be enough for everyone
             builder.build()
+                .with_context(|| anyhow!("Failed to build regex from '{}'", matches.value_of("package_name_regex").unwrap()))
                 .map_err(Error::from)
         })
         .unwrap()?; // safe by clap
@@ -24,7 +27,9 @@ pub async fn find_pkg(matches: &ArgMatches, config: &Configuration, repo: Reposi
         .value_of("package_version_constraint")
         .map(String::from)
         .map(PackageVersionConstraint::new)
-        .transpose()?;
+        .transpose()
+        .context("Parsing package version constraint")
+        .context("A valid package version constraint looks like this: '=1.0.0'")?;
 
     let iter = repo.packages()
         .filter(|p| package_name_regex.captures(p.name()).is_some())
