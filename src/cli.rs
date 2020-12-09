@@ -200,14 +200,10 @@ pub fn cli<'a>() -> App<'a> {
                     .about("Show the environment of the job")
                 )
 
-                .arg(Arg::new("script_disable_highlighting")
-                    .required(false)
-                    .multiple(false)
-                    .long("disable-highlighting")
-                    .short('H')
-                    .about("Disable highlighting when showing the script")
-                )
-
+                .arg(script_arg_line_numbers())
+                .arg(script_arg_no_line_numbers())
+                .arg(script_arg_highlight())
+                .arg(script_arg_no_highlight())
             )
         )
 
