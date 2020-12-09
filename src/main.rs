@@ -84,7 +84,7 @@ async fn main() -> Result<()> {
     let _                     = crate::ui::package_repo_cleanness_check(&repo_path)?;
     let max_packages          = count_pkg_files(&repo_path);
     let hide_bars             = cli.is_present("hide_bars") || crate::util::stdout_is_pipe();
-    let progressbars          = ProgressBars::setup(config.progress_format().clone(), hide_bars);
+    let progressbars          = ProgressBars::setup(config.progress_format().clone(), config.spinner_format().clone(), hide_bars);
 
     let load_repo = || -> Result<Repository> {
         let bar = progressbars.repo_loading();

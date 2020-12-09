@@ -2,6 +2,10 @@ pub fn default_progress_format() -> String {
     String::from("[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}")
 }
 
+pub fn default_spinner_format() -> String {
+    String::from("[{elapsed_precise}] {spinner} | {msg}")
+}
+
 pub fn default_package_print_format() -> String {
     String::from(indoc::indoc!(r#"
             {{i}} - {{p.name}} : {{p.version}}

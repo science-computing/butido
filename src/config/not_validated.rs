@@ -23,6 +23,10 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     progress_format: String,
 
+    #[serde(default = "default_spinner_format")]
+    #[getset(get = "pub")]
+    spinner_format: String,
+
     #[serde(default = "default_package_print_format")]
     #[getset(get = "pub")]
     package_print_format: String,

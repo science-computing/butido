@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use indicatif::*;
 use uuid::Uuid;
 use url::Url;
@@ -5,13 +7,15 @@ use url::Url;
 #[derive(Clone, Debug)]
 pub struct ProgressBars {
     bar_template: String,
+    spinner_template: String,
     hide: bool,
 }
 
 impl ProgressBars {
-    pub fn setup(bar_template: String, hide: bool) -> Self {
+    pub fn setup(bar_template: String, spinner_template: String, hide: bool) -> Self {
         ProgressBars {
             bar_template,
+            spinner_template,
             hide,
         }
     }
@@ -46,6 +50,10 @@ impl ProgressBars {
         self.bar(&format!("Download: {}", url.as_str()), &self.bar_template)
     }
 
+    pub fn verification_bar(&self, path: PathBuf) -> ProgressBar {
+        self.spinner(&self.spinner_template, format!("Verification: {}", path.display()))
+    }
+
     fn bar(&self, msg: &str, template: &str) -> ProgressBar {
         if self.hide {
             ProgressBar::hidden()
@@ -54,6 +62,18 @@ impl ProgressBars {
             b.set_style(ProgressStyle::default_bar().template(template));
             b.set_message(msg);
             b
+        }
+    }
+
+    fn spinner(&self, template: &str, msg: String) -> ProgressBar {
+        if self.hide {
+            ProgressBar::hidden()
+        } else {
+            let bar = ProgressBar::new_spinner();
+            bar.set_style(ProgressStyle::default_spinner().template(template));
+            bar.enable_steady_tick(100);
+            bar.set_message(&msg);
+            bar
         }
     }
 
