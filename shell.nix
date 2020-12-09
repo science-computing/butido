@@ -36,6 +36,8 @@ pkgs.mkShell {
     pkgconfig
     which
     zlib
+
+    devd # development web-server for serving sources locally.
   ];
 
   LIBCLANG_PATH   = "${pkgs.llvmPackages.libclang}/lib";
