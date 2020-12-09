@@ -284,7 +284,8 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 
 fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
 
-    let highlighting_disabled = matches.is_present("script_disable_highlighting");
+    let script_highlight      = !matches.is_present("no_script_highlight");
+    let script_line_numbers   = !matches.is_present("no_script_line_numbers");
     let configured_theme      = config.script_highlight_theme();
     let show_log              = matches.is_present("show_log");
     let show_script           = matches.is_present("show_script");
@@ -386,7 +387,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
             log_len         = format!("{:<4}", data.0.log_text.lines().count()).cyan(),
             envs            = env_vars.unwrap_or_else(|| String::from("<env vars hidden>")),
             script_text     = if show_script {
-                crate::ui::script_to_printable(&data.0.script_text, !highlighting_disabled, configured_theme.as_ref(), false)?
+                crate::ui::script_to_printable(&data.0.script_text, script_highlight, configured_theme.as_ref(), script_line_numbers)?
             } else {
                 String::from("<script hidden>")
             },

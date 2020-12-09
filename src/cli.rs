@@ -200,14 +200,10 @@ pub fn cli<'a>() -> App<'a> {
                     .about("Show the environment of the job")
                 )
 
-                .arg(Arg::new("script_disable_highlighting")
-                    .required(false)
-                    .multiple(false)
-                    .long("disable-highlighting")
-                    .short('H')
-                    .about("Disable highlighting when showing the script")
-                )
-
+                .arg(script_arg_line_numbers())
+                .arg(script_arg_no_line_numbers())
+                .arg(script_arg_highlight())
+                .arg(script_arg_no_highlight())
             )
         )
 
@@ -483,38 +479,10 @@ pub fn cli<'a>() -> App<'a> {
                 .short('s')
                 .about("Show the script of the package")
             )
-
-            .arg(Arg::new("script_line_numbers")
-                .required(false)
-                .multiple(false)
-                .long("line-numbers")
-                .about("Print script with line numbers (default)")
-                .conflicts_with("no_script_line_numbers")
-            )
-            .arg(Arg::new("no_script_line_numbers")
-                .required(false)
-                .multiple(false)
-                .long("no-line-numbers")
-                .about("Print script without line numbers")
-                .conflicts_with("script_line_numbers")
-            )
-
-            .arg(Arg::new("script_highlight")
-                .required(false)
-                .multiple(false)
-                .long("highlighting")
-                .alias("highlight")
-                .about("Print script with highlighting (default)")
-                .conflicts_with("no_script_highlight")
-            )
-            .arg(Arg::new("no_script_highlight")
-                .required(false)
-                .multiple(false)
-                .long("no-highlighting")
-                .alias("no-highlight")
-                .about("Print script without highlighting")
-                .conflicts_with("script_highlight")
-            )
+            .arg(script_arg_line_numbers())
+            .arg(script_arg_no_line_numbers())
+            .arg(script_arg_highlight())
+            .arg(script_arg_no_highlight())
 
         )
         .subcommand(App::new("source")
@@ -618,6 +586,44 @@ pub fn cli<'a>() -> App<'a> {
             )
         )
 
+}
+
+fn script_arg_line_numbers<'a>() -> clap::Arg<'a> {
+    Arg::new("script_line_numbers")
+        .required(false)
+        .multiple(false)
+        .long("line-numbers")
+        .about("Print script with line numbers (default)")
+        .conflicts_with("no_script_line_numbers")
+}
+
+fn script_arg_no_line_numbers<'a>() -> clap::Arg<'a> {
+    Arg::new("no_script_line_numbers")
+        .required(false)
+        .multiple(false)
+        .long("no-line-numbers")
+        .about("Print script without line numbers")
+        .conflicts_with("script_line_numbers")
+}
+
+fn script_arg_highlight<'a>() -> clap::Arg<'a> {
+    Arg::new("script_highlight")
+        .required(false)
+        .multiple(false)
+        .long("highlighting")
+        .alias("highlight")
+        .about("Print script with highlighting (default)")
+        .conflicts_with("no_script_highlight")
+}
+
+fn script_arg_no_highlight<'a>() -> clap::Arg<'a> {
+    Arg::new("no_script_highlight")
+        .required(false)
+        .multiple(false)
+        .long("no-highlighting")
+        .alias("no-highlight")
+        .about("Print script without highlighting")
+        .conflicts_with("script_highlight")
 }
 
 /// Naive check whether 's' is a 'key=value' pair or an existing environment variable
