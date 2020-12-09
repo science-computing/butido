@@ -84,6 +84,7 @@ impl<'a> ScriptBuilder<'a> {
 
     fn interpolate_package(script: String, package: &Package, strict_mode: bool) -> Result<String> {
         let mut hb = Handlebars::new();
+        hb.register_escape_fn(handlebars::no_escape);
         hb.register_template_string("script", script)?;
         hb.register_helper("phase", Box::new(PhaseHelper));
         hb.register_helper("state", Box::new(StateHelper));

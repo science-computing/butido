@@ -74,6 +74,7 @@ pub fn print_packages<'a, I>(out: &mut dyn Write,
     where I: Iterator<Item = &'a Package>
 {
     let mut hb = Handlebars::new();
+    hb.register_escape_fn(handlebars::no_escape);
     hb.register_template_string("package", format)?;
 
     for (i, package) in iter.enumerate() {
