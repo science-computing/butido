@@ -179,7 +179,7 @@ pub async fn build(matches: &ArgMatches,
     if matches.is_present("no_verification") {
         warn!("No hash verification will be performed");
     } else {
-        crate::commands::source::verify_impl(tree.all_packages().into_iter(), &source_cache)
+        crate::commands::source::verify_impl(tree.all_packages().into_iter(), &source_cache, &progressbars)
             .await?;
     }
 

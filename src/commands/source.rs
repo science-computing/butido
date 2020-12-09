@@ -1,12 +1,13 @@
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Context;
 use anyhow::Result;
 use clap::ArgMatches;
-use log::trace;
+use log::{info, trace};
 use tokio::stream::StreamExt;
 use tokio::io::AsyncWriteExt;
 
@@ -20,7 +21,7 @@ use crate::util::progress::ProgressBars;
 
 pub async fn source(matches: &ArgMatches, config: &Configuration, repo: Repository, progressbars: ProgressBars) -> Result<()> {
     match matches.subcommand() {
-        Some(("verify", matches))       => verify(matches, config, repo).await,
+        Some(("verify", matches))       => verify(matches, config, repo, progressbars).await,
         Some(("list-missing", matches)) => list_missing(matches, config, repo).await,
         Some(("url", matches))          => url(matches, repo).await,
         Some(("download", matches))     => download(matches, config, repo, progressbars).await,
@@ -29,7 +30,7 @@ pub async fn source(matches: &ArgMatches, config: &Configuration, repo: Reposito
     }
 }
 
-pub async fn verify(matches: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
+pub async fn verify(matches: &ArgMatches, config: &Configuration, repo: Repository, progressbars: ProgressBars) -> Result<()> {
     let sc                = SourceCache::new(config.source_cache_root().clone());
     let pname             = matches.value_of("package_name").map(String::from).map(PackageName::from);
     let pvers             = matches.value_of("package_version").map(String::from).map(PackageVersionConstraint::new).transpose()?;
@@ -38,29 +39,39 @@ pub async fn verify(matches: &ArgMatches, config: &Configuration, repo: Reposito
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true));
 
-    verify_impl(packages, &sc).await
+    verify_impl(packages, &sc, &progressbars).await
 }
 
-pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCache) -> Result<()>
+pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCache, progressbars: &ProgressBars) -> Result<()>
     where I: Iterator<Item = &'a Package> + 'a
 {
+
+    let multi = Arc::new(indicatif::MultiProgress::new());
+
     let results = packages
         .map(|p| sc.sources_for(p).into_iter())
         .flatten()
-        .map(|source| async move {
+        .map(|src| (multi.clone(), src))
+        .map(|(multi, source)| async move {
+            let bar = multi.add(progressbars.verification_bar(source.path()));
             if source.path().exists() {
                 source.verify_hash()
                     .await
                     .with_context(|| anyhow!("Hash verification failed for: {}", source.path().display()))?;
 
-                Ok(format!("Ok: {}", source.path().display()))
+                let msg = format!("Ok: {}", source.path().display());
+                bar.finish_with_message(&msg);
+                Ok(msg)
             } else {
+                bar.finish_with_message("Error");
                 Err(anyhow!("Source missing: {}", source.path().display()))
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Vec<Result<String>>>()
-        .await;
+        .collect::<Vec<Result<String>>>();
+
+    let (results, _) = tokio::join!(results, async move { multi.join() });
+    info!("Verification processes finished");
 
     let out = std::io::stdout();
     let mut any_error = false;
