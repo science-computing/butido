@@ -1,0 +1,14 @@
+name              = "a"
+version           = "1"
+
+[sources.src]
+url       = "http://localhost:8180/a-1.source"
+hash.hash = "eb68d0823f7047958133e66ebedc923825e8a8fe"
+
+[dependencies]
+runtime         = ["b =2", "c =3"]
+
+[phases]
+build.script = '''
+    echo "Building {{name}} in version {{version}}"
+'''

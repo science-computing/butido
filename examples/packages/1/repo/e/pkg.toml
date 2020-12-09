@@ -1,0 +1,11 @@
+name              = "e"
+version           = "5"
+
+[sources.src]
+url       = "http://localhost:8180/e-5.source"
+hash.hash = "f2c844feb6ccb9e4977f256a5126aac77334ec5a"
+
+[phases]
+build.script = '''
+    echo "Building {{name}} in version {{version}}"
+'''

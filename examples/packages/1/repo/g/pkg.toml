@@ -1,0 +1,11 @@
+name              = "g"
+version           = "7"
+
+[sources.src]
+url       = "http://localhost:8180/g-7.source"
+hash.hash = "c7af27a237cb21368eb2b25a068e72283b528684"
+
+[phases]
+build.script = '''
+    echo "Building {{name}} in version {{version}}"
+'''

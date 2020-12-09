@@ -1,0 +1,41 @@
+name              = "b"
+version           = "2"
+
+[sources.src]
+url       = "http://localhost:8180/b-2.source"
+hash.hash = "89cad6f574693c02c8ecf94983ec20ffad43af0b"
+
+[dependencies]
+build           = ["f =6"]
+runtime         = ["d =4", "e =5"]
+
+[environment]
+FOO = "123"
+BAR = "bla"
+
+[phases]
+build.script = '''
+    echo "Look my pretty variables: $FOO"
+    if [[ -z "$FOO" ]]; then
+        {{state "ERR" "Failed to find variable FOO"}}
+        exit 1
+    fi
+
+    if [[ "$FOO" != "123" ]]; then
+        {{state "ERR" "FOO is not equal to '123'"}}
+        exit 1
+    fi
+
+    echo "Look my pretty variables: $BAR"
+    if [[ -z "$BAR" ]]; then
+        {{state "ERR" "Failed to find variable BAR"}}
+        exit 1
+    fi
+
+    if [[ "$BAR" != "bla" ]]; then
+        {{state "ERR" "BAR is not equal to 'bla'"}}
+        exit 1
+    fi
+
+    echo "Building {{name}} in version {{version}}"
+'''
