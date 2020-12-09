@@ -55,6 +55,13 @@ releases = "/tmp/releases"
 #
 staging  = "/tmp/staging"
 
+# The position where the sources are cached by butido.
+source_cache = "/tmp/sources"
+
+# The directory where butido puts the plain text log files it writes for the
+# jobs
+log_dir      = "/tmp/logs"
+
 # Enable strict script interpolation
 #
 # If this is set to true, the variable interpolation for the packaging script
