@@ -572,6 +572,12 @@ pub fn cli<'a>() -> App<'a> {
                     .value_name("VERSION")
                     .about("Verify the sources of this package version (optional, if left out, all packages are checked)")
                 )
+                .arg(Arg::new("force")
+                    .required(false)
+                    .multiple(false)
+                    .long("force")
+                    .about("Overwrite existing cache entry")
+                )
             )
         )
 
