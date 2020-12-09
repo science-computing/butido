@@ -80,7 +80,7 @@ impl SourceEntry {
         Ok(())
     }
 
-    pub async fn verify_hash(&self) -> Result<bool> {
+    pub async fn verify_hash(&self) -> Result<()> {
         use tokio::io::AsyncReadExt;
 
         let p = self.source_file_path();

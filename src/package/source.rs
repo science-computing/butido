@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use anyhow::Result;
 use getset::Getters;
 use serde::Deserialize;
@@ -31,9 +32,13 @@ pub struct SourceHash {
 }
 
 impl SourceHash {
-    pub fn matches_hash_of(&self, buf: &[u8]) -> Result<bool> {
+    pub fn matches_hash_of(&self, buf: &[u8]) -> Result<()> {
         let h = self.hashtype.hash_buffer(&buf)?;
-        Ok(h == self.value)
+        if h == self.value {
+            Ok(())
+        } else {
+            Err(anyhow!("Hash mismatch, expected '{}', got '{}'", self.value, h))
+        }
     }
 
     #[cfg(test)]
