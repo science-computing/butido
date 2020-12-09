@@ -5,9 +5,7 @@ version_is_semver = false
 patches = []
 
 [sources.src]
-url       = "https://github.com/user/repo/archive/sources.tar.gz"
 hash.type = "sha1"
-hash.hash = "5e8bcaa3c758f84f01935a914e2bbf01309462ae"
 
 [dependencies]
 build           = []
@@ -17,49 +15,57 @@ runtime         = []
 # can be overridden as well
 [phases]
 
-unpack.script = '''
+checksource.script = '''
+    {{phase "Checking sources"}}
+    {{progress 0}}
+
+    echo "Sources for this Package:"
     {{#each sources}}
-    echo "{{@key}}  {{this.url}}"
-    echo "          {{this.hash.hash}}"
-    ls /inputs/{{@key}}-{{this.hash.hash}}.source
+    echo "{{@key}} : {{this.url}}"
+    echo "{{this.hash.type}}: {{this.hash.hash}}"
+
+    if [ ! -e /inputs/{{@key}}-{{this.hash.hash}}.source ]; then
+        {{state "ERR" "Failed to find source" }}
+        exit 1
+    fi
     {{/each}}
+    {{progress 20}}
+
+    echo "All sources:"
+    echo "------------"
+
+    ls /inputs
+
+    echo "------------"
+'''
+
+unpack.script = '''
+    {{phase "Unpacking sources"}}
 
     mkdir /build
-    echo "#BUTIDO:PHASE:unpack"
-'''
+    {{#each sources}}
+    mv /inputs/{{@key}}-{{this.hash.hash}}.source /build/
+    {{/each}}
+    {{progress 40}}
 
-# We use a depinst phase here because we don't want to add a Dockerfile to the
-# repo where we prepare a build container.
-# This is, of course, not be the way it would be done in a real-world scenario!
-depinst.script = '''
-    {{phase "depinst"}}
-    {{progress 0}}
-    for n in {1..10}; do sleep 0.1; done
-    {{progress 10}}
-'''
-
-configure.script = '''
-    {{phase "configure-preparing"}}
-    for n in {1..10}; do sleep 0.1; done
-
-    {{progress 20}}
-    for n in {1..10}; do sleep 0.1; done
-'''
-
-build.script = '''
-    {{phase "build"}}
-
-    for n in {1..10}; do sleep 0.1; done
-
-    echo "#BUTIDO:PROGRESS:60"
+    echo "Moving dependencies to /build"
+    mv /inputs/*.pkg /build/
     {{progress 60}}
+
+
+    ls /build
 '''
 
-install.script = '''
-    {{phase "install"}}
-    for n in {1..10}; do sleep 0.1; done
+package.script = '''
+    {{phase "package"}}
 
-    {{progress 80}}
+    mkdir /outputs
+    for f in /build/*; do
+        cat "$f" | sed 's,^,  ,' >> /outputs/{{name}}-{{version}}.pkg
+    done
+
+    {{progress 100}}
+    {{state "OK" "Finished"}}
 '''
 
 

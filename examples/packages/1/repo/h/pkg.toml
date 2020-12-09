@@ -1,0 +1,14 @@
+name              = "h"
+version           = "8"
+
+[sources.src]
+url       = "http://localhost:8180/h-8.source"
+hash.hash = "387d6873dfbdbaf116e1091c8b11eaf406b98f8f"
+
+[dependencies]
+build = ["j =10"]
+
+[phases]
+build.script = '''
+    echo "Building {{name}} in version {{version}}"
+'''

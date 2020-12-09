@@ -1,17 +1,14 @@
 name              = "a"
 version           = "1"
 
+[sources.src]
+url       = "http://localhost:8180/a-1.source"
+hash.hash = "eb68d0823f7047958133e66ebedc923825e8a8fe"
+
 [dependencies]
 runtime         = ["b =2", "c =3"]
 
 [phases]
-package.script = '''
-    mkdir /outputs
-    echo "#BUTIDO:PHASE:package"
-    echo "#BUTIDO:PROGRESS:90"
-
-    touch /outputs/a-1.pkg
-
-    echo "#BUTIDO:PROGRESS:100"
-    echo "#BUTIDO:STATE:OK:finished"
+build.script = '''
+    echo "Building {{name}} in version {{version}}"
 '''

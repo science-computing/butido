@@ -7,6 +7,16 @@ to resemble a real packaging process cleanly, including downloads and even
 failing builds (configurable via ENV variables).
 
 
+## Setup
+
+The top-level `shell.nix` file contains a list of environment variables that are
+required for butido and the Makefile to automagically find the right locations.
+
+The `shell.nix` file can be called with
+`nix-shell ./shell.nix --argstr example 1` to explicitely select the environment
+for example 1.
+
+
 ## Downloads
 
 The downloads are done from localhost, where a (python) web server has to serve
@@ -21,15 +31,24 @@ The packages are dependend on eachother like this:
 ```
 a
  `- b
- |  `- c
- |  |  `- h
  |  `- d
+ |  |  `- i
  |  `- e
+ |  `- f
  `- c
-    `- f
     `- g
-       `- i
+    `- h
+       `- j
 ```
+
+## Database
+
+The database host is to be expected to run with the settings specified in the
+`shell.nix` file (see `example_1_env`).
+
+See `/scripts/dev-pg-container.sh` for how to start the container.
+Use `diesel db reset` to setup the database.
+
 
 ## Build
 

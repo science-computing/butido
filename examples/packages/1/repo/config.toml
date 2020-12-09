@@ -1,31 +1,21 @@
 # Configuration file for BUTIDO for this repository
 
-# repository of package definitions
-releases     = "/tmp/example-3-releases"
-staging      = "/tmp/example-3-staging"
-source_cache = "/tmp/example-3-sources"
-log_dir      = "/tmp/example-3-logs"
+# In the example, these are configured via the environment.
+# See README.md
+#releases     = "/tmp/example-1-releases"
+#staging      = "/tmp/example-1-staging"
+#source_cache = "/tmp/example-1-sources"
+#log_dir      = "/tmp/example-1-logs"
+#database_host     = "localhost"
+#database_port     = 5432
+#database_user     = "pgdev"
+#database_password = "password"
+#database_name     = "butido"
 
 script_highlight_theme = "Solarized (dark)"
 
-# ####
-#
-# Log database configuration
-#
-# ####
-
-# The database to use
-#
-# Can be overridden via environment vairbale BUTIDO_DATABASE_URI or set via CLI.
-database_host     = "localhost"
-database_port     = 5432
-database_user     = "pgdev"
-database_password = "password"
-database_name     = "butido"
-
-
 # Phases which can be configured in the packages
-available_phases = [ "unpack", "depinst", "configure", "build", "install", "package" ]
+available_phases = [ "checksource", "unpack", "build", "package" ]
 
 [docker]
 # Images which can be used to build
@@ -35,15 +25,15 @@ verify_images_present = true
 
 # List of docker endpoints
 [[docker.endpoints]]
-name          = "example host name"
+name          = "localhost"
 uri           = "http://0.0.0.0:8095"
 endpoint_type = "http"
 speed         = 1
 maxjobs       = 10
 
-
 [containers]
 # environment variables which are allowed during container start
 # This way, errors (typos) when passing environment to a build can be prevented
-allowed_env = [ "PATH" ]
+check_env_names = true
+allowed_env = [ "FOO", "BAR" ]
 
