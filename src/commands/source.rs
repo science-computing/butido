@@ -53,7 +53,8 @@ pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCac
         .flatten()
         .map(|src| (multi.clone(), src))
         .map(|(multi, source)| async move {
-            let bar = multi.add(progressbars.verification_bar(source.path()));
+            trace!("Verifying: {}", source.path().display());
+            let bar = multi.add(progressbars.bar());
             if source.path().exists() {
                 source.verify_hash()
                     .await
@@ -150,7 +151,8 @@ pub async fn download(matches: &ArgMatches, config: &Configuration, repo: Reposi
             sc.sources_for(p)
                 .into_iter()
                 .map(|source| {
-                    let bar = multi.add(progressbars.download_bar(source.url()));
+                    let bar = multi.add(progressbars.spinner());
+                    bar.set_message(&format!("Downloading {}", source.url()));
                     async move {
                         if source.exists() && !force {
                             Err(anyhow!("Source exists: {}", source.path().display()))

@@ -87,7 +87,7 @@ async fn main() -> Result<()> {
     let progressbars          = ProgressBars::setup(config.progress_format().clone(), config.spinner_format().clone(), hide_bars);
 
     let load_repo = || -> Result<Repository> {
-        let bar = progressbars.repo_loading();
+        let bar = progressbars.bar();
         bar.set_length(max_packages);
         let repo = Repository::load(&repo_path, &bar)?;
         bar.finish_with_message("Repository loading finished");
@@ -106,14 +106,14 @@ async fn main() -> Result<()> {
         },
         Some(("what-depends", matches)) => {
             let repo = load_repo()?;
-            let bar = progressbars.what_depends();
+            let bar = progressbars.bar();
             bar.set_length(max_packages);
             crate::commands::what_depends(matches, &config, repo).await?
         },
 
         Some(("dependencies-of", matches)) => {
             let repo = load_repo()?;
-            let bar = progressbars.what_depends();
+            let bar = progressbars.bar();
             bar.set_length(max_packages);
             crate::commands::dependencies_of(matches, &config, repo).await?
         },

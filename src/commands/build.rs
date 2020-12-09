@@ -122,7 +122,7 @@ pub async fn build(matches: &ArgMatches,
     let package = *packages.get(0).ok_or_else(|| anyhow!("Found no package."))?;
 
     let release_dir  = {
-        let bar_release_loading = progressbars.release_loading();
+        let bar_release_loading = progressbars.bar();
         bar_release_loading.set_length(max_packages);
 
         let p = config.releases_directory();
@@ -137,7 +137,7 @@ pub async fn build(matches: &ArgMatches,
     };
 
     let (staging_store, staging_dir) = {
-        let bar_staging_loading = progressbars.staging_loading();
+        let bar_staging_loading = progressbars.bar();
         bar_staging_loading.set_length(max_packages);
 
         let p = if let Some(staging_dir) = matches.value_of("staging_dir").map(PathBuf::from) {
@@ -164,7 +164,7 @@ pub async fn build(matches: &ArgMatches,
     };
 
     let tree = {
-        let bar_tree_building = progressbars.tree_building();
+        let bar_tree_building = progressbars.bar();
         bar_tree_building.set_length(max_packages);
 
         let mut tree = Tree::new();

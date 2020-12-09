@@ -101,7 +101,7 @@ impl<'a> Orchestrator<'a> {
             .await?
             .into_iter()
             .map(|runnable| {
-                let bar = multibar.add(progress_generator.job_bar(runnable.uuid()));
+                let bar = multibar.add(progress_generator.bar());
                 Self::run_runnable(runnable, scheduler, bar)
             })
             .collect::<futures::stream::FuturesUnordered<_>>()
