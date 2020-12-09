@@ -2,6 +2,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::Error;
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
@@ -133,10 +134,14 @@ pub async fn download(matches: &ArgMatches, config: &Configuration, repo: Reposi
                                 let _ = source.remove_file().await?;
                             }
 
-                            trace!("Starting download...");
-                            let file = source.create().await?;
+                            trace!("Creating: {:?}", source);
+                            let file = source.create().await
+                                .with_context(|| anyhow!("Creating source file destination: {}", source.path().display()))?;
+
                             let mut file = tokio::io::BufWriter::new(file);
-                            let response = reqwest::get(source.url().as_ref()).await?;
+                            let response = reqwest::get(source.url().as_ref()).await
+                                .with_context(|| anyhow!("Downloading '{}'", source.url()))?;
+
                             if let Some(len) = response.content_length() {
                                 bar.set_length(len);
                             }
