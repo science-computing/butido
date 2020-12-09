@@ -1,7 +1,10 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
+use anyhow::anyhow;
+use log::trace;
 use url::Url;
 
 use crate::package::Package;
@@ -36,7 +39,11 @@ pub struct SourceEntry {
 impl SourceEntry {
 
     fn source_file_path(&self) -> PathBuf {
-        self.cache_root.join(format!("{}-{}/{}-{}.source", self.package_name, self.package_version, self.package_source_name, self.package_source.hash().value()))
+        self.source_file_directory().join(format!("{}-{}.source", self.package_source_name, self.package_source.hash().value()))
+    }
+
+    fn source_file_directory(&self) -> PathBuf {
+        self.cache_root.join(format!("{}-{}", self.package_name, self.package_version))
     }
 
     fn for_package(cache_root: PathBuf, package: &Package) -> Vec<Self> {
@@ -94,13 +101,38 @@ impl SourceEntry {
 
     pub async fn create(&self) -> Result<tokio::fs::File> {
         let p = self.source_file_path();
+        trace!("Creating source file: {}", p.display());
 
+        if !self.cache_root.is_dir() {
+            trace!("Cache root does not exist: {}", self.cache_root.display());
+            return Err(anyhow!("Cache root {} does not exist!", self.cache_root.display()))
+        }
+
+        {
+            let dir = self.source_file_directory();
+            if !dir.is_dir() {
+                trace!("Creating directory: {}", dir.display());
+                tokio::fs::create_dir(&dir)
+                    .await
+                    .with_context(|| {
+                        anyhow!("Creating source cache directory for package {} {}: {}",
+                            self.package_source_name,
+                            self.package_source.hash().value(),
+                            dir.display())
+                    })?;
+            } else {
+                trace!("Directory exists: {}", dir.display());
+            }
+        }
+
+        trace!("Creating file now: {}", p.display());
         tokio::fs::OpenOptions::new()
             .create(true)
             .create_new(true)
             .write(true)
             .open(&p)
             .await
+            .with_context(|| anyhow!("Creating file: {}", p.display()))
             .map_err(Error::from)
     }
 
