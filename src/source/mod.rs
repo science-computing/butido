@@ -84,6 +84,8 @@ impl SourceEntry {
         use tokio::io::AsyncReadExt;
 
         let p = self.source_file_path();
+
+        trace!("Reading to buffer: {}", p.display());
         let mut buf = vec![];
         tokio::fs::OpenOptions::new()
             .create(false)
@@ -94,6 +96,7 @@ impl SourceEntry {
             .read_to_end(&mut buf)
             .await?;
 
+        trace!("Reading to buffer finished: {}", p.display());
         self.package_source
             .hash()
             .matches_hash_of(&buf)

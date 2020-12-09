@@ -56,14 +56,17 @@ pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCac
             trace!("Verifying: {}", source.path().display());
             let bar = multi.add(progressbars.bar());
             if source.path().exists() {
+                trace!("Exists: {}", source.path().display());
                 source.verify_hash()
                     .await
                     .with_context(|| anyhow!("Hash verification failed for: {}", source.path().display()))?;
 
+                trace!("Success verifying: {}", source.path().display());
                 let msg = format!("Ok: {}", source.path().display());
                 bar.finish_with_message(&msg);
                 Ok(msg)
             } else {
+                trace!("Failed verifying: {}", source.path().display());
                 bar.finish_with_message("Error");
                 Err(anyhow!("Source missing: {}", source.path().display()))
             }
