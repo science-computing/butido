@@ -1,10 +1,10 @@
 use std::io::Write;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Context;
 use anyhow::Result;
-use anyhow::anyhow;
 use clap::ArgMatches;
 use log::trace;
 use tokio::stream::StreamExt;
@@ -38,35 +38,49 @@ pub async fn verify(matches: &ArgMatches, config: &Configuration, repo: Reposito
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true));
 
-    let mut out = std::io::stdout();
-    verify_impl(packages, &sc, &mut out).await
+    verify_impl(packages, &sc).await
 }
 
-pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCache, output: &mut dyn Write) -> Result<()>
+pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCache) -> Result<()>
     where I: Iterator<Item = &'a Package> + 'a
 {
-    if let Err(_) = packages
+    let results = packages
         .map(|p| sc.sources_for(p).into_iter())
         .flatten()
         .map(|source| async move {
             if source.path().exists() {
-                match source.verify_hash().await {
-                    Ok(true)  => Ok(format!("Ok: {}", source.path().display())),
-                    Ok(false) => Err(format!("Hash Mismatch: {}", source.path().display())),
-                    Err(e)    => Err(format!("Hash verification failed: {}", e.to_string())), // TODO: make me nice
-                }
+                source.verify_hash()
+                    .await
+                    .with_context(|| anyhow!("Hash verification failed for: {}", source.path().display()))?;
+
+                Ok(format!("Ok: {}", source.path().display()))
             } else {
-                Err(format!("Source missing: {}", source.path().display()))
+                Err(anyhow!("Source missing: {}", source.path().display()))
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Vec<std::result::Result<String, String>>>()
-        .await
-        .into_iter()
-        .inspect(|r| { let _ = writeln!(output, "{}", match r { Ok(s) | Err(s) => s }); })
-        .map(|r| r.map(|_| ()).map_err(|_| ()))
-        .collect::<std::result::Result<(), ()>>()
-    {
+        .collect::<Vec<Result<String>>>()
+        .await;
+
+    let out = std::io::stdout();
+    let mut any_error = false;
+    for result in results {
+        match result {
+            Err(e) => {
+                let mut outlock = out.lock();
+                any_error = true;
+                for cause in e.chain() {
+                    let _ = writeln!(outlock, "{}", cause);
+                }
+                let _ = writeln!(outlock, "");
+            },
+            Ok(s) => {
+                let _ = writeln!(out.lock(), "{}", s);
+            },
+        }
+    }
+
+    if any_error {
         Err(anyhow!("At least one package failed with source verification"))
     } else {
         Ok(())
