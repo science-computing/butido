@@ -175,7 +175,23 @@ impl Endpoint {
             .map(|_| ())
     }
 
-    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<(Vec<ArtifactPath>, ContainerHash, Script)> {
+    /// Run a job
+    ///
+    /// The return type of this function is a bit complex, so here's an explanation:
+    ///
+    /// * The outer Result is for indicating whether the general process of running the container
+    /// and all related tasks worked.
+    ///
+    /// The tuple holds the result of the container run itself (the first item), the hash of the
+    /// container that was run and the script that was run.
+    ///
+    /// The script is for reporting and should be written to the database by the caller.
+    /// The ContainerHash as well.
+    ///
+    /// The result inside the tuple is an Err if the container script returned an error.
+    /// It is Ok containing the created artifact pathes if the script exited successfully.
+    ///
+    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<(Result<Vec<ArtifactPath>>, ContainerHash, Script)> {
         let (container_id, _warnings) = {
             let envs = job.environment()
                 .into_iter()
@@ -364,16 +380,23 @@ impl Endpoint {
 
         let script: Script = job.script().clone();
         match exited_successfully {
-            Some((false, msg))       => Err({
-                ContainerError::container_error(ContainerHash::from(container_id), self.uri().clone(), msg.unwrap_or_else(|| String::new()))
-            }).map_err(Error::from),
+            Some((false, msg))       => {
+                let conthash = ContainerHash::from(container_id);
+                let conterr = ContainerError::container_error(conthash.clone(), self.uri().clone(), msg.unwrap_or_else(|| String::new()));
+
+                // error because the container errored
+                let conterr = Err(conterr).map_err(Error::from);
+
+                // Ok because the general process worked.
+                Ok((conterr, conthash, script))
+            },
 
             Some((true, _)) | None => {
                 container.stop(Some(std::time::Duration::new(1, 0)))
                     .await
                     .with_context(|| anyhow!("Stopping container {}", container_id))?;
 
-                Ok((r, ContainerHash::from(container_id), script))
+                Ok((Ok(r), ContainerHash::from(container_id), script))
             },
         }
     }

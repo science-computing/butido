@@ -161,6 +161,8 @@ impl JobHandle {
             let _ = dbmodels::JobEnv::create(&self.db, &job, &env)?;
         }
 
+        let paths = paths?;
+
         // Have to do it the ugly way here because of borrowing semantics
         let mut r = vec![];
         for p in paths.iter() {
