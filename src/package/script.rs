@@ -199,7 +199,7 @@ impl HelperDef for StateHelper {
             .ok_or_else(|| RenderError::new("Required parameter must be a string: state"))
             .and_then(|state| match state {
                 "OK" => {
-                    out.write("echo '#BUTIDO:STATE:OK\n")?;
+                    out.write("echo '#BUTIDO:STATE:OK'\n")?;
                     Ok(())
                 },
                 "ERR" => {
