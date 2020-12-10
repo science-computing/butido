@@ -1,6 +1,5 @@
 use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
-use std::result::Result as RResult;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -176,7 +175,7 @@ impl Endpoint {
             .map(|_| ())
     }
 
-    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> RResult<(Vec<ArtifactPath>, ContainerHash, Script), ContainerError> {
+    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<(Vec<ArtifactPath>, ContainerHash, Script)> {
         let (container_id, _warnings) = {
             let envs = job.environment()
                 .into_iter()
@@ -292,7 +291,7 @@ impl Endpoint {
                 .with_context(|| anyhow!("Copying artifacts to container {}", container_id))?;
             }
 
-        let exited_successfully: Option<bool> = container
+        let exited_successfully: Option<(bool, Option<String>)> = container
             .copy_file_into(script_path, job.script().as_ref().as_bytes())
             .inspect(|r| { trace!("Copying script to container {} -> {:?}", container_id, r); })
             .map(|r| r.with_context(|| anyhow!("Copying the script into the container {} on '{}'", container_id, self.name)))
@@ -316,8 +315,8 @@ impl Endpoint {
                                         let mut exited_successfully = None;
                                         {
                                             match item {
-                                                LogItem::State(Ok(_))    => exited_successfully = Some(true),
-                                                LogItem::State(Err(_))   => exited_successfully = Some(false),
+                                                LogItem::State(Ok(_))  => exited_successfully = Some((true, None)),
+                                                LogItem::State(Err(ref msg)) => exited_successfully = Some((false, Some(msg.clone()))),
                                                 _ => {
                                                     // Nothing
                                                 }
@@ -339,11 +338,11 @@ impl Endpoint {
             .with_context(|| anyhow!("Copying script to container, running container and getting logs: {}", container_id))?
             .into_iter()
             .fold(None, |accu, elem| match (accu, elem) {
-                (None        , b)           => b,
-                (Some(false) , _)           => Some(false),
-                (_           , Some(false)) => Some(false),
-                (a           , None)        => a,
-                (Some(true)  , Some(true))  => Some(true),
+                (None        , b)                      => b,
+                (Some((false, msg)) , _)               => Some((false, msg)),
+                (_           , Some((false, msg)))     => Some((false, msg)),
+                (a           , None)                   => a,
+                (Some((true, _))  , Some((true, _)))   => Some((true, None)),
             });
 
         trace!("Fetching /outputs from container {}", container_id);
@@ -365,8 +364,11 @@ impl Endpoint {
 
         let script: Script = job.script().clone();
         match exited_successfully {
-            Some(false)       => Err(ContainerError::container_error(ContainerHash::from(container_id), self.uri().clone())),
-            Some(true) | None => {
+            Some((false, msg))       => Err({
+                ContainerError::container_error(ContainerHash::from(container_id), self.uri().clone(), msg.unwrap_or_else(|| String::new()))
+            }).map_err(Error::from),
+
+            Some((true, _)) | None => {
                 container.stop(Some(std::time::Duration::new(1, 0)))
                     .await
                     .with_context(|| anyhow!("Stopping container {}", container_id))?;

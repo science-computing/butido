@@ -83,7 +83,7 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
             (
                 (seq(b"STATE:ERR:") * string().map(|s| LogItem::State(Err(s))))
                 |
-                (seq(b"STATE:OK:") * string().map(|s| LogItem::State(Ok(s))))
+                seq(b"STATE:OK:").map(|_| LogItem::State(Ok(())))
             )
         )
     )
@@ -189,7 +189,7 @@ mod tests {
             Some other log line
             Some other log line
             Some other log line
-            #BUTIDO:STATE:OK:finished successfully
+            #BUTIDO:STATE:OK
         "};
 
         let p = parser();
@@ -249,7 +249,7 @@ mod tests {
         }
         {
             let elem = i.next().unwrap();
-            let expe = LogItem::State(Ok(String::from("finished successfully")));
+            let expe = LogItem::State(Ok(()));
             assert_eq!(*elem, expe, "Expected {}: {:?}", prettify_item(&expe), prettify_item(elem));
         }
         {
