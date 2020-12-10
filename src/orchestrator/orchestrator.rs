@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -65,9 +64,9 @@ impl<'a> OrchestratorSetup<'a> {
 
 impl<'a> Orchestrator<'a> {
 
-    pub async fn run(self, output: &mut Vec<Artifact>) -> Result<()> {
+    pub async fn run(self, output: &mut Vec<Artifact>) -> Result<Vec<anyhow::Error>> {
         for jobset in self.jobsets.into_iter() {
-            let _ = Self::run_jobset(&self.scheduler,
+            let errs = Self::run_jobset(&self.scheduler,
                 &self.merged_stores,
                 &self.source_cache,
                 &self.config,
@@ -75,9 +74,13 @@ impl<'a> Orchestrator<'a> {
                 jobset,
                 output)
                 .await?;
+
+            if !errs.is_empty() {
+                return Ok(errs)
+            }
         }
 
-        Ok(())
+        Ok(vec![])
     }
 
     async fn run_jobset(
@@ -88,7 +91,7 @@ impl<'a> Orchestrator<'a> {
         progress_generator: &ProgressBars,
         jobset: JobSet,
         output: &mut Vec<Artifact>)
-        -> Result<()>
+        -> Result<Vec<anyhow::Error>>
     {
         use tokio::stream::StreamExt;
 
@@ -131,28 +134,9 @@ impl<'a> Orchestrator<'a> {
 
         }
 
-        let mut have_error = false;
-        {
-            trace!("Logging {} errors...", errors.len());
-            let out = std::io::stderr();
-            let mut lock = out.lock();
-            for error in errors {
-                have_error = true;
-                if let Err(e) = error.map_err(Error::from) {
-                    for cause in e.chain() {
-                        writeln!(lock, "{}", cause)?;
-                    }
-                }
-            }
-        }
-
         let mut results = results; // rebind
         output.append(&mut results);
-        if have_error {
-            Err(anyhow!("Error during build"))
-        } else {
-            Ok(())
-        }
+        Ok(errors.into_iter().filter_map(Result::err).collect())
     }
 
     async fn run_runnable(runnable: RunnableJob, scheduler: &EndpointScheduler, bar: indicatif::ProgressBar) -> Result<Vec<Artifact>> {

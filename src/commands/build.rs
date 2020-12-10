@@ -244,7 +244,7 @@ pub async fn build(matches: &ArgMatches,
 
     info!("Running orchestrator...");
     let mut artifacts = vec![];
-    let res         = orch.run(&mut artifacts).await;
+    let errors      = orch.run(&mut artifacts).await?;
     let out         = std::io::stdout();
     let mut outlock = out.lock();
 
@@ -253,5 +253,17 @@ pub async fn build(matches: &ArgMatches,
         .map(|artifact| writeln!(outlock, "-> {}", staging_dir.join(artifact.path).display()).map_err(Error::from))
         .collect::<Result<_>>()?;
 
-    res
+    let mut had_error = false;
+    for error in errors {
+        had_error = true;
+        for cause in error.chain() {
+            writeln!(outlock, "{}", cause)?;
+        }
+    }
+
+    if had_error {
+        Err(anyhow!("One or multiple errors during build"))
+    } else {
+        Ok(())
+    }
 }
