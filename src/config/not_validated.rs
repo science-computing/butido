@@ -31,6 +31,10 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     package_print_format: String,
 
+    #[serde(default = "default_build_error_lines")]
+    #[getset(get = "pub")]
+    build_error_lines: usize,
+
     #[getset(get = "pub")]
     script_highlight_theme: Option<String>,
 

@@ -71,3 +71,7 @@ pub fn default_script_shebang() -> String {
     String::from("#!/bin/bash")
 }
 
+pub fn default_build_error_lines() -> usize {
+    10
+}
+

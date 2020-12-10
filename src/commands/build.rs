@@ -8,7 +8,11 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
+use colored::Colorize;
+use diesel::ExpressionMethods;
 use diesel::PgConnection;
+use diesel::QueryDsl;
+use diesel::RunQueryDsl;
 use log::{debug, info, warn, trace};
 use tokio::stream::StreamExt;
 use tokio::sync::RwLock;
@@ -19,12 +23,14 @@ use crate::filestore::StagingStore;
 use crate::filestore::path::StoreRoot;
 use crate::job::JobResource;
 use crate::job::JobSet;
+use crate::log::LogItem;
 use crate::orchestrator::OrchestratorSetup;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::package::Shebang;
 use crate::package::Tree;
 use crate::repository::Repository;
+use crate::schema;
 use crate::source::SourceCache;
 use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
@@ -42,6 +48,7 @@ pub async fn build(matches: &ArgMatches,
     use crate::db::models::{
         EnvVar,
         Package,
+        Job,
         GitHash,
         Image,
         Submit,
@@ -227,12 +234,13 @@ pub async fn build(matches: &ArgMatches,
     trace!("Setting up job sets finished successfully");
 
     trace!("Setting up Orchestrator");
+    let database_connection = Arc::new(database_connection);
     let orch = OrchestratorSetup::builder()
         .progress_generator(progressbars)
         .endpoint_config(endpoint_configurations)
         .staging_store(staging_store)
         .release_store(release_dir)
-        .database(database_connection)
+        .database(database_connection.clone())
         .source_cache(source_cache)
         .submit(submit)
         .log_dir(if matches.is_present("write-log-file") { Some(config.log_dir().clone()) } else { None })
@@ -254,11 +262,42 @@ pub async fn build(matches: &ArgMatches,
         .collect::<Result<_>>()?;
 
     let mut had_error = false;
-    for error in errors {
+    for (job_uuid, error) in errors {
         had_error = true;
         for cause in error.chain() {
             writeln!(outlock, "{}", cause)?;
         }
+
+        let data = schema::jobs::table
+            .filter(schema::jobs::dsl::uuid.eq(job_uuid))
+            .inner_join(schema::packages::table)
+            .first::<(Job, Package)>(database_connection.as_ref())?;
+
+        let number_log_lines = *config.build_error_lines();
+        writeln!(outlock, "Last {} lines of Job {}", number_log_lines, job_uuid)?;
+        writeln!(outlock, "for package {} {}\n\n", data.1.name, data.1.version)?;
+
+        let parsed_log = crate::log::ParsedLog::build_from(&data.0.log_text)?;
+        let lines = parsed_log.iter()
+            .map(|line_item| match line_item {
+                LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
+                LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
+                LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
+                LogItem::State(Ok(()))   => Ok(format!("#BUTIDO:STATE:OK").green()),
+                LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        lines
+            .iter()
+            .enumerate()
+            .skip(lines.len() - number_log_lines)
+            .map(|(i, line)| {
+                writeln!(outlock, "{:>4} | {}", i, line).map_err(Error::from)
+            })
+            .collect::<Result<()>>()?;
+
+        writeln!(outlock, "\n\n")?;
     }
 
     if had_error {

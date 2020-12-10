@@ -15,6 +15,10 @@ progress_format = "[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {ms
 # Can be overwritten temporarily via CLI
 script_shebang = "#!/bin/bash"
 
+# The number of log lines to show if a build fails.
+# Defaults to 10
+build_error_lines = 10
+
 # The theme for the highlighting engine when printing the script that ran inside
 # a container.
 #
