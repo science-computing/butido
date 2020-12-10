@@ -239,9 +239,9 @@ impl<'a> LogReceiver<'a> {
                     trace!("Setting bar phase to {}", phasename);
                     self.bar.set_message(&format!("Job ({} {}): {} Phase: {}", self.package_name, self.package_version, self.job_id, phasename));
                 },
-                LogItem::State(Ok(ref s)) => {
-                    trace!("Setting bar state to Ok: {}", s);
-                    self.bar.set_message(&format!("Job ({} {}): {} State Ok: {}", self.package_name, self.package_version, self.job_id, s));
+                LogItem::State(Ok(())) => {
+                    trace!("Setting bar state to Ok");
+                    self.bar.set_message(&format!("Job ({} {}): {} State Ok", self.package_name, self.package_version, self.job_id));
                     success = Some(true);
                 },
                 LogItem::State(Err(ref e)) => {

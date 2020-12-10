@@ -192,7 +192,6 @@ struct StateHelper;
 
 impl HelperDef for StateHelper {
     fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
-        let state_msg = h.param(1).ok_or_else(|| RenderError::new("Required parameter missing: state message"))?;
         h.param(0)
             .ok_or_else(|| RenderError::new("Required parameter missing: state"))?
             .value()
@@ -200,12 +199,11 @@ impl HelperDef for StateHelper {
             .ok_or_else(|| RenderError::new("Required parameter must be a string: state"))
             .and_then(|state| match state {
                 "OK" => {
-                    out.write("echo '#BUTIDO:STATE:OK:")?;
-                    out.write(state_msg.value().render().as_ref())?;
-                    out.write("'\n")?;
+                    out.write("echo '#BUTIDO:STATE:OK\n")?;
                     Ok(())
                 },
                 "ERR" => {
+                    let state_msg = h.param(1).ok_or_else(|| RenderError::new("Required parameter missing: state message"))?;
                     out.write("echo '#BUTIDO:STATE:ERR:")?;
                     out.write(state_msg.value().render().as_ref())?;
                     out.write("'\n")?;

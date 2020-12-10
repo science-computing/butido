@@ -13,7 +13,7 @@ pub enum LogItem {
 
     /// The end-state of the process
     /// Either Ok or Error
-    State(Result<String, String>),
+    State(Result<(), String>),
 }
 
 impl LogItem {
@@ -22,7 +22,7 @@ impl LogItem {
             LogItem::Line(s)         => Ok(Display(String::from_utf8(s.to_vec())?)),
             LogItem::Progress(u)     => Ok(Display(format!("#BUTIDO:PROGRESS:{}", u))),
             LogItem::CurrentPhase(p) => Ok(Display(format!("#BUTIDO:PHASE:{}", p))),
-            LogItem::State(Ok(s))    => Ok(Display(format!("#BUTIDO:STATE:OK:{}", s))),
+            LogItem::State(Ok(()))   => Ok(Display(format!("#BUTIDO:STATE:OK"))),
             LogItem::State(Err(s))   => Ok(Display(format!("#BUTIDO:STATE:ERR:{}", s))),
         }
     }
