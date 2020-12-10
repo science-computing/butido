@@ -59,12 +59,16 @@ impl Repository {
             let subdirs = all_subdirs(path).with_context(|| format!("Finding subdirs for {}", pkg_file.display()))?;
 
             if subdirs.is_empty() {
-                let package = config
-                    .try_into()
-                    .with_context(|| format!("Failed to parse {} into package", path.display()));
-
                 progress.tick();
-                Ok(vec![package])
+                if pkg_file.is_file() {
+                    let package = config
+                        .try_into()
+                        .with_context(|| format!("Failed to parse {} into package", path.display()));
+
+                    Ok(vec![package])
+                } else {
+                    Ok(vec![])
+                }
             } else {
                 subdirs
                     .into_iter()
