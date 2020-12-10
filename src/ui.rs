@@ -10,12 +10,9 @@ use anyhow::anyhow;
 use handlebars::Handlebars;
 use itertools::Itertools;
 use log::error;
-use syntect::easy::HighlightLines;
-use syntect::highlighting::{ThemeSet, Style};
-use syntect::parsing::SyntaxSet;
-use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 use crate::package::Package;
+use crate::package::Script;
 use crate::package::ScriptBuilder;
 use crate::package::Shebang;
 use crate::config::Configuration;
@@ -95,9 +92,12 @@ fn print_package(out: &mut dyn Write,
     let script = ScriptBuilder::new(&Shebang::from(config.shebang().clone()))
         .build(package, config.available_phases(), *config.strict_script_interpolation())?;
 
-    let script = crate::ui::script_to_printable(script.as_ref(),
+    let script = crate::ui::script_to_printable(&script,
         flags.script_highlighting,
-        config.script_highlight_theme().as_ref(),
+        config
+            .script_highlight_theme()
+            .as_ref()
+            .ok_or_else(|| anyhow!("Highlighting for script enabled, but no theme configured"))?,
         flags.script_line_numbers)?;
 
     let mut data = BTreeMap::new();
@@ -123,56 +123,24 @@ fn print_package(out: &mut dyn Write,
         .and_then(|r| writeln!(out, "{}", r).map_err(Error::from))
 }
 
-pub fn script_to_printable(script: &str,
-                          highlight: bool,
-                          highlight_theme: Option<&String>,
-                          line_numbers: bool)
+pub fn script_to_printable(script: &Script, highlight: bool, highlight_theme: &str, line_numbers: bool)
     -> Result<String>
 {
-    if highlight {
-        if let Some(configured_theme) = highlight_theme {
-            // Load these once at the start of your program
-            let ps = SyntaxSet::load_defaults_newlines();
-            let ts = ThemeSet::load_defaults();
-
-            let syntax = ps
-                .find_syntax_by_first_line(script)
-                .ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
-
-            let theme = ts
-                .themes
-                .get(configured_theme)
-                .ok_or_else(|| anyhow!("Theme not available: {}", configured_theme))?;
-
-            let mut h = HighlightLines::new(syntax, &theme);
-
-            let output = LinesWithEndings::from(script)
-                .enumerate()
-                .map(|(i, line)| {
-                    let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
-                    if line_numbers {
-                        format!("{:>4} | {}", i, as_24_bit_terminal_escaped(&ranges[..], true))
-                    } else {
-                        as_24_bit_terminal_escaped(&ranges[..], true)
-                    }
-                })
-                .join("");
-
-            Ok(output)
+    let script = if highlight {
+        let script = script.highlighted(highlight_theme);
+        if line_numbers {
+            script.lines_numbered()?.map(|(i, s)| format!("{:>4} | {}", i, s)).join("")
         } else {
-            Err(anyhow!("Highlighting for script enabled, but no theme configured"))
+            script.lines()?.join("")
         }
     } else {
         if line_numbers {
-            Ok({
-                script.lines()
-                    .enumerate()
-                    .map(|(i, s)| format!("{:>4} | {}", i, s))
-                    .join("\n")
-            })
+            script.lines_numbered().map(|(i, s)| format!("{:>4} | {}", i, s)).join("")
         } else {
-            Ok(script.to_string())
+            script.to_string()
         }
-    }
+    };
+
+    Ok(script)
 }
 

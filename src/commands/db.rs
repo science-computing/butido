@@ -20,6 +20,7 @@ use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
 use crate::db::models;
 use crate::log::LogItem;
+use crate::package::Script;
 use crate::schema;
 
 pub fn db(db_connection_config: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
@@ -387,7 +388,11 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
             log_len         = format!("{:<4}", data.0.log_text.lines().count()).cyan(),
             envs            = env_vars.unwrap_or_else(|| String::from("<env vars hidden>")),
             script_text     = if show_script {
-                crate::ui::script_to_printable(&data.0.script_text, script_highlight, configured_theme.as_ref(), script_line_numbers)?
+                let theme = configured_theme
+                    .as_ref()
+                    .ok_or_else(|| anyhow!("Highlighting for script enabled, but no theme configured"))?;
+                let script = Script::from(data.0.script_text);
+                crate::ui::script_to_printable(&script, script_highlight, theme, script_line_numbers)?
             } else {
                 String::from("<script hidden>")
             },

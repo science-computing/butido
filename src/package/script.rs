@@ -1,8 +1,13 @@
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use handlebars::{Handlebars, HelperDef, RenderContext, Helper, Context, JsonRender, HelperResult, Output, RenderError};
 use serde::Deserialize;
 use serde::Serialize;
+use syntect::easy::HighlightLines;
+use syntect::highlighting::{ThemeSet, Style};
+use syntect::parsing::SyntaxSet;
+use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 use crate::package::Package;
 use crate::phase::Phase;
@@ -12,8 +17,77 @@ use crate::phase::PhaseName;
 #[serde(transparent)]
 pub struct Script(String);
 
+impl From<String> for Script {
+    fn from(s: String) -> Script {
+        Script(s)
+    }
+}
+
+impl std::fmt::Display for Script {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "{}", self.0)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Shebang(String);
+
+impl Script {
+    pub fn highlighted<'a>(&'a self, script_theme: &'a str) -> HighlightedScript<'a> {
+        HighlightedScript::new(self, script_theme)
+    }
+
+    pub fn lines_numbered(&self) -> impl Iterator<Item = (usize, &str)> {
+        self.0.lines().enumerate()
+    }
+}
+
+#[derive(Debug)]
+pub struct HighlightedScript<'a> {
+    script: &'a Script,
+    script_theme: &'a str,
+
+    ps: SyntaxSet,
+    ts: ThemeSet,
+}
+
+impl<'a> HighlightedScript<'a> {
+    fn new(script: &'a Script, script_theme: &'a str) -> Self {
+        HighlightedScript {
+            script,
+            script_theme,
+
+            ps: SyntaxSet::load_defaults_newlines(),
+            ts: ThemeSet::load_defaults(),
+        }
+    }
+
+    pub fn lines(&'a self) -> Result<impl Iterator<Item = String> + 'a> {
+        let syntax = self.ps
+            .find_syntax_by_first_line(&self.script.0)
+            .ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
+
+        let theme = self.ts
+            .themes
+            .get(self.script_theme)
+            .ok_or_else(|| anyhow!("Theme not available: {}", self.script_theme))?;
+
+        let mut h = HighlightLines::new(syntax, &theme);
+
+        Ok({
+            LinesWithEndings::from(&self.script.0)
+                .map(move |line| {
+                    let ranges: Vec<(Style, &str)> = h.highlight(line, &self.ps);
+                    as_24_bit_terminal_escaped(&ranges[..], true)
+                })
+        })
+    }
+
+
+    pub fn lines_numbered(&'a self) -> Result<impl Iterator<Item = (usize, String)> + 'a> {
+        self.lines().map(|iter| iter.enumerate())
+    }
+}
 
 impl From<String> for Shebang {
     fn from(s: String) -> Self {
