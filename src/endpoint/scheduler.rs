@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::result::Result as RResult;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -18,7 +17,6 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use uuid::Uuid;
 
 use crate::db::models as dbmodels;
-use crate::endpoint::ContainerError;
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::StagingStore;
@@ -131,7 +129,7 @@ impl std::fmt::Debug for JobHandle {
 }
 
 impl JobHandle {
-    pub async fn run(self) -> RResult<Vec<dbmodels::Artifact>, ContainerError> {
+    pub async fn run(self) -> Result<Vec<dbmodels::Artifact>> {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let ep       = self.endpoint.read().await;
         let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;
@@ -156,7 +154,7 @@ impl JobHandle {
 
         trace!("Found result for job {}: {:?}", job_id, res);
         let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", ep.name()))?;
-        let (paths, container_hash, script) = res.with_context(|| anyhow!("Running job on '{}'", ep.name()))?;
+        let (paths, container_hash, script) = res.with_context(|| anyhow!("Error during running job on '{}'", ep.name()))?;
 
         let job = dbmodels::Job::create(&self.db, &job_id, &self.submit, &endpoint, &package, &image, &container_hash, &script, &log)?;
         for env in envs {

@@ -1,6 +1,5 @@
 use std::io::Write;
 use std::path::PathBuf;
-use std::result::Result as RResult;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -15,7 +14,6 @@ use typed_builder::TypedBuilder;
 use crate::config::Configuration;
 use crate::db::models::Artifact;
 use crate::db::models::Submit;
-use crate::endpoint::ContainerError;
 use crate::endpoint::EndpointConfiguration;
 use crate::endpoint::EndpointScheduler;
 use crate::filestore::MergedStores;
@@ -67,21 +65,19 @@ impl<'a> OrchestratorSetup<'a> {
 
 impl<'a> Orchestrator<'a> {
 
-    pub async fn run(self) -> Result<Vec<Artifact>> {
-        let mut report_result = vec![];
+    pub async fn run(self, output: &mut Vec<Artifact>) -> Result<()> {
         for jobset in self.jobsets.into_iter() {
-            let mut results = Self::run_jobset(&self.scheduler,
+            let _ = Self::run_jobset(&self.scheduler,
                 &self.merged_stores,
                 &self.source_cache,
                 &self.config,
                 &self.progress_generator,
-                jobset)
+                jobset,
+                output)
                 .await?;
-
-            report_result.append(&mut results);
         }
 
-        Ok(report_result)
+        Ok(())
     }
 
     async fn run_jobset(
@@ -90,8 +86,9 @@ impl<'a> Orchestrator<'a> {
         source_cache: &SourceCache,
         config: &Configuration,
         progress_generator: &ProgressBars,
-        jobset: JobSet)
-        -> Result<Vec<Artifact>>
+        jobset: JobSet,
+        output: &mut Vec<Artifact>)
+        -> Result<()>
     {
         use tokio::stream::StreamExt;
 
@@ -105,7 +102,7 @@ impl<'a> Orchestrator<'a> {
                 Self::run_runnable(runnable, scheduler, bar)
             })
             .collect::<futures::stream::FuturesUnordered<_>>()
-            .collect::<Vec<RResult<Vec<Artifact>, ContainerError>>>();
+            .collect::<Vec<Result<Vec<Artifact>>>>();
 
         let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
 
@@ -117,17 +114,6 @@ impl<'a> Orchestrator<'a> {
             .partition(|e| e.is_ok());
 
         let results = okays.into_iter().filter_map(Result::ok).flatten().collect::<Vec<Artifact>>();
-
-        {
-            let mut out = std::io::stderr();
-            for error in errors {
-                if let Err(e) = error {
-                    if let Some(expl) = e.explain_container_error() {
-                        writeln!(out, "{}", expl)?;
-                    }
-                }
-            }
-        }
 
         { // check if all paths that were written are actually there in the staging store
             let staging_store_lock = merged_store.staging().read().await;
@@ -145,12 +131,31 @@ impl<'a> Orchestrator<'a> {
 
         }
 
-        Ok(results)
+        let mut have_error = false;
+        {
+            trace!("Logging {} errors...", errors.len());
+            let out = std::io::stderr();
+            let mut lock = out.lock();
+            for error in errors {
+                have_error = true;
+                if let Err(e) = error.map_err(Error::from) {
+                    for cause in e.chain() {
+                        writeln!(lock, "{}", cause)?;
+                    }
+                }
+            }
+        }
+
+        let mut results = results; // rebind
+        output.append(&mut results);
+        if have_error {
+            Err(anyhow!("Error during build"))
+        } else {
+            Ok(())
+        }
     }
 
-    async fn run_runnable(runnable: RunnableJob, scheduler: &EndpointScheduler, bar: indicatif::ProgressBar)
-        -> RResult<Vec<Artifact>, ContainerError>
-    {
+    async fn run_runnable(runnable: RunnableJob, scheduler: &EndpointScheduler, bar: indicatif::ProgressBar) -> Result<Vec<Artifact>> {
         let job_id = runnable.uuid().clone();
         trace!("Runnable {} for package {}", job_id, runnable.package().name());
 

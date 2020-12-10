@@ -1,6 +1,5 @@
 use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
-use std::result::Result as RResult;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -176,7 +175,7 @@ impl Endpoint {
             .map(|_| ())
     }
 
-    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> RResult<(Vec<ArtifactPath>, ContainerHash, Script), ContainerError> {
+    pub async fn run_job(&self, job: RunnableJob, logsink: UnboundedSender<LogItem>, staging: Arc<RwLock<StagingStore>>) -> Result<(Vec<ArtifactPath>, ContainerHash, Script)> {
         let (container_id, _warnings) = {
             let envs = job.environment()
                 .into_iter()
@@ -365,7 +364,7 @@ impl Endpoint {
 
         let script: Script = job.script().clone();
         match exited_successfully {
-            Some(false)       => Err(ContainerError::container_error(ContainerHash::from(container_id), self.uri().clone())),
+            Some(false)       => Err(ContainerError::container_error(ContainerHash::from(container_id), self.uri().clone())).map_err(Error::from),
             Some(true) | None => {
                 container.stop(Some(std::time::Duration::new(1, 0)))
                     .await

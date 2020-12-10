@@ -243,12 +243,15 @@ pub async fn build(matches: &ArgMatches,
         .await?;
 
     info!("Running orchestrator...");
-    let res         = orch.run().await?;
+    let mut artifacts = vec![];
+    let res         = orch.run(&mut artifacts).await;
     let out         = std::io::stdout();
     let mut outlock = out.lock();
 
     writeln!(outlock, "Packages created:")?;
-    res.into_iter()
+    artifacts.into_iter()
         .map(|artifact| writeln!(outlock, "-> {}", staging_dir.join(artifact.path).display()).map_err(Error::from))
-        .collect::<Result<_>>()
+        .collect::<Result<_>>()?;
+
+    res
 }
