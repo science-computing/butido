@@ -4,7 +4,7 @@ use crate::util::docker::ContainerHash;
 
 #[derive(ThisError, Debug)]
 pub enum ContainerError {
-    #[error("Error during container run:\n\tMessage: '{msg}'\n\tConnect using `docker --host {uri} exec -it {container_id} /bin/bash`")]
+    #[error("Error during container run:\n\tMessage: '{msg}'\n\tConnect using\n\n\t\t`docker --host {uri} exec -it {container_id} /bin/bash`\n\n\tto debug.")]
     ContainerError {
         container_id: ContainerHash,
         uri: String,
