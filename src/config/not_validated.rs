@@ -38,6 +38,9 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     script_highlight_theme: Option<String>,
 
+    #[getset(get = "pub")]
+    script_linter: Option<PathBuf>,
+
     #[serde(default = "default_script_shebang")]
     #[getset(get = "pub")]
     shebang: String,
@@ -86,6 +89,12 @@ pub struct NotValidatedConfiguration {
 
 impl NotValidatedConfiguration {
     pub fn validate(self) -> Result<Configuration> {
+        if let Some(linter) = self.script_linter.as_ref() {
+            if !linter.is_file() {
+                return Err(anyhow!("Lint script is not a file: {}", linter.display()))
+            }
+        }
+
         if !self.staging_directory.is_dir() {
             return Err(anyhow!("Not a directory: staging = {}", self.staging_directory.display()))
         }

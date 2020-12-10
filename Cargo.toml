@@ -64,7 +64,7 @@ thiserror   = "1"
 rand = "=0.4.3"
 
 url      = { version = "2", features = ["serde"] }
-tokio    = { version = "0.2", features = ["macros", "fs"] }
+tokio    = { version = "0.2", features = ["macros", "fs", "process", "io-util"] }
 shiplift = { git = "https://github.com/softprops/shiplift", branch = "master" }
 
 

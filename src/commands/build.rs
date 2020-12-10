@@ -13,7 +13,7 @@ use diesel::ExpressionMethods;
 use diesel::PgConnection;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
-use log::{debug, info, warn, trace};
+use log::{debug, error, info, warn, trace};
 use tokio::stream::StreamExt;
 use tokio::sync::RwLock;
 
@@ -27,6 +27,7 @@ use crate::log::LogItem;
 use crate::orchestrator::OrchestratorSetup;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
+use crate::package::ScriptBuilder;
 use crate::package::Shebang;
 use crate::package::Tree;
 use crate::repository::Repository;
@@ -189,6 +190,76 @@ pub async fn build(matches: &ArgMatches,
         crate::commands::source::verify_impl(tree.all_packages().into_iter(), &source_cache, &progressbars)
             .await?;
     }
+
+    // linting the package scripts
+    if matches.is_present("no_lint") {
+        warn!("No script linting will be performed!");
+    } else {
+        if let Some(linter) = config.script_linter().as_ref() {
+            let shebang = Shebang::from(config.shebang().clone());
+
+            let all_packages = tree.all_packages();
+            let bar = progressbars.bar();
+            bar.set_length(all_packages.len() as u64);
+            bar.set_message("Linting package scripts...");
+
+            let lint_error = all_packages
+                .into_iter()
+                .map(|pkg| {
+                    let shebang = shebang.clone();
+                    let bar = bar.clone();
+                    async move {
+                        trace!("Linting script of {} {} with '{}'", pkg.name(), pkg.version(), linter.display());
+                        let cmd = tokio::process::Command::new(linter);
+                        let script = ScriptBuilder::new(&shebang)
+                            .build(pkg, config.available_phases(), *config.strict_script_interpolation())?;
+
+                        let (status, stdout, stderr) = script.lint(cmd).await?;
+                        bar.inc(1);
+                        Ok((pkg.name().clone(), pkg.version().clone(), status, stdout, stderr))
+                    }
+                })
+                .collect::<futures::stream::FuturesUnordered<_>>()
+                .collect::<Result<Vec<_>>>()
+                .await?
+                .into_iter()
+                .any(|tpl| {
+                    let pkg_name = tpl.0;
+                    let pkg_vers = tpl.1;
+                    let status = tpl.2;
+                    let stdout = tpl.3;
+                    let stderr = tpl.4;
+
+                    if status.success() {
+                        info!("Linting {pkg_name} {pkg_vers} script (exit {status}):\nstdout:\n{stdout}\n\nstderr:\n\n{stderr}",
+                            pkg_name = pkg_name,
+                            pkg_vers = pkg_vers,
+                            status = status,
+                            stdout = stdout,
+                            stderr = stderr);
+                        false
+                    } else {
+                        error!("Linting {pkg_name} {pkg_vers} errored ({status}):\n\nstdout:\n{stdout}\n\nstderr:\n{stderr}\n\n",
+                            pkg_name = pkg_name,
+                            pkg_vers = pkg_vers,
+                            status = status,
+                            stdout = stdout,
+                            stderr = stderr
+                        );
+                        true
+                    }
+                });
+
+            if lint_error {
+                bar.finish_with_message("Linting errored");
+                return Err(anyhow!("Linting was not successful"))
+            } else {
+                bar.finish_with_message("Finished linting package scripts");
+            }
+        } else {
+            warn!("No linter set in configuration, no script linting will be performed!");
+        }
+    } // linting
 
     trace!("Setting up database jobs for Package, GitHash, Image");
     let db_package = async { Package::create_or_fetch(&database_connection, &package) };

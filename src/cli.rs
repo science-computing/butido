@@ -231,6 +231,13 @@ pub fn cli<'a>() -> App<'a> {
                 .long("no-verify")
                 .about("Do not perform a hash sum check on all packages in the dependency tree before starting the build")
             )
+            .arg(Arg::new("no_lint")
+                .required(false)
+                .multiple(false)
+                .takes_value(false)
+                .long("no-lint")
+                .about("Do not perform script linting before starting the build")
+            )
 
             .arg(Arg::new("staging_dir")
                 .required(false)

@@ -1,13 +1,18 @@
-use anyhow::anyhow;
+use std::process::ExitStatus;
+
 use anyhow::Error;
+use anyhow::Context as AnyhowContext;
 use anyhow::Result;
+use anyhow::anyhow;
 use handlebars::{Handlebars, HelperDef, RenderContext, Helper, Context, JsonRender, HelperResult, Output, RenderError};
+use log::trace;
 use serde::Deserialize;
 use serde::Serialize;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{ThemeSet, Style};
 use syntect::parsing::SyntaxSet;
 use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
+use tokio::process::Command;
 
 use crate::package::Package;
 use crate::phase::Phase;
@@ -40,6 +45,43 @@ impl Script {
     pub fn lines_numbered(&self) -> impl Iterator<Item = (usize, &str)> {
         self.0.lines().enumerate()
     }
+
+    pub async fn lint(&self, mut cmd: Command) -> Result<(ExitStatus, String, String)> {
+        use tokio::io::AsyncWriteExt;
+        use tokio::io::BufWriter;
+
+        let mut child = cmd
+            .stderr(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+            .context("Spawning subprocess for linting package script")?;
+
+        trace!("Child = {:?}", child);
+
+        {
+            let stdin = child.stdin.take().ok_or_else(|| anyhow!("No stdin"))?;
+            let mut writer = BufWriter::new(stdin);
+            let _ = writer
+                .write_all(self.0.as_bytes())
+                .await
+                .context("Writing package script to STDIN of subprocess")?;
+
+            let _ = writer
+                .flush()
+                .await
+                .context("Flushing STDIN of subprocess")?;
+            trace!("Script written");
+        }
+
+        trace!("Waiting for child...");
+        let out = child.wait_with_output()
+            .await
+            .context("Waiting for subprocess")?;
+
+        Ok((out.status, String::from_utf8(out.stdout)?, String::from_utf8(out.stderr)?))
+    }
+
 }
 
 #[derive(Debug)]
@@ -87,6 +129,7 @@ impl<'a> HighlightedScript<'a> {
     pub fn lines_numbered(&'a self) -> Result<impl Iterator<Item = (usize, String)> + 'a> {
         self.lines().map(|iter| iter.enumerate())
     }
+
 }
 
 impl From<String> for Shebang {
