@@ -55,7 +55,7 @@ pub struct Package {
 impl Package {
 
     #[cfg(test)]
-    pub fn new(name: PackageName, version: PackageVersion, version_is_semver: bool, sources: Vec<Source>, dependencies: Dependencies) -> Self {
+    pub fn new(name: PackageName, version: PackageVersion, version_is_semver: bool, sources: HashMap<String, Source>, dependencies: Dependencies) -> Self {
         Package {
             name,
             version,
@@ -189,7 +189,9 @@ pub mod tests {
         let sources = {
             let url       = Url::parse(srcurl).unwrap();
             let hashvalue = HashValue::from(String::from(hash));
-            vec![Source::new(url, SourceHash::new(HashType::Sha1, hashvalue))]
+            let mut hm = HashMap::new();
+            hm.insert(String::from("src"), Source::new(url, SourceHash::new(HashType::Sha1, hashvalue)));
+            hm
         };
         let dependencies = Dependencies::empty();
         Package::new(name, version, version_is_semver, sources, dependencies)
