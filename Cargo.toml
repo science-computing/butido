@@ -7,44 +7,47 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log         = "0.4"
-toml        = "0.5"
-serde       = "1"
-serde_json  = "1"
-config      = "0.10"
-anyhow      = "1"
-getset      = "0.1"
-walkdir     = "2"
-resiter     = "0.4"
-itertools   = "0.9"
-clap        = "3.0.0-beta.2"
-indicatif   = "0.15"
-env_logger  = "0.8"
-regex       = "1"
-lazy_static = "1.4"
-uuid        = { version = "0.6", features = ["serde", "v4"] }
-pom         = "3"
-futures     = "0.3"
-handlebars  = "3"
-filters     = "0.4.0"
-indoc       = "1"
-typed-builder = "0.7"
-tar         = "0.4"
-diesel      = { version = "1.4", features = ["postgres", "chrono", "uuid", "serde_json"] }
-which       = "4"
-ascii_table = ">= 3.0.2"
-terminal_size = "0.1"
-atty        = "0.2"
-csv         = "1.1"
-chrono      = "0.4"
-git2	    = "0.13"
+anyhow         = "1"
+ascii_table    = ">= 3.0.2"
+atty           = "0.2"
+chrono         = "0.4"
+clap           = "3.0.0-beta.2"
+colored        = "2"
+config         = "0.10"
+csv            = "1.1"
+diesel         = { version = "1.4", features = ["postgres", "chrono", "uuid", "serde_json"] }
+env_logger     = "0.8"
+filters        = "0.4.0"
+futures        = "0.3"
+getset         = "0.1"
+git2           = "0.13"
+handlebars     = "3"
+indicatif      = "0.15"
+indoc          = "1"
+itertools      = "0.9"
+lazy_static    = "1.4"
+log            = "0.4"
+pom            = "3"
+regex          = "1"
+reqwest        = { version = "0.10", features = [ "stream" ] }
+resiter        = "0.4"
 result-inspect = "0.1"
-sha1        = { version = "0.6", features = ["std"] }
-sha2        = "0.9"
-reqwest     = { version = "0.10", features = [ "stream" ] }
-colored     = "2"
-syntect     = "4.4"
-thiserror   = "1"
+serde          = "1"
+serde_json     = "1"
+sha1           = { version = "0.6", features = ["std"] }
+sha2           = "0.9"
+shiplift       = { git = "https://github.com/softprops/shiplift", branch = "master" }
+syntect        = "4.4"
+tar            = "0.4"
+terminal_size  = "0.1"
+thiserror      = "1"
+tokio          = { version = "0.2", features = ["macros", "fs", "process", "io-util"] }
+toml           = "0.5"
+typed-builder  = "0.7"
+url            = { version = "2", features = ["serde"] }
+uuid           = { version = "0.6", features = ["serde", "v4"] }
+walkdir        = "2"
+which          = "4"
 
 # Hard-code rand to 0.4.4
 #
@@ -62,10 +65,3 @@ thiserror   = "1"
 # Upstream issue: https://github.com/rust-random/rand/issues/1071
 rand = "=0.4.3"
 
-url      = { version = "2", features = ["serde"] }
-tokio    = { version = "0.2", features = ["macros", "fs", "process", "io-util"] }
-shiplift = { git = "https://github.com/softprops/shiplift", branch = "master" }
-
-
-[dev-dependencies]
-indoc = "1"
