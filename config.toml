@@ -34,6 +34,19 @@ build_error_lines = 10
 # If the value is not set, highlighting is disabled.
 script_highlight_theme = "Solarized (dark)"
 
+# An (optional) script or program that can lint the packaging script.
+# This command gets the script on STDIN and might return 1 if there was an
+# error.
+# Stderr and stdout are printed to the user in this case.
+#
+# Simplest example:
+# ```bash
+# #!/bin/bash
+# shellcheck -
+# ```
+#
+# script_linter = "/path/to/scriptlinter"
+
 # The format to print the found packages with.
 #
 # Possible tokens are:
