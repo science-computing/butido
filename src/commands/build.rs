@@ -36,7 +36,8 @@ use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
 
-pub async fn build(matches: &ArgMatches,
+pub async fn build(repo_root: &Path,
+               matches: &ArgMatches,
                progressbars: ProgressBars,
                database_connection: PgConnection,
                config: &Configuration,
@@ -189,6 +190,23 @@ pub async fn build(matches: &ArgMatches,
         crate::commands::source::verify_impl(tree.all_packages().into_iter(), &source_cache, &progressbars)
             .await?;
     }
+
+    // linting the package scripts
+    if matches.is_present("no_lint") {
+        warn!("No script linting will be performed!");
+    } else {
+        if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
+            let all_packages = tree.all_packages();
+            let bar = progressbars.bar();
+            bar.set_length(all_packages.len() as u64);
+            bar.set_message("Linting package scripts...");
+
+            let iter = all_packages.into_iter();
+            let _ = crate::commands::util::lint_packages(iter, &linter, config, bar).await?;
+        } else {
+            warn!("No linter set in configuration, no script linting will be performed!");
+        }
+    } // linting
 
     trace!("Setting up database jobs for Package, GitHash, Image");
     let db_package = async { Package::create_or_fetch(&database_connection, &package) };

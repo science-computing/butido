@@ -13,6 +13,9 @@ pub use find_pkg::find_pkg;
 mod dependencies_of;
 pub use dependencies_of::dependencies_of;
 
+mod lint;
+pub use lint::lint;
+
 mod what_depends;
 pub use what_depends::what_depends;
 

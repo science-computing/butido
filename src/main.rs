@@ -102,7 +102,7 @@ async fn main() -> Result<()> {
 
             let repo = load_repo()?;
 
-            crate::commands::build(matches, progressbars, conn, &config, repo, &repo_path, max_packages).await?
+            crate::commands::build(&repo_path, matches, progressbars, conn, &config, repo, &repo_path, max_packages).await?
         },
         Some(("what-depends", matches)) => {
             let repo = load_repo()?;
@@ -140,6 +140,11 @@ async fn main() -> Result<()> {
 
         Some(("release", matches)) => {
             crate::commands::release(db_connection_config, &config, matches).await?
+        }
+
+        Some(("lint", matches)) => {
+            let repo = load_repo()?;
+            crate::commands::lint(&repo_path, matches, progressbars, &config, repo).await?
         }
 
         Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
