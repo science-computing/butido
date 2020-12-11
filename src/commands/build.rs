@@ -13,7 +13,7 @@ use diesel::ExpressionMethods;
 use diesel::PgConnection;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
-use log::{debug, error, info, warn, trace};
+use log::{debug, info, warn, trace};
 use tokio::stream::StreamExt;
 use tokio::sync::RwLock;
 
@@ -27,7 +27,6 @@ use crate::log::LogItem;
 use crate::orchestrator::OrchestratorSetup;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
-use crate::package::ScriptBuilder;
 use crate::package::Shebang;
 use crate::package::Tree;
 use crate::repository::Repository;
@@ -197,69 +196,13 @@ pub async fn build(repo_root: &Path,
         warn!("No script linting will be performed!");
     } else {
         if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
-            let shebang = Shebang::from(config.shebang().clone());
-
             let all_packages = tree.all_packages();
             let bar = progressbars.bar();
             bar.set_length(all_packages.len() as u64);
             bar.set_message("Linting package scripts...");
 
-            let lint_results = all_packages
-                .into_iter()
-                .map(|pkg| {
-                    let shebang = shebang.clone();
-                    let bar = bar.clone();
-                    let linter = &linter; // rebind because of borrowing semantics
-                    async move {
-                        trace!("Linting script of {} {} with '{}'", pkg.name(), pkg.version(), linter.display());
-                        let cmd = tokio::process::Command::new(linter);
-                        let script = ScriptBuilder::new(&shebang)
-                            .build(pkg, config.available_phases(), *config.strict_script_interpolation())?;
-
-                        let (status, stdout, stderr) = script.lint(cmd).await?;
-                        bar.inc(1);
-                        Ok((pkg.name().clone(), pkg.version().clone(), status, stdout, stderr))
-                    }
-                })
-                .collect::<futures::stream::FuturesUnordered<_>>()
-                .collect::<Result<Vec<_>>>()
-                .await?
-                .into_iter()
-                .map(|tpl| {
-                    let pkg_name = tpl.0;
-                    let pkg_vers = tpl.1;
-                    let status = tpl.2;
-                    let stdout = tpl.3;
-                    let stderr = tpl.4;
-
-                    if status.success() {
-                        info!("Linting {pkg_name} {pkg_vers} script (exit {status}):\nstdout:\n{stdout}\n\nstderr:\n\n{stderr}",
-                            pkg_name = pkg_name,
-                            pkg_vers = pkg_vers,
-                            status = status,
-                            stdout = stdout,
-                            stderr = stderr);
-                        true
-                    } else {
-                        error!("Linting {pkg_name} {pkg_vers} errored ({status}):\n\nstdout:\n{stdout}\n\nstderr:\n{stderr}\n\n",
-                            pkg_name = pkg_name,
-                            pkg_vers = pkg_vers,
-                            status = status,
-                            stdout = stdout,
-                            stderr = stderr
-                        );
-                        false
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            let lint_ok = lint_results.iter().all(|b| *b);
-            if !lint_ok {
-                bar.finish_with_message("Linting errored");
-                return Err(anyhow!("Linting was not successful"))
-            } else {
-                bar.finish_with_message(&format!("Finished linting {} package scripts", lint_results.len()));
-            }
+            let iter = all_packages.into_iter();
+            let _ = crate::commands::util::lint_packages(iter, &linter, config, bar).await?;
         } else {
             warn!("No linter set in configuration, no script linting will be performed!");
         }
