@@ -204,7 +204,7 @@ pub async fn build(repo_root: &Path,
             bar.set_length(all_packages.len() as u64);
             bar.set_message("Linting package scripts...");
 
-            let lint_error = all_packages
+            let lint_results = all_packages
                 .into_iter()
                 .map(|pkg| {
                     let shebang = shebang.clone();
@@ -225,7 +225,7 @@ pub async fn build(repo_root: &Path,
                 .collect::<Result<Vec<_>>>()
                 .await?
                 .into_iter()
-                .any(|tpl| {
+                .map(|tpl| {
                     let pkg_name = tpl.0;
                     let pkg_vers = tpl.1;
                     let status = tpl.2;
@@ -239,7 +239,7 @@ pub async fn build(repo_root: &Path,
                             status = status,
                             stdout = stdout,
                             stderr = stderr);
-                        false
+                        true
                     } else {
                         error!("Linting {pkg_name} {pkg_vers} errored ({status}):\n\nstdout:\n{stdout}\n\nstderr:\n{stderr}\n\n",
                             pkg_name = pkg_name,
@@ -248,15 +248,17 @@ pub async fn build(repo_root: &Path,
                             stdout = stdout,
                             stderr = stderr
                         );
-                        true
+                        false
                     }
-                });
+                })
+                .collect::<Vec<_>>();
 
-            if lint_error {
+            let lint_ok = lint_results.iter().all(|b| *b);
+            if !lint_ok {
                 bar.finish_with_message("Linting errored");
                 return Err(anyhow!("Linting was not successful"))
             } else {
-                bar.finish_with_message("Finished linting package scripts");
+                bar.finish_with_message(&format!("Finished linting {} package scripts", lint_results.len()));
             }
         } else {
             warn!("No linter set in configuration, no script linting will be performed!");
