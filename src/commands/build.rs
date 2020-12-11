@@ -208,6 +208,21 @@ pub async fn build(repo_root: &Path,
         }
     } // linting
 
+    tree.all_packages()
+        .into_iter()
+        .map(|pkg| {
+            if let Some(denylist) = pkg.deny_on_images() {
+                if denylist.iter().any(|denied| image_name == *denied) {
+                    Err(anyhow!("Package {} {} is not allowed to be built on {}", pkg.name(), pkg.version(), image_name))
+                } else {
+                    Ok(())
+                }
+            } else {
+                Ok(())
+            }
+        })
+        .collect::<Result<Vec<()>>>()?;
+
     trace!("Setting up database jobs for Package, GitHash, Image");
     let db_package = async { Package::create_or_fetch(&database_connection, &package) };
     let db_githash = async { GitHash::create_or_fetch(&database_connection, &hash_str) };
