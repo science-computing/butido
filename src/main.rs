@@ -147,6 +147,11 @@ async fn main() -> Result<()> {
             crate::commands::lint(&repo_path, matches, progressbars, &config, repo).await?
         }
 
+        Some(("tree-of", matches)) => {
+            let repo = load_repo()?;
+            crate::commands::tree_of(matches, repo, progressbars).await?
+        }
+
         Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
         None             => return Err(anyhow!("No subcommand")),
     }
