@@ -46,9 +46,14 @@ pub fn default_package_print_format() -> String {
                 {{#each p.flags}}{{this}}
                 {{/each~}}
             {{/if~}}
-            {{~#if print_deny_images}}
+            {{~#if print_allowed_images}}
+            Only supported on:
+                {{#each p.allowed_images}}{{this}}
+                {{/each~}}
+            {{/if~}}
+            {{~#if print_denied_images}}
             Denied on:
-                {{#each p.deny_on_images}}{{this}}
+                {{#each p.denied_images}}{{this}}
                 {{/each~}}
             {{/if~}}
             {{~#if print_phases}}
