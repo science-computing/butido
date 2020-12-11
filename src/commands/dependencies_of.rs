@@ -39,6 +39,7 @@ pub async fn dependencies_of(matches: &ArgMatches, config: &Configuration, repo:
         print_patches: false,
         print_env: false,
         print_flags: false,
+        print_allowed_images: false,
         print_deny_images: false,
         print_phases: false,
         print_script: false,

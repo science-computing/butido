@@ -53,6 +53,7 @@ pub async fn find_pkg(matches: &ArgMatches, config: &Configuration, repo: Reposi
             print_patches       : matches.is_present("show_patches"),
             print_env           : matches.is_present("show_env"),
             print_flags         : matches.is_present("show_flags"),
+            print_allowed_images: matches.is_present("show_allowed_images"),
             print_deny_images   : matches.is_present("show_deny_images"),
             print_phases        : matches.is_present("show_phases"),
             print_script        : matches.is_present("show_script"),

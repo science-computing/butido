@@ -13,6 +13,7 @@ use diesel::ExpressionMethods;
 use diesel::PgConnection;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
+use itertools::Itertools;
 use log::{debug, info, warn, trace};
 use tokio::stream::StreamExt;
 use tokio::sync::RwLock;
@@ -211,15 +212,19 @@ pub async fn build(repo_root: &Path,
     tree.all_packages()
         .into_iter()
         .map(|pkg| {
+            if let Some(allowlist) = pkg.allowed_images() {
+                if !allowlist.contains(&image_name) {
+                    return Err(anyhow!("Package {} {} is only allowed on: {}", pkg.name(), pkg.version(), allowlist.iter().join(", ")))
+                }
+            }
+
             if let Some(denylist) = pkg.deny_on_images() {
                 if denylist.iter().any(|denied| image_name == *denied) {
-                    Err(anyhow!("Package {} {} is not allowed to be built on {}", pkg.name(), pkg.version(), image_name))
-                } else {
-                    Ok(())
+                    return Err(anyhow!("Package {} {} is not allowed to be built on {}", pkg.name(), pkg.version(), image_name))
                 }
-            } else {
-                Ok(())
             }
+
+            Ok(())
         })
         .collect::<Result<Vec<()>>>()?;
 

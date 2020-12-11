@@ -406,7 +406,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .long("all")
                 .short('A')
-                .about("Same as: -SDpEFPs --deny-images (all flags enabled)")
+                .about("Same as: -SDpEFPs --deny-images --allowed-images (all flags enabled)")
             )
 
             .arg(Arg::new("show_sources")
@@ -465,6 +465,13 @@ pub fn cli<'a>() -> App<'a> {
                 .long("flags")
                 .short('F')
                 .about("Show the flags of the package")
+            )
+
+            .arg(Arg::new("show_allowed_images")
+                .required(false)
+                .multiple(false)
+                .long("allowed-images")
+                .about("Show the images on which the package is only allowed to be built")
             )
 
             .arg(Arg::new("show_deny_images")
