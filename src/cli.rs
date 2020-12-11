@@ -604,7 +604,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("lint")
-            .about("Release artifacts")
+            .about("Lint the package script of one or multiple packages")
             .arg(Arg::new("package_name")
                 .required(false)
                 .multiple(false)
