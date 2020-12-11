@@ -37,7 +37,7 @@ pub struct PackagePrintFlags {
     pub print_env: bool,
     pub print_flags: bool,
     pub print_allowed_images: bool,
-    pub print_deny_images: bool,
+    pub print_denied_images: bool,
     pub print_phases: bool,
     pub print_script: bool,
     pub script_line_numbers: bool,
@@ -58,7 +58,7 @@ impl PackagePrintFlags {
             || self.print_env
             || self.print_flags
             || self.print_allowed_images
-            || self.print_deny_images
+            || self.print_denied_images
             || self.print_phases
             || self.print_script
         }
@@ -117,7 +117,7 @@ fn print_package(out: &mut dyn Write,
     data.insert("print_env"           , serde_json::Value::Bool(flags.print_all || flags.print_env));
     data.insert("print_flags"         , serde_json::Value::Bool(flags.print_all || flags.print_flags));
     data.insert("print_allowed_images", serde_json::Value::Bool(flags.print_all || flags.print_allowed_images));
-    data.insert("print_deny_images"   , serde_json::Value::Bool(flags.print_all || flags.print_deny_images));
+    data.insert("print_denied_images" , serde_json::Value::Bool(flags.print_all || flags.print_denied_images));
     data.insert("print_phases"        , serde_json::Value::Bool(flags.print_all || flags.print_phases));
     data.insert("print_script"        , serde_json::Value::Bool(flags.print_all || flags.print_script));
 

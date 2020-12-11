@@ -218,8 +218,8 @@ pub async fn build(repo_root: &Path,
                 }
             }
 
-            if let Some(denylist) = pkg.deny_on_images() {
-                if denylist.iter().any(|denied| image_name == *denied) {
+            if let Some(deniedlist) = pkg.denied_images() {
+                if deniedlist.iter().any(|denied| image_name == *denied) {
                     return Err(anyhow!("Package {} {} is not allowed to be built on {}", pkg.name(), pkg.version(), image_name))
                 }
             }
