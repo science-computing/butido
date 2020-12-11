@@ -37,7 +37,8 @@ use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
 
-pub async fn build(matches: &ArgMatches,
+pub async fn build(repo_root: &Path,
+               matches: &ArgMatches,
                progressbars: ProgressBars,
                database_connection: PgConnection,
                config: &Configuration,
@@ -195,7 +196,7 @@ pub async fn build(matches: &ArgMatches,
     if matches.is_present("no_lint") {
         warn!("No script linting will be performed!");
     } else {
-        if let Some(linter) = config.script_linter().as_ref() {
+        if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
             let shebang = Shebang::from(config.shebang().clone());
 
             let all_packages = tree.all_packages();
@@ -208,6 +209,7 @@ pub async fn build(matches: &ArgMatches,
                 .map(|pkg| {
                     let shebang = shebang.clone();
                     let bar = bar.clone();
+                    let linter = &linter; // rebind because of borrowing semantics
                     async move {
                         trace!("Linting script of {} {} with '{}'", pkg.name(), pkg.version(), linter.display());
                         let cmd = tokio::process::Command::new(linter);

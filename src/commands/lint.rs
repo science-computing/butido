@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use clap::ArgMatches;
@@ -12,11 +14,9 @@ use crate::package::PackageVersionConstraint;
 use crate::package::ScriptBuilder;
 use crate::util::progress::ProgressBars;
 
-pub async fn lint(matches: &ArgMatches, progressbars: ProgressBars, config: &Configuration, repo: Repository) -> Result<()> {
-    let linter = config.script_linter()
-        .as_ref()
-        .ok_or_else(|| anyhow!("No linting script configured"))?;
-
+pub async fn lint(repo_path: &Path, matches: &ArgMatches, progressbars: ProgressBars, config: &Configuration, repo: Repository) -> Result<()> {
+    let linter = crate::ui::find_linter_command(repo_path, config)?
+        .ok_or_else(|| anyhow!("No linter command found"))?;
     let shebang = Shebang::from(config.shebang().clone());
     let pname = matches.value_of("package_name").map(String::from).map(PackageName::from);
     let pvers = matches.value_of("package_version").map(String::from).map(PackageVersionConstraint::new).transpose()?;
@@ -30,6 +30,7 @@ pub async fn lint(matches: &ArgMatches, progressbars: ProgressBars, config: &Con
         .map(|pkg| {
             let shebang = shebang.clone();
             let bar = bar.clone();
+            let linter = &linter; // rebind because of borrowing semantics
             async move {
                 trace!("Linting script of {} {} with '{}'", pkg.name(), pkg.version(), linter.display());
                 let cmd = tokio::process::Command::new(linter);

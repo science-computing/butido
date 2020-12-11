@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -142,5 +143,21 @@ pub fn script_to_printable(script: &Script, highlight: bool, highlight_theme: &s
     };
 
     Ok(script)
+}
+
+pub fn find_linter_command(repo_path: &Path, config: &Configuration) -> Result<Option<PathBuf>> {
+    match config.script_linter().as_ref() {
+        None => Ok(None),
+        Some(linter) => if linter.is_absolute() {
+            Ok(Some(linter.to_path_buf()))
+        } else {
+            let linter = repo_path.join(linter);
+            if !linter.is_file() {
+                Err(anyhow!("Cannot find linter command, searched in: {}", linter.display()))
+            } else {
+                Ok(Some(linter))
+            }
+        }
+    }
 }
 
