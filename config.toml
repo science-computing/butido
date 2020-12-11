@@ -1,3 +1,6 @@
+# Example configuration file for butido
+
+
 # Format of the progress bars used.
 # See https://docs.rs/indicatif/0.15.0/indicatif/#templates
 # for how to customize this.
@@ -52,32 +55,41 @@ script_highlight_theme = "Solarized (dark)"
 # Possible tokens are:
 #     i                         - Incrementing number of package that is printed
 #     p                         - The package data
-#     print_system_deps         - boolean flag to use in format string, true if user wants to see system deps
-#     print_system_runtime_deps - boolean flag to use in format string, true if user wants to see system runtime deps
-#     print_build_deps          - boolean flag to use in format string, true if user wants to see build deps
-#     print_runtime_deps        - boolean flag to use in format string, true if user wants to see runtime deps
+#     script                    - The rendered packaging script, variables embedded, highlighted and with line numbers (if requested via CLI flag)
+#     print_runtime_deps        - Whether to print runtime dependencies
+#     print_build_deps          - Whether to print buildtime dependencies
+
+#     print_any                 - Whether any of _the following_ `print_*` variables is set to true
+#     print_sources             - Whether to print sources
+#     print_dependencies        - Whether to print dependencies
+#     print_patches             - Whether to print patches
+#     print_env                 - Whether to print env
+#     print_flags               - Whether to print flags
+#     print_allowed_images      - Whether to print allowed_images
+#     print_denied_images       - Whether to print denied_images
+#     print_phases              - Whether to print phases
+#     print_script              - Whether to print script
+#
+#
+# Note that the default value of this setting is rather sophisticated and you
+# most certainly don't want to change this.
+#
 #
 # Handlebars modifiers are available.
-package_print_format = ""
+#package_print_format = ""
 
 # The position of the release binaries
-#
-# butido checks this location for packages when installing dependencies
-#
 releases = "/tmp/releases"
 
 # The position of the staging binaries
-# butido rolls a dice for each submitted build and generates a
-# per-process-staging directory here to store intermediate builds.
-#
-staging  = "/tmp/staging"
+staging = "/tmp/staging"
 
 # The position where the sources are cached by butido.
 source_cache = "/tmp/sources"
 
-# The directory where butido puts the plain text log files it writes for the
-# jobs
-log_dir      = "/tmp/logs"
+# The directory where butido puts plain text log files if requested
+log_dir = "/tmp/logs"
+
 
 # Enable strict script interpolation
 #
@@ -88,39 +100,45 @@ log_dir      = "/tmp/logs"
 #
 # Default if this setting is missing is true
 #
+# Note:
+#   This does only catch variable interpolation. Not errors in your script.
+#
 strict_script_interpolation = true
 
-# ####
+
+#
 #
 # Log database configuration
 #
-# ####
-
-# The database to use
 #
-# Can be overridden via environment vairbale BUTIDO_DATABASE_URI or set via CLI.
+
+# Database configuration should be self-explanatory
 database_host     = "localhost"
 database_port     = 5432
 database_user     = "pgdev"
 database_password = "password"
 database_name     = "butido"
 
+
 # Phases which can be configured in the packages
 
 # This also defines the _order_ in which the phases are executed
-# Each phase gets a pre_ and a post_ phase added automatically.
 # So for [ "foo", "bar" ], the phases are executed in this order:
-#   pre_foo
 #   foo
-#   post_foo
-#   pre_bar
 #   bar
-#   post_bar
 #
 # Phases which are not listed here are not executed at all.
 available_phases = [ "unpack", "patch", "configure", "build", "fixup", "pack" ]
 
+
+#
+#
+# Docker specific configuration
+#
+#
+
 [docker]
+
 # Images which can be used to build
 # images not listed here are automatically rejected
 images = [ "debian:bullseye" ]
@@ -139,14 +157,24 @@ images = [ "debian:bullseye" ]
 #
 verify_images_present = true
 
+
+#
 # List of docker endpoints
+#
+
 [[docker.endpoints]]
 name          = "testhostname"
-uri           = "http://0.0.0.0:8095"
-endpoint_type = "http"
-speed         = 1
-maxjobs       = 1
+uri           = "http://0.0.0.0:8095" # the URI of the endpoint. Either http or socket path
+endpoint_type = "http" # either "http" or "socket"
+speed         = 1 # currently ignored, but required to be present
+maxjobs       = 1 # currently ignored, but required to be present
 
+
+#
+#
+# Container specific settings
+#
+#
 
 [containers]
 
