@@ -16,6 +16,13 @@ impl AsRef<str> for ImageName {
     }
 }
 
+impl std::fmt::Display for ImageName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        self.0.fmt(f)
+    }
+}
+
+
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
 pub struct ContainerHash(String);
