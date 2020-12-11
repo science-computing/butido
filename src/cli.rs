@@ -596,6 +596,24 @@ pub fn cli<'a>() -> App<'a> {
             )
         )
 
+        .subcommand(App::new("lint")
+            .about("Release artifacts")
+            .arg(Arg::new("package_name")
+                .required(false)
+                .multiple(false)
+                .index(1)
+                .value_name("NAME")
+                .about("Package name to lint (if not present, every package will be linted")
+            )
+            .arg(Arg::new("package_version")
+                .required(false)
+                .multiple(false)
+                .index(2)
+                .value_name("VERSION_CONSTRAINT")
+                .about("A version constraint to search for (optional), E.G. '=1.0.0'")
+            )
+        )
+
 }
 
 fn script_arg_line_numbers<'a>() -> clap::Arg<'a> {

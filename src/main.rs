@@ -142,6 +142,11 @@ async fn main() -> Result<()> {
             crate::commands::release(db_connection_config, &config, matches).await?
         }
 
+        Some(("lint", matches)) => {
+            let repo = load_repo()?;
+            crate::commands::lint(matches, progressbars, &config, repo).await?
+        }
+
         Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
         None             => return Err(anyhow!("No subcommand")),
     }
