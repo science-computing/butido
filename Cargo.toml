@@ -21,7 +21,7 @@ filters        = "0.4.0"
 futures        = "0.3"
 getset         = "0.1"
 git2           = "0.13"
-handlebars     = "3"
+handlebars     = { version = "3", features = ["no_logging"] }
 indicatif      = "0.15"
 indoc          = "1"
 itertools      = "0.9"
