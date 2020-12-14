@@ -83,7 +83,7 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
             (
                 (seq(b"STATE:ERR:") * string().map(|s| LogItem::State(Err(s))))
                 |
-                seq(b"STATE:OK:").map(|_| LogItem::State(Ok(())))
+                seq(b"STATE:OK").map(|_| LogItem::State(Ok(())))
             )
         )
     )
