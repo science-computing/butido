@@ -284,7 +284,6 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 }
 
 fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
-
     let script_highlight      = !matches.is_present("no_script_highlight");
     let script_line_numbers   = !matches.is_present("no_script_line_numbers");
     let configured_theme      = config.script_highlight_theme();
@@ -345,6 +344,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
 
         let s = indoc::formatdoc!(r#"
                 Job:        {job_uuid}
+                Submit:     {submit_uuid}
                 Succeeded:  {succeeded}
                 Package:    {package_name} {package_version}
 
@@ -373,6 +373,8 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
                 Some(false) => data.0.uuid.to_string().red(),
                 None => data.0.uuid.to_string().cyan(),
             },
+
+            submit_uuid = data.1.uuid.to_string().cyan(),
 
             succeeded = match success {
                 Some(true) => String::from("yes").green(),
