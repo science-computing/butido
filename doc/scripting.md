@@ -80,3 +80,28 @@ For the packaging progress itself it is not required.
 earlier builds of the same package using heuristics. This might or might not
 deprecate this feature).
 
+
+### Other helpers
+
+The (handlebars) templating engine we use to provide helpers for the package
+script building provides some basic helpers, e.g.:
+
+* if-else
+* each
+* boolean helpers for if conditions
+
+For a full list see
+[the handlebars documentation](https://docs.rs/handlebars/3.5.1/handlebars/#built-in-helpers).
+The "logging" feature of handlebars is _not_ enabled, thus, the logging helpers
+are not included.
+
+butido provides some more helpers:
+
+* `join` for joining several strings to one string:
+    `{{join "foo" "bar}}` -> `foobar`
+  Arguments can also be variables.
+
+* `joinwith` for joining several strings to one string seperated
+    `{{joinwith ", " "foo" "bar}}` -> `foo, bar`
+  Arguments can also be variables.
+
