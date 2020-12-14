@@ -8,7 +8,7 @@ use crate::config::Configuration;
 use crate::config::ContainerConfig;
 use crate::config::DockerConfig;
 use crate::config::util::*;
-use crate::phase::PhaseName;
+use crate::package::PhaseName;
 
 #[derive(Debug, Getters, Deserialize)]
 pub struct NotValidatedConfiguration {

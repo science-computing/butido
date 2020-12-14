@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::job::JobResource;
 use crate::package::Package;
 use crate::package::Shebang;
-use crate::phase::PhaseName;
+use crate::package::PhaseName;
 use crate::util::docker::ImageName;
 
 /// A prepared, but not necessarily runnable, job configuration

@@ -9,7 +9,7 @@ use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::package::Shebang;
 use crate::package::Tree;
-use crate::phase::PhaseName;
+use crate::package::PhaseName;
 use crate::source::SourceCache;
 use crate::util::docker::ImageName;
 
@@ -98,7 +98,7 @@ mod tests {
     use crate::package::tests::package;
     use crate::package::Dependency;
     use crate::package::Dependencies;
-    use crate::phase::PhaseName;
+    use crate::package::PhaseName;
     use crate::util::docker::ImageName;
     use crate::repository::Repository;
 

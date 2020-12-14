@@ -15,8 +15,8 @@ use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 use tokio::process::Command;
 
 use crate::package::Package;
-use crate::phase::Phase;
-use crate::phase::PhaseName;
+use crate::package::Phase;
+use crate::package::PhaseName;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(transparent)]

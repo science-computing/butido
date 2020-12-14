@@ -12,7 +12,7 @@ use crate::package::dependency::*;
 use crate::package::name::*;
 use crate::package::source::*;
 use crate::package::version::*;
-use crate::phase::{PhaseName, Phase};
+use crate::package::{PhaseName, Phase};
 use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 
