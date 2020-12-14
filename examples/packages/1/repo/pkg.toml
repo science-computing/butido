@@ -65,7 +65,6 @@ package.script = '''
     done
 
     {{progress 100}}
-    {{state "OK" "Finished"}}
-'''
+    {{state "OK"}}
 
 
