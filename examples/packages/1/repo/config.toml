@@ -14,6 +14,8 @@
 
 script_highlight_theme = "Solarized (dark)"
 
+script_linter = "linterscript"
+
 # Phases which can be configured in the packages
 available_phases = [ "checksource", "unpack", "build", "package" ]
 
