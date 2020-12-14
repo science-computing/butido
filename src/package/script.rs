@@ -4,7 +4,7 @@ use anyhow::Error;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
 use anyhow::anyhow;
-use handlebars::{Handlebars, HelperDef, RenderContext, Helper, Context, JsonRender, HelperResult, Output, RenderError};
+use handlebars::{Handlebars, HelperDef, RenderContext, Helper, Context, JsonRender, HelperResult, Output, RenderError, PathAndJson};
 use log::trace;
 use serde::Deserialize;
 use serde::Serialize;
@@ -206,6 +206,8 @@ impl<'a> ScriptBuilder<'a> {
         hb.register_helper("phase", Box::new(PhaseHelper));
         hb.register_helper("state", Box::new(StateHelper));
         hb.register_helper("progress", Box::new(ProgressHelper));
+        hb.register_helper("join", Box::new(JoinHelper));
+        hb.register_helper("joinwith", Box::new(JoinWithHelper));
         hb.set_strict_mode(strict_mode);
         hb.render("script", package).map_err(Error::from)
     }
@@ -274,5 +276,49 @@ impl HelperDef for ProgressHelper {
                 Ok(())
             })
     }
+}
+
+#[derive(Clone, Copy)]
+struct JoinHelper;
+
+impl HelperDef for JoinHelper {
+    fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
+        joinstrs("", h.params().iter(), out)
+    }
+}
+
+#[derive(Clone, Copy)]
+struct JoinWithHelper;
+
+impl HelperDef for JoinWithHelper {
+    fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
+        let joiner = h.param(0)
+            .ok_or_else(|| RenderError::new("Required parameter missing: Join string"))?
+            .value()
+            .as_str()
+            .ok_or_else(|| RenderError::new("Required parameter must be a string: joinstr"))?;
+
+        joinstrs(joiner, h.params().iter().skip(1), out)
+    }
+}
+
+fn joinstrs<'reg: 'rc, 'rc, I>(with: &str, params: I, out: &mut dyn Output) -> HelperResult
+    where I: Iterator<Item = &'rc PathAndJson<'reg, 'rc>>
+{
+    use std::result::Result as RResult;
+    use itertools::Itertools;
+
+    let s = params
+        .map(|p| {
+            p.value()
+                .as_str()
+                .ok_or_else(|| RenderError::new("All parameters must be string"))
+        })
+        .collect::<RResult<Vec<&str>, RenderError>>()?
+        .into_iter()
+        .join(with);
+
+    out.write(&s)?;
+    Ok(())
 }
 
