@@ -157,6 +157,7 @@ impl JobHandle {
         let (paths, container_hash, script) = res.with_context(|| anyhow!("Error during running job on '{}'", ep.name()))?;
 
         let job = dbmodels::Job::create(&self.db, &job_id, &self.submit, &endpoint, &package, &image, &container_hash, &script, &log)?;
+        trace!("DB: Job entry for job {} created: {}", job.uuid, job.id);
         for env in envs {
             let _ = dbmodels::JobEnv::create(&self.db, &job, &env)?;
         }
@@ -166,6 +167,7 @@ impl JobHandle {
         // Have to do it the ugly way here because of borrowing semantics
         let mut r = vec![];
         for p in paths.iter() {
+            trace!("DB: Creating artifact entry for path: {}", p.display());
             r.push(dbmodels::Artifact::create(&self.db, p, false, &job)?);
         }
         Ok(r)
