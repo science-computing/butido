@@ -46,11 +46,10 @@ impl Artifact {
 
         diesel::insert_into(artifacts::table)
             .values(&new_art)
-            .on_conflict_do_nothing()
             .execute(database_connection)?;
 
         dsl::artifacts
-            .filter(path.eq(path_str))
+            .filter(path.eq(path_str).and(job_id.eq(job.id)))
             .first::<Artifact>(database_connection)
             .map_err(Error::from)
     }
