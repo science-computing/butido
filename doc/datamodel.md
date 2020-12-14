@@ -1,5 +1,10 @@
 ## The data model used for the database
 
+
+(Note that this part of the documentation is not relevant for users of butido,
+but only developers)
+
+
 The following visualization _only_ shows the entities we need to store.
 The tables extracted from this visualization are listed below.
 
