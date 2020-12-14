@@ -342,6 +342,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
             None
         };
 
+        let mut out = std::io::stdout();
         let s = indoc::formatdoc!(r#"
                 Job:        {job_uuid}
                 Submit:     {submit_uuid}
@@ -355,17 +356,6 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
                 Script:     {script_len} lines
                 Log:        {log_len} lines
 
-                ---
-
-                {envs}
-
-                ---
-
-                {script_text}
-
-                ---
-
-                {log_text}
             "#,
 
             job_uuid = match success {
@@ -388,34 +378,58 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
             container_hash  = data.0.container_hash.cyan(),
             script_len      = format!("{:<4}", data.0.script_text.lines().count()).cyan(),
             log_len         = format!("{:<4}", data.0.log_text.lines().count()).cyan(),
-            envs            = env_vars.unwrap_or_else(|| String::from("<env vars hidden>")),
-            script_text     = if show_script {
-                let theme = configured_theme
-                    .as_ref()
-                    .ok_or_else(|| anyhow!("Highlighting for script enabled, but no theme configured"))?;
-                let script = Script::from(data.0.script_text);
-                crate::ui::script_to_printable(&script, script_highlight, theme, script_line_numbers)?
-            } else {
-                String::from("<script hidden>")
-            },
-            log_text        = if show_log {
-                parsed_log.iter()
-                    .map(|line_item| match line_item {
-                        LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
-                        LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
-                        LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
-                        LogItem::State(Ok(()))   => Ok(format!("#BUTIDO:STATE:OK").green()),
-                        LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
-                    })
-                    .collect::<Result<Vec<_>>>()?
-                    .into_iter() // ugly, but hey... not important right now.
-                    .join("\n")
-            } else {
-                String::from("<log hidden>")
-            },
         );
+        let _ = writeln!(out, "{}", s)?;
 
-        writeln!(&mut std::io::stdout(), "{}", s).map_err(Error::from)
+        if let Some(envs) = env_vars {
+            let s = indoc::formatdoc!(r#"
+                ---
+
+                {envs}
+
+            "#, envs = envs);
+            let _ = writeln!(out, "{}", s)?;
+        }
+
+        if show_script {
+            let theme = configured_theme
+                .as_ref()
+                .ok_or_else(|| anyhow!("Highlighting for script enabled, but no theme configured"))?;
+            let script = Script::from(data.0.script_text);
+            let script = crate::ui::script_to_printable(&script, script_highlight, theme, script_line_numbers)?;
+
+            let s = indoc::formatdoc!(r#"
+                ---
+
+                {script}
+
+            "#, script = script);
+            let _ = writeln!(out, "{}", s)?;
+        }
+
+        if show_log {
+            let log = parsed_log.iter()
+                .map(|line_item| match line_item {
+                    LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
+                    LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
+                    LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
+                    LogItem::State(Ok(()))   => Ok(format!("#BUTIDO:STATE:OK").green()),
+                    LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
+                })
+                .collect::<Result<Vec<_>>>()?
+                .into_iter() // ugly, but hey... not important right now.
+                .join("\n");
+
+            let s = indoc::formatdoc!(r#"
+                ---
+
+                {log}
+
+            "#, log = log);
+            let _ = writeln!(out, "{}", s)?;
+        }
+
+        Ok(())
     }
 }
 
