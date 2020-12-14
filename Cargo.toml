@@ -40,7 +40,6 @@ shiplift       = { git = "https://github.com/softprops/shiplift", branch = "mast
 syntect        = "4.4"
 tar            = "0.4"
 terminal_size  = "0.1"
-thiserror      = "1"
 tokio          = { version = "0.2", features = ["macros", "fs", "process", "io-util"] }
 toml           = "0.5"
 typed-builder  = "0.7"

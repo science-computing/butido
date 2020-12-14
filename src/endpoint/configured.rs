@@ -2,6 +2,7 @@ use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::ops::Deref;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -17,7 +18,6 @@ use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
 use typed_builder::TypedBuilder;
 
-use crate::endpoint::ContainerError;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::path::ArtifactPath;
 use crate::filestore::StagingStore;
@@ -382,10 +382,14 @@ impl Endpoint {
         match exited_successfully {
             Some((false, msg))       => {
                 let conthash = ContainerHash::from(container_id);
-                let conterr = ContainerError::container_error(conthash.clone(), self.uri().clone(), msg.unwrap_or_else(|| String::new()));
+                let err = anyhow!("Error during container run:\n\tMessage: '{msg}'\n\tConnect using\n\n\t\t`docker --host {uri} exec -it {container_id} /bin/bash`\n\n\tto debug.",
+                    container_id = &conthash,
+                    uri = self.uri(),
+                    msg = msg.as_ref().map(String::deref).unwrap_or(""),
+                    );
 
                 // error because the container errored
-                let conterr = Err(conterr).map_err(Error::from);
+                let conterr = Err(Error::from(err));
 
                 // Ok because the general process worked.
                 Ok((conterr, conthash, script))
