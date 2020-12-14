@@ -8,7 +8,7 @@ use diesel::prelude::*;
 use crate::schema::packages::*;
 use crate::schema::packages;
 
-#[derive(Identifiable, Queryable)]
+#[derive(Debug, Identifiable, Queryable)]
 pub struct Package {
     pub id: i32,
     pub name: String,

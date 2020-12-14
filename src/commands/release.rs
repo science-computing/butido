@@ -24,15 +24,19 @@ pub async fn release(db_connection_config: DbConnectionConfig, config: &Configur
         .value_of("package_version")
         .map(String::from);
 
+    debug!("Release called for: {:?} {:?}", pname, pvers);
+
     let conn = crate::db::establish_connection(db_connection_config)?;
     let submit_uuid = matches.value_of("submit_uuid")
         .map(uuid::Uuid::parse_str)
         .transpose()?
         .unwrap(); // safe by clap
+    debug!("Release called for submit: {:?}", submit_uuid);
 
     let submit = crate::schema::submits::dsl::submits
         .filter(crate::schema::submits::dsl::uuid.eq(submit_uuid))
         .first::<dbmodels::Submit>(&conn)?;
+    debug!("Found Submit: {:?}", submit_uuid);
 
     let arts = {
         let sel = crate::schema::artifacts::dsl::artifacts
@@ -45,27 +49,33 @@ pub async fn release(db_connection_config: DbConnectionConfig, config: &Configur
 
         match (pname, pvers) {
             (Some(name), Some(vers)) => {
-                sel.filter(crate::schema::packages::name.eq(name))
-                    .filter(crate::schema::packages::version.like(vers))
-                    .load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
+                let query = sel.filter(crate::schema::packages::name.eq(name))
+                    .filter(crate::schema::packages::version.like(vers));
+                debug!("Query: {}", diesel::debug_query(&query).to_string());
+                query.load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
             },
             (Some(name), None) => {
-                sel.filter(crate::schema::packages::name.eq(name))
-                    .load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
+                let query = sel.filter(crate::schema::packages::name.eq(name));
+                debug!("Query: {}", diesel::debug_query(&query).to_string());
+                query.load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
             },
             (None, Some(vers)) => {
-                sel.filter(crate::schema::packages::version.like(vers))
-                    .load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
+                let query = sel.filter(crate::schema::packages::version.like(vers));
+                debug!("Query: {}", diesel::debug_query(&query).to_string());
+                query.load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
             },
             (None, None) => {
+                debug!("Query: {}", diesel::debug_query(&sel).to_string());
                 sel.load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
             },
         }
     };
+    debug!("Artifacts = {:?}", arts);
 
     arts.iter()
         .filter_map(|(art, _)| art.path_buf().parent().map(|p| config.releases_directory().join(p)))
         .map(|p| async {
+            debug!("mkdir {:?}", p);
             tokio::fs::create_dir_all(p).await.map_err(Error::from)
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
@@ -98,6 +108,7 @@ pub async fn release(db_connection_config: DbConnectionConfig, config: &Configur
         .await?
         .into_iter()
         .map(|art| {
+            debug!("Updating {:?} to set released = true", art);
             diesel::update(&art)
                 .set(crate::schema::artifacts::released.eq(true))
                 .execute(&conn)

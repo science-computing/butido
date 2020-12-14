@@ -10,7 +10,7 @@ use crate::schema::jobs::*;
 use crate::schema::jobs;
 use crate::util::docker::ContainerHash;
 
-#[derive(Identifiable, Queryable, Associations)]
+#[derive(Debug, Identifiable, Queryable, Associations)]
 #[belongs_to(Submit)]
 #[belongs_to(Endpoint)]
 #[belongs_to(Package)]
