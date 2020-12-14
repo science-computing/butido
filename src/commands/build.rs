@@ -316,13 +316,23 @@ pub async fn build(repo_root: &Path,
         writeln!(outlock, "for package {} {}\n\n", data.1.name, data.1.version)?;
 
         let parsed_log = crate::log::ParsedLog::build_from(&data.0.log_text)?;
+        let mut last_phase = None;
+        let mut error_catched = false;
         let lines = parsed_log.iter()
             .map(|line_item| match line_item {
                 LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
                 LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
-                LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
+                LogItem::CurrentPhase(p) => {
+                    if !error_catched {
+                        last_phase = Some(p.clone());
+                    }
+                    Ok(format!("#BUTIDO:PHASE:{}", p).bright_black())
+                },
                 LogItem::State(Ok(()))   => Ok(format!("#BUTIDO:STATE:OK").green()),
-                LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
+                LogItem::State(Err(s))   => {
+                    error_catched = true;
+                    Ok(format!("#BUTIDO:STATE:ERR:{}", s).red())
+                },
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -335,6 +345,10 @@ pub async fn build(repo_root: &Path,
             })
             .collect::<Result<()>>()?;
 
+        writeln!(outlock, "\n\n")?;
+        if let Some(last_phase) = last_phase {
+            writeln!(outlock, "\tJob errored in Phase '{}'", last_phase)?;
+        }
         writeln!(outlock, "\n\n")?;
     }
 
