@@ -341,7 +341,13 @@ pub async fn build(repo_root: &Path,
         lines
             .iter()
             .enumerate()
-            .skip(lines.len() - number_log_lines)
+            .skip({
+                if lines.len() > number_log_lines {
+                    lines.len() - number_log_lines
+                } else {
+                    lines.len()
+                }
+            })
             .map(|(i, line)| {
                 writeln!(outlock, "{:>4} | {}", i, line).map_err(Error::from)
             })
