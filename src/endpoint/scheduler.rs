@@ -138,8 +138,11 @@ impl JobHandle {
         let envs     = self.create_env_in_db()?;
         let job_id   = self.job.uuid().clone();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
-        let res = ep
-            .run_job(self.job, log_sender, self.staging_store);
+        let running_container = ep.prepare_container(self.job, self.staging_store.clone())
+            .await?
+            .start()
+            .await?
+            .execute_script(log_sender);
 
         let logres = LogReceiver {
             package_name: &package.name,
@@ -150,19 +153,22 @@ impl JobHandle {
             bar: &self.bar,
         }.join();
 
-        let (res, logres) = tokio::join!(res, logres);
-
-        trace!("Found result for job {}: {:?}", job_id, res);
+        let (run_container, logres) = tokio::join!(running_container, logres);
         let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", ep.name()))?;
-        let (paths, container_hash, script) = res.with_context(|| anyhow!("Error during running job on '{}'", ep.name()))?;
-
-        let job = dbmodels::Job::create(&self.db, &job_id, &self.submit, &endpoint, &package, &image, &container_hash, &script, &log)?;
+        let run_container = run_container.with_context(|| anyhow!("Running container {} failed"))?;
+        let job = dbmodels::Job::create(&self.db, &job_id, &self.submit, &endpoint, &package, &image, &run_container.container_hash(), run_container.script(), &log)?;
         trace!("DB: Job entry for job {} created: {}", job.uuid, job.id);
         for env in envs {
             let _ = dbmodels::JobEnv::create(&self.db, &job, &env)?;
         }
 
-        let paths = paths?;
+
+        let res : crate::endpoint::FinalizedContainer = run_container
+            .finalize(self.staging_store.clone())
+            .await?;
+        trace!("Found result for job {}: {:?}", job_id, res);
+        let (paths, res) = res.unpack();
+        let _ = res.with_context(|| anyhow!("Error during running job on '{}'", ep.name()))?;
 
         // Have to do it the ugly way here because of borrowing semantics
         let mut r = vec![];
