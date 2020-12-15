@@ -294,7 +294,9 @@ pub async fn build(repo_root: &Path,
     let out         = std::io::stdout();
     let mut outlock = out.lock();
 
-    writeln!(outlock, "Packages created:")?;
+    if !artifacts.is_empty() {
+        writeln!(outlock, "Packages created:")?;
+    }
     artifacts.into_iter()
         .map(|artifact| writeln!(outlock, "-> {}", staging_dir.join(artifact.path).display()).map_err(Error::from))
         .collect::<Result<_>>()?;
