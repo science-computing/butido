@@ -35,6 +35,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use anyhow::anyhow;
+use clap::ArgMatches;
 use logcrate::debug;
 use walkdir::WalkDir;
 
@@ -63,8 +64,8 @@ async fn main() -> Result<()> {
     let _ = env_logger::try_init()?;
     debug!("Debugging enabled");
 
-    let cli = cli::cli();
-    let cli = cli.get_matches();
+    let app = cli::cli();
+    let cli = app.get_matches();
 
     let repo = git2::Repository::discover(PathBuf::from("."))?;
     let repo_path = repo.workdir()
@@ -95,6 +96,7 @@ async fn main() -> Result<()> {
 
     let db_connection_config = crate::db::parse_db_connection_config(&config, &cli);
     match cli.subcommand() {
+        Some(("generate-completions", matches))  => generate_completions(matches)?,
         Some(("db", matches))           => crate::commands::db(db_connection_config, &config, matches)?,
         Some(("build", matches))        => {
             let conn = crate::db::establish_connection(db_connection_config)?;
@@ -166,5 +168,29 @@ fn count_pkg_files(p: &Path) -> u64 {
         .filter(|d| d.file_type().is_file())
         .filter(|f| f.path().file_name().map(|name| name == "pkg.toml").unwrap_or(false))
         .count() as u64
+}
+
+fn generate_completions(matches: &ArgMatches) -> Result<()> {
+    use clap_generate::generate;
+    use clap_generate::generators::{Bash, Elvish, Fish, Zsh};
+
+    let appname = "butido";
+    match matches.value_of("shell").unwrap() { // unwrap safe by clap
+        "bash" => {
+            generate::<Bash, _>(&mut cli::cli(), appname, &mut std::io::stdout());
+        },
+        "elvish" => {
+            generate::<Elvish, _>(&mut cli::cli(), appname, &mut std::io::stdout());
+        },
+        "fish" => {
+            generate::<Fish, _>(&mut cli::cli(), appname, &mut std::io::stdout());
+        },
+        "zsh" => {
+            generate::<Zsh, _>(&mut cli::cli(), appname, &mut std::io::stdout());
+        },
+        _ => unreachable!(),
+    }
+
+    Ok(())
 }
 

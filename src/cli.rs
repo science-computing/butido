@@ -60,6 +60,17 @@ pub fn cli<'a>() -> App<'a> {
             .about("Overwrite the database name set via configuration. Can also be overriden via environment, but this setting has presendence.")
         )
 
+        .subcommand(App::new("generate-completions")
+            .about("Generate and print commandline completions")
+            .arg(Arg::new("shell")
+                .possible_values(&["bash", "elvish", "fish", "zsh"])
+                .default_value("bash")
+                .required(true)
+                .multiple(false)
+                .about("Shell to generate completions for")
+            )
+        )
+
         .subcommand(App::new("db")
             .about("Database CLI interface")
             .subcommand(App::new("cli")
