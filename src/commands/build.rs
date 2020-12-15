@@ -354,10 +354,14 @@ pub async fn build(repo_root: &Path,
             .collect::<Result<()>>()?;
 
         writeln!(outlock, "\n\n")?;
-        if let Some(last_phase) = last_phase {
-            writeln!(outlock, "\tJob errored in Phase '{}'", last_phase)?;
+        if error_catched {
+            if let Some(last_phase) = last_phase {
+                writeln!(outlock, "\tJob errored in Phase '{}'", last_phase)?;
+            }
+            writeln!(outlock, "\n\n")?;
+        } else {
+            writeln!(outlock, "{}", "Error seems not to be caused by packaging script.".red())?;
         }
-        writeln!(outlock, "\n\n")?;
     }
 
     if had_error {
