@@ -1,7 +1,8 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(parse_display::Display ,Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[display("{0}")]
 pub struct ImageName(String);
 
 impl From<String> for ImageName {
@@ -16,15 +17,10 @@ impl AsRef<str> for ImageName {
     }
 }
 
-impl std::fmt::Display for ImageName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        self.0.fmt(f)
-    }
-}
 
-
-#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(parse_display::Display, Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
+#[display("{0}")]
 pub struct ContainerHash(String);
 
 impl From<String> for ContainerHash {
@@ -36,12 +32,6 @@ impl From<String> for ContainerHash {
 impl AsRef<str> for ContainerHash {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
-    }
-}
-
-impl std::fmt::Display for ContainerHash {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        self.0.fmt(f)
     }
 }
 

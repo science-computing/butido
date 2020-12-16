@@ -40,8 +40,9 @@ impl PackageVersionConstraint {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(parse_display::Display, Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
+#[display("{0}")]
 pub struct PackageVersion(String);
 
 impl Deref for PackageVersion {
@@ -54,12 +55,6 @@ impl Deref for PackageVersion {
 impl From<String> for PackageVersion {
     fn from(s: String) -> Self {
         PackageVersion(s)
-    }
-}
-
-impl std::fmt::Display for PackageVersion {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        self.0.fmt(f)
     }
 }
 

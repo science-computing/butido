@@ -18,19 +18,14 @@ use crate::package::Package;
 use crate::package::Phase;
 use crate::package::PhaseName;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(parse_display::Display, Serialize, Deserialize, Clone, Debug)]
 #[serde(transparent)]
+#[display("{0}")]
 pub struct Script(String);
 
 impl From<String> for Script {
     fn from(s: String) -> Script {
         Script(s)
-    }
-}
-
-impl std::fmt::Display for Script {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(fmt, "{}", self.0)
     }
 }
 

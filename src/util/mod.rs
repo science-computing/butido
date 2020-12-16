@@ -1,8 +1,9 @@
 use serde::Serialize;
 use serde::Deserialize;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(parse_display::Display, Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
+#[display("{0}")]
 pub struct EnvironmentVariableName(String);
 
 impl From<&str> for EnvironmentVariableName {
@@ -14,12 +15,6 @@ impl From<&str> for EnvironmentVariableName {
 impl AsRef<str> for EnvironmentVariableName {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
-    }
-}
-
-impl std::fmt::Display for EnvironmentVariableName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        self.0.fmt(f)
     }
 }
 

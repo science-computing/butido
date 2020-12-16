@@ -28,11 +28,7 @@ impl LogItem {
     }
 }
 
+#[derive(parse_display::Display)]
+#[display("{0}")]
 pub struct Display(String);
-
-impl std::fmt::Display for Display {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        write!(f, "{}", self.0)
-    }
-}
 

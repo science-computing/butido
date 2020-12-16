@@ -54,26 +54,19 @@ impl SourceHash {
 }
 
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(parse_display::Display, Clone, Debug, Serialize, Deserialize)]
 pub enum HashType {
     #[serde(rename = "sha1")]
+    #[display("sha1")]
     Sha1,
 
     #[serde(rename = "sha256")]
+    #[display("sha256")]
     Sha256,
 
     #[serde(rename = "sha512")]
+    #[display("sha512")]
     Sha512,
-}
-
-impl std::fmt::Display for HashType {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        match self {
-            HashType::Sha1   => write!(f, "sha1"),
-            HashType::Sha256 => write!(f, "sha256"),
-            HashType::Sha512 => write!(f, "sha512"),
-        }
-    }
 }
 
 impl HashType {
@@ -104,20 +97,15 @@ impl HashType {
 }
 
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(parse_display::Display, Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
 #[serde(transparent)]
+#[display("{0}")]
 pub struct HashValue(String);
 
 #[cfg(test)]
 impl From<String> for HashValue {
     fn from(s: String) -> Self {
         HashValue(s)
-    }
-}
-
-impl std::fmt::Display for HashValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        self.0.fmt(f)
     }
 }
 

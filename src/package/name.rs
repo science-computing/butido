@@ -4,8 +4,9 @@ use pom::parser::Parser as PomParser;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(parse_display::Display, Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(transparent)]
+#[display("{0}")]
 pub struct PackageName(String);
 
 impl Deref for PackageName {
@@ -18,12 +19,6 @@ impl Deref for PackageName {
 impl From<String> for PackageName {
     fn from(s: String) -> Self {
         PackageName(s)
-    }
-}
-
-impl std::fmt::Display for PackageName {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        self.0.fmt(f)
     }
 }
 
