@@ -305,7 +305,7 @@ pub async fn build(repo_root: &Path,
     for (job_uuid, error) in errors {
         had_error = true;
         for cause in error.chain() {
-            writeln!(outlock, "{}", cause)?;
+            writeln!(outlock, "{}: {}", "[ERROR]".red(), cause)?;
         }
 
         let data = schema::jobs::table
