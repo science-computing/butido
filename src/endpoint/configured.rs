@@ -193,9 +193,12 @@ impl Endpoint {
 
 }
 
+#[derive(Getters)]
 pub struct PreparedContainer<'a> {
     endpoint: &'a Endpoint,
     script: Script,
+
+    #[getset(get = "pub")]
     create_info: shiplift::rep::ContainerCreateInfo,
 }
 
