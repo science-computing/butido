@@ -179,6 +179,27 @@ impl JobHandle {
         Ok(r)
     }
 
+    /// Helper to create an error object with a nice message.
+    fn create_job_run_error(job_id: &Uuid, package_name: &str, package_version: &str, endpoint_uri: &str, container_id: &str) -> anyhow::Error {
+        anyhow!(indoc::formatdoc!(r#"Error while running job 
+            {job_id}
+        for package
+            {package_name} {package_version}
+
+        Connect to docker using
+
+            docker --host {endpoint_uri} exec -it {container_id} /bin/bash
+
+        to debug.
+        "#,
+            job_id          = job_id,
+            package_name    = package_name,
+            package_version = package_version,
+            endpoint_uri    = endpoint_uri,
+            container_id    = container_id,
+        )).into()
+    }
+
     fn create_env_in_db(&self) -> Result<Vec<dbmodels::EnvVar>> {
         trace!("Creating environment in database");
         trace!("Hardcoded = {:?}", self.job.package().environment());
