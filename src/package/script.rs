@@ -156,13 +156,17 @@ impl<'a> ScriptBuilder<'a> {
         for name in phaseorder {
             match package.phases().get(name) {
                 Some(Phase::Text(text)) => {
+                    use unindent::Unindent;
+
                     script.push_str(&indoc::formatdoc!(r#"
                         ### phase {}
                         {}
                         ### / {} phase
                     "#,
                     name.as_str(),
-                    text,
+                    // whack hack: insert empty line on top because unindent ignores the
+                    // indentation of the first line, see commit message for more info
+                    format!("\n{}", text).unindent(),
                     name.as_str(),
                     ));
 
@@ -180,7 +184,6 @@ impl<'a> ScriptBuilder<'a> {
                     "#,
                     path = pb.display(),
                     name = name.as_str()));
-
                     script.push_str("\n");
                 },
 
