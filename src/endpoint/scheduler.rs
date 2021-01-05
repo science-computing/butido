@@ -138,10 +138,12 @@ impl JobHandle {
         let envs     = self.create_env_in_db()?;
         let job_id   = self.job.uuid().clone();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
-        let running_container = ep.prepare_container(self.job, self.staging_store.clone())
-            .await?
+        let prepared_container = ep.prepare_container(self.job, self.staging_store.clone()).await?;
+        let container_id       = prepared_container.create_info().id.clone();
+        let running_container  = prepared_container
             .start()
-            .await?
+            .await
+            .with_context(|| Self::create_job_run_error(&job_id, &package.name, &package.version, ep.uri(), &container_id))?
             .execute_script(log_sender);
 
         let logres = LogReceiver {
@@ -155,20 +157,24 @@ impl JobHandle {
 
         let (run_container, logres) = tokio::join!(running_container, logres);
         let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", ep.name()))?;
-        let run_container = run_container.with_context(|| anyhow!("Running container {} failed"))?;
+        let run_container = run_container.with_context(|| anyhow!("Running container {} failed"))
+            .with_context(|| Self::create_job_run_error(&job_id, &package.name, &package.version, ep.uri(), &container_id))?;
+
         let job = dbmodels::Job::create(&self.db, &job_id, &self.submit, &endpoint, &package, &image, &run_container.container_hash(), run_container.script(), &log)?;
         trace!("DB: Job entry for job {} created: {}", job.uuid, job.id);
         for env in envs {
             let _ = dbmodels::JobEnv::create(&self.db, &job, &env)?;
         }
 
-
         let res : crate::endpoint::FinalizedContainer = run_container
             .finalize(self.staging_store.clone())
-            .await?;
+            .await
+            .with_context(|| Self::create_job_run_error(&job.uuid, &package.name, &package.version, ep.uri(), &container_id))?;
+
         trace!("Found result for job {}: {:?}", job_id, res);
         let (paths, res) = res.unpack();
-        let _ = res.with_context(|| anyhow!("Error during running job on '{}'", ep.name()))?;
+        let _ = res.with_context(|| anyhow!("Error during running job on '{}'", ep.name()))
+            .with_context(|| Self::create_job_run_error(&job.uuid, &package.name, &package.version, ep.uri(), &container_id))?;
 
         // Have to do it the ugly way here because of borrowing semantics
         let mut r = vec![];
@@ -177,6 +183,27 @@ impl JobHandle {
             r.push(dbmodels::Artifact::create(&self.db, p, false, &job)?);
         }
         Ok(r)
+    }
+
+    /// Helper to create an error object with a nice message.
+    fn create_job_run_error(job_id: &Uuid, package_name: &str, package_version: &str, endpoint_uri: &str, container_id: &str) -> anyhow::Error {
+        anyhow!(indoc::formatdoc!(r#"Error while running job 
+            {job_id}
+        for package
+            {package_name} {package_version}
+
+        Connect to docker using
+
+            docker --host {endpoint_uri} exec -it {container_id} /bin/bash
+
+        to debug.
+        "#,
+            job_id          = job_id,
+            package_name    = package_name,
+            package_version = package_version,
+            endpoint_uri    = endpoint_uri,
+            container_id    = container_id,
+        )).into()
     }
 
     fn create_env_in_db(&self) -> Result<Vec<dbmodels::EnvVar>> {
