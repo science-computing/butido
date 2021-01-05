@@ -67,6 +67,7 @@ impl RunnableJob {
             let (mut build, mut rt) = (build?, rt?);
 
             build.append(&mut rt);
+            build.extend(job.resources().iter().filter(|jr| jr.env().is_some()).cloned());
             build
         };
 
