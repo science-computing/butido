@@ -190,7 +190,7 @@ impl JobHandle {
         let mut r = vec![];
         for p in paths.iter() {
             trace!("DB: Creating artifact entry for path: {}", p.display());
-            r.push(dbmodels::Artifact::create(&self.db, p, false, &job)?);
+            r.push(dbmodels::Artifact::create(&self.db, p, &job)?);
         }
         Ok(r)
     }
