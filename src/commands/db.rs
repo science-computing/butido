@@ -162,7 +162,10 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 .map_err(Error::from)
         })?
         .into_iter()
-        .map(|(artifact, job, rel)| vec![format!("{}", artifact.id), artifact.path, rel.is_some().to_string(), job.uuid.to_string()])
+        .map(|(artifact, job, rel)| {
+            let rel = rel.map(|r| r.release_date.to_string()).unwrap_or_else(|| String::from("no"));
+            vec![format!("{}", artifact.id), artifact.path, rel, job.uuid.to_string()]
+        })
         .collect::<Vec<_>>();
 
     if data.is_empty() {
