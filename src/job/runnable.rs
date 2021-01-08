@@ -58,27 +58,31 @@ impl RunnableJob {
     pub async fn build_from_job(job: Job, merged_stores: &MergedStores, source_cache: &SourceCache, config: &Configuration) -> Result<Self> {
         trace!("Preparing build dependencies");
         let resources = {
-            let deps = job.package().dependencies();
-            let build = deps
+            let mut resources = job
+                .package()
+                .dependencies()
                 .build()
                 .into_iter()
                 .map(|dep| Self::build_resource(dep, merged_stores))
+                .chain({
+                    job.package()
+                        .dependencies()
+                        .runtime()
+                        .into_iter()
+                        .map(|dep| Self::build_resource(dep, merged_stores))
+                })
                 .collect::<futures::stream::FuturesUnordered<_>>()
-                .collect::<Result<Vec<JobResource>>>();
+                .collect::<Result<Vec<JobResource>>>()
+                .await?;
 
-            let rt = deps
-                .runtime()
-                .into_iter()
-                .map(|dep| Self::build_resource(dep, merged_stores))
-                .collect::<futures::stream::FuturesUnordered<_>>()
-                .collect::<Result<Vec<JobResource>>>();
+            resources.extend({
+                job.resources()
+                    .iter()
+                    .filter(|jr| jr.env().is_some())
+                    .cloned()
+            });
 
-            let (build, rt)         = tokio::join!(build, rt);
-            let (mut build, mut rt) = (build?, rt?);
-
-            build.append(&mut rt);
-            build.extend(job.resources().iter().filter(|jr| jr.env().is_some()).cloned());
-            build
+            resources
         };
 
         if config.containers().check_env_names() {
