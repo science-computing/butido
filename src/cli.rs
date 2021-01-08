@@ -176,6 +176,16 @@ pub fn cli<'a>() -> App<'a> {
                     .value_name("UUID")
                     .about("Only list jobs of a certain submit")
                 )
+
+                .arg(Arg::new("env_filter")
+                    .required(false)
+                    .multiple(false)
+                    .long("env")
+                    .short('E')
+                    .takes_value(true)
+                    .value_name("KV")
+                    .about("Filter for this \"key=value\" environment variable")
+                )
             )
 
             .subcommand(App::new("job")
