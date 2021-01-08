@@ -287,11 +287,8 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .map(|(job, submit, ep, package, o_env)| {
             let success = crate::log::ParsedLog::build_from(&job.log_text)?
                 .is_successfull()
-                .map(|b| if b {
-                    String::from("yes")
-                } else {
-                    String::from("no")
-                })
+                .map(|b| if b { "yes" } else { "no" })
+                .map(String::from)
                 .unwrap_or_else(|| String::from("unknown"));
 
             let env = o_env.map(|tpl| (tpl.1.name, tpl.1.value)).unwrap_or_default();
