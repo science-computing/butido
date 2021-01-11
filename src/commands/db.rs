@@ -223,29 +223,51 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     let hdrs = mk_header(vec!["id", "time", "uuid"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
 
+    // Helper to map Submit -> Vec<String>
+    let submit_to_vec = |submit: models::Submit| {
+        vec![format!("{}", submit.id), submit.submit_time.to_string(), submit.uuid.to_string()]
+    };
+
+    // Helper to get all submits that were made _for_ a package
+    let submits_for = |pkgname: &str| {
+        schema::submits::table
+            .inner_join(schema::packages::table)
+            .filter(schema::packages::dsl::name.eq(&pkgname))
+            .select(schema::submits::all_columns)
+            .load::<models::Submit>(&conn)
+    };
+
     let data = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
-        schema::packages::table
-            .filter(schema::packages::name.eq(pkgname))
+        // Get all submits which included the package, but were not made _for_ the package
+        let submits_with_pkg = schema::packages::table
+            .filter(schema::packages::name.eq(&pkgname))
             .inner_join(schema::jobs::table.inner_join(schema::submits::table))
             .select(schema::submits::all_columns)
-            .load::<models::Submit>(&conn)?
+            .load::<models::Submit>(&conn)?;
+
+        let submits_for_pkg = submits_for(&pkgname)?;
+
+        submits_with_pkg
+            .into_iter()
+            .chain(submits_for_pkg.into_iter())
+            .map(submit_to_vec)
+            .collect::<Vec<_>>()
     } else {
         if let Some(pkgname) = matches.value_of("for_pkg") {
-            schema::submits::table
-                .inner_join(schema::packages::table)
-                .filter(schema::packages::dsl::name.eq(pkgname))
-                .select(schema::submits::all_columns)
-                .load::<models::Submit>(&conn)?
+            // Get all submits _for_ the package
+            submits_for(pkgname)?
+                .into_iter()
+                .map(submit_to_vec)
+                .collect::<Vec<_>>()
         } else {
+            // default: Get all submits
             schema::submits::table
                 .load::<models::Submit>(&conn)?
+                .into_iter()
+                .map(submit_to_vec)
+                .collect::<Vec<_>>()
         }
-    }
-    .into_iter()
-    .map(|submit| {
-        vec![format!("{}", submit.id), submit.submit_time.to_string(), submit.uuid.to_string()]
-    })
-    .collect::<Vec<_>>();
+    };
 
     if data.is_empty() {
         info!("No submits in database");
