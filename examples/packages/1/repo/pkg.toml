@@ -6,6 +6,7 @@ patches = []
 
 [sources.src]
 hash.type = "sha1"
+download_manually = false
 
 [dependencies]
 build           = []

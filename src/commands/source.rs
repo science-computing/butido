@@ -167,6 +167,13 @@ pub async fn download(matches: &ArgMatches, config: &Configuration, repo: Reposi
                     let bar = multi.add(progressbars.spinner());
                     bar.set_message(&format!("Downloading {}", source.url()));
                     async move {
+                        if !source.exists() && source.download_manually() {
+                            return Err(anyhow!("Cannot download source that is marked for manual download"))
+                                .context(anyhow!("Creating source: {}", source.path().display()))
+                                .context(anyhow!("Downloading source: {}", source.url()))
+                                .map_err(Error::from)
+                        }
+
                         if source.exists() && !force {
                             Err(anyhow!("Source exists: {}", source.path().display()))
                         } else {
