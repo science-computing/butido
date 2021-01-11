@@ -22,7 +22,10 @@ use crate::db::models::Package;
 use crate::schema::submits::*;
 use crate::schema::submits;
 
-#[derive(Clone, Debug, Identifiable, Queryable)]
+#[derive(Clone, Debug, Identifiable, Queryable, Associations)]
+#[belongs_to(Package, foreign_key = "requested_package_id")]
+#[belongs_to(Image, foreign_key = "requested_image_id")]
+#[table_name="submits"]
 pub struct Submit {
     pub id: i32,
     pub uuid: ::uuid::Uuid,

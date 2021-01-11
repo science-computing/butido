@@ -226,8 +226,7 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     let data = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
         schema::packages::table
             .filter(schema::packages::name.eq(pkgname))
-            .inner_join(schema::jobs::table)
-            .inner_join(schema::submits::table)
+            .inner_join(schema::jobs::table.inner_join(schema::submits::table))
             .select(schema::submits::all_columns)
             .load::<models::Submit>(&conn)?
     } else {
