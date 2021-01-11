@@ -219,18 +219,26 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 }
 
 fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
-    use crate::schema::submits::dsl;
-
     let csv  = matches.is_present("csv");
     let hdrs = mk_header(vec!["id", "time", "uuid"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
-    let data = dsl::submits
-        .load::<models::Submit>(&conn)?
-        .into_iter()
-        .map(|submit| {
-            vec![format!("{}", submit.id), submit.submit_time.to_string(), submit.uuid.to_string()]
-        })
-        .collect::<Vec<_>>();
+
+    let data = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
+        schema::packages::table
+            .filter(schema::packages::name.eq(pkgname))
+            .inner_join(schema::jobs::table)
+            .inner_join(schema::submits::table)
+            .select(schema::submits::all_columns)
+            .load::<models::Submit>(&conn)?
+    } else {
+        schema::submits::table
+            .load::<models::Submit>(&conn)?
+    }
+    .into_iter()
+    .map(|submit| {
+        vec![format!("{}", submit.id), submit.submit_time.to_string(), submit.uuid.to_string()]
+    })
+    .collect::<Vec<_>>();
 
     if data.is_empty() {
         info!("No submits in database");
