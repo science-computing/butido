@@ -230,8 +230,16 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
             .select(schema::submits::all_columns)
             .load::<models::Submit>(&conn)?
     } else {
-        schema::submits::table
-            .load::<models::Submit>(&conn)?
+        if let Some(pkgname) = matches.value_of("for_pkg") {
+            schema::submits::table
+                .inner_join(schema::packages::table)
+                .filter(schema::packages::dsl::name.eq(pkgname))
+                .select(schema::submits::all_columns)
+                .load::<models::Submit>(&conn)?
+        } else {
+            schema::submits::table
+                .load::<models::Submit>(&conn)?
+        }
     }
     .into_iter()
     .map(|submit| {
