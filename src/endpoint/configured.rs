@@ -245,7 +245,7 @@ impl<'a> PreparedContainer<'a> {
         trace!("Job resources: Environment variables = {:?}", envs);
 
         let builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref())
-            .env(envs.iter().map(AsRef::as_ref).collect())
+            .env(envs.iter().map(AsRef::as_ref).collect::<Vec<&str>>())
             .cmd(vec!["/bin/bash"]) // we start the container with /bin/bash, but exec() the script in it later
             .attach_stdin(true) // we have to attach, otherwise bash exits
             .build();
