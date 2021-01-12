@@ -86,24 +86,20 @@ impl SourceEntry {
         trace!("Reading to buffer: {}", p.display());
 
         let path = p.clone();
-        let buf = tokio::task::spawn_blocking(move || {
-            use std::io::Read;
-
-            let mut buf = vec![];
+        let reader = tokio::task::spawn_blocking(move || {
             std::fs::OpenOptions::new()
                 .create(false)
                 .create_new(false)
                 .read(true)
-                .open(path)?
-                .read_to_end(&mut buf)
-                .map(|_| buf)
+                .open(path)
+                .map(std::io::BufReader::new)
         })
         .await??;
 
         trace!("Reading to buffer finished: {}", p.display());
         self.package_source
             .hash()
-            .matches_hash_of(&buf)
+            .matches_hash_of(reader)
     }
 
     pub async fn create(&self) -> Result<tokio::fs::File> {
