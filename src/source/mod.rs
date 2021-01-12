@@ -81,29 +81,29 @@ impl SourceEntry {
     }
 
     pub async fn verify_hash(&self) -> Result<()> {
-
         let p = self.source_file_path();
-        trace!("Reading to buffer: {}", p.display());
+        trace!("Reading: {}", p.display());
 
-        let path = p.clone();
-        let buf = tokio::task::spawn_blocking(move || {
-            use std::io::Read;
+        // we can clone() here, because the object itself is just a representation of "what hash
+        // type do we use here", which is rather cheap to clone (because it is
+        // crate::package::SourceHash, that is not more than an enum + String).
+        //
+        // We need to clone to move into the closure below.
+        let source_hash = self.package_source.hash().clone();
 
-            let mut buf = vec![];
+        tokio::task::spawn_blocking(move || {
             std::fs::OpenOptions::new()
                 .create(false)
                 .create_new(false)
                 .read(true)
-                .open(path)?
-                .read_to_end(&mut buf)
-                .map(|_| buf)
+                .open(&p)
+                .map_err(Error::from)
+                .map(std::io::BufReader::new)
+                .and_then(|reader| {
+                    source_hash.matches_hash_of(reader)
+                })
         })
-        .await??;
-
-        trace!("Reading to buffer finished: {}", p.display());
-        self.package_source
-            .hash()
-            .matches_hash_of(&buf)
+        .await?
     }
 
     pub async fn create(&self) -> Result<tokio::fs::File> {
