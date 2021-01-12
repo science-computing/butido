@@ -38,7 +38,7 @@ serde          = "1"
 serde_json     = "1"
 sha1           = { version = "0.6", features = ["std"] }
 sha2           = "0.9"
-shiplift       = { git = "https://github.com/softprops/shiplift", branch = "master" }
+shiplift       = { git = "https://github.com/softprops/shiplift", rev = "03cc8c075f86f1bd9e2c4e29872a0e8b9072c7f0" }
 syntect        = "4.4"
 tar            = "0.4"
 terminal_size  = "0.1"
