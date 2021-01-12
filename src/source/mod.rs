@@ -81,18 +81,24 @@ impl SourceEntry {
     }
 
     pub async fn verify_hash(&self) -> Result<()> {
-        use std::io::Read;
 
         let p = self.source_file_path();
-
         trace!("Reading to buffer: {}", p.display());
-        let mut buf = vec![];
-        std::fs::OpenOptions::new()
-            .create(false)
-            .create_new(false)
-            .read(true)
-            .open(&p)?
-            .read_to_end(&mut buf)?;
+
+        let path = p.clone();
+        let buf = tokio::task::spawn_blocking(move || {
+            use std::io::Read;
+
+            let mut buf = vec![];
+            std::fs::OpenOptions::new()
+                .create(false)
+                .create_new(false)
+                .read(true)
+                .open(path)?
+                .read_to_end(&mut buf)
+                .map(|_| buf)
+        })
+        .await??;
 
         trace!("Reading to buffer finished: {}", p.display());
         self.package_source
