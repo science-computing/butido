@@ -52,7 +52,7 @@ impl Repository {
                 }
             }
 
-            return Ok(v)
+            Ok(v)
         }
 
         fn load_recursive(path: &Path, mut config: config::Config, progress: &indicatif::ProgressBar) -> Result<Vec<Result<Package>>> {
