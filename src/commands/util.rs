@@ -92,7 +92,7 @@ pub async fn lint_packages<'a, I>(iter: I, linter: &Path, config: &Configuration
     }
 }
 
-fn all_phases_available(pkg: &Package, available_phases: &Vec<PhaseName>) -> Result<()> {
+fn all_phases_available(pkg: &Package, available_phases: &[PhaseName]) -> Result<()> {
     let package_phasenames = pkg.phases().keys().collect::<Vec<_>>();
 
     if let Some(phase) = package_phasenames.iter().find(|name| !available_phases.contains(name)) {
