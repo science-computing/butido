@@ -197,7 +197,7 @@ impl JobHandle {
 
     /// Helper to create an error object with a nice message.
     fn create_job_run_error(job_id: &Uuid, package_name: &str, package_version: &str, endpoint_uri: &str, container_id: &str) -> anyhow::Error {
-        anyhow!(indoc::formatdoc!(r#"Error while running job 
+        anyhow!(indoc::formatdoc!(r#"Error while running job
             {job_id}
         for package
             {package_name} {package_version}
