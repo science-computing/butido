@@ -105,7 +105,7 @@ impl Package {
 
         build_iter
             .chain(runtime_iter)
-            .unique_by(|res| res.as_ref().ok().map(|tpl| tpl.clone()))
+            .unique_by(|res| res.as_ref().ok().cloned())
     }
 }
 
