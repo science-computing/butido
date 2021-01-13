@@ -134,7 +134,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::new();
+        let mut tree = Tree::default();
         let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
 
@@ -179,7 +179,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::new();
+        let mut tree = Tree::default();
         let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
 
@@ -235,7 +235,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::new();
+        let mut tree = Tree::default();
         let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
 

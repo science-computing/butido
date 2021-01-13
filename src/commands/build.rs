@@ -180,7 +180,7 @@ pub async fn build(repo_root: &Path,
         let bar_tree_building = progressbars.bar();
         bar_tree_building.set_length(max_packages);
 
-        let mut tree = Tree::new();
+        let mut tree = Tree::default();
         tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
 
         bar_tree_building.finish_with_message("Finished loading Tree");
