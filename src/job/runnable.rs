@@ -62,7 +62,7 @@ impl RunnableJob {
                 .package()
                 .dependencies()
                 .build()
-                .into_iter()
+                .iter()
                 .map(|dep| Self::build_resource(dep, merged_stores))
                 .chain({
                     job.package()
