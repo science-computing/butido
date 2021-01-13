@@ -50,12 +50,10 @@ impl StoreRoot {
 
         if join.is_file() {
             Ok(FullArtifactPath(&self, ap))
+        } else if join.is_dir() {
+            Err(anyhow!("Cannot load non-file path: {}", join.display()))
         } else {
-            if join.is_dir() {
-                Err(anyhow!("Cannot load non-file path: {}", join.display()))
-            } else {
-                Err(anyhow!("Path does not exist: {}", join.display()))
-            }
+            Err(anyhow!("Path does not exist: {}", join.display()))
         }
     }
 
