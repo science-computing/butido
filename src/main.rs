@@ -37,7 +37,7 @@
 
 extern crate log as logcrate;
 
-#[allow(macro_use_extern_crate)]
+#![allow(macro_use_extern_crate)]
 #[macro_use] extern crate diesel;
 
 use std::path::Path;
