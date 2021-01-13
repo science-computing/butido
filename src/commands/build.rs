@@ -200,18 +200,16 @@ pub async fn build(repo_root: &Path,
     // linting the package scripts
     if matches.is_present("no_lint") {
         warn!("No script linting will be performed!");
-    } else {
-        if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
-            let all_packages = tree.all_packages();
-            let bar = progressbars.bar();
-            bar.set_length(all_packages.len() as u64);
-            bar.set_message("Linting package scripts...");
+    } else if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
+        let all_packages = tree.all_packages();
+        let bar = progressbars.bar();
+        bar.set_length(all_packages.len() as u64);
+        bar.set_message("Linting package scripts...");
 
-            let iter = all_packages.into_iter();
-            let _ = crate::commands::util::lint_packages(iter, &linter, config, bar).await?;
-        } else {
-            warn!("No linter set in configuration, no script linting will be performed!");
-        }
+        let iter = all_packages.into_iter();
+        let _ = crate::commands::util::lint_packages(iter, &linter, config, bar).await?;
+    } else {
+        warn!("No linter set in configuration, no script linting will be performed!");
     } // linting
 
     tree.all_packages()
