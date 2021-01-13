@@ -12,7 +12,6 @@ use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::ops::Deref;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -484,7 +483,7 @@ impl<'a> ExecutedContainer<'a> {
                 let err = anyhow!("Error during container run:\n\tMessage: '{msg}'\n\tConnect using\n\n\t\t`docker --host {uri} exec -it {container_id} /bin/bash`\n\n\tto debug.",
                     container_id = self.create_info.id,
                     uri = self.endpoint.uri(),
-                    msg = msg.as_ref().map(String::deref).unwrap_or(""),
+                    msg = msg.as_deref().unwrap_or(""),
                     );
 
                 // error because the container errored
