@@ -147,12 +147,10 @@ pub fn script_to_printable(script: &Script, highlight: bool, highlight_theme: &s
         } else {
             script.lines()?.join("")
         }
+    } else if line_numbers {
+        script.lines_numbered().map(|(i, s)| format!("{:>4} | {}", i, s)).join("")
     } else {
-        if line_numbers {
-            script.lines_numbered().map(|(i, s)| format!("{:>4} | {}", i, s)).join("")
-        } else {
-            script.to_string()
-        }
+        script.to_string()
     };
 
     Ok(script)

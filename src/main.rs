@@ -35,9 +35,9 @@
     while_true,
 )]
 
-extern crate log as logcrate;
-
 #![allow(macro_use_extern_crate)]
+
+extern crate log as logcrate;
 #[macro_use] extern crate diesel;
 
 use std::path::Path;
