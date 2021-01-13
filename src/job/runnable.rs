@@ -90,14 +90,13 @@ impl RunnableJob {
             let _ = Self::env_resources(job.resources(), job.package().environment().as_ref())
                 .into_iter()
                 .inspect(|(name, _)| debug!("Checking: {}", name))
-                .map(|(name, _)| {
+                .try_for_each(|(name, _)| {
                     if !config.containers().allowed_env().contains(&name) {
                         Err(anyhow!("Environment variable name not allowed: {}", name))
                     } else {
                         Ok(())
                     }
                 })
-                .collect::<Result<()>>()
                 .with_context(|| anyhow!("Checking allowed variables for package {} {}", job.package().name(), job.package().version()))
                 .context("Checking allowed variable names")?;
         } else {
