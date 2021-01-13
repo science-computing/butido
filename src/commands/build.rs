@@ -78,13 +78,11 @@ pub async fn build(repo_root: &Path,
     });
 
     let image_name = matches.value_of("image").map(String::from).map(ImageName::from).unwrap(); // safe by clap
-    if config.docker().verify_images_present() {
-        if !config.docker().images().iter().any(|img| image_name == *img) {
-            return Err(anyhow!("Requested build image {} is not in the configured images"))
-                .with_context(|| anyhow!("Available images: {:?}", config.docker().images()))
-                .with_context(|| anyhow!("Image present verification failed"))
-                .map_err(Error::from)
-        }
+    if config.docker().verify_images_present() && !config.docker().images().iter().any(|img| image_name == *img) {
+        return Err(anyhow!("Requested build image {} is not in the configured images"))
+            .with_context(|| anyhow!("Available images: {:?}", config.docker().images()))
+            .with_context(|| anyhow!("Image present verification failed"))
+            .map_err(Error::from)
     }
 
     debug!("Getting repository HEAD");
