@@ -488,10 +488,7 @@ impl<'a> ExecutedContainer<'a> {
                     );
 
                 // error because the container errored
-                let conterr = Err(Error::from(err));
-
-                // Ok because the general process worked.
-                conterr
+                Err(err)
             },
 
             Some((true, _)) | None => {
