@@ -352,10 +352,9 @@ pub async fn build(repo_root: &Path,
                     lines.len()
                 }
             })
-            .map(|(i, line)| {
+            .try_for_each(|(i, line)| {
                 writeln!(outlock, "{:>4} | {}", i, line).map_err(Error::from)
-            })
-            .collect::<Result<()>>()?;
+            })?;
 
         writeln!(outlock, "\n\n")?;
         if error_catched {
