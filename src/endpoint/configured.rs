@@ -186,7 +186,7 @@ impl Endpoint {
     }
 
 
-    pub async fn prepare_container<'a>(&'a self, job: RunnableJob, staging: Arc<RwLock<StagingStore>>) -> Result<PreparedContainer<'a>> {
+    pub async fn prepare_container(&self, job: RunnableJob, staging: Arc<RwLock<StagingStore>>) -> Result<PreparedContainer<'_>> {
         PreparedContainer::new(self, job, staging).await
     }
 
