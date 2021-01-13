@@ -184,7 +184,7 @@ impl RunnableJob {
                 warn!("Please investigate, this might be a BUG");
             }
 
-            Ok(JobResource::Artifact(found_dependency.clone()))
+            Ok(JobResource::Artifact(found_dependency))
         }
 
     }
