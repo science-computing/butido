@@ -64,12 +64,10 @@ pub fn build_package_filter_by_dependency_name(
 }
 
 pub fn build_package_filter_by_name(name: PackageName) -> impl filters::filter::Filter<Package> {
-    let name_filter    = move |p: &Package| {
+    move |p: &Package| {
         trace!("Checking {:?} -> name == {}", p, name);
         *p.name() == name
-    };
-
-    name_filter
+    }
 }
 
 
