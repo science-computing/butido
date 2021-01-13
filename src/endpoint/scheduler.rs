@@ -146,7 +146,7 @@ impl JobHandle {
         let package  = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
         let image    = dbmodels::Image::create_or_fetch(&self.db, self.job.image())?;
         let envs     = self.create_env_in_db()?;
-        let job_id   = self.job.uuid().clone();
+        let job_id   = *self.job.uuid();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let prepared_container = ep.prepare_container(self.job, self.staging_store.clone()).await?;
         let container_id       = prepared_container.create_info().id.clone();
