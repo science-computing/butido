@@ -86,9 +86,9 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
 
     (
         seq(b"#BUTIDO:") * (
-            (seq(b"PROGRESS:") * number.map(|n| LogItem::Progress(n)))
+            (seq(b"PROGRESS:") * number.map(LogItem::Progress))
             |
-            (seq(b"PHASE:") * string().map(|s| LogItem::CurrentPhase(s)))
+            (seq(b"PHASE:") * string().map(LogItem::CurrentPhase))
             |
             (
                 (seq(b"STATE:ERR:") * string().map(|s| LogItem::State(Err(s))))
@@ -97,7 +97,7 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
             )
         )
     )
-    | ignored().map(|s| LogItem::Line(s))
+    | ignored().map(LogItem::Line)
 }
 
 #[cfg(test)]
