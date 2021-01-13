@@ -213,7 +213,7 @@ impl JobHandle {
             package_version = package_version,
             endpoint_uri    = endpoint_uri,
             container_id    = container_id,
-        )).into()
+        ))
     }
 
     fn create_env_in_db(&self) -> Result<Vec<dbmodels::EnvVar>> {
