@@ -1,7 +1,10 @@
 [package]
 name = "butido"
 version = "0.1.0"
-authors = ["Matthias Beyer <mail@beyermatthias.de>"]
+authors = ["Matthias Beyer <mail@beyermatthias.de>",
+           "Matthias Beyer <matthias.beyer@atos.net>",
+           "Christoph Prokop <christoph.prokop@atos.net>",
+          ]
 edition = "2018"
 license = "EPL-2.0"
 
