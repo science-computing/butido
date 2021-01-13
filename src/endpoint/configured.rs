@@ -87,7 +87,7 @@ impl Endpoint {
         match ep.endpoint_type() {
             crate::config::EndpointType::Http => {
                 shiplift::Uri::from_str(ep.uri())
-                    .map(|uri| shiplift::Docker::host(uri))
+                    .map(shiplift::Docker::host)
                     .with_context(|| anyhow!("Connecting to {}", ep.uri()))
                     .map_err(Error::from)
                     .map(|docker| {
