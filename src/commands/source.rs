@@ -97,7 +97,7 @@ pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCac
                 for cause in e.chain() {
                     let _ = writeln!(outlock, "{}", cause);
                 }
-                let _ = writeln!(outlock, "");
+                let _ = writeln!(outlock);
             },
             Ok(s) => {
                 let _ = writeln!(out.lock(), "{}", s);
