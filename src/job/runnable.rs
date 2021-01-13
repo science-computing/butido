@@ -129,7 +129,7 @@ impl RunnableJob {
 
     /// Helper function to collect a list of resources and the result of package.environment() into
     /// a Vec of environment variables
-    fn env_resources(resources: &Vec<JobResource>, pkgenv: Option<&HashMap<EnvironmentVariableName, String>>)
+    fn env_resources(resources: &[JobResource], pkgenv: Option<&HashMap<EnvironmentVariableName, String>>)
         -> Vec<(EnvironmentVariableName, String)>
     {
         let iter = resources
