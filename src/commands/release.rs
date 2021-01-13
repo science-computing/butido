@@ -124,11 +124,10 @@ pub async fn release(db_connection_config: DbConnectionConfig, config: &Configur
         .collect::<Result<Vec<_>>>()
         .await?
         .into_iter()
-        .map(|art| {
-            debug!("Creating Release object in database for {:?}", art);
+        .try_for_each(|art| {
+            debug!("Updating {:?} to set released = true", art);
             let rel = crate::db::models::Release::create(&conn, &art, &now)?;
             debug!("Release object = {:?}", rel);
             Ok(())
         })
-        .collect()
 }
