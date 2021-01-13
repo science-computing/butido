@@ -8,8 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::io::Write;
-
+use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use resiter::AndThen;
@@ -23,14 +22,6 @@ use crate::util::progress::ProgressBars;
 pub async fn tree_of(matches: &ArgMatches, repo: Repository, progressbars: ProgressBars) -> Result<()> {
     let pname = matches.value_of("package_name").map(String::from).map(PackageName::from);
     let pvers = matches.value_of("package_version").map(String::from).map(PackageVersionConstraint::new).transpose()?;
-
-    fn print_package_tree(out: &mut dyn Write, indent: usize, tree: Tree) -> Result<()> {
-        for (pkg, tree) in tree.into_iter() {
-            writeln!(out, "{:indent$}{name} {version}", "", indent = indent, name = pkg.name(), version = pkg.version())?;
-            print_package_tree(out, indent + 2, tree)?;
-        }
-        Ok(())
-    }
 
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
@@ -46,7 +37,7 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, progressbars: Progr
             let stdout = std::io::stdout();
             let mut outlock = stdout.lock();
 
-            print_package_tree(&mut outlock, 0, tree)
+            tree.display().iter().try_for_each(|d| ptree::write_tree(d, &mut outlock).map_err(Error::from))
         })
         .collect::<Result<()>>()
 }

@@ -8,6 +8,10 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::io::Write;
+use std::borrow::Cow;
+use std::io::Result as IoResult;
+
 use anyhow::Result;
 use anyhow::anyhow;
 use indicatif::ProgressBar;
@@ -15,6 +19,8 @@ use log::trace;
 use resiter::AndThen;
 use serde::Deserialize;
 use serde::Serialize;
+use ptree::TreeItem;
+use ptree::Style;
 
 use crate::package::Package;
 use crate::repository::Repository;
@@ -116,6 +122,25 @@ impl Tree {
         self.packages().any(name_eq) || self.dependencies().any(|t| t.has_package(p))
     }
 
+    pub fn display(&self) -> Vec<DisplayTree> {
+        self.root.iter().map(DisplayTree).collect()
+    }
+
+}
+
+#[derive(Clone)]
+pub struct DisplayTree<'a>(&'a Mapping);
+
+impl<'a> TreeItem for DisplayTree<'a> {
+    type Child = Self;
+
+    fn write_self<W: Write>(&self, f: &mut W, _: &Style) -> IoResult<()> {
+        write!(f, "{} {}", self.0.package.name(), self.0.package.version())
+    }
+
+    fn children(&self) -> Cow<[Self::Child]> {
+        Cow::from(self.0.dependencies.root.iter().map(DisplayTree).collect::<Vec<_>>())
+    }
 }
 
 #[cfg(test)]
