@@ -118,7 +118,7 @@ pub async fn list_missing(_: &ArgMatches, config: &Configuration, repo: Reposito
     let mut outlock = out.lock();
 
     repo.packages()
-        .map(|p| {
+        .try_for_each(|p| {
             for source in sc.sources_for(p) {
                 if !source.exists() {
                     writeln!(outlock, "{} {} -> {}", p.name(), p.version(), source.path().display())?;
@@ -127,7 +127,6 @@ pub async fn list_missing(_: &ArgMatches, config: &Configuration, repo: Reposito
 
             Ok(())
         })
-        .collect()
 }
 
 pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
