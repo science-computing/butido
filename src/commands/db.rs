@@ -477,7 +477,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
                     LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
                     LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
                     LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
-                    LogItem::State(Ok(()))   => Ok(format!("#BUTIDO:STATE:OK").green()),
+                    LogItem::State(Ok(()))   => Ok("#BUTIDO:STATE:OK".to_string().green()),
                     LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
                 })
                 .collect::<Result<Vec<_>>>()?
