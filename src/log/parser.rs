@@ -97,7 +97,7 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
             )
         )
     )
-    | ignored().map(|s| LogItem::Line(Vec::from(s)))
+    | ignored().map(|s| LogItem::Line(s))
 }
 
 #[cfg(test)]
