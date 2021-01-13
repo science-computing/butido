@@ -62,7 +62,7 @@ impl<'a> OrchestratorSetup<'a> {
         let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), self.database, self.submit.clone(), self.log_dir).await?;
 
         Ok(Orchestrator {
-            scheduler:     scheduler,
+            scheduler,
             progress_generator: self.progress_generator,
             merged_stores: MergedStores::new(self.release_store, self.staging_store),
             source_cache:  self.source_cache,
