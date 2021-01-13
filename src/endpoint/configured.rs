@@ -311,7 +311,7 @@ impl<'a> PreparedContainer<'a> {
 
     async fn copy_artifacts_to_container<'ca>(container: &Container<'ca>, job: &RunnableJob, staging: Arc<RwLock<StagingStore>>) -> Result<()> {
         job.resources()
-            .into_iter()
+            .iter()
             .filter_map(JobResource::artifact)
             .cloned()
             .map(|art| async {
