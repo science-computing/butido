@@ -42,8 +42,8 @@ pub fn db(db_connection_config: DbConnectionConfig, config: &Configuration, matc
         Some(("submits", matches))    => submits(db_connection_config, matches),
         Some(("jobs", matches))       => jobs(db_connection_config, matches),
         Some(("job", matches))        => job(db_connection_config, config, matches),
-        Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
-        None             => return Err(anyhow!("No subcommand")),
+        Some((other, _))              => Err(anyhow!("Unknown subcommand: {}", other)),
+        None                          => Err(anyhow!("No subcommand")),
     }
 }
 
