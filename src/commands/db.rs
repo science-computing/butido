@@ -533,11 +533,12 @@ fn display_data<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>
 
     } else {
         if atty::is(atty::Stream::Stdout) {
-            let mut ascii_table = ascii_table::AsciiTable::default();
-
-            ascii_table.max_width = terminal_size::terminal_size()
-                .map(|tpl| tpl.0.0 as usize) // an ugly interface indeed!
-                .unwrap_or(80);
+            let mut ascii_table = ascii_table::AsciiTable {
+                columns: Default::default(),
+                max_width: terminal_size::terminal_size()
+                    .map(|tpl| tpl.0.0 as usize) // an ugly interface indeed!
+                    .unwrap_or(80),
+            };
 
             headers.into_iter()
                 .enumerate()
