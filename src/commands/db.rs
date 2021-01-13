@@ -386,7 +386,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
                 data.3.version.to_string(),
                 data.2.name.to_string(),
                 data.4.name.to_string(),
-                data.0.container_hash.to_string(),
+                data.0.container_hash,
             ]
         ];
         display_data(hdrs, data, csv)
