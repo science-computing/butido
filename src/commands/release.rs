@@ -109,15 +109,13 @@ pub async fn release(db_connection_config: DbConnectionConfig, config: &Configur
             if !art_path.is_file() {
                 trace!("Artifact does not exist as file, cannot release it: {:?}", art);
                 Err(anyhow!("Not a file: {}", art_path.display()))
+            } else if dest_path.exists() {
+                Err(anyhow!("Does already exist: {}", dest_path.display()))
             } else {
-                if dest_path.exists() {
-                    Err(anyhow!("Does already exist: {}", dest_path.display()))
-                } else {
-                    tokio::fs::rename(art_path, dest_path)
-                        .await
-                        .map_err(Error::from)
-                        .map(|_| art)
-                }
+                tokio::fs::rename(art_path, dest_path)
+                    .await
+                    .map_err(Error::from)
+                    .map(|_| art)
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
