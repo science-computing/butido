@@ -302,8 +302,10 @@ pub async fn build(repo_root: &Path,
         writeln!(outlock, "Packages created:")?;
     }
     artifacts.into_iter()
-        .map(|artifact| writeln!(outlock, "-> {}", staging_dir.join(artifact.path).display()).map_err(Error::from))
-        .collect::<Result<_>>()?;
+        .try_for_each(|artifact| {
+            writeln!(outlock, "-> {}", staging_dir.join(artifact.path).display())
+                .map_err(Error::from)
+        })?;
 
     let mut had_error = false;
     for (job_uuid, error) in errors {
