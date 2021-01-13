@@ -33,7 +33,7 @@ pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
     repo.packages()
         .filter(|package| package_filter.filter(package))
         .inspect(|pkg| trace!("Found package: {:?}", pkg))
-        .map(|pkg| {
+        .try_for_each(|pkg| {
             if let Some(hm) = pkg.environment() {
                 for (key, value) in hm {
                     writeln!(stdout, "{} = '{}'", key, value)?;
@@ -44,7 +44,6 @@ pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
 
             Ok(())
         })
-        .collect::<Result<_>>()
 }
 
 
