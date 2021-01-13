@@ -10,6 +10,7 @@
 
 use std::path::PathBuf;
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use getset::Getters;
 use serde::Deserialize;
@@ -22,6 +23,9 @@ use crate::package::PhaseName;
 
 #[derive(Debug, Getters, Deserialize)]
 pub struct NotValidatedConfiguration {
+    #[getset(get = "pub")]
+    compatibility: semver::VersionReq,
+
     #[getset(get = "pub")]
     log_dir: PathBuf,
 
@@ -99,6 +103,13 @@ pub struct NotValidatedConfiguration {
 
 impl NotValidatedConfiguration {
     pub fn validate(self) -> Result<Configuration> {
+        let crate_version = semver::Version::parse(env!("CARGO_PKG_VERSION"))
+            .context("Parsing version of crate (CARGO_PKG_VERSION) into semver::Version object")?;
+
+        if !self.compatibility.matches(&crate_version) {
+            return Err(anyhow!("Configuration is not compatible to butido {}", crate_version))
+        }
+
         if let Some(linter) = self.script_linter.as_ref() {
             if !linter.is_file() {
                 return Err(anyhow!("Lint script is not a file: {}", linter.display()))

@@ -38,6 +38,7 @@ regex          = "1"
 reqwest        = { version = "0.10", features = [ "stream" ] }
 resiter        = "0.4"
 result-inspect = "0.1"
+semver		   = { version = "0.11", features = [ "serde" ] }
 serde          = "1"
 serde_json     = "1"
 sha1           = { version = "0.6", features = ["std"] }
