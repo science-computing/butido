@@ -140,13 +140,14 @@ pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true))
-        .map(|p| {
+        .try_for_each(|p| {
             p.sources()
                 .iter()
-                .map(|(source_name, source)| writeln!(outlock, "{} {} -> {} = {}", p.name(), p.version(), source_name, source.url()).map_err(Error::from))
-                .collect()
+                .try_for_each(|(source_name, source)| {
+                    writeln!(outlock, "{} {} -> {} = {}", p.name(), p.version(), source_name, source.url())
+                        .map_err(Error::from)
+                })
         })
-        .collect()
 }
 
 pub async fn download(matches: &ArgMatches, config: &Configuration, repo: Repository, progressbars: ProgressBars) -> Result<()> {
