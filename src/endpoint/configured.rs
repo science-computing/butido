@@ -151,7 +151,7 @@ impl Endpoint {
         }
     }
 
-    async fn check_images_available(imgs: &Vec<ImageName>, ep: &Endpoint) -> Result<()> {
+    async fn check_images_available(imgs: &[ImageName], ep: &Endpoint) -> Result<()> {
         use shiplift::ImageListOptions;
 
         trace!("Checking availability of images: {:?}", imgs);
