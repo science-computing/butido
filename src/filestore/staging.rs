@@ -19,7 +19,6 @@ use futures::stream::Stream;
 use indicatif::ProgressBar;
 use log::trace;
 use result_inspect::ResultInspect;
-use tar;
 
 use crate::filestore::path::ArtifactPath;
 use crate::filestore::path::StoreRoot;
