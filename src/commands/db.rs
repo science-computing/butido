@@ -500,11 +500,10 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
 
 fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
     vec.into_iter()
-        .map(|name| {
-            let mut column = ascii_table::Column::default();
-            column.header  = name.into();
-            column.align   = ascii_table::Align::Left;
-            column
+        .map(|name| ascii_table::Column {
+            header: name.into(),
+            align: ascii_table::Align::Left,
+            ..Default::default()
         })
         .collect()
 }
