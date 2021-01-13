@@ -51,7 +51,7 @@ impl JobSet {
 
 /// Get the tree as sets of jobs, the deepest level of the tree first
 fn tree_into_jobsets(tree: Tree, shebang: Shebang, image: ImageName, phases: Vec<PhaseName>, resources: Vec<JobResource>) -> Result<Vec<JobSet>> {
-    fn inner(tree: Tree, shebang: &Shebang, image: &ImageName, phases: &Vec<PhaseName>, resources: &Vec<JobResource>) -> Result<Vec<JobSet>> {
+    fn inner(tree: Tree, shebang: &Shebang, image: &ImageName, phases: &[PhaseName], resources: &[JobResource]) -> Result<Vec<JobSet>> {
         trace!("Creating jobsets for tree: {:?}", tree);
 
         let mut sets = vec![];
@@ -69,7 +69,7 @@ fn tree_into_jobsets(tree: Tree, shebang: Shebang, image: ImageName, phases: Vec
             set: current_set
                 .into_iter()
                 .map(|package| {
-                    Job::new(package, shebang.clone(), image.clone(), phases.clone(), resources.clone())
+                    Job::new(package, shebang.clone(), image.clone(), phases.to_vec(), resources.to_vec())
                 })
                 .collect(),
         };
