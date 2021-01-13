@@ -52,6 +52,7 @@ struct NewJob<'a> {
 }
 
 impl Job {
+    #[allow(clippy::too_many_arguments)]
     pub fn create(database_connection: &PgConnection,
                            job_uuid: &::uuid::Uuid,
                            submit: &Submit,
