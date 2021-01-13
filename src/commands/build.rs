@@ -334,7 +334,7 @@ pub async fn build(repo_root: &Path,
                     }
                     Ok(format!("#BUTIDO:PHASE:{}", p).bright_black())
                 },
-                LogItem::State(Ok(()))   => Ok(format!("#BUTIDO:STATE:OK").green()),
+                LogItem::State(Ok(()))   => Ok("#BUTIDO:STATE:OK".to_string().green()),
                 LogItem::State(Err(s))   => {
                     error_catched = true;
                     Ok(format!("#BUTIDO:STATE:ERR:{}", s).red())
