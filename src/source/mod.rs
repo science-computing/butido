@@ -1,3 +1,13 @@
+//
+// Copyright (c) 2020-2021 science+computing ag and other contributors
+//
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -81,29 +91,29 @@ impl SourceEntry {
     }
 
     pub async fn verify_hash(&self) -> Result<()> {
+
         let p = self.source_file_path();
-        trace!("Reading: {}", p.display());
+        trace!("Reading to buffer: {}", p.display());
 
-        // we can clone() here, because the object itself is just a representation of "what hash
-        // type do we use here", which is rather cheap to clone (because it is
-        // crate::package::SourceHash, that is not more than an enum + String).
-        //
-        // We need to clone to move into the closure below.
-        let source_hash = self.package_source.hash().clone();
+        let path = p.clone();
+        let buf = tokio::task::spawn_blocking(move || {
+            use std::io::Read;
 
-        tokio::task::spawn_blocking(move || {
+            let mut buf = vec![];
             std::fs::OpenOptions::new()
                 .create(false)
                 .create_new(false)
                 .read(true)
-                .open(&p)
-                .map_err(Error::from)
-                .map(std::io::BufReader::new)
-                .and_then(|reader| {
-                    source_hash.matches_hash_of(reader)
-                })
+                .open(path)?
+                .read_to_end(&mut buf)
+                .map(|_| buf)
         })
-        .await?
+        .await??;
+
+        trace!("Reading to buffer finished: {}", p.display());
+        self.package_source
+            .hash()
+            .matches_hash_of(&buf)
     }
 
     pub async fn create(&self) -> Result<tokio::fs::File> {

@@ -1,4 +1,12 @@
-use std::io::Read;
+//
+// Copyright (c) 2020-2021 science+computing ag and other contributors
+//
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -35,9 +43,9 @@ pub struct SourceHash {
 }
 
 impl SourceHash {
-    pub fn matches_hash_of<R: Read>(&self, reader: R) -> Result<()> {
+    pub fn matches_hash_of(&self, buf: &[u8]) -> Result<()> {
         trace!("Hashing buffer with: {:?}", self.hashtype);
-        let h = self.hashtype.hash_from_reader(reader)?;
+        let h = self.hashtype.hash_buffer(&buf)?;
         trace!("Hashing buffer with: {} finished", self.hashtype);
 
         if h == self.value {
@@ -72,24 +80,29 @@ pub enum HashType {
 }
 
 impl HashType {
-    fn hash_from_reader<R: Read>(&self, mut reader: R) -> Result<HashValue> {
-        use ring::digest::{Context, SHA1_FOR_LEGACY_USE_ONLY, SHA256, SHA512};
-        let mut context = match self {
-            HashType::Sha1   => Context::new(&SHA1_FOR_LEGACY_USE_ONLY),
-            HashType::Sha256 => Context::new(&SHA256),
-            HashType::Sha512 => Context::new(&SHA512),
-        };
-        let mut buffer = [0; 1024];
-
-        loop {
-            let count = reader.read(&mut buffer)?;
-            if count == 0 {
-                break;
-            }
-            context.update(&buffer[..count]);
+    fn hash_buffer(&self, buffer: &[u8]) -> Result<HashValue> {
+        match self {
+            HashType::Sha1 => {
+                trace!("SHA1 hashing buffer");
+                let mut m = sha1::Sha1::new();
+                m.update(buffer);
+                Ok(HashValue(m.digest().to_string()))
+            },
+            HashType::Sha256 => {
+                trace!("SHA256 hashing buffer");
+                //let mut m = sha2::Sha256::new();
+                //m.update(buffer);
+                //Ok(HashValue(String::from(m.finalize())))
+                unimplemented!()
+            },
+            HashType::Sha512 => {
+                trace!("SHA512 hashing buffer");
+                //let mut m = sha2::Sha512::new();
+                //m.update(buffer);
+                //Ok(HashValue(String::from(m.finalize())))
+                unimplemented!()
+            },
         }
-
-        Ok(HashValue(data_encoding::HEXLOWER.encode(context.finish().as_ref())))
     }
 }
 
