@@ -64,6 +64,15 @@ pub struct Package {
 
     #[getset(get = "pub")]
     phases: HashMap<PhaseName, Phase>,
+
+    /// Meta field
+    ///
+    /// Contains only key-value string-string data, that the packager can set for a package and
+    /// then use in the packaging scripts (for example) to write package meta data to the package
+    /// file (think of rpmbuild spec files).
+    #[getset(get = "pub")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    meta: Option<HashMap<String, String>>,
 }
 
 impl Package {
@@ -82,6 +91,7 @@ impl Package {
             allowed_images: None,
             denied_images: None,
             phases: HashMap::new(),
+            meta: None,
         }
     }
 
