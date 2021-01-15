@@ -12,7 +12,6 @@ table! {
     artifacts (id) {
         id -> Int4,
         path -> Varchar,
-        released -> Bool,
         job_id -> Int4,
     }
 }
@@ -93,6 +92,14 @@ table! {
 }
 
 table! {
+    releases (id) {
+        id -> Int4,
+        artifact_id -> Int4,
+        release_date -> Timestamptz,
+    }
+}
+
+table! {
     submit_envs (id) {
         id -> Int4,
         submit_id -> Int4,
@@ -123,6 +130,7 @@ joinable!(jobs -> endpoints (endpoint_id));
 joinable!(jobs -> images (image_id));
 joinable!(jobs -> packages (package_id));
 joinable!(jobs -> submits (submit_id));
+joinable!(releases -> artifacts (artifact_id));
 joinable!(submit_envs -> envvars (env_id));
 joinable!(submit_envs -> submits (submit_id));
 joinable!(submits -> githashes (repo_hash_id));
@@ -140,6 +148,7 @@ allow_tables_to_appear_in_same_query!(
     job_output_artifacts,
     jobs,
     packages,
+    releases,
     submit_envs,
     submits,
 );

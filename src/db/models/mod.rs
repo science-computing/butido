@@ -32,6 +32,9 @@ pub use githash::*;
 mod package;
 pub use package::*;
 
+mod releases;
+pub use releases::*;
+
 mod submit;
 pub use submit::*;
 

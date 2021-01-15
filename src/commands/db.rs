@@ -149,18 +149,23 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .map(|job_uuid| -> Result<_> {
             dsl::artifacts
                 .inner_join(schema::jobs::table)
+                .left_join(schema::releases::table)
                 .filter(schema::jobs::dsl::uuid.eq(job_uuid))
-                .load::<(models::Artifact, models::Job)>(&conn)
+                .load::<(models::Artifact, models::Job, Option<models::Release>)>(&conn)
                 .map_err(Error::from)
         })
         .unwrap_or_else(|| {
             dsl::artifacts
                 .inner_join(schema::jobs::table)
-                .load::<(models::Artifact, models::Job)>(&conn)
+                .left_join(schema::releases::table)
+                .load::<(models::Artifact, models::Job, Option<models::Release>)>(&conn)
                 .map_err(Error::from)
         })?
         .into_iter()
-        .map(|(artifact, job)| vec![format!("{}", artifact.id), artifact.path, artifact.released.to_string(), job.uuid.to_string()])
+        .map(|(artifact, job, rel)| {
+            let rel = rel.map(|r| r.release_date.to_string()).unwrap_or_else(|| String::from("no"));
+            vec![format!("{}", artifact.id), artifact.path, rel, job.uuid.to_string()]
+        })
         .collect::<Vec<_>>();
 
     if data.is_empty() {

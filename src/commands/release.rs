@@ -55,35 +55,40 @@ pub async fn release(db_connection_config: DbConnectionConfig, config: &Configur
                     .inner_join(crate::schema::packages::table)
             })
             .filter(crate::schema::jobs::submit_id.eq(submit.id))
-            .filter(crate::schema::artifacts::released.eq(false));
+            .left_outer_join(crate::schema::releases::table) // not released
+            .select(crate::schema::artifacts::all_columns)
+            ;
 
         match (pname, pvers) {
             (Some(name), Some(vers)) => {
-                let query = sel.filter(crate::schema::packages::name.eq(name))
+                let query = sel
+                    .filter(crate::schema::packages::name.eq(name))
                     .filter(crate::schema::packages::version.like(vers));
-                debug!("Query: {}", diesel::debug_query(&query).to_string());
-                query.load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
+                debug!("Query: {:?}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
+                query.load::<dbmodels::Artifact>(&conn)?
             },
             (Some(name), None) => {
-                let query = sel.filter(crate::schema::packages::name.eq(name));
-                debug!("Query: {}", diesel::debug_query(&query).to_string());
-                query.load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
+                let query = sel
+                    .filter(crate::schema::packages::name.eq(name));
+                debug!("Query: {:?}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
+                query.load::<dbmodels::Artifact>(&conn)?
             },
             (None, Some(vers)) => {
-                let query = sel.filter(crate::schema::packages::version.like(vers));
-                debug!("Query: {}", diesel::debug_query(&query).to_string());
-                query.load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
+                let query = sel
+                    .filter(crate::schema::packages::version.like(vers));
+                debug!("Query: {:?}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
+                query.load::<dbmodels::Artifact>(&conn)?
             },
             (None, None) => {
-                debug!("Query: {}", diesel::debug_query(&sel).to_string());
-                sel.load::<(dbmodels::Artifact, (dbmodels::Job, dbmodels::Package))>(&conn)?
+                debug!("Query: {:?}", diesel::debug_query::<diesel::pg::Pg, _>(&sel));
+                sel.load::<dbmodels::Artifact>(&conn)?
             },
         }
     };
     debug!("Artifacts = {:?}", arts);
 
     arts.iter()
-        .filter_map(|(art, _)| art.path_buf().parent().map(|p| config.releases_directory().join(p)))
+        .filter_map(|art| art.path_buf().parent().map(|p| config.releases_directory().join(p)))
         .map(|p| async {
             debug!("mkdir {:?}", p);
             tokio::fs::create_dir_all(p).await.map_err(Error::from)
@@ -93,8 +98,10 @@ pub async fn release(db_connection_config: DbConnectionConfig, config: &Configur
         .await?;
 
     let staging_base: &PathBuf = &config.staging_directory().join(submit.uuid.to_string());
+
+    let now = chrono::offset::Local::now().naive_local();
     arts.into_iter()
-        .map(|(art, _)| async move {
+        .map(|art| async move {
             let art_path  = staging_base.join(&art.path);
             let dest_path = config.releases_directory().join(&art.path);
             debug!("Trying to release {} to {}", art_path.display(), dest_path.display());
@@ -118,12 +125,10 @@ pub async fn release(db_connection_config: DbConnectionConfig, config: &Configur
         .await?
         .into_iter()
         .map(|art| {
-            debug!("Updating {:?} to set released = true", art);
-            diesel::update(&art)
-                .set(crate::schema::artifacts::released.eq(true))
-                .execute(&conn)
-                .map(|_| ())
-                .map_err(Error::from)
+            debug!("Creating Release object in database for {:?}", art);
+            let rel = crate::db::models::Release::create(&conn, &art, &now)?;
+            debug!("Release object = {:?}", rel);
+            Ok(())
         })
         .collect()
 }
