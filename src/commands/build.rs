@@ -47,6 +47,7 @@ use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
 
+#[allow(clippy::too_many_arguments)]
 pub async fn build(repo_root: &Path,
                matches: &ArgMatches,
                progressbars: ProgressBars,
@@ -77,13 +78,11 @@ pub async fn build(repo_root: &Path,
     });
 
     let image_name = matches.value_of("image").map(String::from).map(ImageName::from).unwrap(); // safe by clap
-    if config.docker().verify_images_present() {
-        if !config.docker().images().iter().any(|img| image_name == *img) {
-            return Err(anyhow!("Requested build image {} is not in the configured images"))
-                .with_context(|| anyhow!("Available images: {:?}", config.docker().images()))
-                .with_context(|| anyhow!("Image present verification failed"))
-                .map_err(Error::from)
-        }
+    if config.docker().verify_images_present() && !config.docker().images().iter().any(|img| image_name == *img) {
+        return Err(anyhow!("Requested build image {} is not in the configured images"))
+            .with_context(|| anyhow!("Available images: {:?}", config.docker().images()))
+            .with_context(|| anyhow!("Image present verification failed"))
+            .map_err(Error::from)
     }
 
     debug!("Getting repository HEAD");
@@ -180,7 +179,7 @@ pub async fn build(repo_root: &Path,
         let bar_tree_building = progressbars.bar();
         bar_tree_building.set_length(max_packages);
 
-        let mut tree = Tree::new();
+        let mut tree = Tree::default();
         tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
 
         bar_tree_building.finish_with_message("Finished loading Tree");
@@ -199,18 +198,16 @@ pub async fn build(repo_root: &Path,
     // linting the package scripts
     if matches.is_present("no_lint") {
         warn!("No script linting will be performed!");
-    } else {
-        if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
-            let all_packages = tree.all_packages();
-            let bar = progressbars.bar();
-            bar.set_length(all_packages.len() as u64);
-            bar.set_message("Linting package scripts...");
+    } else if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
+        let all_packages = tree.all_packages();
+        let bar = progressbars.bar();
+        bar.set_length(all_packages.len() as u64);
+        bar.set_message("Linting package scripts...");
 
-            let iter = all_packages.into_iter();
-            let _ = crate::commands::util::lint_packages(iter, &linter, config, bar).await?;
-        } else {
-            warn!("No linter set in configuration, no script linting will be performed!");
-        }
+        let iter = all_packages.into_iter();
+        let _ = crate::commands::util::lint_packages(iter, &linter, config, bar).await?;
+    } else {
+        warn!("No linter set in configuration, no script linting will be performed!");
     } // linting
 
     tree.all_packages()
@@ -302,8 +299,10 @@ pub async fn build(repo_root: &Path,
         writeln!(outlock, "Packages created:")?;
     }
     artifacts.into_iter()
-        .map(|artifact| writeln!(outlock, "-> {}", staging_dir.join(artifact.path).display()).map_err(Error::from))
-        .collect::<Result<_>>()?;
+        .try_for_each(|artifact| {
+            writeln!(outlock, "-> {}", staging_dir.join(artifact.path).display())
+                .map_err(Error::from)
+        })?;
 
     let mut had_error = false;
     for (job_uuid, error) in errors {
@@ -334,7 +333,7 @@ pub async fn build(repo_root: &Path,
                     }
                     Ok(format!("#BUTIDO:PHASE:{}", p).bright_black())
                 },
-                LogItem::State(Ok(()))   => Ok(format!("#BUTIDO:STATE:OK").green()),
+                LogItem::State(Ok(()))   => Ok("#BUTIDO:STATE:OK".to_string().green()),
                 LogItem::State(Err(s))   => {
                     error_catched = true;
                     Ok(format!("#BUTIDO:STATE:ERR:{}", s).red())
@@ -352,10 +351,9 @@ pub async fn build(repo_root: &Path,
                     lines.len()
                 }
             })
-            .map(|(i, line)| {
+            .try_for_each(|(i, line)| {
                 writeln!(outlock, "{:>4} | {}", i, line).map_err(Error::from)
-            })
-            .collect::<Result<()>>()?;
+            })?;
 
         writeln!(outlock, "\n\n")?;
         if error_catched {

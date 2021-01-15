@@ -160,7 +160,7 @@ impl<'a> ScriptBuilder<'a> {
         }
     }
 
-    pub fn build(self, package: &Package, phaseorder: &Vec<PhaseName>, strict_mode: bool) -> Result<Script> {
+    pub fn build(self, package: &Package, phaseorder: &[PhaseName], strict_mode: bool) -> Result<Script> {
         let mut script = format!("{shebang}\n", shebang = self.shebang.0);
 
         for name in phaseorder {
@@ -180,7 +180,7 @@ impl<'a> ScriptBuilder<'a> {
                     name.as_str(),
                     ));
 
-                    script.push_str("\n");
+                    script.push('\n');
                 },
 
                 // TODO: Support path embedding
@@ -194,12 +194,12 @@ impl<'a> ScriptBuilder<'a> {
                     "#,
                     path = pb.display(),
                     name = name.as_str()));
-                    script.push_str("\n");
+                    script.push('\n');
                 },
 
                 None => {
                     script.push_str(&format!("# No script for phase: {name}", name = name.as_str()));
-                    script.push_str("\n");
+                    script.push('\n');
                 },
             }
         }

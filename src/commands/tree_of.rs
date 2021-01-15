@@ -28,7 +28,7 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, progressbars: Progr
         .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true))
         .map(|package| {
             let bar_tree_building = progressbars.bar();
-            let mut tree = Tree::new();
+            let mut tree = Tree::default();
             let _ = tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
             bar_tree_building.finish_with_message("Finished loading Tree");
             Ok(tree)

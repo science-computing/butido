@@ -90,7 +90,7 @@ impl Package {
         self.dependencies = dependencies;
     }
 
-    pub fn get_self_packaged_dependencies<'a>(&'a self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
+    pub fn get_self_packaged_dependencies(&self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + '_ {
         let build_iter = self.dependencies()
             .build()
             .iter()
@@ -105,7 +105,7 @@ impl Package {
 
         build_iter
             .chain(runtime_iter)
-            .unique_by(|res| res.as_ref().ok().map(|tpl| tpl.clone()))
+            .unique_by(|res| res.as_ref().ok().cloned())
     }
 }
 

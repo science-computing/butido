@@ -22,6 +22,8 @@ pub struct Source {
     url: Url,
     #[getset(get = "pub")]
     hash: SourceHash,
+    #[getset(get = "pub")]
+    download_manually: bool,
 }
 
 impl Source {

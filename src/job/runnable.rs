@@ -62,13 +62,13 @@ impl RunnableJob {
                 .package()
                 .dependencies()
                 .build()
-                .into_iter()
+                .iter()
                 .map(|dep| Self::build_resource(dep, merged_stores))
                 .chain({
                     job.package()
                         .dependencies()
                         .runtime()
-                        .into_iter()
+                        .iter()
                         .map(|dep| Self::build_resource(dep, merged_stores))
                 })
                 .collect::<futures::stream::FuturesUnordered<_>>()
@@ -90,14 +90,13 @@ impl RunnableJob {
             let _ = Self::env_resources(job.resources(), job.package().environment().as_ref())
                 .into_iter()
                 .inspect(|(name, _)| debug!("Checking: {}", name))
-                .map(|(name, _)| {
+                .try_for_each(|(name, _)| {
                     if !config.containers().allowed_env().contains(&name) {
                         Err(anyhow!("Environment variable name not allowed: {}", name))
                     } else {
                         Ok(())
                     }
                 })
-                .collect::<Result<()>>()
                 .with_context(|| anyhow!("Checking allowed variables for package {} {}", job.package().name(), job.package().version()))
                 .context("Checking allowed variable names")?;
         } else {
@@ -129,7 +128,7 @@ impl RunnableJob {
 
     /// Helper function to collect a list of resources and the result of package.environment() into
     /// a Vec of environment variables
-    fn env_resources(resources: &Vec<JobResource>, pkgenv: Option<&HashMap<EnvironmentVariableName, String>>)
+    fn env_resources(resources: &[JobResource], pkgenv: Option<&HashMap<EnvironmentVariableName, String>>)
         -> Vec<(EnvironmentVariableName, String)>
     {
         let iter = resources
@@ -184,7 +183,7 @@ impl RunnableJob {
                 warn!("Please investigate, this might be a BUG");
             }
 
-            Ok(JobResource::Artifact(found_dependency.clone()))
+            Ok(JobResource::Artifact(found_dependency))
         }
 
     }

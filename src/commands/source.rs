@@ -97,7 +97,7 @@ pub (in crate::commands) async fn verify_impl<'a, I>(packages: I, sc: &SourceCac
                 for cause in e.chain() {
                     let _ = writeln!(outlock, "{}", cause);
                 }
-                let _ = writeln!(outlock, "");
+                let _ = writeln!(outlock);
             },
             Ok(s) => {
                 let _ = writeln!(out.lock(), "{}", s);
@@ -118,7 +118,7 @@ pub async fn list_missing(_: &ArgMatches, config: &Configuration, repo: Reposito
     let mut outlock = out.lock();
 
     repo.packages()
-        .map(|p| {
+        .try_for_each(|p| {
             for source in sc.sources_for(p) {
                 if !source.exists() {
                     writeln!(outlock, "{} {} -> {}", p.name(), p.version(), source.path().display())?;
@@ -127,7 +127,6 @@ pub async fn list_missing(_: &ArgMatches, config: &Configuration, repo: Reposito
 
             Ok(())
         })
-        .collect()
 }
 
 pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
@@ -140,13 +139,14 @@ pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true))
-        .map(|p| {
+        .try_for_each(|p| {
             p.sources()
                 .iter()
-                .map(|(source_name, source)| writeln!(outlock, "{} {} -> {} = {}", p.name(), p.version(), source_name, source.url()).map_err(Error::from))
-                .collect()
+                .try_for_each(|(source_name, source)| {
+                    writeln!(outlock, "{} {} -> {} = {}", p.name(), p.version(), source_name, source.url())
+                        .map_err(Error::from)
+                })
         })
-        .collect()
 }
 
 pub async fn download(matches: &ArgMatches, config: &Configuration, repo: Repository, progressbars: ProgressBars) -> Result<()> {
@@ -167,6 +167,13 @@ pub async fn download(matches: &ArgMatches, config: &Configuration, repo: Reposi
                     let bar = multi.add(progressbars.spinner());
                     bar.set_message(&format!("Downloading {}", source.url()));
                     async move {
+                        if !source.exists() && source.download_manually() {
+                            return Err(anyhow!("Cannot download source that is marked for manual download"))
+                                .context(anyhow!("Creating source: {}", source.path().display()))
+                                .context(anyhow!("Downloading source: {}", source.url()))
+                                .map_err(Error::from)
+                        }
+
                         if source.exists() && !force {
                             Err(anyhow!("Source exists: {}", source.path().display()))
                         } else {

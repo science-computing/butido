@@ -41,14 +41,10 @@ struct Mapping {
 
 impl Tree {
 
-    pub fn new() -> Self {
-        Tree { root: Vec::new() }
-    }
-
     pub fn add_package(&mut self, p: Package, repo: &Repository, progress: ProgressBar) -> Result<()> {
         macro_rules! mk_add_package_tree {
             ($this:ident, $pack:ident, $repo:ident, $root:ident, $progress:ident) => {{
-                let mut subtree = Tree::new();
+                let mut subtree = Tree::default();
                 ($pack).get_self_packaged_dependencies()
                     .and_then_ok(|(name, constr)| {
                         trace!("Dependency: {:?}", name);
@@ -143,6 +139,12 @@ impl<'a> TreeItem for DisplayTree<'a> {
     }
 }
 
+impl Default for Tree {
+    fn default() -> Tree {
+        Tree { root: Vec::default() }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,7 +174,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::new();
+        let mut tree = Tree::default();
         let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
     }
@@ -199,7 +201,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::new();
+        let mut tree = Tree::default();
         let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
 
@@ -235,7 +237,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::new();
+        let mut tree = Tree::default();
         let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("a")));
@@ -326,7 +328,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::new();
+        let mut tree = Tree::default();
         let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("p1")));
@@ -497,7 +499,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::new();
+        let mut tree = Tree::default();
         let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("p1")));

@@ -12,7 +12,6 @@ use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::ops::Deref;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -88,7 +87,7 @@ impl Endpoint {
         match ep.endpoint_type() {
             crate::config::EndpointType::Http => {
                 shiplift::Uri::from_str(ep.uri())
-                    .map(|uri| shiplift::Docker::host(uri))
+                    .map(shiplift::Docker::host)
                     .with_context(|| anyhow!("Connecting to {}", ep.uri()))
                     .map_err(Error::from)
                     .map(|docker| {
@@ -152,7 +151,7 @@ impl Endpoint {
         }
     }
 
-    async fn check_images_available(imgs: &Vec<ImageName>, ep: &Endpoint) -> Result<()> {
+    async fn check_images_available(imgs: &[ImageName], ep: &Endpoint) -> Result<()> {
         use shiplift::ImageListOptions;
 
         trace!("Checking availability of images: {:?}", imgs);
@@ -187,7 +186,7 @@ impl Endpoint {
     }
 
 
-    pub async fn prepare_container<'a>(&'a self, job: RunnableJob, staging: Arc<RwLock<StagingStore>>) -> Result<PreparedContainer<'a>> {
+    pub async fn prepare_container(&self, job: RunnableJob, staging: Arc<RwLock<StagingStore>>) -> Result<PreparedContainer<'_>> {
         PreparedContainer::new(self, job, staging).await
     }
 
@@ -312,7 +311,7 @@ impl<'a> PreparedContainer<'a> {
 
     async fn copy_artifacts_to_container<'ca>(container: &Container<'ca>, job: &RunnableJob, staging: Arc<RwLock<StagingStore>>) -> Result<()> {
         job.resources()
-            .into_iter()
+            .iter()
             .filter_map(JobResource::artifact)
             .cloned()
             .map(|art| async {
@@ -484,14 +483,11 @@ impl<'a> ExecutedContainer<'a> {
                 let err = anyhow!("Error during container run:\n\tMessage: '{msg}'\n\tConnect using\n\n\t\t`docker --host {uri} exec -it {container_id} /bin/bash`\n\n\tto debug.",
                     container_id = self.create_info.id,
                     uri = self.endpoint.uri(),
-                    msg = msg.as_ref().map(String::deref).unwrap_or(""),
+                    msg = msg.as_deref().unwrap_or(""),
                     );
 
                 // error because the container errored
-                let conterr = Err(Error::from(err));
-
-                // Ok because the general process worked.
-                conterr
+                Err(err)
             },
 
             Some((true, _)) | None => {

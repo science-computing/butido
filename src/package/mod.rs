@@ -16,6 +16,7 @@ pub use dependency::*;
 mod name;
 pub use name::*;
 
+#[allow(clippy::module_inception)]
 mod package;
 pub use package::*;
 

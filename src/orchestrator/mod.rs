@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+#![allow(clippy::module_inception)]
 mod orchestrator;
 pub use orchestrator::*;
 

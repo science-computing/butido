@@ -44,7 +44,7 @@ impl Repository {
                 let is_hidden = de.path()
                     .file_name()
                     .and_then(|s| s.to_str())
-                    .map(|s| s.starts_with("."))
+                    .map(|s| s.starts_with('.'))
                     .unwrap_or(false);
 
                 if is_dir && !is_hidden {
@@ -52,7 +52,7 @@ impl Repository {
                 }
             }
 
-            return Ok(v)
+            Ok(v)
         }
 
         fn load_recursive(path: &Path, mut config: config::Config, progress: &indicatif::ProgressBar) -> Result<Vec<Result<Package>>> {

@@ -84,6 +84,10 @@ impl SourceEntry {
         self.package_source.url()
     }
 
+    pub fn download_manually(&self) -> bool {
+        *self.package_source.download_manually()
+    }
+
     pub async fn remove_file(&self) -> Result<()> {
         let p = self.source_file_path();
         tokio::fs::remove_file(&p).await?;

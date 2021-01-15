@@ -146,7 +146,7 @@ impl JobHandle {
         let package  = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
         let image    = dbmodels::Image::create_or_fetch(&self.db, self.job.image())?;
         let envs     = self.create_env_in_db()?;
-        let job_id   = self.job.uuid().clone();
+        let job_id   = *self.job.uuid();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let prepared_container = ep.prepare_container(self.job, self.staging_store.clone()).await?;
         let container_id       = prepared_container.create_info().id.clone();
@@ -197,7 +197,7 @@ impl JobHandle {
 
     /// Helper to create an error object with a nice message.
     fn create_job_run_error(job_id: &Uuid, package_name: &str, package_version: &str, endpoint_uri: &str, container_id: &str) -> anyhow::Error {
-        anyhow!(indoc::formatdoc!(r#"Error while running job 
+        anyhow!(indoc::formatdoc!(r#"Error while running job
             {job_id}
         for package
             {package_name} {package_version}
@@ -213,7 +213,7 @@ impl JobHandle {
             package_version = package_version,
             endpoint_uri    = endpoint_uri,
             container_id    = container_id,
-        )).into()
+        ))
     }
 
     fn create_env_in_db(&self) -> Result<Vec<dbmodels::EnvVar>> {
@@ -308,7 +308,6 @@ impl<'a> LogReceiver<'a> {
         };
         self.bar.finish_with_message(&finish_msg);
 
-        drop(self.bar);
         if let Some(mut lf) = logfile {
             let _ = lf.flush().await?;
         }

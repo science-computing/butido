@@ -62,7 +62,7 @@ impl<'a> OrchestratorSetup<'a> {
         let scheduler = EndpointScheduler::setup(self.endpoint_config, self.staging_store.clone(), self.database, self.submit.clone(), self.log_dir).await?;
 
         Ok(Orchestrator {
-            scheduler:     scheduler,
+            scheduler,
             progress_generator: self.progress_generator,
             merged_stores: MergedStores::new(self.release_store, self.staging_store),
             source_cache:  self.source_cache,
@@ -114,7 +114,7 @@ impl<'a> Orchestrator<'a> {
                 let bar = multibar.add(progress_generator.bar());
 
                 async {
-                    let uuid = runnable.uuid().clone();
+                    let uuid = *runnable.uuid();
                     Self::run_runnable(runnable, scheduler, bar)
                         .await
                         .map_err(|e| (uuid, e))
@@ -156,7 +156,7 @@ impl<'a> Orchestrator<'a> {
     }
 
     async fn run_runnable(runnable: RunnableJob, scheduler: &EndpointScheduler, bar: indicatif::ProgressBar) -> Result<Vec<Artifact>> {
-        let job_id = runnable.uuid().clone();
+        let job_id = *runnable.uuid();
         trace!("Runnable {} for package {}", job_id, runnable.package().name());
 
         let jobhandle = scheduler.schedule_job(runnable, bar).await?;

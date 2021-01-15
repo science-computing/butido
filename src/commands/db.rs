@@ -42,8 +42,8 @@ pub fn db(db_connection_config: DbConnectionConfig, config: &Configuration, matc
         Some(("submits", matches))    => submits(db_connection_config, matches),
         Some(("jobs", matches))       => jobs(db_connection_config, matches),
         Some(("job", matches))        => job(db_connection_config, config, matches),
-        Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
-        None             => return Err(anyhow!("No subcommand")),
+        Some((other, _))              => Err(anyhow!("Unknown subcommand: {}", other)),
+        None                          => Err(anyhow!("No subcommand")),
     }
 }
 
@@ -257,21 +257,19 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
             .chain(submits_for_pkg.into_iter())
             .map(submit_to_vec)
             .collect::<Vec<_>>()
+    } else if let Some(pkgname) = matches.value_of("for_pkg") {
+        // Get all submits _for_ the package
+        submits_for(pkgname)?
+            .into_iter()
+            .map(submit_to_vec)
+            .collect::<Vec<_>>()
     } else {
-        if let Some(pkgname) = matches.value_of("for_pkg") {
-            // Get all submits _for_ the package
-            submits_for(pkgname)?
-                .into_iter()
-                .map(submit_to_vec)
-                .collect::<Vec<_>>()
-        } else {
-            // default: Get all submits
-            schema::submits::table
-                .load::<models::Submit>(&conn)?
-                .into_iter()
-                .map(submit_to_vec)
-                .collect::<Vec<_>>()
-        }
+        // default: Get all submits
+        schema::submits::table
+            .load::<models::Submit>(&conn)?
+            .into_iter()
+            .map(submit_to_vec)
+            .collect::<Vec<_>>()
     };
 
     if data.is_empty() {
@@ -386,7 +384,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
                 data.3.version.to_string(),
                 data.2.name.to_string(),
                 data.4.name.to_string(),
-                data.0.container_hash.to_string(),
+                data.0.container_hash,
             ]
         ];
         display_data(hdrs, data, csv)
@@ -477,7 +475,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
                     LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
                     LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
                     LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
-                    LogItem::State(Ok(()))   => Ok(format!("#BUTIDO:STATE:OK").green()),
+                    LogItem::State(Ok(()))   => Ok("#BUTIDO:STATE:OK".to_string().green()),
                     LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
                 })
                 .collect::<Result<Vec<_>>>()?
@@ -500,11 +498,10 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
 
 fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
     vec.into_iter()
-        .map(|name| {
-            let mut column = ascii_table::Column::default();
-            column.header  = name.into();
-            column.align   = ascii_table::Align::Left;
-            column
+        .map(|name| ascii_table::Column {
+            header: name.into(),
+            align: ascii_table::Align::Left,
+            ..Default::default()
         })
         .collect()
 }
@@ -531,30 +528,29 @@ fn display_data<D: Display>(headers: Vec<ascii_table::Column>, data: Vec<Vec<D>>
              .and_then(|t| String::from_utf8(t).map_err(Error::from))
              .and_then(|text| writeln!(lock, "{}", text).map_err(Error::from))
 
-    } else {
-        if atty::is(atty::Stream::Stdout) {
-            let mut ascii_table = ascii_table::AsciiTable::default();
-
-            ascii_table.max_width = terminal_size::terminal_size()
+    } else if atty::is(atty::Stream::Stdout) {
+        let mut ascii_table = ascii_table::AsciiTable {
+            columns: Default::default(),
+            max_width: terminal_size::terminal_size()
                 .map(|tpl| tpl.0.0 as usize) // an ugly interface indeed!
-                .unwrap_or(80);
+                .unwrap_or(80),
+        };
 
-            headers.into_iter()
-                .enumerate()
-                .for_each(|(i, c)| {
-                    ascii_table.columns.insert(i, c);
-                });
+        headers.into_iter()
+            .enumerate()
+            .for_each(|(i, c)| {
+                ascii_table.columns.insert(i, c);
+            });
 
-            ascii_table.print(data);
-            Ok(())
-        } else {
-            let out = std::io::stdout();
-            let mut lock = out.lock();
-            for list in data {
-                writeln!(lock, "{}", list.iter().map(|d| d.to_string()).join(" "))?;
-            }
-            Ok(())
+        ascii_table.print(data);
+        Ok(())
+    } else {
+        let out = std::io::stdout();
+        let mut lock = out.lock();
+        for list in data {
+            writeln!(lock, "{}", list.iter().map(|d| d.to_string()).join(" "))?;
         }
+        Ok(())
     }
 }
 

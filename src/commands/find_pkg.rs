@@ -26,6 +26,7 @@ pub async fn find_pkg(matches: &ArgMatches, config: &Configuration, repo: Reposi
         .value_of("package_name_regex")
         .map(regex::RegexBuilder::new)
         .map(|mut builder| {
+            #[allow(clippy::identity_op)]
             builder.size_limit(1 * 1024 * 1024); // max size for the regex is 1MB. Should be enough for everyone
             builder.build()
                 .with_context(|| anyhow!("Failed to build regex from '{}'", matches.value_of("package_name_regex").unwrap()))
