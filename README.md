@@ -1,7 +1,7 @@
 # BUTIDO
 
 "butido" could stand for "but i do", "BUild Things In DOcker" or
-"Better Universal Task Instrumentation Docker Obersavtor".
+"Better Universal Task Instrumentation Docker Observator".
 
 Anyways, it is a tool for building packages for linux distributions in docker
 and it does not make assumptions about the build procedure itself (and thus can
