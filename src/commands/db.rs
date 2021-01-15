@@ -245,42 +245,54 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::jobs::dsl;
 
     let csv  = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "submit uuid", "job uuid", "time", "endpoint", "success", "package", "version"]);
+    let hdrs = mk_header(vec!["id", "submit uuid", "job uuid", "time", "endpoint", "success", "package", "version", "Env Name", "Env Value"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let jobs = matches.value_of("submit_uuid")
         .map(uuid::Uuid::parse_str)
         .transpose()?
         .map(|submit_uuid| {
-            let submit = models::Submit::with_id(&conn, &submit_uuid)?;
-
-            models::Job::belonging_to(&submit)
+            let sel = schema::jobs::table
                 .inner_join(schema::submits::table)
                 .inner_join(schema::endpoints::table)
                 .inner_join(schema::packages::table)
-                .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)
-                .map_err(Error::from)
+                .left_outer_join(schema::job_envs::table.inner_join(schema::envvars::table))
+                .filter(schema::submits::uuid.eq(&submit_uuid));
+
+            if let Some((env_name, env_value)) = matches.value_of("filter_env").map(crate::util::env::parse_to_env).transpose()? {
+                sel.filter({
+                        use crate::diesel::BoolExpressionMethods;
+
+                        schema::envvars::dsl::name
+                            .eq(env_name.as_ref())
+                            .and(schema::envvars::dsl::value.eq(env_value))
+                    })
+                    .load::<(models::Job, models::Submit, models::Endpoint, models::Package, Option<(models::JobEnv, models::EnvVar)>)>(&conn)
+                    .map_err(Error::from)
+            } else {
+                sel.load::<(models::Job, models::Submit, models::Endpoint, models::Package, Option<(models::JobEnv, models::EnvVar)>)>(&conn)
+                    .map_err(Error::from)
+            }
         })
         .unwrap_or_else(|| {
             dsl::jobs
                 .inner_join(crate::schema::submits::table)
                 .inner_join(crate::schema::endpoints::table)
                 .inner_join(crate::schema::packages::table)
-                .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)
+                .left_outer_join(schema::job_envs::table.inner_join(schema::envvars::table))
+                .load::<(models::Job, models::Submit, models::Endpoint, models::Package, Option<(models::JobEnv, models::EnvVar)>)>(&conn)
                 .map_err(Error::from)
         })?;
 
     let data = jobs.into_iter()
-        .map(|(job, submit, ep, package)| {
+        .map(|(job, submit, ep, package, o_env)| {
             let success = crate::log::ParsedLog::build_from(&job.log_text)?
                 .is_successfull()
-                .map(|b| if b {
-                    String::from("yes")
-                } else {
-                    String::from("no")
-                })
+                .map(|b| if b { "yes" } else { "no" })
+                .map(String::from)
                 .unwrap_or_else(|| String::from("unknown"));
 
-            Ok(vec![format!("{}", job.id), submit.uuid.to_string(), job.uuid.to_string(), submit.submit_time.to_string(), ep.name, success, package.name, package.version])
+            let env = o_env.map(|tpl| (tpl.1.name, tpl.1.value)).unwrap_or_default();
+            Ok(vec![format!("{}", job.id), submit.uuid.to_string(), job.uuid.to_string(), submit.submit_time.to_string(), ep.name, success, package.name, package.version, env.0, env.1])
         })
         .collect::<Result<Vec<_>>>()?;
 

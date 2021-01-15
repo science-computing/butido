@@ -117,13 +117,7 @@ pub async fn build(repo_root: &Path,
 
     let additional_env = matches.values_of("env")
         .unwrap_or_default()
-        .map(|s| {
-            let v = s.split("=").collect::<Vec<_>>();
-            Ok((
-                 EnvironmentVariableName::from(*v.get(0).ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?),
-                 String::from(*v.get(1).ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?)
-            ))
-        })
+        .map(crate::util::env::parse_to_env)
         .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
 
     let packages = if let Some(pvers) = pvers {
