@@ -257,21 +257,19 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
             .chain(submits_for_pkg.into_iter())
             .map(submit_to_vec)
             .collect::<Vec<_>>()
+    } else if let Some(pkgname) = matches.value_of("for_pkg") {
+        // Get all submits _for_ the package
+        submits_for(pkgname)?
+            .into_iter()
+            .map(submit_to_vec)
+            .collect::<Vec<_>>()
     } else {
-        if let Some(pkgname) = matches.value_of("for_pkg") {
-            // Get all submits _for_ the package
-            submits_for(pkgname)?
-                .into_iter()
-                .map(submit_to_vec)
-                .collect::<Vec<_>>()
-        } else {
-            // default: Get all submits
-            schema::submits::table
-                .load::<models::Submit>(&conn)?
-                .into_iter()
-                .map(submit_to_vec)
-                .collect::<Vec<_>>()
-        }
+        // default: Get all submits
+        schema::submits::table
+            .load::<models::Submit>(&conn)?
+            .into_iter()
+            .map(submit_to_vec)
+            .collect::<Vec<_>>()
     };
 
     if data.is_empty() {
