@@ -68,7 +68,7 @@ impl RunnableJob {
                     job.package()
                         .dependencies()
                         .runtime()
-                        .into_iter()
+                        .iter()
                         .map(|dep| Self::build_resource(dep, merged_stores))
                 })
                 .collect::<futures::stream::FuturesUnordered<_>>()
