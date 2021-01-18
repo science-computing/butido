@@ -47,6 +47,7 @@ use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
 
+/// Implementation of the "build" subcommand
 #[allow(clippy::too_many_arguments)]
 pub async fn build(repo_root: &Path,
                matches: &ArgMatches,

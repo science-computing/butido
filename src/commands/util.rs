@@ -22,11 +22,13 @@ use crate::package::PhaseName;
 use crate::package::ScriptBuilder;
 use crate::package::Shebang;
 
+/// Helper for getting a boolean value by name form the argument object
 pub fn getbool(m: &ArgMatches, name: &str, cmp: &str) -> bool {
     // unwrap is safe here because clap is configured with default values
     m.values_of(name).unwrap().any(|v| v == cmp)
 }
 
+/// Helper function to lint all packages in an interator
 pub async fn lint_packages<'a, I>(iter: I, linter: &Path, config: &Configuration, bar: indicatif::ProgressBar) -> Result<()>
     where I: Iterator<Item = &'a Package> + 'a
 {

@@ -17,6 +17,7 @@ use crate::config::*;
 use crate::package::PackageName;
 use crate::repository::Repository;
 
+/// Implementation of the "dependencies_of" subcommand
 pub async fn dependencies_of(matches: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
     use filters::filter::Filter;
 

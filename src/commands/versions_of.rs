@@ -16,6 +16,7 @@ use log::trace;
 use crate::package::PackageName;
 use crate::repository::Repository;
 
+/// Implementation of the "versions_of" subcommand
 pub async fn versions_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
     use filters::filter::Filter;
     use std::io::Write;

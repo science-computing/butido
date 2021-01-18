@@ -20,6 +20,7 @@ use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 use crate::util::progress::ProgressBars;
 
+/// Implementation of the "lint" subcommand
 pub async fn lint(repo_path: &Path, matches: &ArgMatches, progressbars: ProgressBars, config: &Configuration, repo: Repository) -> Result<()> {
     let linter = crate::ui::find_linter_command(repo_path, config)?
         .ok_or_else(|| anyhow!("No linter command found"))?;

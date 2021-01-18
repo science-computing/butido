@@ -19,6 +19,7 @@ use crate::config::*;
 use crate::package::PackageName;
 use crate::repository::Repository;
 
+/// Implementation of the "what_depends" subcommand
 pub async fn what_depends(matches: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
     use filters::failable::filter::FailableFilter;
 

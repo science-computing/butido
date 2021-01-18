@@ -19,6 +19,7 @@ use crate::config::Configuration;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
 
+/// Implementation of the "find_pkg" subcommand
 pub async fn find_pkg(matches: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
     use std::io::Write;
 

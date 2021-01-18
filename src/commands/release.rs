@@ -22,6 +22,7 @@ use crate::db::models as dbmodels;
 use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
 
+/// Implementation of the "release" subcommand
 pub async fn release(db_connection_config: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
         return Err(anyhow!("Release directory does not exist or does not point to directory: {}", config.releases_directory().display()))

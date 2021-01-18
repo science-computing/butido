@@ -29,6 +29,7 @@ use crate::repository::Repository;
 use crate::source::*;
 use crate::util::progress::ProgressBars;
 
+/// Implementation of the "source" subcommand
 pub async fn source(matches: &ArgMatches, config: &Configuration, repo: Repository, progressbars: ProgressBars) -> Result<()> {
     match matches.subcommand() {
         Some(("verify", matches))       => verify(matches, config, repo, progressbars).await,

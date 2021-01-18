@@ -19,6 +19,7 @@ use crate::repository::Repository;
 use crate::package::Tree;
 use crate::util::progress::ProgressBars;
 
+/// Implementation of the "tree_of" subcommand
 pub async fn tree_of(matches: &ArgMatches, repo: Repository, progressbars: ProgressBars) -> Result<()> {
     let pname = matches.value_of("package_name").map(String::from).map(PackageName::from);
     let pvers = matches.value_of("package_version").map(String::from).map(PackageVersionConstraint::new).transpose()?;

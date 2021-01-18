@@ -16,6 +16,7 @@ use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
 
+/// Implementation of the "env_of" subcommand
 pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
     use filters::filter::Filter;
     use std::io::Write;

@@ -33,6 +33,7 @@ use crate::log::LogItem;
 use crate::package::Script;
 use crate::schema;
 
+/// Implementation of the "db" subcommand
 pub fn db(db_connection_config: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
         Some(("cli", matches))        => cli(db_connection_config, matches),
