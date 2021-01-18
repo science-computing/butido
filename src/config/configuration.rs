@@ -12,6 +12,7 @@ use std::ops::Deref;
 
 use crate::config::NotValidatedConfiguration;
 
+/// A valid configuration (validated via NotValidatedConfiguration::validate())
 #[derive(Debug)]
 pub struct Configuration {
     pub (in crate::config) inner: NotValidatedConfiguration,

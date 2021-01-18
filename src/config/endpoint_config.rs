@@ -11,14 +11,18 @@
 use getset::{CopyGetters, Getters};
 use serde::Deserialize;
 
+/// Configuration of a single endpoint
 #[derive(Clone, Debug, Getters, CopyGetters, Deserialize)]
 pub struct Endpoint {
+    /// A human-readable name of the endpoint
     #[getset(get = "pub")]
     name: String,
 
+    /// The URI where the endpoint is reachable
     #[getset(get = "pub")]
     uri: String,
 
+    /// The type of the endpoint
     #[getset(get = "pub")]
     endpoint_type: EndpointType,
 
@@ -35,6 +39,7 @@ pub struct Endpoint {
     maxjobs: usize,
 }
 
+/// The type of an endpoint
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub enum EndpointType {
     #[serde(rename  = "socket")]

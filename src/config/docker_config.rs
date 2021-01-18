@@ -14,6 +14,7 @@ use serde::Deserialize;
 use crate::config::Endpoint;
 use crate::util::docker::ImageName;
 
+/// Configuration of the docker daemon interfacing functionality
 #[derive(Debug, Getters, CopyGetters, Deserialize)]
 pub struct DockerConfig {
     /// The required docker version

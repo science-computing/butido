@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! This module contains default functions that are called by serde when deserializing the
+//! configuration and having to use default values.
+
 pub fn default_progress_format() -> String {
     String::from("[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}")
 }
