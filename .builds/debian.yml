@@ -1,0 +1,33 @@
+image: debian/buster
+sources:
+  - https://git.sr.ht/~matthiasbeyer/butido
+packages:
+  - libssl-dev
+  - openssl
+  - pkg-config
+  - libpq-dev
+tasks:
+  - install: curl https://sh.rustup.rs -sSf | sh -s -- -y
+  - prepare_lint: |
+      PATH="$HOME/.cargo/bin:$PATH" cargo install cargo-deny
+  - lint-licenses: |
+      cd butido
+      PATH="$HOME/.cargo/bin:$PATH" cargo deny check licenses
+  - lint-sources: |
+      cd butido
+      PATH="$HOME/.cargo/bin:$PATH" cargo deny check sources
+  - build: |
+      cd butido
+      PATH="$HOME/.cargo/bin:$PATH" cargo build --all --all-features
+  - test: |
+      cd butido
+      PATH="$HOME/.cargo/bin:$PATH" cargo test --all --all-features
+  - clippy: |
+      cd butido
+      PATH="$HOME/.cargo/bin:$PATH" rustup component add clippy
+      PATH="$HOME/.cargo/bin:$PATH" cargo clippy --all --all-targets --all-features -- -D warnings
+triggers:
+  - action: email
+    condition: always
+    to: mail@beyermatthias.de, matthias.beyer@atos.net
+

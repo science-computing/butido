@@ -29,7 +29,7 @@ pub struct Source {
 impl Source {
     #[cfg(test)]
     pub fn new(url: Url, hash: SourceHash) -> Self {
-        Source { url, hash }
+        Source { url, hash, download_manually: false }
     }
 }
 

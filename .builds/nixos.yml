@@ -1,0 +1,20 @@
+image: nixos/20.09
+repositories:
+  nixpkgs: https://nixos.org/channels/nixos-20.09
+sources:
+  - https://git.sr.ht/~matthiasbeyer/butido
+tasks:
+  - install: |
+      cd butido
+      nix-shell ./.builds/ci.nix --run "echo nix-shell ready"
+  - build: |
+      cd butido
+      nix-shell ./.builds/ci.nix --run "cargo build --all --all-features"
+  - test: |
+      cd butido
+      nix-shell ./.builds/ci.nix --run "cargo test --all --all-features"
+triggers:
+  - action: email
+    condition: always
+    to: mail@beyermatthias.de, matthias.beyer@atos.net
+

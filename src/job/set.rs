@@ -135,7 +135,7 @@ mod tests {
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress.clone());
+        let r = tree.add_package(p1, &repo, progress);
         assert!(r.is_ok());
 
         let image  = ImageName::from(String::from("test"));
@@ -183,7 +183,7 @@ mod tests {
         let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
 
-        let r = tree.add_package(p2, &repo, progress.clone());
+        let r = tree.add_package(p2, &repo, progress);
         assert!(r.is_ok());
 
         let image  = ImageName::from(String::from("test"));
@@ -236,7 +236,7 @@ mod tests {
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress.clone());
+        let r = tree.add_package(p1, &repo, progress);
         assert!(r.is_ok());
 
         let image  = ImageName::from(String::from("test"));
