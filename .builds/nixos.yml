@@ -6,13 +6,13 @@ sources:
 tasks:
   - install: |
       cd butido
-      nix-shell ./shell.nix --run "echo nix-shell ready"
+      nix-shell ./.builds/ci.nix --run "echo nix-shell ready"
   - build: |
       cd butido
-      nix-shell ./shell.nix --run "cargo build --all --all-features"
+      nix-shell ./.builds/ci.nix --run "cargo build --all --all-features"
   - test: |
       cd butido
-      nix-shell ./shell.nix --run "cargo test --all --all-features"
+      nix-shell ./.builds/ci.nix --run "cargo test --all --all-features"
 triggers:
   - action: email
     condition: always
