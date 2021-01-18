@@ -151,7 +151,7 @@ impl RunnableJob {
             .map(|(k, v)| (k.clone(), v.clone()));
 
         if let Some(hm) = pkgenv {
-            iter.chain({ hm.iter().map(|(k, v)| (k.clone(), v.clone())) })
+            iter.chain(hm.iter().map(|(k, v)| (k.clone(), v.clone())))
                 .collect()
         } else {
             iter.collect()

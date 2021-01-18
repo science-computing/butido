@@ -69,7 +69,7 @@ impl EndpointScheduler {
 
         for cfg in endpoints.into_iter() {
             unordered
-                .push({ Endpoint::setup(cfg).map(|r_ep| r_ep.map(RwLock::new).map(Arc::new)) });
+                .push(Endpoint::setup(cfg).map(|r_ep| r_ep.map(RwLock::new).map(Arc::new)));
         }
 
         unordered.collect().await

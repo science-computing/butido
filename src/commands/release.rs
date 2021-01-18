@@ -56,7 +56,7 @@ pub async fn release(
 
     let arts = {
         let sel = crate::schema::artifacts::dsl::artifacts
-            .inner_join({ crate::schema::jobs::table.inner_join(crate::schema::packages::table) })
+            .inner_join(crate::schema::jobs::table.inner_join(crate::schema::packages::table))
             .filter(crate::schema::jobs::submit_id.eq(submit.id))
             .left_outer_join(crate::schema::releases::table) // not released
             .select(crate::schema::artifacts::all_columns);
