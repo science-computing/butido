@@ -5,6 +5,7 @@ packages:
   - libssl-dev
   - openssl
   - pkg-config
+  - libpq-dev
 tasks:
   - install: curl https://sh.rustup.rs -sSf | sh -s -- -y
   - prepare_lint: |
