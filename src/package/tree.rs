@@ -175,7 +175,7 @@ mod tests {
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress.clone());
+        let r = tree.add_package(p1, &repo, progress);
         assert!(r.is_ok());
     }
 
@@ -205,7 +205,7 @@ mod tests {
         let r = tree.add_package(p1, &repo, progress.clone());
         assert!(r.is_ok());
 
-        let r = tree.add_package(p2, &repo, progress.clone());
+        let r = tree.add_package(p2, &repo, progress);
         assert!(r.is_ok());
     }
 
@@ -225,7 +225,7 @@ mod tests {
             let name = "b";
             let vers = "2";
             let pack = package(name, vers, "https://rust-lang.org", "124");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
@@ -238,7 +238,7 @@ mod tests {
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress.clone());
+        let r = tree.add_package(p1, &repo, progress);
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("a")));
         assert!(tree.packages().all(|p| *p.version() == pversion("1")));
@@ -288,14 +288,14 @@ mod tests {
                 let ds = Dependencies::with_runtime_dependencies(vec![d1]);
                 pack.set_dependencies(ds);
             }
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
             let name = "p3";
             let vers = "3";
             let pack = package(name, vers, "https://rust-lang.org", "125");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
@@ -308,28 +308,28 @@ mod tests {
                 let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
                 pack.set_dependencies(ds);
             }
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
             let name = "p5";
             let vers = "5";
             let pack = package(name, vers, "https://rust-lang.org", "129");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
             let name = "p6";
             let vers = "66.6.6";
             let pack = package(name, vers, "https://rust-lang.org", "666");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress.clone());
+        let r = tree.add_package(p1, &repo, progress);
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("p1")));
         assert!(tree.packages().all(|p| *p.version() == pversion("1")));
@@ -413,7 +413,7 @@ mod tests {
                 let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
                 pack.set_dependencies(ds);
             }
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
@@ -425,28 +425,28 @@ mod tests {
                 let ds = Dependencies::with_runtime_dependencies(vec![d1]);
                 pack.set_dependencies(ds);
             }
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
             let name = "p3";
             let vers = "3";
             let pack = package(name, vers, "https://rust-lang.org", "125");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
             let name = "p3";
             let vers = "1";
             let pack = package(name, vers, "https://rust-lang.org", "128");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
             let name = "p3";
             let vers = "3.1";
             let pack = package(name, vers, "https://rust-lang.org", "118");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
@@ -459,7 +459,7 @@ mod tests {
                 let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
                 pack.set_dependencies(ds);
             }
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
@@ -472,35 +472,35 @@ mod tests {
                 let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
                 pack.set_dependencies(ds);
             }
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
             let name = "p5";
             let vers = "5";
             let pack = package(name, vers, "https://rust-lang.org", "129");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
             let name = "p6";
             let vers = "66.6.6";
             let pack = package(name, vers, "https://rust-lang.org", "666");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         {
             let name = "p6";
             let vers = "66.6.8";
             let pack = package(name, vers, "https://rust-lang.org", "666");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
+            btree.insert((pname(name), pversion(vers)), pack);
         }
 
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
         let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress.clone());
+        let r = tree.add_package(p1, &repo, progress);
         assert!(r.is_ok());
         assert!(tree.packages().all(|p| *p.name() == pname("p1")));
         assert!(tree.packages().all(|p| *p.version() == pversion("1")));
