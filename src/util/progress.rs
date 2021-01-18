@@ -45,6 +45,4 @@ impl ProgressBars {
             bar
         }
     }
-
 }
-

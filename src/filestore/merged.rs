@@ -40,14 +40,25 @@ impl MergedStores {
         MergedStores { release, staging }
     }
 
-    pub async fn get_artifact_by_name_and_version(&self, name: &PackageName, version: &PackageVersionConstraint) -> Result<Vec<Artifact>> {
-        let v = self.staging
+    pub async fn get_artifact_by_name_and_version(
+        &self,
+        name: &PackageName,
+        version: &PackageVersionConstraint,
+    ) -> Result<Vec<Artifact>> {
+        let v = self
+            .staging
             .read()
             .await
             .0
             .values()
             .filter(|a| {
-                trace!("Checking {:?} == {:?} && {:?} == {:?}", a.name(), name, version, a.version());
+                trace!(
+                    "Checking {:?} == {:?} && {:?} == {:?}",
+                    a.name(),
+                    name,
+                    version,
+                    a.version()
+                );
                 a.name() == name && version.matches(a.version())
             })
             .cloned()
@@ -68,5 +79,4 @@ impl MergedStores {
             Ok(v)
         }
     }
-
 }

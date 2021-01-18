@@ -8,10 +8,21 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use serde::Serialize;
 use serde::Deserialize;
+use serde::Serialize;
 
-#[derive(parse_display::Display, Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(
+    parse_display::Display,
+    Serialize,
+    Deserialize,
+    Clone,
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+)]
 #[serde(transparent)]
 #[display("{0}")]
 pub struct EnvironmentVariableName(String);
@@ -38,4 +49,3 @@ pub mod progress;
 pub fn stdout_is_pipe() -> bool {
     !atty::is(atty::Stream::Stdout)
 }
-

@@ -22,7 +22,11 @@ pub async fn versions_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
     use std::io::Write;
 
     let package_filter = {
-        let name = matches.value_of("package_name").map(String::from).map(PackageName::from).unwrap();
+        let name = matches
+            .value_of("package_name")
+            .map(String::from)
+            .map(PackageName::from)
+            .unwrap();
         trace!("Checking for package with name = {}", name);
 
         crate::util::filters::build_package_filter_by_name(name)
@@ -36,5 +40,3 @@ pub async fn versions_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
         .collect::<Result<Vec<_>>>()
         .map(|_| ())
 }
-
-

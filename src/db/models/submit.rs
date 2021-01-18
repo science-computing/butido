@@ -13,19 +13,19 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use chrono::NaiveDateTime;
-use diesel::PgConnection;
 use diesel::prelude::*;
+use diesel::PgConnection;
 
 use crate::db::models::GitHash;
 use crate::db::models::Image;
 use crate::db::models::Package;
-use crate::schema::submits::*;
 use crate::schema::submits;
+use crate::schema::submits::*;
 
 #[derive(Clone, Debug, Identifiable, Queryable, Associations)]
 #[belongs_to(Package, foreign_key = "requested_package_id")]
 #[belongs_to(Image, foreign_key = "requested_image_id")]
-#[table_name="submits"]
+#[table_name = "submits"]
 pub struct Submit {
     pub id: i32,
     pub uuid: ::uuid::Uuid,
@@ -37,7 +37,7 @@ pub struct Submit {
 }
 
 #[derive(Insertable)]
-#[table_name="submits"]
+#[table_name = "submits"]
 struct NewSubmit<'a> {
     pub uuid: &'a ::uuid::Uuid,
     pub submit_time: &'a NaiveDateTime,
@@ -48,15 +48,15 @@ struct NewSubmit<'a> {
 }
 
 impl Submit {
-    pub fn create(database_connection: &PgConnection,
-                  t: &crate::package::Tree,
-                  submit_datetime: &NaiveDateTime,
-                  submit_id: &::uuid::Uuid,
-                  requested_image: &Image,
-                  requested_package: &Package,
-                  repo_hash: &GitHash)
-        -> Result<Submit>
-    {
+    pub fn create(
+        database_connection: &PgConnection,
+        t: &crate::package::Tree,
+        submit_datetime: &NaiveDateTime,
+        submit_id: &::uuid::Uuid,
+        requested_image: &Image,
+        requested_package: &Package,
+        repo_hash: &GitHash,
+    ) -> Result<Submit> {
         let tree_json = serde_json::to_value(t)
             .context("Converting tree to JSON string")
             .with_context(|| anyhow!("Tree = {:#?}", t))?;
@@ -86,6 +86,4 @@ impl Submit {
             .context("Loading submit")
             .map_err(Error::from)
     }
-
 }
-

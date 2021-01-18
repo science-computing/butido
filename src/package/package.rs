@@ -17,14 +17,14 @@ use itertools::Itertools;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::package::ParseDependency;
 use crate::package::dependency::*;
 use crate::package::name::*;
 use crate::package::source::*;
 use crate::package::version::*;
-use crate::package::{PhaseName, Phase};
-use crate::util::EnvironmentVariableName;
+use crate::package::ParseDependency;
+use crate::package::{Phase, PhaseName};
 use crate::util::docker::ImageName;
+use crate::util::EnvironmentVariableName;
 
 #[derive(Clone, Serialize, Deserialize, Getters)]
 pub struct Package {
@@ -76,9 +76,14 @@ pub struct Package {
 }
 
 impl Package {
-
     #[cfg(test)]
-    pub fn new(name: PackageName, version: PackageVersion, version_is_semver: bool, sources: HashMap<String, Source>, dependencies: Dependencies) -> Self {
+    pub fn new(
+        name: PackageName,
+        version: PackageVersion,
+        version_is_semver: bool,
+        sources: HashMap<String, Source>,
+        dependencies: Dependencies,
+    ) -> Self {
         Package {
             name,
             version,
@@ -100,14 +105,18 @@ impl Package {
         self.dependencies = dependencies;
     }
 
-    pub fn get_self_packaged_dependencies(&self) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + '_ {
-        let build_iter = self.dependencies()
+    pub fn get_self_packaged_dependencies(
+        &self,
+    ) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + '_ {
+        let build_iter = self
+            .dependencies()
             .build()
             .iter()
             .cloned()
             .map(|d| d.parse_as_name_and_version());
 
-        let runtime_iter = self.dependencies()
+        let runtime_iter = self
+            .dependencies()
             .runtime()
             .iter()
             .cloned()
@@ -124,7 +133,12 @@ impl std::fmt::Debug for Package {
         if self.patches().is_empty() {
             write!(f, "Package({:?}, {:?})", self.name(), self.version())
         } else {
-            write!(f, "Package({:?}, {:?} + patches)", self.name(), self.version())
+            write!(
+                f,
+                "Package({:?}, {:?} + patches)",
+                self.name(),
+                self.version()
+            )
         }
     }
 }
@@ -147,9 +161,7 @@ impl Ord for Package {
     }
 }
 
-impl Eq for Package {
-}
-
+impl Eq for Package {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PackageFlags {
@@ -189,12 +201,12 @@ impl Dependencies {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use url::Url;
-    use crate::package::Source;
-    use crate::package::SourceHash;
+    use crate::package::Dependencies;
     use crate::package::HashType;
     use crate::package::HashValue;
-    use crate::package::Dependencies;
+    use crate::package::Source;
+    use crate::package::SourceHash;
+    use url::Url;
 
     /// helper function for quick object construction
     pub fn pname(name: &str) -> PackageName {
@@ -208,18 +220,20 @@ pub mod tests {
 
     /// helper function for quick object construction
     pub fn package(name: &str, vers: &str, srcurl: &str, hash: &str) -> Package {
-        let name    = pname(name);
+        let name = pname(name);
         let version = pversion(vers);
         let version_is_semver = false;
         let sources = {
-            let url       = Url::parse(srcurl).unwrap();
+            let url = Url::parse(srcurl).unwrap();
             let hashvalue = HashValue::from(String::from(hash));
             let mut hm = HashMap::new();
-            hm.insert(String::from("src"), Source::new(url, SourceHash::new(HashType::Sha1, hashvalue)));
+            hm.insert(
+                String::from("src"),
+                Source::new(url, SourceHash::new(HashType::Sha1, hashvalue)),
+            );
             hm
         };
         let dependencies = Dependencies::empty();
         Package::new(name, version, version_is_semver, sources, dependencies)
     }
-
 }

@@ -10,8 +10,8 @@
 
 use std::path::Path;
 
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
 use clap::ArgMatches;
 use log::{error, info, trace};
 use tokio::stream::StreamExt;
@@ -29,8 +29,14 @@ pub fn getbool(m: &ArgMatches, name: &str, cmp: &str) -> bool {
 }
 
 /// Helper function to lint all packages in an interator
-pub async fn lint_packages<'a, I>(iter: I, linter: &Path, config: &Configuration, bar: indicatif::ProgressBar) -> Result<()>
-    where I: Iterator<Item = &'a Package> + 'a
+pub async fn lint_packages<'a, I>(
+    iter: I,
+    linter: &Path,
+    config: &Configuration,
+    bar: indicatif::ProgressBar,
+) -> Result<()>
+where
+    I: Iterator<Item = &'a Package> + 'a,
 {
     let shebang = Shebang::from(config.shebang().clone());
     let lint_results = iter
@@ -87,9 +93,12 @@ pub async fn lint_packages<'a, I>(iter: I, linter: &Path, config: &Configuration
 
     if !lint_ok {
         bar.finish_with_message("Linting errored");
-        return Err(anyhow!("Linting was not successful"))
+        return Err(anyhow!("Linting was not successful"));
     } else {
-        bar.finish_with_message(&format!("Finished linting {} package scripts", lint_results.len()));
+        bar.finish_with_message(&format!(
+            "Finished linting {} package scripts",
+            lint_results.len()
+        ));
         Ok(())
     }
 }
@@ -97,14 +106,29 @@ pub async fn lint_packages<'a, I>(iter: I, linter: &Path, config: &Configuration
 fn all_phases_available(pkg: &Package, available_phases: &[PhaseName]) -> Result<()> {
     let package_phasenames = pkg.phases().keys().collect::<Vec<_>>();
 
-    if let Some(phase) = package_phasenames.iter().find(|name| !available_phases.contains(name)) {
-        return Err(anyhow!("Phase '{}' available in {} {}, but not in config", phase.as_str(), pkg.name(), pkg.version()))
+    if let Some(phase) = package_phasenames
+        .iter()
+        .find(|name| !available_phases.contains(name))
+    {
+        return Err(anyhow!(
+            "Phase '{}' available in {} {}, but not in config",
+            phase.as_str(),
+            pkg.name(),
+            pkg.version()
+        ));
     }
 
-    if let Some(phase) = available_phases.iter().find(|name| !package_phasenames.contains(name)) {
-        return Err(anyhow!("Phase '{}' not configured in {} {}", phase.as_str(), pkg.name(), pkg.version()))
+    if let Some(phase) = available_phases
+        .iter()
+        .find(|name| !package_phasenames.contains(name))
+    {
+        return Err(anyhow!(
+            "Phase '{}' not configured in {} {}",
+            phase.as_str(),
+            pkg.name(),
+            pkg.version()
+        ));
     }
 
     Ok(())
 }
-

@@ -8,14 +8,14 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::ffi::OsStr;
 use std::path::Path;
 use std::path::PathBuf;
-use std::ffi::OsStr;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::Context;
 use resiter::AndThen;
 use resiter::Map;
 
@@ -28,10 +28,16 @@ impl StoreRoot {
             if root.is_dir() {
                 Ok(StoreRoot(root))
             } else {
-                Err(anyhow!("StoreRoot path does not point to directory: {}", root.display()))
+                Err(anyhow!(
+                    "StoreRoot path does not point to directory: {}",
+                    root.display()
+                ))
             }
         } else {
-            Err(anyhow!("StoreRoot path is not absolute: {}", root.display()))
+            Err(anyhow!(
+                "StoreRoot path is not absolute: {}",
+                root.display()
+            ))
         }
     }
 
@@ -67,11 +73,11 @@ impl StoreRoot {
         FullArtifactPath(self, ap)
     }
 
-    pub (in crate::filestore) fn is_file(&self, subpath: &Path) -> bool {
+    pub(in crate::filestore) fn is_file(&self, subpath: &Path) -> bool {
         self.0.join(subpath).is_file()
     }
 
-    pub (in crate::filestore) fn is_dir(&self, subpath: &Path) -> bool {
+    pub(in crate::filestore) fn is_dir(&self, subpath: &Path) -> bool {
         self.0.join(subpath).is_dir()
     }
 
@@ -79,7 +85,9 @@ impl StoreRoot {
         self.0.display()
     }
 
-    pub (in crate::filestore) fn find_artifacts_recursive(&self) -> impl Iterator<Item = Result<ArtifactPath>> {
+    pub(in crate::filestore) fn find_artifacts_recursive(
+        &self,
+    ) -> impl Iterator<Item = Result<ArtifactPath>> {
         walkdir::WalkDir::new(&self.0)
             .follow_links(false)
             .into_iter()
@@ -89,12 +97,11 @@ impl StoreRoot {
             .and_then_ok(ArtifactPath::new)
     }
 
-    pub (in crate::filestore) fn unpack_archive_here<R>(&self, mut ar: tar::Archive<R>) -> Result<()>
-        where R: std::io::Read
+    pub(in crate::filestore) fn unpack_archive_here<R>(&self, mut ar: tar::Archive<R>) -> Result<()>
+    where
+        R: std::io::Read,
     {
-        ar.unpack(&self.0)
-            .map_err(Error::from)
-            .map(|_| ())
+        ar.unpack(&self.0).map_err(Error::from).map(|_| ())
     }
 }
 
@@ -102,7 +109,7 @@ impl StoreRoot {
 pub struct ArtifactPath(PathBuf);
 
 impl ArtifactPath {
-    pub (in crate::filestore) fn new(p: PathBuf) -> Result<Self> {
+    pub(in crate::filestore) fn new(p: PathBuf) -> Result<Self> {
         if p.is_relative() {
             Ok(ArtifactPath(p))
         } else {
@@ -138,15 +145,15 @@ pub struct FullArtifactPath<'a>(&'a StoreRoot, &'a ArtifactPath);
 
 impl<'a> FullArtifactPath<'a> {
     fn joined(&self) -> PathBuf {
-        self.0.0.join(&self.1.0)
+        self.0 .0.join(&self.1 .0)
     }
 
     pub fn display(&self) -> FullArtifactPathDisplay<'a> {
         FullArtifactPathDisplay(self.0, self.1)
     }
 
-    pub (in crate::filestore) fn file_stem(&self) -> Option<&OsStr> {
-        self.1.0.file_stem()
+    pub(in crate::filestore) fn file_stem(&self) -> Option<&OsStr> {
+        self.1 .0.file_stem()
     }
 
     pub async fn read(self) -> Result<Vec<u8>> {
@@ -165,4 +172,3 @@ impl<'a> std::fmt::Display for FullArtifactPathDisplay<'a> {
         write!(fmt, "{}/{}", self.0.display(), self.1.display())
     }
 }
-

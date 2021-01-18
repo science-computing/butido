@@ -12,10 +12,10 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
 use crate::package::dependency::ParseDependency;
 use crate::package::dependency::StringEqual;
+use crate::package::PackageName;
+use crate::package::PackageVersionConstraint;
 
 /// A dependency that is packaged and is required during runtime
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -45,4 +45,3 @@ impl ParseDependency for Dependency {
         crate::package::dependency::parse_package_dependency_string_into_name_and_version(&self.0)
     }
 }
-

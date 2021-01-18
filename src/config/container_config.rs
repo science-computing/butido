@@ -17,7 +17,6 @@ use crate::util::EnvironmentVariableName;
 /// The configuration for the containers
 #[derive(Debug, CopyGetters, Getters, Deserialize)]
 pub struct ContainerConfig {
-
     /// check environment names whether they're allowed
     #[getset(get_copy = "pub")]
     check_env_names: bool,
@@ -26,4 +25,3 @@ pub struct ContainerConfig {
     #[getset(get = "pub")]
     allowed_env: Vec<EnvironmentVariableName>,
 }
-

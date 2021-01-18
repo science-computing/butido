@@ -13,8 +13,8 @@ use uuid::Uuid;
 
 use crate::job::JobResource;
 use crate::package::Package;
-use crate::package::Shebang;
 use crate::package::PhaseName;
+use crate::package::Shebang;
 use crate::util::docker::ImageName;
 
 /// A prepared, but not necessarily runnable, job configuration
@@ -22,27 +22,32 @@ use crate::util::docker::ImageName;
 pub struct Job {
     /// A unique name for the job, not necessarily human-readable
     #[getset(get = "pub")]
-    pub(in super) uuid: Uuid,
+    pub(super) uuid: Uuid,
 
     #[getset(get = "pub")]
-    pub(in super) package: Package,
+    pub(super) package: Package,
 
     #[getset(get = "pub")]
-    pub(in super) image: ImageName,
+    pub(super) image: ImageName,
 
     #[getset(get = "pub")]
-    pub(in super) script_shebang: Shebang,
+    pub(super) script_shebang: Shebang,
 
     #[getset(get = "pub")]
-    pub(in super) script_phases: Vec<PhaseName>,
+    pub(super) script_phases: Vec<PhaseName>,
 
     #[getset(get = "pub")]
-    pub(in super) resources: Vec<JobResource>,
+    pub(super) resources: Vec<JobResource>,
 }
 
 impl Job {
-
-    pub fn new(pkg: Package, script_shebang: Shebang, image: ImageName, phases: Vec<PhaseName>, resources: Vec<JobResource>) -> Self {
+    pub fn new(
+        pkg: Package,
+        script_shebang: Shebang,
+        image: ImageName,
+        phases: Vec<PhaseName>,
+        resources: Vec<JobResource>,
+    ) -> Self {
         let uuid = Uuid::new_v4();
 
         Job {
@@ -53,8 +58,5 @@ impl Job {
             script_phases: phases,
             resources,
         }
-
     }
-
 }
-

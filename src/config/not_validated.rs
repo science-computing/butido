@@ -8,17 +8,17 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::path::PathBuf;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use getset::Getters;
 use serde::Deserialize;
+use std::path::PathBuf;
 
+use crate::config::util::*;
 use crate::config::Configuration;
 use crate::config::ContainerConfig;
 use crate::config::DockerConfig;
-use crate::config::util::*;
 use crate::package::PhaseName;
 
 /// The configuration that is loaded from the filesystem
@@ -113,39 +113,52 @@ impl NotValidatedConfiguration {
             .context("Parsing version of crate (CARGO_PKG_VERSION) into semver::Version object")?;
 
         if !self.compatibility.matches(&crate_version) {
-            return Err(anyhow!("Configuration is not compatible to butido {}", crate_version))
+            return Err(anyhow!(
+                "Configuration is not compatible to butido {}",
+                crate_version
+            ));
         }
 
         // Error if linter is not a file
         if let Some(linter) = self.script_linter.as_ref() {
             if !linter.is_file() {
-                return Err(anyhow!("Lint script is not a file: {}", linter.display()))
+                return Err(anyhow!("Lint script is not a file: {}", linter.display()));
             }
         }
 
         // Error if staging_directory is not a directory
         if !self.staging_directory.is_dir() {
-            return Err(anyhow!("Not a directory: staging = {}", self.staging_directory.display()))
+            return Err(anyhow!(
+                "Not a directory: staging = {}",
+                self.staging_directory.display()
+            ));
         }
 
         // Error if releases_directory is not a directory
         if !self.releases_directory.is_dir() {
-            return Err(anyhow!("Not a directory: releases = {}", self.releases_directory.display()))
+            return Err(anyhow!(
+                "Not a directory: releases = {}",
+                self.releases_directory.display()
+            ));
         }
 
         // Error if source_cache_root is not a directory
         if !self.source_cache_root.is_dir() {
-            return Err(anyhow!("Not a directory: releases = {}", self.source_cache_root.display()))
+            return Err(anyhow!(
+                "Not a directory: releases = {}",
+                self.source_cache_root.display()
+            ));
         }
 
         // Error if there are no phases configured
         if self.available_phases.is_empty() {
-            return Err(anyhow!("No phases configured"))
+            return Err(anyhow!("No phases configured"));
         }
 
         // Error if script highlighting theme is not valid
         if let Some(configured_theme) = self.script_highlight_theme.as_ref() {
-            let allowed_theme_present = [ // from syntect
+            let allowed_theme_present = [
+                // from syntect
                 "base16-ocean.dark",
                 "base16-eighties.dark",
                 "base16-mocha.dark",
@@ -153,14 +166,15 @@ impl NotValidatedConfiguration {
                 "InspiredGitHub",
                 "Solarized (dark)",
                 "Solarized (light)",
-            ].iter().any(|allowed_theme| configured_theme == *allowed_theme);
+            ]
+            .iter()
+            .any(|allowed_theme| configured_theme == *allowed_theme);
 
             if !allowed_theme_present {
-                return Err(anyhow!("Theme not known: {}", configured_theme))
+                return Err(anyhow!("Theme not known: {}", configured_theme));
             }
         }
 
         Ok(Configuration { inner: self })
     }
 }
-

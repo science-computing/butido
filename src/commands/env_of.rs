@@ -22,9 +22,21 @@ pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
     use std::io::Write;
 
     let package_filter = {
-        let name       = matches.value_of("package_name").map(String::from).map(PackageName::from).unwrap();
-        let constraint = matches.value_of("package_version_constraint").map(String::from).map(PackageVersionConstraint::new).unwrap()?;
-        trace!("Checking for package with name = {} and version = {:?}", name, constraint);
+        let name = matches
+            .value_of("package_name")
+            .map(String::from)
+            .map(PackageName::from)
+            .unwrap();
+        let constraint = matches
+            .value_of("package_version_constraint")
+            .map(String::from)
+            .map(PackageVersionConstraint::new)
+            .unwrap()?;
+        trace!(
+            "Checking for package with name = {} and version = {:?}",
+            name,
+            constraint
+        );
 
         crate::util::filters::build_package_filter_by_name(name)
             .and(crate::util::filters::build_package_filter_by_version_constraint(constraint))
@@ -46,6 +58,3 @@ pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
             Ok(())
         })
 }
-
-
-

@@ -50,4 +50,3 @@ pub struct DockerConfig {
     #[getset(get = "pub")]
     endpoints: Vec<Endpoint>,
 }
-

@@ -11,10 +11,10 @@
 use std::fmt::Debug;
 use std::path::Path;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
 use log::trace;
@@ -25,7 +25,7 @@ use crate::filestore::path::StoreRoot;
 use crate::filestore::util::FileStoreImpl;
 
 // The implementation of this type must be available in the merged filestore.
-pub struct StagingStore(pub (in crate::filestore) FileStoreImpl);
+pub struct StagingStore(pub(in crate::filestore) FileStoreImpl);
 
 impl Debug for StagingStore {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
@@ -44,20 +44,26 @@ impl StagingStore {
     ///
     /// Returns a list of Artifacts that were written from the stream
     pub async fn write_files_from_tar_stream<S>(&mut self, stream: S) -> Result<Vec<ArtifactPath>>
-        where S: Stream<Item = Result<Vec<u8>>>
+    where
+        S: Stream<Item = Result<Vec<u8>>>,
     {
         use futures::stream::TryStreamExt;
 
         let dest = &self.0.root;
-        stream.try_concat()
+        stream
+            .try_concat()
             .await
             .and_then(|bytes| {
                 let mut archive = tar::Archive::new(&bytes[..]);
 
-                let outputs = archive.entries()
+                let outputs = archive
+                    .entries()
                     .context("Fetching entries from tar archive")?
                     .map(|ent| {
-                        let p = ent?.path().context("Getting path of TAR entry")?.into_owned();
+                        let p = ent?
+                            .path()
+                            .context("Getting path of TAR entry")?
+                            .into_owned();
                         Ok(p)
                     })
                     .inspect(|p| trace!("Path in tar archive: {:?}", p))
@@ -78,14 +84,14 @@ impl StagingStore {
                     None
                 } else {
                     Some({
-                        ArtifactPath::new(path)
-                            .and_then(|ap| {
-                                self.0.load_from_path(&ap)
-                                    .inspect(|r| trace!("Loaded from path {} = {:?}", ap.display(), r))
-                                    .with_context(|| anyhow!("Loading from path: {}", ap.display()))
-                                    .map_err(Error::from)
-                                    .map(|art| art.path().clone())
-                            })
+                        ArtifactPath::new(path).and_then(|ap| {
+                            self.0
+                                .load_from_path(&ap)
+                                .inspect(|r| trace!("Loaded from path {} = {:?}", ap.display(), r))
+                                .with_context(|| anyhow!("Loading from path: {}", ap.display()))
+                                .map_err(Error::from)
+                                .map(|art| art.path().clone())
+                        })
                     })
                 }
             })
@@ -100,4 +106,3 @@ impl StagingStore {
         self.0.path_exists_in_store_root(path)
     }
 }
-

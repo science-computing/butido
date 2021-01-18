@@ -12,11 +12,11 @@ use std::ops::Deref;
 
 use anyhow::Error;
 use anyhow::Result;
-use diesel::PgConnection;
 use diesel::prelude::*;
+use diesel::PgConnection;
 
-use crate::schema::packages::*;
 use crate::schema::packages;
+use crate::schema::packages::*;
 
 #[derive(Debug, Identifiable, Queryable)]
 pub struct Package {
@@ -26,16 +26,19 @@ pub struct Package {
 }
 
 #[derive(Insertable)]
-#[table_name="packages"]
+#[table_name = "packages"]
 struct NewPackage<'a> {
     pub name: &'a str,
     pub version: &'a str,
 }
 
 impl Package {
-    pub fn create_or_fetch(database_connection: &PgConnection, p: &crate::package::Package) -> Result<Package> {
+    pub fn create_or_fetch(
+        database_connection: &PgConnection,
+        p: &crate::package::Package,
+    ) -> Result<Package> {
         let new_package = NewPackage {
-            name:    p.name().deref(),
+            name: p.name().deref(),
             version: p.version().deref(),
         };
 
@@ -55,4 +58,3 @@ impl Package {
             .map_err(Error::from)
     }
 }
-

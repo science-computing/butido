@@ -11,7 +11,18 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(parse_display::Display ,Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(
+    parse_display::Display,
+    Serialize,
+    Deserialize,
+    Clone,
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+)]
 #[display("{0}")]
 pub struct ImageName(String);
 
@@ -27,8 +38,18 @@ impl AsRef<str> for ImageName {
     }
 }
 
-
-#[derive(parse_display::Display, Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(
+    parse_display::Display,
+    Serialize,
+    Deserialize,
+    Clone,
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+)]
 #[serde(transparent)]
 #[display("{0}")]
 pub struct ContainerHash(String);
@@ -44,4 +65,3 @@ impl AsRef<str> for ContainerHash {
         self.0.as_ref()
     }
 }
-

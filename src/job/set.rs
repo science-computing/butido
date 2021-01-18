@@ -17,20 +17,26 @@ use crate::filestore::MergedStores;
 use crate::job::Job;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
+use crate::package::PhaseName;
 use crate::package::Shebang;
 use crate::package::Tree;
-use crate::package::PhaseName;
 use crate::source::SourceCache;
 use crate::util::docker::ImageName;
 
 /// A set of jobs that could theoretically be run in parallel
 #[derive(Debug)]
 pub struct JobSet {
-    set: Vec<Job>
+    set: Vec<Job>,
 }
 
 impl JobSet {
-    pub fn sets_from_tree(t: Tree, shebang: Shebang, image: ImageName, phases: Vec<PhaseName>, resources: Vec<JobResource>) -> Result<Vec<JobSet>> {
+    pub fn sets_from_tree(
+        t: Tree,
+        shebang: Shebang,
+        image: ImageName,
+        phases: Vec<PhaseName>,
+        resources: Vec<JobResource>,
+    ) -> Result<Vec<JobSet>> {
         tree_into_jobsets(t, shebang, image, phases, resources)
     }
 
@@ -38,7 +44,12 @@ impl JobSet {
         self.set.is_empty()
     }
 
-    pub async fn into_runables<'a>(self, merged_stores: &'a MergedStores, source_cache: &'a SourceCache, config: &Configuration) -> Result<Vec<RunnableJob>> {
+    pub async fn into_runables<'a>(
+        self,
+        merged_stores: &'a MergedStores,
+        source_cache: &'a SourceCache,
+        config: &Configuration,
+    ) -> Result<Vec<RunnableJob>> {
         self.set
             .into_iter()
             .map(move |j| RunnableJob::build_from_job(j, merged_stores, source_cache, config))
@@ -46,12 +57,23 @@ impl JobSet {
             .collect::<Result<Vec<RunnableJob>>>()
             .await
     }
-
 }
 
 /// Get the tree as sets of jobs, the deepest level of the tree first
-fn tree_into_jobsets(tree: Tree, shebang: Shebang, image: ImageName, phases: Vec<PhaseName>, resources: Vec<JobResource>) -> Result<Vec<JobSet>> {
-    fn inner(tree: Tree, shebang: &Shebang, image: &ImageName, phases: &[PhaseName], resources: &[JobResource]) -> Result<Vec<JobSet>> {
+fn tree_into_jobsets(
+    tree: Tree,
+    shebang: Shebang,
+    image: ImageName,
+    phases: Vec<PhaseName>,
+    resources: Vec<JobResource>,
+) -> Result<Vec<JobSet>> {
+    fn inner(
+        tree: Tree,
+        shebang: &Shebang,
+        image: &ImageName,
+        phases: &[PhaseName],
+        resources: &[JobResource],
+    ) -> Result<Vec<JobSet>> {
         trace!("Creating jobsets for tree: {:?}", tree);
 
         let mut sets = vec![];
@@ -69,7 +91,13 @@ fn tree_into_jobsets(tree: Tree, shebang: Shebang, image: ImageName, phases: Vec
             set: current_set
                 .into_iter()
                 .map(|package| {
-                    Job::new(package, shebang.clone(), image.clone(), phases.to_vec(), resources.to_vec())
+                    Job::new(
+                        package,
+                        shebang.clone(),
+                        image.clone(),
+                        phases.to_vec(),
+                        resources.to_vec(),
+                    )
                 })
                 .collect(),
         };
@@ -103,14 +131,14 @@ mod tests {
 
     use std::collections::BTreeMap;
 
+    use crate::package::tests::package;
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
-    use crate::package::tests::package;
-    use crate::package::Dependency;
     use crate::package::Dependencies;
+    use crate::package::Dependency;
     use crate::package::PhaseName;
-    use crate::util::docker::ImageName;
     use crate::repository::Repository;
+    use crate::util::docker::ImageName;
 
     use indicatif::ProgressBar;
 
@@ -138,7 +166,7 @@ mod tests {
         let r = tree.add_package(p1, &repo, progress);
         assert!(r.is_ok());
 
-        let image  = ImageName::from(String::from("test"));
+        let image = ImageName::from(String::from("test"));
         let phases = vec![PhaseName::from(String::from("testphase"))];
         let shebang = Shebang::from(String::from("#!/bin/bash"));
 
@@ -149,10 +177,20 @@ mod tests {
         assert_eq!(js.len(), 1, "There should be only one jobset if there is only one element in the dependency tree: {:?}", js);
 
         let js = js.get(0).unwrap();
-        assert_eq!(js.set.len(), 1, "The jobset should contain exactly one job: {:?}", js);
+        assert_eq!(
+            js.set.len(),
+            1,
+            "The jobset should contain exactly one job: {:?}",
+            js
+        );
 
         let job = js.set.get(0).unwrap();
-        assert_eq!(*job.package.name(), pname("a"), "The job should be for the package 'a': {:?}", job);
+        assert_eq!(
+            *job.package.name(),
+            pname("a"),
+            "The job should be for the package 'a': {:?}",
+            job
+        );
     }
 
     #[test]
@@ -186,7 +224,7 @@ mod tests {
         let r = tree.add_package(p2, &repo, progress);
         assert!(r.is_ok());
 
-        let image  = ImageName::from(String::from("test"));
+        let image = ImageName::from(String::from("test"));
         let phases = vec![PhaseName::from(String::from("testphase"))];
         let shebang = Shebang::from(String::from("#!/bin/bash"));
 
@@ -194,16 +232,36 @@ mod tests {
         assert!(js.is_ok());
         let js = js.unwrap();
 
-        assert_eq!(js.len(), 1, "There should be one set of jobs for two packages on the same level in the tree: {:?}", js);
+        assert_eq!(
+            js.len(),
+            1,
+            "There should be one set of jobs for two packages on the same level in the tree: {:?}",
+            js
+        );
 
         let js = js.get(0).unwrap();
-        assert_eq!(js.set.len(), 2, "The jobset should contain exactly two jobs: {:?}", js);
+        assert_eq!(
+            js.set.len(),
+            2,
+            "The jobset should contain exactly two jobs: {:?}",
+            js
+        );
 
         let job = js.set.get(0).unwrap();
-        assert_eq!(*job.package.name(), pname("a"), "The job should be for the package 'a': {:?}", job);
+        assert_eq!(
+            *job.package.name(),
+            pname("a"),
+            "The job should be for the package 'a': {:?}",
+            job
+        );
 
         let job = js.set.get(1).unwrap();
-        assert_eq!(*job.package.name(), pname("b"), "The job should be for the package 'a': {:?}", job);
+        assert_eq!(
+            *job.package.name(),
+            pname("b"),
+            "The job should be for the package 'a': {:?}",
+            job
+        );
     }
 
     #[test]
@@ -239,7 +297,7 @@ mod tests {
         let r = tree.add_package(p1, &repo, progress);
         assert!(r.is_ok());
 
-        let image  = ImageName::from(String::from("test"));
+        let image = ImageName::from(String::from("test"));
         let phases = vec![PhaseName::from(String::from("testphase"))];
         let shebang = Shebang::from(String::from("#!/bin/bash"));
 
@@ -247,25 +305,47 @@ mod tests {
         assert!(js.is_ok());
         let js = js.unwrap();
 
-        assert_eq!(js.len(), 2, "There should be two set of jobs for two packages where one depends on the other: {:?}", js);
+        assert_eq!(
+            js.len(),
+            2,
+            "There should be two set of jobs for two packages where one depends on the other: {:?}",
+            js
+        );
 
         {
             let first_js = js.get(0).unwrap();
-            assert_eq!(first_js.set.len(), 1, "The first jobset should contain exactly one job: {:?}", js);
+            assert_eq!(
+                first_js.set.len(),
+                1,
+                "The first jobset should contain exactly one job: {:?}",
+                js
+            );
 
             let job = first_js.set.get(0).unwrap();
-            assert_eq!(*job.package.name(), pname("b"), "The job from the first set should be for the package 'b': {:?}", job);
+            assert_eq!(
+                *job.package.name(),
+                pname("b"),
+                "The job from the first set should be for the package 'b': {:?}",
+                job
+            );
         }
 
         {
             let second_js = js.get(1).unwrap();
-            assert_eq!(second_js.set.len(), 1, "The second jobset should contain exactly one job: {:?}", js);
+            assert_eq!(
+                second_js.set.len(),
+                1,
+                "The second jobset should contain exactly one job: {:?}",
+                js
+            );
 
             let job = second_js.set.get(0).unwrap();
-            assert_eq!(*job.package.name(), pname("a"), "The job should be for the package 'a': {:?}", job);
+            assert_eq!(
+                *job.package.name(),
+                pname("a"),
+                "The job should be for the package 'a': {:?}",
+                job
+            );
         }
-
     }
-
 }
-

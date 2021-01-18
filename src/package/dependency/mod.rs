@@ -8,8 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -38,17 +38,24 @@ lazy_static! {
 /// Helper function for the actual implementation of the ParseDependency trait.
 ///
 /// TODO: Reimplement using pom crate
-pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_and_version(s: &str)
-    -> Result<(PackageName, PackageVersionConstraint)>
-{
+pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_and_version(
+    s: &str,
+) -> Result<(PackageName, PackageVersionConstraint)> {
     let caps = crate::package::dependency::DEPENDENCY_PARSING_RE
         .captures(s)
-        .ok_or_else(|| anyhow!("Could not parse into package name and package version constraint: '{}'", s))?;
+        .ok_or_else(|| {
+            anyhow!(
+                "Could not parse into package name and package version constraint: '{}'",
+                s
+            )
+        })?;
 
-    let name = caps.name("name")
+    let name = caps
+        .name("name")
         .ok_or_else(|| anyhow!("Could not parse name: '{}'", s))?;
 
-    let vers = caps.name("version")
+    let vers = caps
+        .name("version")
         .ok_or_else(|| anyhow!("Could not parse version: '{}'", s))?;
 
     let v = PackageVersionConstraint::parser().parse(vers.as_str().as_bytes())?;
@@ -87,7 +94,10 @@ mod tests {
         let (n, c) = d.parse_as_name_and_version().unwrap();
 
         assert_eq!(n, name("vim"));
-        assert_eq!(c, PackageVersionConstraint::from_version(String::from("="), exact("8.2")));
+        assert_eq!(
+            c,
+            PackageVersionConstraint::from_version(String::from("="), exact("8.2"))
+        );
     }
 
     #[test]
@@ -98,6 +108,9 @@ mod tests {
         let (n, c) = d.parse_as_name_and_version().unwrap();
 
         assert_eq!(n, name("gtk15"));
-        assert_eq!(c, PackageVersionConstraint::from_version(String::from("="), exact("1b")));
+        assert_eq!(
+            c,
+            PackageVersionConstraint::from_version(String::from("="), exact("1b"))
+        );
     }
 }

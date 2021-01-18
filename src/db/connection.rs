@@ -38,27 +38,34 @@ pub struct DbConnectionConfig {
 
 impl Into<String> for DbConnectionConfig {
     fn into(self) -> String {
-        format!("postgres://{user}:{password}@{host}:{port}/{name}",
-                host     = self.database_host,
-                port     = self.database_port,
-                user     = self.database_user,
-                password = self.database_password,
-                name     = self.database_name)
+        format!(
+            "postgres://{user}:{password}@{host}:{port}/{name}",
+            host = self.database_host,
+            port = self.database_port,
+            user = self.database_user,
+            password = self.database_password,
+            name = self.database_name
+        )
     }
 }
 
 pub fn parse_db_connection_config(config: &Configuration, cli: &ArgMatches) -> DbConnectionConfig {
     fn find_value<F>(cli: &ArgMatches, key: &str, alternative: F) -> String
-        where F: FnOnce() -> String
+    where
+        F: FnOnce() -> String,
     {
-        cli.value_of(key).map(String::from).unwrap_or_else(alternative)
+        cli.value_of(key)
+            .map(String::from)
+            .unwrap_or_else(alternative)
     }
 
-    let database_host     = find_value(cli, "database_host",      || config.database_host().to_string());
-    let database_port     = find_value(cli, "database_port",     || config.database_port().to_string());
-    let database_user     = find_value(cli, "database_user",     || config.database_user().to_string());
-    let database_password = find_value(cli, "database_password", || config.database_password().to_string());
-    let database_name     = find_value(cli, "database_name",     || config.database_name().to_string());
+    let database_host = find_value(cli, "database_host", || config.database_host().to_string());
+    let database_port = find_value(cli, "database_port", || config.database_port().to_string());
+    let database_user = find_value(cli, "database_user", || config.database_user().to_string());
+    let database_password = find_value(cli, "database_password", || {
+        config.database_password().to_string()
+    });
+    let database_name = find_value(cli, "database_name", || config.database_name().to_string());
 
     DbConnectionConfig {
         database_host,
@@ -67,7 +74,6 @@ pub fn parse_db_connection_config(config: &Configuration, cli: &ArgMatches) -> D
         database_password,
         database_name,
     }
-
 }
 
 pub fn establish_connection(conn_config: DbConnectionConfig) -> Result<PgConnection> {
@@ -75,4 +81,3 @@ pub fn establish_connection(conn_config: DbConnectionConfig) -> Result<PgConnect
     debug!("Trying to connect to database: {}", database_uri);
     PgConnection::establish(&database_uri).map_err(Error::from)
 }
-

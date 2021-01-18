@@ -10,16 +10,19 @@
 
 use std::process::ExitStatus;
 
-use anyhow::Error;
-use anyhow::Context as AnyhowContext;
-use anyhow::Result;
 use anyhow::anyhow;
-use handlebars::{Handlebars, HelperDef, RenderContext, Helper, Context, JsonRender, HelperResult, Output, RenderError, PathAndJson};
+use anyhow::Context as AnyhowContext;
+use anyhow::Error;
+use anyhow::Result;
+use handlebars::{
+    Context, Handlebars, Helper, HelperDef, HelperResult, JsonRender, Output, PathAndJson,
+    RenderContext, RenderError,
+};
 use log::trace;
 use serde::Deserialize;
 use serde::Serialize;
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{ThemeSet, Style};
+use syntect::highlighting::{Style, ThemeSet};
 use syntect::parsing::SyntaxSet;
 use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 use tokio::process::Command;
@@ -80,13 +83,17 @@ impl Script {
         }
 
         trace!("Waiting for child...");
-        let out = child.wait_with_output()
+        let out = child
+            .wait_with_output()
             .await
             .context("Waiting for subprocess")?;
 
-        Ok((out.status, String::from_utf8(out.stdout)?, String::from_utf8(out.stderr)?))
+        Ok((
+            out.status,
+            String::from_utf8(out.stdout)?,
+            String::from_utf8(out.stderr)?,
+        ))
     }
-
 }
 
 #[derive(Debug)]
@@ -110,11 +117,13 @@ impl<'a> HighlightedScript<'a> {
     }
 
     pub fn lines(&'a self) -> Result<impl Iterator<Item = String> + 'a> {
-        let syntax = self.ps
+        let syntax = self
+            .ps
             .find_syntax_by_first_line(&self.script.0)
             .ok_or_else(|| anyhow!("Failed to load syntax for highlighting script"))?;
 
-        let theme = self.ts
+        let theme = self
+            .ts
             .themes
             .get(self.script_theme)
             .ok_or_else(|| anyhow!("Theme not available: {}", self.script_theme))?;
@@ -122,19 +131,16 @@ impl<'a> HighlightedScript<'a> {
         let mut h = HighlightLines::new(syntax, &theme);
 
         Ok({
-            LinesWithEndings::from(&self.script.0)
-                .map(move |line| {
-                    let ranges: Vec<(Style, &str)> = h.highlight(line, &self.ps);
-                    as_24_bit_terminal_escaped(&ranges[..], true)
-                })
+            LinesWithEndings::from(&self.script.0).map(move |line| {
+                let ranges: Vec<(Style, &str)> = h.highlight(line, &self.ps);
+                as_24_bit_terminal_escaped(&ranges[..], true)
+            })
         })
     }
-
 
     pub fn lines_numbered(&'a self) -> Result<impl Iterator<Item = (usize, String)> + 'a> {
         self.lines().map(|iter| iter.enumerate())
     }
-
 }
 
 impl From<String> for Shebang {
@@ -155,12 +161,15 @@ pub struct ScriptBuilder<'a> {
 
 impl<'a> ScriptBuilder<'a> {
     pub fn new(shebang: &'a Shebang) -> Self {
-        ScriptBuilder {
-            shebang,
-        }
+        ScriptBuilder { shebang }
     }
 
-    pub fn build(self, package: &Package, phaseorder: &[PhaseName], strict_mode: bool) -> Result<Script> {
+    pub fn build(
+        self,
+        package: &Package,
+        phaseorder: &[PhaseName],
+        strict_mode: bool,
+    ) -> Result<Script> {
         let mut script = format!("{shebang}\n", shebang = self.shebang.0);
 
         for name in phaseorder {
@@ -168,39 +177,45 @@ impl<'a> ScriptBuilder<'a> {
                 Some(Phase::Text(text)) => {
                     use unindent::Unindent;
 
-                    script.push_str(&indoc::formatdoc!(r#"
+                    script.push_str(&indoc::formatdoc!(
+                        r#"
                         ### phase {}
                         {}
                         ### / {} phase
                     "#,
-                    name.as_str(),
-                    // whack hack: insert empty line on top because unindent ignores the
-                    // indentation of the first line, see commit message for more info
-                    format!("\n{}", text).unindent(),
-                    name.as_str(),
+                        name.as_str(),
+                        // whack hack: insert empty line on top because unindent ignores the
+                        // indentation of the first line, see commit message for more info
+                        format!("\n{}", text).unindent(),
+                        name.as_str(),
                     ));
 
                     script.push('\n');
-                },
+                }
 
                 // TODO: Support path embedding
                 // (requires possibility to have stuff in Script type that gets copied to
                 // container)
                 Some(Phase::Path(pb)) => {
-                    script.push_str(&format!(r#"
+                    script.push_str(&format!(
+                        r#"
                         # Phase (from file {path}): {name}
                         # NOT SUPPORTED YET
                         exit 1
                     "#,
-                    path = pb.display(),
-                    name = name.as_str()));
+                        path = pb.display(),
+                        name = name.as_str()
+                    ));
                     script.push('\n');
-                },
+                }
 
                 None => {
-                    script.push_str(&format!("# No script for phase: {name}", name = name.as_str()));
+                    script.push_str(&format!(
+                        "# No script for phase: {name}",
+                        name = name.as_str()
+                    ));
                     script.push('\n');
-                },
+                }
             }
         }
 
@@ -225,7 +240,14 @@ impl<'a> ScriptBuilder<'a> {
 struct PhaseHelper;
 
 impl HelperDef for PhaseHelper {
-    fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper,
+        _: &Handlebars,
+        _: &Context,
+        _rc: &mut RenderContext,
+        out: &mut dyn Output,
+    ) -> HelperResult {
         h.param(0)
             .ok_or_else(|| RenderError::new("Required parameter missing: phase name"))?
             .value()
@@ -244,7 +266,14 @@ impl HelperDef for PhaseHelper {
 struct StateHelper;
 
 impl HelperDef for StateHelper {
-    fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper,
+        _: &Handlebars,
+        _: &Context,
+        _rc: &mut RenderContext,
+        out: &mut dyn Output,
+    ) -> HelperResult {
         h.param(0)
             .ok_or_else(|| RenderError::new("Required parameter missing: state"))?
             .value()
@@ -254,15 +283,20 @@ impl HelperDef for StateHelper {
                 "OK" => {
                     out.write("echo '#BUTIDO:STATE:OK'\n")?;
                     Ok(())
-                },
+                }
                 "ERR" => {
-                    let state_msg = h.param(1).ok_or_else(|| RenderError::new("Required parameter missing: state message"))?;
+                    let state_msg = h.param(1).ok_or_else(|| {
+                        RenderError::new("Required parameter missing: state message")
+                    })?;
                     out.write("echo '#BUTIDO:STATE:ERR:")?;
                     out.write(state_msg.value().render().as_ref())?;
                     out.write("'\n")?;
                     Ok(())
-                },
-                other => Err(RenderError::new(format!("Parameter must bei either 'OK' or 'ERR', '{}' is invalid", other))),
+                }
+                other => Err(RenderError::new(format!(
+                    "Parameter must bei either 'OK' or 'ERR', '{}' is invalid",
+                    other
+                ))),
             })
     }
 }
@@ -271,7 +305,14 @@ impl HelperDef for StateHelper {
 struct ProgressHelper;
 
 impl HelperDef for ProgressHelper {
-    fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper,
+        _: &Handlebars,
+        _: &Context,
+        _rc: &mut RenderContext,
+        out: &mut dyn Output,
+    ) -> HelperResult {
         h.param(0)
             .ok_or_else(|| RenderError::new("Required parameter missing: progress"))?
             .value()
@@ -290,7 +331,14 @@ impl HelperDef for ProgressHelper {
 struct JoinHelper;
 
 impl HelperDef for JoinHelper {
-    fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper,
+        _: &Handlebars,
+        _: &Context,
+        _rc: &mut RenderContext,
+        out: &mut dyn Output,
+    ) -> HelperResult {
         joinstrs("", h.params().iter(), out)
     }
 }
@@ -299,8 +347,16 @@ impl HelperDef for JoinHelper {
 struct JoinWithHelper;
 
 impl HelperDef for JoinWithHelper {
-    fn call<'reg: 'rc, 'rc>(&self, h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
-        let joiner = h.param(0)
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper,
+        _: &Handlebars,
+        _: &Context,
+        _rc: &mut RenderContext,
+        out: &mut dyn Output,
+    ) -> HelperResult {
+        let joiner = h
+            .param(0)
             .ok_or_else(|| RenderError::new("Required parameter missing: Join string"))?
             .value()
             .as_str()
@@ -311,10 +367,11 @@ impl HelperDef for JoinWithHelper {
 }
 
 fn joinstrs<'reg: 'rc, 'rc, I>(with: &str, params: I, out: &mut dyn Output) -> HelperResult
-    where I: Iterator<Item = &'rc PathAndJson<'reg, 'rc>>
+where
+    I: Iterator<Item = &'rc PathAndJson<'reg, 'rc>>,
 {
-    use std::result::Result as RResult;
     use itertools::Itertools;
+    use std::result::Result as RResult;
 
     let s = params
         .map(|p| {
@@ -329,4 +386,3 @@ fn joinstrs<'reg: 'rc, 'rc, I>(with: &str, params: I, out: &mut dyn Output) -> H
     out.write(&s)?;
     Ok(())
 }
-

@@ -15,7 +15,7 @@ use crate::config::NotValidatedConfiguration;
 /// A valid configuration (validated via NotValidatedConfiguration::validate())
 #[derive(Debug)]
 pub struct Configuration {
-    pub (in crate::config) inner: NotValidatedConfiguration,
+    pub(in crate::config) inner: NotValidatedConfiguration,
 }
 
 impl Deref for Configuration {
@@ -25,4 +25,3 @@ impl Deref for Configuration {
         &self.inner
     }
 }
-

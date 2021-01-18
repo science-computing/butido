@@ -15,18 +15,34 @@ use resiter::AndThen;
 
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
-use crate::repository::Repository;
 use crate::package::Tree;
+use crate::repository::Repository;
 use crate::util::progress::ProgressBars;
 
 /// Implementation of the "tree_of" subcommand
-pub async fn tree_of(matches: &ArgMatches, repo: Repository, progressbars: ProgressBars) -> Result<()> {
-    let pname = matches.value_of("package_name").map(String::from).map(PackageName::from);
-    let pvers = matches.value_of("package_version").map(String::from).map(PackageVersionConstraint::new).transpose()?;
+pub async fn tree_of(
+    matches: &ArgMatches,
+    repo: Repository,
+    progressbars: ProgressBars,
+) -> Result<()> {
+    let pname = matches
+        .value_of("package_name")
+        .map(String::from)
+        .map(PackageName::from);
+    let pvers = matches
+        .value_of("package_version")
+        .map(String::from)
+        .map(PackageVersionConstraint::new)
+        .transpose()?;
 
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
-        .filter(|p| pvers.as_ref().map(|v| v.matches(p.version())).unwrap_or(true))
+        .filter(|p| {
+            pvers
+                .as_ref()
+                .map(|v| v.matches(p.version()))
+                .unwrap_or(true)
+        })
         .map(|package| {
             let bar_tree_building = progressbars.bar();
             let mut tree = Tree::default();
@@ -38,9 +54,9 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, progressbars: Progr
             let stdout = std::io::stdout();
             let mut outlock = stdout.lock();
 
-            tree.display().iter().try_for_each(|d| ptree::write_tree(d, &mut outlock).map_err(Error::from))
+            tree.display()
+                .iter()
+                .try_for_each(|d| ptree::write_tree(d, &mut outlock).map_err(Error::from))
         })
         .collect::<Result<()>>()
 }
-
-
