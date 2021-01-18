@@ -10,15 +10,15 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use diesel::PgConnection;
 use diesel::prelude::*;
+use diesel::PgConnection;
 
-use crate::schema::envvars::*;
 use crate::schema::envvars;
+use crate::schema::envvars::*;
 use crate::util::EnvironmentVariableName;
 
 #[derive(Identifiable, Queryable)]
-#[table_name="envvars"]
+#[table_name = "envvars"]
 pub struct EnvVar {
     pub id: i32,
     pub name: String,
@@ -26,15 +26,22 @@ pub struct EnvVar {
 }
 
 #[derive(Insertable)]
-#[table_name="envvars"]
+#[table_name = "envvars"]
 struct NewEnvVar<'a> {
     pub name: &'a str,
     pub value: &'a str,
 }
 
 impl EnvVar {
-    pub fn create_or_fetch(database_connection: &PgConnection, k: &EnvironmentVariableName, v: &str) -> Result<EnvVar> {
-        let new_envvar = NewEnvVar { name: k.as_ref(), value: v };
+    pub fn create_or_fetch(
+        database_connection: &PgConnection,
+        k: &EnvironmentVariableName,
+        v: &str,
+    ) -> Result<EnvVar> {
+        let new_envvar = NewEnvVar {
+            name: k.as_ref(),
+            value: v,
+        };
 
         diesel::insert_into(envvars::table)
             .values(&new_envvar)
@@ -47,4 +54,3 @@ impl EnvVar {
             .map_err(Error::from)
     }
 }
-

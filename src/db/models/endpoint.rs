@@ -10,11 +10,11 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use diesel::PgConnection;
 use diesel::prelude::*;
+use diesel::PgConnection;
 
-use crate::schema::endpoints::*;
 use crate::schema::endpoints;
+use crate::schema::endpoints::*;
 
 #[derive(Identifiable, Queryable)]
 pub struct Endpoint {
@@ -23,7 +23,7 @@ pub struct Endpoint {
 }
 
 #[derive(Insertable)]
-#[table_name="endpoints"]
+#[table_name = "endpoints"]
 struct NewEndpoint<'a> {
     pub name: &'a str,
 }
@@ -43,4 +43,3 @@ impl Endpoint {
             .map_err(Error::from)
     }
 }
-

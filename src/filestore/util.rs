@@ -14,13 +14,13 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
 use indicatif::ProgressBar;
 use resiter::AndThen;
 
-use crate::filestore::Artifact;
 use crate::filestore::path::*;
+use crate::filestore::Artifact;
 
 /// The actual filestore implementation
 ///
@@ -40,8 +40,7 @@ impl FileStoreImpl {
             .find_artifacts_recursive()
             .and_then_ok(|artifact_path| {
                 progress.tick();
-                Artifact::load(&root, artifact_path.clone())
-                    .map(|a| (artifact_path, a))
+                Artifact::load(&root, artifact_path.clone()).map(|a| (artifact_path, a))
             })
             .collect::<Result<BTreeMap<ArtifactPath, Artifact>>>()?;
 
@@ -56,17 +55,21 @@ impl FileStoreImpl {
         self.root.is_file(p)
     }
 
-    pub (in crate::filestore) fn values(&self) -> impl Iterator<Item = &Artifact> {
+    pub(in crate::filestore) fn values(&self) -> impl Iterator<Item = &Artifact> {
         self.store.values()
     }
 
-    pub (in crate::filestore) fn load_from_path(&mut self, artifact_path: &ArtifactPath) -> Result<&Artifact> {
+    pub(in crate::filestore) fn load_from_path(
+        &mut self,
+        artifact_path: &ArtifactPath,
+    ) -> Result<&Artifact> {
         if self.store.get(&artifact_path).is_some() {
             Err(anyhow!("Entry exists: {}", artifact_path.display()))
         } else {
-            Ok(self.store.entry(artifact_path.clone()).or_insert(Artifact::load(&self.root, artifact_path.clone())?))
+            Ok(self
+                .store
+                .entry(artifact_path.clone())
+                .or_insert(Artifact::load(&self.root, artifact_path.clone())?))
         }
     }
-
 }
-

@@ -29,11 +29,11 @@ pub enum LogItem {
 impl LogItem {
     pub fn display(&self) -> Result<Display> {
         match self {
-            LogItem::Line(s)         => Ok(Display(String::from_utf8(s.to_vec())?)),
-            LogItem::Progress(u)     => Ok(Display(format!("#BUTIDO:PROGRESS:{}", u))),
+            LogItem::Line(s) => Ok(Display(String::from_utf8(s.to_vec())?)),
+            LogItem::Progress(u) => Ok(Display(format!("#BUTIDO:PROGRESS:{}", u))),
             LogItem::CurrentPhase(p) => Ok(Display(format!("#BUTIDO:PHASE:{}", p))),
-            LogItem::State(Ok(()))   => Ok(Display("#BUTIDO:STATE:OK".to_string())),
-            LogItem::State(Err(s))   => Ok(Display(format!("#BUTIDO:STATE:ERR:{}", s))),
+            LogItem::State(Ok(())) => Ok(Display("#BUTIDO:STATE:OK".to_string())),
+            LogItem::State(Err(s)) => Ok(Display(format!("#BUTIDO:STATE:ERR:{}", s))),
         }
     }
 }
@@ -41,4 +41,3 @@ impl LogItem {
 #[derive(parse_display::Display)]
 #[display("{0}")]
 pub struct Display(String);
-

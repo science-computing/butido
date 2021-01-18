@@ -10,11 +10,11 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use diesel::PgConnection;
 use diesel::prelude::*;
+use diesel::PgConnection;
 
-use crate::schema::images::*;
 use crate::schema::images;
+use crate::schema::images::*;
 use crate::util::docker::ImageName;
 
 #[derive(Identifiable, Queryable)]
@@ -24,14 +24,19 @@ pub struct Image {
 }
 
 #[derive(Insertable)]
-#[table_name="images"]
+#[table_name = "images"]
 struct NewImage<'a> {
     pub name: &'a str,
 }
 
 impl Image {
-    pub fn create_or_fetch(database_connection: &PgConnection, image_name: &ImageName) -> Result<Image> {
-        let new_image = NewImage { name: image_name.as_ref() };
+    pub fn create_or_fetch(
+        database_connection: &PgConnection,
+        image_name: &ImageName,
+    ) -> Result<Image> {
+        let new_image = NewImage {
+            name: image_name.as_ref(),
+        };
 
         diesel::insert_into(images::table)
             .values(&new_image)
@@ -44,4 +49,3 @@ impl Image {
             .map_err(Error::from)
     }
 }
-

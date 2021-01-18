@@ -8,19 +8,19 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::io::Write;
 use std::borrow::Cow;
 use std::io::Result as IoResult;
+use std::io::Write;
 
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
 use indicatif::ProgressBar;
 use log::trace;
+use ptree::Style;
+use ptree::TreeItem;
 use resiter::AndThen;
 use serde::Deserialize;
 use serde::Serialize;
-use ptree::TreeItem;
-use ptree::Style;
 
 use crate::package::Package;
 use crate::repository::Repository;
@@ -40,19 +40,27 @@ struct Mapping {
 }
 
 impl Tree {
-
-    pub fn add_package(&mut self, p: Package, repo: &Repository, progress: ProgressBar) -> Result<()> {
+    pub fn add_package(
+        &mut self,
+        p: Package,
+        repo: &Repository,
+        progress: ProgressBar,
+    ) -> Result<()> {
         macro_rules! mk_add_package_tree {
             ($this:ident, $pack:ident, $repo:ident, $root:ident, $progress:ident) => {{
                 let mut subtree = Tree::default();
-                ($pack).get_self_packaged_dependencies()
+                ($pack)
+                    .get_self_packaged_dependencies()
                     .and_then_ok(|(name, constr)| {
                         trace!("Dependency: {:?}", name);
                         let pack = ($repo).find_with_version(&name, &constr);
                         trace!("Found: {:?}", pack);
 
                         if pack.iter().any(|p| ($root).has_package(p)) {
-                            return Err(anyhow!("Duplicate version of some package in {:?} found", pack))
+                            return Err(anyhow!(
+                                "Duplicate version of some package in {:?} found",
+                                pack
+                            ));
                         }
                         trace!("All dependecies available...");
 
@@ -60,19 +68,34 @@ impl Tree {
                             .map(|p| {
                                 ($progress).tick();
                                 trace!("Following dependecy: {:?}", p);
-                                add_package_tree(&mut subtree, p.clone(), ($repo), ($root), ($progress).clone())
+                                add_package_tree(
+                                    &mut subtree,
+                                    p.clone(),
+                                    ($repo),
+                                    ($root),
+                                    ($progress).clone(),
+                                )
                             })
                             .collect()
                     })
                     .collect::<Result<Vec<()>>>()?;
 
                 trace!("Inserting subtree: {:?} -> {:?}", ($pack), subtree);
-                ($this).root.push(Mapping { package: ($pack), dependencies: subtree });
+                ($this).root.push(Mapping {
+                    package: ($pack),
+                    dependencies: subtree,
+                });
                 Ok(())
-            }}
+            }};
         };
 
-        fn add_package_tree(this: &mut Tree, p: Package, repo: &Repository, root: &mut Tree, progress: ProgressBar) -> Result<()> {
+        fn add_package_tree(
+            this: &mut Tree,
+            p: Package,
+            repo: &Repository,
+            root: &mut Tree,
+            progress: ProgressBar,
+        ) -> Result<()> {
             mk_add_package_tree!(this, p, repo, root, progress)
         }
 
@@ -121,7 +144,6 @@ impl Tree {
     pub fn display(&self) -> Vec<DisplayTree> {
         self.root.iter().map(DisplayTree).collect()
     }
-
 }
 
 #[derive(Clone)]
@@ -135,13 +157,22 @@ impl<'a> TreeItem for DisplayTree<'a> {
     }
 
     fn children(&self) -> Cow<[Self::Child]> {
-        Cow::from(self.0.dependencies.root.iter().map(DisplayTree).collect::<Vec<_>>())
+        Cow::from(
+            self.0
+                .dependencies
+                .root
+                .iter()
+                .map(DisplayTree)
+                .collect::<Vec<_>>(),
+        )
     }
 }
 
 impl Default for Tree {
     fn default() -> Tree {
-        Tree { root: Vec::default() }
+        Tree {
+            root: Vec::default(),
+        }
     }
 }
 
@@ -151,11 +182,11 @@ mod tests {
 
     use std::collections::BTreeMap;
 
+    use crate::package::tests::package;
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
-    use crate::package::tests::package;
-    use crate::package::Dependency;
     use crate::package::Dependencies;
+    use crate::package::Dependency;
 
     use indicatif::ProgressBar;
 
@@ -340,31 +371,24 @@ mod tests {
         let subtree = subtrees[0];
         assert_eq!(subtree.packages().count(), 2);
 
-        assert!(subtree.packages().all(|p| {
-            *p.name() == pname("p2") || *p.name() == pname("p4")
-        }));
+        assert!(subtree
+            .packages()
+            .all(|p| { *p.name() == pname("p2") || *p.name() == pname("p4") }));
 
         let subsubtrees: Vec<&Tree> = subtree.dependencies().collect();
         assert_eq!(subsubtrees.len(), 2);
 
-        assert!(subsubtrees.iter().any(|st| {
-            st.packages().count() == 1
-        }));
+        assert!(subsubtrees.iter().any(|st| { st.packages().count() == 1 }));
+
+        assert!(subsubtrees.iter().any(|st| { st.packages().count() == 2 }));
+
+        assert!(subsubtrees
+            .iter()
+            .any(|st| { st.packages().all(|p| *p.name() == pname("p3")) }));
 
         assert!(subsubtrees.iter().any(|st| {
-            st.packages().count() == 2
-        }));
-
-
-        assert!(subsubtrees.iter().any(|st| {
-            st.packages().all(|p| *p.name() == pname("p3"))
-        }));
-
-        assert!(subsubtrees.iter().any(|st| {
-            st.packages().all(|p| {
-                *p.name() == pname("p5") ||
-                *p.name() == pname("p6")
-            })
+            st.packages()
+                .all(|p| *p.name() == pname("p5") || *p.name() == pname("p6"))
         }));
     }
 
@@ -511,32 +535,24 @@ mod tests {
         let subtree = subtrees[0];
         assert_eq!(subtree.packages().count(), 2);
 
-        assert!(subtree.packages().all(|p| {
-            *p.name() == pname("p2") || *p.name() == pname("p4")
-        }));
+        assert!(subtree
+            .packages()
+            .all(|p| { *p.name() == pname("p2") || *p.name() == pname("p4") }));
 
         let subsubtrees: Vec<&Tree> = subtree.dependencies().collect();
         assert_eq!(subsubtrees.len(), 2);
 
-        assert!(subsubtrees.iter().any(|st| {
-            st.packages().count() == 1
-        }));
+        assert!(subsubtrees.iter().any(|st| { st.packages().count() == 1 }));
+
+        assert!(subsubtrees.iter().any(|st| { st.packages().count() == 2 }));
+
+        assert!(subsubtrees
+            .iter()
+            .any(|st| { st.packages().all(|p| *p.name() == pname("p3")) }));
 
         assert!(subsubtrees.iter().any(|st| {
-            st.packages().count() == 2
-        }));
-
-
-        assert!(subsubtrees.iter().any(|st| {
-            st.packages().all(|p| *p.name() == pname("p3"))
-        }));
-
-        assert!(subsubtrees.iter().any(|st| {
-            st.packages().all(|p| {
-                *p.name() == pname("p5") ||
-                *p.name() == pname("p6")
-            })
+            st.packages()
+                .all(|p| *p.name() == pname("p5") || *p.name() == pname("p6"))
         }));
     }
-
 }

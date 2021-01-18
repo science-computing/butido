@@ -19,4 +19,3 @@ pub trait LogSink: Sized {
         Ok(())
     }
 }
-

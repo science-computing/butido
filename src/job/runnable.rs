@@ -10,12 +10,12 @@
 
 use std::collections::HashMap;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use getset::Getters;
-use log::{debug, warn, trace};
+use log::{debug, trace, warn};
 use tokio::stream::StreamExt;
 use uuid::Uuid;
 
@@ -29,8 +29,8 @@ use crate::package::Script;
 use crate::package::ScriptBuilder;
 use crate::source::SourceCache;
 use crate::source::SourceEntry;
-use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
+use crate::util::EnvironmentVariableName;
 
 /// A job configuration that can be run. All inputs are clear here.
 #[derive(Debug, Getters)]
@@ -39,23 +39,28 @@ pub struct RunnableJob {
     uuid: Uuid,
 
     #[getset(get = "pub")]
-    package:  Package,
+    package: Package,
 
     #[getset(get = "pub")]
-    image:    ImageName,
+    image: ImageName,
 
     #[getset(get = "pub")]
     source_cache: SourceCache,
 
     #[getset(get = "pub")]
-    script:   Script,
+    script: Script,
 
     #[getset(get = "pub")]
     resources: Vec<JobResource>,
 }
 
 impl RunnableJob {
-    pub async fn build_from_job(job: Job, merged_stores: &MergedStores, source_cache: &SourceCache, config: &Configuration) -> Result<Self> {
+    pub async fn build_from_job(
+        job: Job,
+        merged_stores: &MergedStores,
+        source_cache: &SourceCache,
+        config: &Configuration,
+    ) -> Result<Self> {
         trace!("Preparing build dependencies");
         let resources = {
             let mut resources = job
@@ -97,14 +102,23 @@ impl RunnableJob {
                         Ok(())
                     }
                 })
-                .with_context(|| anyhow!("Checking allowed variables for package {} {}", job.package().name(), job.package().version()))
+                .with_context(|| {
+                    anyhow!(
+                        "Checking allowed variables for package {} {}",
+                        job.package().name(),
+                        job.package().version()
+                    )
+                })
                 .context("Checking allowed variable names")?;
         } else {
             debug!("Environment checking disabled");
         }
 
-        let script = ScriptBuilder::new(&job.script_shebang)
-            .build(&job.package, &job.script_phases, *config.strict_script_interpolation())?;
+        let script = ScriptBuilder::new(&job.script_shebang).build(
+            &job.package,
+            &job.script_phases,
+            *config.strict_script_interpolation(),
+        )?;
 
         Ok(RunnableJob {
             uuid: job.uuid,
@@ -115,7 +129,6 @@ impl RunnableJob {
 
             script,
         })
-
     }
 
     pub fn package_sources(&self) -> Vec<SourceEntry> {
@@ -128,18 +141,18 @@ impl RunnableJob {
 
     /// Helper function to collect a list of resources and the result of package.environment() into
     /// a Vec of environment variables
-    fn env_resources(resources: &[JobResource], pkgenv: Option<&HashMap<EnvironmentVariableName, String>>)
-        -> Vec<(EnvironmentVariableName, String)>
-    {
+    fn env_resources(
+        resources: &[JobResource],
+        pkgenv: Option<&HashMap<EnvironmentVariableName, String>>,
+    ) -> Vec<(EnvironmentVariableName, String)> {
         let iter = resources
             .iter()
             .filter_map(JobResource::env)
             .map(|(k, v)| (k.clone(), v.clone()));
 
         if let Some(hm) = pkgenv {
-            iter.chain({
-                hm.iter().map(|(k, v)| (k.clone(), v.clone()))
-            }).collect()
+            iter.chain({ hm.iter().map(|(k, v)| (k.clone(), v.clone())) })
+                .collect()
         } else {
             iter.collect()
         }
@@ -149,25 +162,32 @@ impl RunnableJob {
         vec![
             (
                 String::from("BUTIDO_PACKAGE_NAME"),
-                 self.package().name().clone().to_string()
+                self.package().name().clone().to_string(),
             ),
-
             (
                 String::from("BUTIDO_PACKAGE_VERSION"),
-                self.package().version().clone().to_string()
+                self.package().version().clone().to_string(),
             ),
-
             (
                 String::from("BUTIDO_PACKAGE_VERSION_IS_SEMVER"),
-                String::from(if *self.package().version_is_semver() { "true" } else { "false" })
+                String::from(if *self.package().version_is_semver() {
+                    "true"
+                } else {
+                    "false"
+                }),
             ),
         ]
     }
 
-    async fn build_resource(dep: &dyn ParseDependency, merged_stores: &MergedStores) -> Result<JobResource> {
+    async fn build_resource(
+        dep: &dyn ParseDependency,
+        merged_stores: &MergedStores,
+    ) -> Result<JobResource> {
         let (name, vers) = dep.parse_as_name_and_version()?;
         trace!("Copying dep: {:?} {:?}", name, vers);
-        let mut a = merged_stores.get_artifact_by_name_and_version(&name, &vers).await?;
+        let mut a = merged_stores
+            .get_artifact_by_name_and_version(&name, &vers)
+            .await?;
 
         if a.is_empty() {
             Err(anyhow!("Cannot find dependency: {:?} {:?}", name, vers))
@@ -185,6 +205,5 @@ impl RunnableJob {
 
             Ok(JobResource::Artifact(found_dependency))
         }
-
     }
 }

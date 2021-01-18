@@ -38,4 +38,3 @@ pub enum Phase {
     #[serde(rename = "script")]
     Text(String),
 }
-

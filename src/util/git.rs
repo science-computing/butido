@@ -10,10 +10,10 @@
 
 use std::path::Path;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use git2::Repository;
 use log::trace;
 
@@ -24,15 +24,14 @@ pub fn repo_is_clean(p: &Path) -> Result<bool> {
 }
 
 pub fn get_repo_head_commit_hash(p: &Path) -> Result<String> {
-    let r = Repository::open(p)
-        .with_context(|| anyhow!("Opening repository at {}", p.display()))?;
+    let r =
+        Repository::open(p).with_context(|| anyhow!("Opening repository at {}", p.display()))?;
 
-    let s = r.head()
+    let s = r
+        .head()
         .with_context(|| anyhow!("Getting HEAD from repository at {}", p.display()))?
         .peel_to_commit()
-        .with_context(|| {
-            anyhow!("Failed to get commit hash: Not valid UTF8")
-        })?
+        .with_context(|| anyhow!("Failed to get commit hash: Not valid UTF8"))?
         .id()
         .to_string();
 

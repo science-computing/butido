@@ -10,14 +10,14 @@
 
 use std::path::PathBuf;
 
+use clap::crate_authors;
+use clap::crate_version;
 use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
-use clap::crate_authors;
-use clap::crate_version;
 
 // Helper types to ship around stringly typed clap API.
-pub const IDENT_DEPENDENCY_TYPE_BUILD: &str   = "build";
+pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
 pub const IDENT_DEPENDENCY_TYPE_RUNTIME: &str = "runtime";
 
 pub fn cli<'a>() -> App<'a> {
@@ -687,7 +687,6 @@ pub fn cli<'a>() -> App<'a> {
                 .about("A version constraint to search for (optional), E.G. '=1.0.0'")
             )
         )
-
 }
 
 fn script_arg_line_numbers<'a>() -> clap::Arg<'a> {
@@ -749,11 +748,11 @@ fn env_pass_validator(s: &str) -> Result<(), String> {
         Err(s) => {
             log::error!("Error during validation: '{}' is not a key-value pair", s);
             Err(s)
-        },
+        }
         Ok((k, v)) => {
             log::debug!("Env pass valiation: '{}={}'", k, v);
             Ok(())
-        },
+        }
     }
 }
 
@@ -844,4 +843,3 @@ mod tests {
         assert!(env_pass_validator("123").is_err());
     }
 }
-

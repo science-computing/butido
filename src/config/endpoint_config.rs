@@ -42,9 +42,8 @@ pub struct Endpoint {
 /// The type of an endpoint
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub enum EndpointType {
-    #[serde(rename  = "socket")]
+    #[serde(rename = "socket")]
     Socket,
-    #[serde(rename  = "http")]
+    #[serde(rename = "http")]
     Http,
 }
-

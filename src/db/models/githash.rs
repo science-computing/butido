@@ -10,11 +10,11 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use diesel::PgConnection;
 use diesel::prelude::*;
+use diesel::PgConnection;
 
-use crate::schema::githashes::*;
 use crate::schema::githashes;
+use crate::schema::githashes::*;
 
 #[derive(Queryable)]
 pub struct GitHash {
@@ -23,7 +23,7 @@ pub struct GitHash {
 }
 
 #[derive(Insertable)]
-#[table_name="githashes"]
+#[table_name = "githashes"]
 struct NewGitHash<'a> {
     pub hash: &'a str,
 }
@@ -43,4 +43,3 @@ impl GitHash {
             .map_err(Error::from)
     }
 }
-

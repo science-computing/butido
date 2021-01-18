@@ -30,4 +30,3 @@ pub struct EndpointConfiguration {
     #[builder(default)]
     required_docker_api_versions: Option<Vec<String>>,
 }
-

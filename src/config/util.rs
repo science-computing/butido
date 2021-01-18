@@ -20,7 +20,8 @@ pub fn default_spinner_format() -> String {
 }
 
 pub fn default_package_print_format() -> String {
-    String::from(indoc::indoc!(r#"
+    String::from(indoc::indoc!(
+        r#"
             {{i}} - {{p.name}} : {{p.version}}
             {{~ #if print_any }}
             ==================================
@@ -78,7 +79,8 @@ pub fn default_package_print_format() -> String {
             {{script}}
             {{/if~}}
             {{~ /if ~}}
-    "#))
+    "#
+    ))
 }
 
 pub fn default_strict_script_interpolation() -> bool {
@@ -92,4 +94,3 @@ pub fn default_script_shebang() -> String {
 pub fn default_build_error_lines() -> usize {
     10
 }
-

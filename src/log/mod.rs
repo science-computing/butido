@@ -18,4 +18,3 @@ mod sink;
 pub use sink::*;
 
 mod util;
-

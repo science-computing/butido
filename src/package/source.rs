@@ -8,8 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
 use getset::Getters;
 use log::trace;
 use serde::Deserialize;
@@ -29,7 +29,11 @@ pub struct Source {
 impl Source {
     #[cfg(test)]
     pub fn new(url: Url, hash: SourceHash) -> Self {
-        Source { url, hash, download_manually: false }
+        Source {
+            url,
+            hash,
+            download_manually: false,
+        }
     }
 }
 
@@ -55,7 +59,11 @@ impl SourceHash {
             Ok(())
         } else {
             trace!("Hash mismatch expected hash");
-            Err(anyhow!("Hash mismatch, expected '{}', got '{}'", self.value, h))
+            Err(anyhow!(
+                "Hash mismatch, expected '{}', got '{}'",
+                self.value,
+                h
+            ))
         }
     }
 
@@ -64,7 +72,6 @@ impl SourceHash {
         SourceHash { hashtype, value }
     }
 }
-
 
 #[derive(parse_display::Display, Clone, Debug, Serialize, Deserialize)]
 pub enum HashType {
@@ -89,25 +96,24 @@ impl HashType {
                 let mut m = sha1::Sha1::new();
                 m.update(buffer);
                 Ok(HashValue(m.digest().to_string()))
-            },
+            }
             HashType::Sha256 => {
                 trace!("SHA256 hashing buffer");
                 //let mut m = sha2::Sha256::new();
                 //m.update(buffer);
                 //Ok(HashValue(String::from(m.finalize())))
                 unimplemented!()
-            },
+            }
             HashType::Sha512 => {
                 trace!("SHA512 hashing buffer");
                 //let mut m = sha2::Sha512::new();
                 //m.update(buffer);
                 //Ok(HashValue(String::from(m.finalize())))
                 unimplemented!()
-            },
+            }
         }
     }
 }
-
 
 #[derive(parse_display::Display, Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
 #[serde(transparent)]
@@ -120,4 +126,3 @@ impl From<String> for HashValue {
         HashValue(s)
     }
 }
-

@@ -10,14 +10,14 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use diesel::PgConnection;
 use diesel::prelude::*;
+use diesel::PgConnection;
 use log::trace;
 
-use crate::db::models::{Submit, Endpoint, Package, Image};
+use crate::db::models::{Endpoint, Image, Package, Submit};
 use crate::package::Script;
-use crate::schema::jobs::*;
 use crate::schema::jobs;
+use crate::schema::jobs::*;
 use crate::util::docker::ContainerHash;
 
 #[derive(Debug, Identifiable, Queryable, Associations)]
@@ -25,7 +25,7 @@ use crate::util::docker::ContainerHash;
 #[belongs_to(Endpoint)]
 #[belongs_to(Package)]
 #[belongs_to(Image)]
-#[table_name="jobs"]
+#[table_name = "jobs"]
 pub struct Job {
     pub id: i32,
     pub submit_id: i32,
@@ -39,7 +39,7 @@ pub struct Job {
 }
 
 #[derive(Debug, Insertable)]
-#[table_name="jobs"]
+#[table_name = "jobs"]
 struct NewJob<'a> {
     pub submit_id: i32,
     pub endpoint_id: i32,
@@ -53,16 +53,17 @@ struct NewJob<'a> {
 
 impl Job {
     #[allow(clippy::too_many_arguments)]
-    pub fn create(database_connection: &PgConnection,
-                           job_uuid: &::uuid::Uuid,
-                           submit: &Submit,
-                           endpoint: &Endpoint,
-                           package: &Package,
-                           image: &Image,
-                           container: &ContainerHash,
-                           script: &Script,
-                           log: &str,
-                           ) -> Result<Job> {
+    pub fn create(
+        database_connection: &PgConnection,
+        job_uuid: &::uuid::Uuid,
+        submit: &Submit,
+        endpoint: &Endpoint,
+        package: &Package,
+        image: &Image,
+        container: &ContainerHash,
+        script: &Script,
+        log: &str,
+    ) -> Result<Job> {
         let new_job = NewJob {
             uuid: job_uuid,
             submit_id: submit.id,
@@ -86,4 +87,3 @@ impl Job {
             .map_err(Error::from)
     }
 }
-

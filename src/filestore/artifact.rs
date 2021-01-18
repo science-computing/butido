@@ -10,16 +10,16 @@
 
 use std::cmp::Ordering;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use getset::Getters;
 use pom::parser::Parser as PomParser;
 
+use crate::filestore::path::*;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
-use crate::filestore::path::*;
 
 #[derive(Clone, PartialEq, Eq, Debug, Getters)]
 pub struct Artifact {
@@ -45,7 +45,6 @@ impl Ord for Artifact {
     }
 }
 
-
 impl Artifact {
     pub fn load(root: &StoreRoot, path: ArtifactPath) -> Result<Self> {
         let joined_fullpath = root.join(&path)?;
@@ -55,7 +54,7 @@ impl Artifact {
         Ok(Artifact {
             path,
             name,
-            version
+            version,
         })
     }
 
@@ -73,16 +72,15 @@ impl Artifact {
         (PackageName::parser() + crate::util::parser::dash() + PackageVersion::parser())
             .map(|((name, _), vers)| (name, vers))
     }
-
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filestore::path::ArtifactPath;
+    use crate::filestore::path::StoreRoot;
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
-    use crate::filestore::path::StoreRoot;
-    use crate::filestore::path::ArtifactPath;
     use std::path::PathBuf;
 
     #[test]

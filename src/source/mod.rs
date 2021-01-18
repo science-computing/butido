@@ -10,10 +10,10 @@
 
 use std::path::PathBuf;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use log::trace;
 use url::Url;
 
@@ -47,27 +47,30 @@ pub struct SourceEntry {
 }
 
 impl SourceEntry {
-
     fn source_file_path(&self) -> PathBuf {
-        self.source_file_directory().join(format!("{}-{}.source", self.package_source_name, self.package_source.hash().value()))
+        self.source_file_directory().join(format!(
+            "{}-{}.source",
+            self.package_source_name,
+            self.package_source.hash().value()
+        ))
     }
 
     fn source_file_directory(&self) -> PathBuf {
-        self.cache_root.join(format!("{}-{}", self.package_name, self.package_version))
+        self.cache_root
+            .join(format!("{}-{}", self.package_name, self.package_version))
     }
 
     fn for_package(cache_root: PathBuf, package: &Package) -> Vec<Self> {
-        package.sources()
+        package
+            .sources()
             .clone()
             .into_iter()
-            .map(|(source_name, source)| {
-                SourceEntry {
-                    cache_root: cache_root.clone(),
-                    package_name: package.name().clone(),
-                    package_version: package.version().clone(),
-                    package_source_name: source_name,
-                    package_source: source,
-                }
+            .map(|(source_name, source)| SourceEntry {
+                cache_root: cache_root.clone(),
+                package_name: package.name().clone(),
+                package_version: package.version().clone(),
+                package_source_name: source_name,
+                package_source: source,
             })
             .collect()
     }
@@ -95,7 +98,6 @@ impl SourceEntry {
     }
 
     pub async fn verify_hash(&self) -> Result<()> {
-
         let p = self.source_file_path();
         trace!("Reading to buffer: {}", p.display());
 
@@ -115,9 +117,7 @@ impl SourceEntry {
         .await??;
 
         trace!("Reading to buffer finished: {}", p.display());
-        self.package_source
-            .hash()
-            .matches_hash_of(&buf)
+        self.package_source.hash().matches_hash_of(&buf)
     }
 
     pub async fn create(&self) -> Result<tokio::fs::File> {
@@ -126,21 +126,24 @@ impl SourceEntry {
 
         if !self.cache_root.is_dir() {
             trace!("Cache root does not exist: {}", self.cache_root.display());
-            return Err(anyhow!("Cache root {} does not exist!", self.cache_root.display()))
+            return Err(anyhow!(
+                "Cache root {} does not exist!",
+                self.cache_root.display()
+            ));
         }
 
         {
             let dir = self.source_file_directory();
             if !dir.is_dir() {
                 trace!("Creating directory: {}", dir.display());
-                tokio::fs::create_dir(&dir)
-                    .await
-                    .with_context(|| {
-                        anyhow!("Creating source cache directory for package {} {}: {}",
-                            self.package_source_name,
-                            self.package_source.hash().value(),
-                            dir.display())
-                    })?;
+                tokio::fs::create_dir(&dir).await.with_context(|| {
+                    anyhow!(
+                        "Creating source cache directory for package {} {}: {}",
+                        self.package_source_name,
+                        self.package_source.hash().value(),
+                        dir.display()
+                    )
+                })?;
             } else {
                 trace!("Directory exists: {}", dir.display());
             }
@@ -156,6 +159,4 @@ impl SourceEntry {
             .with_context(|| anyhow!("Creating file: {}", p.display()))
             .map_err(Error::from)
     }
-
 }
-

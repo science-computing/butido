@@ -13,11 +13,11 @@ use std::fmt::Debug;
 use anyhow::Result;
 use indicatif::ProgressBar;
 
-use crate::filestore::util::FileStoreImpl;
 use crate::filestore::path::StoreRoot;
+use crate::filestore::util::FileStoreImpl;
 
 // The implementation of this type must be available in the merged filestore.
-pub struct ReleaseStore(pub (in crate::filestore) FileStoreImpl);
+pub struct ReleaseStore(pub(in crate::filestore) FileStoreImpl);
 
 impl Debug for ReleaseStore {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
@@ -25,10 +25,8 @@ impl Debug for ReleaseStore {
     }
 }
 
-
 impl ReleaseStore {
     pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
         FileStoreImpl::load(root, progress).map(ReleaseStore)
     }
 }
-

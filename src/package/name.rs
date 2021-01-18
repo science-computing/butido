@@ -14,7 +14,18 @@ use pom::parser::Parser as PomParser;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(parse_display::Display, Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(
+    parse_display::Display,
+    Serialize,
+    Deserialize,
+    Clone,
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+)]
 #[serde(transparent)]
 #[display("{0}")]
 pub struct PackageName(String);
@@ -40,4 +51,3 @@ impl PackageName {
             .convert(|b| String::from_utf8(b.to_vec()).map(Self::from))
     }
 }
-
