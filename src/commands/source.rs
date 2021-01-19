@@ -17,6 +17,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
+use colored::Colorize;
 use log::{info, trace};
 use tokio::io::AsyncWriteExt;
 use tokio::stream::StreamExt;
@@ -100,17 +101,17 @@ where
                 })?;
 
                 trace!("Success verifying: {}", source.path().display());
-                let msg = format!("Ok: {}", source.path().display());
+                let msg = format!("Ok: {}", source.path().display()).green();
                 bar.finish_with_message(&msg);
                 Ok(msg)
             } else {
                 trace!("Failed verifying: {}", source.path().display());
-                bar.finish_with_message("Error");
+                bar.finish_with_message(&"Error".red());
                 Err(anyhow!("Source missing: {}", source.path().display()))
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Vec<Result<String>>>();
+        .collect::<Vec<Result<_>>>();
 
     let (results, _) = tokio::join!(results, async move { multi.join() });
     info!("Verification processes finished");
@@ -123,12 +124,12 @@ where
                 let mut outlock = out.lock();
                 any_error = true;
                 for cause in e.chain() {
-                    let _ = writeln!(outlock, "{}", cause);
+                    let _ = writeln!(outlock, "Error: {}", cause.to_string().red());
                 }
                 let _ = writeln!(outlock);
             }
             Ok(s) => {
-                let _ = writeln!(out.lock(), "{}", s);
+                let _ = writeln!(out.lock(), "{}", s.green());
             }
         }
     }
