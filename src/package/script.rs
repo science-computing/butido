@@ -51,7 +51,7 @@ impl Script {
     }
 
     pub fn lines_numbered(&self) -> impl Iterator<Item = (usize, &str)> {
-        self.0.lines().enumerate()
+        self.0.lines().enumerate().map(|(n, l)| (n + 1, l))
     }
 
     pub async fn lint(&self, mut cmd: Command) -> Result<(ExitStatus, String, String)> {
@@ -139,7 +139,7 @@ impl<'a> HighlightedScript<'a> {
     }
 
     pub fn lines_numbered(&'a self) -> Result<impl Iterator<Item = (usize, String)> + 'a> {
-        self.lines().map(|iter| iter.enumerate())
+        self.lines().map(|iter| iter.enumerate().map(|(n, l)| (n + 1, l)))
     }
 }
 
