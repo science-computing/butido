@@ -300,8 +300,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         "success",
         "package",
         "version",
-        "Env Name",
-        "Env Value",
+        "Env",
     ]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let jobs = matches
@@ -364,28 +363,35 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         })?;
 
     let data = jobs
+        .iter()
+        .group_by(|(job, submit, ep, package, _)| {
+            (job, submit, ep, package)
+        });
+
+    let data = data
         .into_iter()
-        .map(|(job, submit, ep, package, o_env)| {
+        .map(|((job, submit, ep, package), grouped)| {
+            let envs = grouped
+                .filter_map(|opt| opt.4.as_ref())
+                .map(|tpl| format!("{}={}", tpl.1.name, tpl.1.value))
+                .join(", ");
+
             let success = crate::log::ParsedLog::build_from(&job.log_text)?
                 .is_successfull()
                 .map(|b| if b { "yes" } else { "no" })
                 .map(String::from)
                 .unwrap_or_else(|| String::from("unknown"));
 
-            let env = o_env
-                .map(|tpl| (tpl.1.name, tpl.1.value))
-                .unwrap_or_default();
             Ok(vec![
                 format!("{}", job.id),
                 submit.uuid.to_string(),
                 job.uuid.to_string(),
                 submit.submit_time.to_string(),
-                ep.name,
+                ep.name.clone(),
                 success,
-                package.name,
-                package.version,
-                env.0,
-                env.1,
+                package.name.clone(),
+                package.version.clone(),
+                envs,
             ])
         })
         .collect::<Result<Vec<_>>>()?;

@@ -16,7 +16,7 @@ use diesel::PgConnection;
 use crate::schema::endpoints;
 use crate::schema::endpoints::*;
 
-#[derive(Identifiable, Queryable)]
+#[derive(Identifiable, Queryable, Eq, PartialEq)]
 pub struct Endpoint {
     pub id: i32,
     pub name: String,
