@@ -95,7 +95,7 @@ where
             let bar = multi.add(progressbars.bar());
             if source.path().exists() {
                 trace!("Exists: {}", source.path().display());
-                source.verify_hash().await.with_context(|| {
+                source.verify_hash().with_context(|| {
                     anyhow!("Hash verification failed for: {}", source.path().display())
                 })?;
 
