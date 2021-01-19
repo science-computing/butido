@@ -85,7 +85,7 @@ pub async fn build(
             .any(|img| image_name == *img)
     {
         return Err(anyhow!(
-            "Requested build image {} is not in the configured images"
+            "Requested build image {} is not in the configured images", image_name
         ))
         .with_context(|| anyhow!("Available images: {:?}", config.docker().images()))
         .with_context(|| anyhow!("Image present verification failed"))

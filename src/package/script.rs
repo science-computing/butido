@@ -51,7 +51,7 @@ impl Script {
     }
 
     pub fn lines_numbered(&self) -> impl Iterator<Item = (usize, &str)> {
-        self.0.lines().enumerate()
+        self.0.lines().enumerate().map(|(n, l)| (n + 1, l))
     }
 
     pub async fn lint(&self, mut cmd: Command) -> Result<(ExitStatus, String, String)> {
@@ -139,7 +139,7 @@ impl<'a> HighlightedScript<'a> {
     }
 
     pub fn lines_numbered(&'a self) -> Result<impl Iterator<Item = (usize, String)> + 'a> {
-        self.lines().map(|iter| iter.enumerate())
+        self.lines().map(|iter| iter.enumerate().map(|(n, l)| (n + 1, l)))
     }
 }
 
@@ -256,7 +256,7 @@ impl HelperDef for PhaseHelper {
             .and_then(|phase_name| {
                 out.write("echo '#BUTIDO:PHASE:")?;
                 out.write(phase_name)?;
-                out.write("'\n")?;
+                out.write("'")?;
                 Ok(())
             })
     }
@@ -281,7 +281,7 @@ impl HelperDef for StateHelper {
             .ok_or_else(|| RenderError::new("Required parameter must be a string: state"))
             .and_then(|state| match state {
                 "OK" => {
-                    out.write("echo '#BUTIDO:STATE:OK'\n")?;
+                    out.write("echo '#BUTIDO:STATE:OK'")?;
                     Ok(())
                 }
                 "ERR" => {
@@ -290,7 +290,7 @@ impl HelperDef for StateHelper {
                     })?;
                     out.write("echo '#BUTIDO:STATE:ERR:")?;
                     out.write(state_msg.value().render().as_ref())?;
-                    out.write("'\n")?;
+                    out.write("'")?;
                     Ok(())
                 }
                 other => Err(RenderError::new(format!(
@@ -321,7 +321,7 @@ impl HelperDef for ProgressHelper {
             .and_then(|progress| {
                 out.write("echo '#BUTIDO:PROGRESS:")?;
                 out.write(&progress.to_string())?;
-                out.write("'\n")?;
+                out.write("'")?;
                 Ok(())
             })
     }
