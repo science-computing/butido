@@ -331,7 +331,7 @@ impl<'a> LogReceiver<'a> {
             if let Some(lf) = logfile.as_mut() {
                 lf.write_all(logitem.display()?.to_string().as_bytes())
                     .await?;
-                lf.write_all("\n".as_bytes()).await?;
+                lf.write_all(b"\n").await?;
             }
 
             match logitem {

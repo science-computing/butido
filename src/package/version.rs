@@ -96,49 +96,49 @@ mod tests {
 
     #[test]
     fn test_parse_version_1() {
-        assert!(PackageVersion::parser().parse("".as_bytes()).is_err());
-        assert!(PackageVersion::parser().parse("=".as_bytes()).is_err());
-        assert!(PackageVersion::parser().parse("*1".as_bytes()).is_err());
-        assert!(PackageVersion::parser().parse(">1".as_bytes()).is_err());
-        assert!(PackageVersion::parser().parse("<1".as_bytes()).is_err());
-        assert!(PackageVersion::parser().parse("=a".as_bytes()).is_err());
-        assert!(PackageVersion::parser().parse("=.a".as_bytes()).is_err());
-        assert!(PackageVersion::parser().parse("=.1".as_bytes()).is_err());
-        assert!(PackageVersion::parser().parse("=a1".as_bytes()).is_err());
-        assert!(PackageVersion::parser().parse("a".as_bytes()).is_err());
+        assert!(PackageVersion::parser().parse(b"").is_err());
+        assert!(PackageVersion::parser().parse(b"=").is_err());
+        assert!(PackageVersion::parser().parse(b"*1").is_err());
+        assert!(PackageVersion::parser().parse(b">1").is_err());
+        assert!(PackageVersion::parser().parse(b"<1").is_err());
+        assert!(PackageVersion::parser().parse(b"=a").is_err());
+        assert!(PackageVersion::parser().parse(b"=.a").is_err());
+        assert!(PackageVersion::parser().parse(b"=.1").is_err());
+        assert!(PackageVersion::parser().parse(b"=a1").is_err());
+        assert!(PackageVersion::parser().parse(b"a").is_err());
 
         assert!(PackageVersionConstraint::parser()
-            .parse("".as_bytes())
+            .parse(b"")
             .is_err());
         assert!(PackageVersionConstraint::parser()
-            .parse("=".as_bytes())
+            .parse(b"=")
             .is_err());
         assert!(PackageVersionConstraint::parser()
-            .parse("*1".as_bytes())
+            .parse(b"*1")
             .is_err());
         assert!(PackageVersionConstraint::parser()
-            .parse(">1".as_bytes())
+            .parse(b">1")
             .is_err());
         assert!(PackageVersionConstraint::parser()
-            .parse("<1".as_bytes())
+            .parse(b"<1")
             .is_err());
         assert!(PackageVersionConstraint::parser()
-            .parse("=a".as_bytes())
+            .parse(b"=a")
             .is_err());
         assert!(PackageVersionConstraint::parser()
-            .parse("=.a".as_bytes())
+            .parse(b"=.a")
             .is_err());
         assert!(PackageVersionConstraint::parser()
-            .parse("=.1".as_bytes())
+            .parse(b"=.1")
             .is_err());
         assert!(PackageVersionConstraint::parser()
-            .parse("=a1".as_bytes())
+            .parse(b"=a1")
             .is_err());
         assert!(PackageVersionConstraint::parser()
-            .parse("1".as_bytes())
+            .parse(b"1")
             .is_err());
         assert!(PackageVersionConstraint::parser()
-            .parse("a".as_bytes())
+            .parse(b"a")
             .is_err());
     }
 
