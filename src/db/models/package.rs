@@ -18,7 +18,7 @@ use diesel::PgConnection;
 use crate::schema::packages;
 use crate::schema::packages::*;
 
-#[derive(Debug, Identifiable, Queryable)]
+#[derive(Debug, Identifiable, Queryable, Eq, PartialEq)]
 pub struct Package {
     pub id: i32,
     pub name: String,
