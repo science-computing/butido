@@ -79,4 +79,29 @@ impl MergedStores {
             Ok(v)
         }
     }
+
+    pub async fn get_artifact_by_path(&self, p: &Path) -> Result<Option<Artifact>> {
+        let artifact_path = ArtifactPath::new(p.to_path_buf())?;
+
+        let staging = &mut self.staging.write().await.0;
+        let staging_path = staging.root_path().join(&artifact_path)?;
+
+        if staging_path.exists() {
+            let art_path = ArtifactPath::new(p.to_path_buf())?;
+            let art = staging.load_from_path(&artifact_path)?;
+            return Ok(Some(art.clone()))
+        }
+
+        drop(staging);
+
+        let release = &mut self.release.write().await.0;
+        let release_path = release.root_path().join(&artifact_path)?;
+
+        if release_path.exists() {
+            let art = release.load_from_path(&artifact_path)?;
+            return Ok(Some(art.clone()))
+        }
+
+        Ok(None)
+    }
 }
