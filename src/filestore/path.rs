@@ -169,6 +169,7 @@ impl<'a> FullArtifactPath<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct FullArtifactPathDisplay<'a>(&'a StoreRoot, &'a ArtifactPath);
 
 impl<'a> std::fmt::Display for FullArtifactPathDisplay<'a> {
