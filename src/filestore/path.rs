@@ -73,10 +73,6 @@ impl StoreRoot {
         FullArtifactPath(self, ap)
     }
 
-    pub(in crate::filestore) fn is_file(&self, subpath: &Path) -> bool {
-        self.0.join(subpath).is_file()
-    }
-
     pub(in crate::filestore) fn is_dir(&self, subpath: &Path) -> bool {
         self.0.join(subpath).is_dir()
     }
