@@ -148,6 +148,10 @@ impl<'a> FullArtifactPath<'a> {
         self.0 .0.join(&self.1 .0)
     }
 
+    pub fn exists(&self) -> bool {
+        self.joined().exists()
+    }
+
     pub fn display(&self) -> FullArtifactPathDisplay<'a> {
         FullArtifactPathDisplay(self.0, self.1)
     }
