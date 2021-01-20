@@ -90,7 +90,6 @@ async fn main() -> Result<()> {
 
     let config = config.try_into::<NotValidatedConfiguration>()?.validate()?;
 
-    let _ = crate::ui::package_repo_cleanness_check(&repo_path)?;
     let max_packages = count_pkg_files(&repo_path);
     let hide_bars = cli.is_present("hide_bars") || crate::util::stdout_is_pipe();
     let progressbars = ProgressBars::setup(
