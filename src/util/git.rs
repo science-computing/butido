@@ -18,9 +18,16 @@ use git2::Repository;
 use log::trace;
 
 pub fn repo_is_clean(p: &Path) -> Result<bool> {
-    Repository::open(p)
+    let r = Repository::open(p)?;
+
+    r.diff_index_to_workdir(None, None)
+        .and_then(|d| d.stats())
         .map_err(Error::from)
-        .map(|r| r.state() == git2::RepositoryState::Clean)
+        .map(|st| {
+            trace!("Repo stats: {:?}", st);
+            trace!("Repo state: {:?}", r.state());
+            st.files_changed() == 0 && r.state() == git2::RepositoryState::Clean
+        })
 }
 
 pub fn get_repo_head_commit_hash(p: &Path) -> Result<String> {
