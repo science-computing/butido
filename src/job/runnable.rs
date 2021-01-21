@@ -138,25 +138,4 @@ impl RunnableJob {
         }
     }
 
-    pub fn package_environment(&self) -> Vec<(String, String)> {
-        vec![
-            (
-                String::from("BUTIDO_PACKAGE_NAME"),
-                self.package().name().clone().to_string(),
-            ),
-            (
-                String::from("BUTIDO_PACKAGE_VERSION"),
-                self.package().version().clone().to_string(),
-            ),
-            (
-                String::from("BUTIDO_PACKAGE_VERSION_IS_SEMVER"),
-                String::from(if *self.package().version_is_semver() {
-                    "true"
-                } else {
-                    "false"
-                }),
-            ),
-        ]
-    }
-
 }
