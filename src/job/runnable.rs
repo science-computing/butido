@@ -101,7 +101,7 @@ impl RunnableJob {
         )?;
 
         Ok(RunnableJob {
-            uuid: job.uuid.clone(),
+            uuid: job.uuid,
             package: job.package.clone(),
             image: job.image.clone(),
             resources,

@@ -59,7 +59,7 @@ impl Tree {
                 phases.clone(),
                 resources.clone());
 
-            let job_uuid = job.uuid().clone();
+            let job_uuid = *job.uuid();
             let jdef = JobDefinition { job, dependencies: deps_uuids };
 
             tree.insert(job_uuid, jdef);

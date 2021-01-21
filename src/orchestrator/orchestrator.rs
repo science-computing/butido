@@ -131,8 +131,7 @@ impl<'a> Orchestrator<'a> {
                 .map(|(uuid, jobdef)| {
                     trace!("Running job {}", uuid);
                     let bar = multibar.add(self.progress_generator.bar());
-                    let uuid = uuid.clone();
-                    self.run_job(jobdef, bar).map(move |r| (uuid, r))
+                    self.run_job(jobdef, bar).map(move |r| (*uuid, r))
                 })
                 .collect::<futures::stream::FuturesUnordered<_>>()
                 .collect::<Vec<(_, Result<JobResult>)>>();
@@ -181,7 +180,7 @@ impl<'a> Orchestrator<'a> {
             .await?;
 
         bar.set_message("Scheduling...");
-        let job_uuid = jobdef.job.uuid().clone();
+        let job_uuid = *jobdef.job.uuid();
         match self.scheduler.schedule_job(runnable, bar).await?.run().await {
             Err(e) => return Ok(Err((job_uuid, e))),
             Ok(db_artifacts) => {
