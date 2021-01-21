@@ -58,8 +58,6 @@ impl MergedStores {
             return Ok(Some(art.clone()))
         }
 
-        drop(staging);
-
         let release = &mut self.release.write().await.0;
         let release_path = release.root_path().join(&artifact_path)?;
         trace!("release_path = {:?}", release_path);
