@@ -137,7 +137,7 @@ impl<'a> Orchestrator<'a> {
                 .collect::<futures::stream::FuturesUnordered<_>>()
                 .collect::<Vec<(_, Result<JobResult>)>>();
 
-            let multibar_block = tokio::task::spawn_blocking(move || multibar.join());                        
+            let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
             let (_, build_results) = tokio::join!(multibar_block, build_results);
 
             for (uuid, artifact_result) in build_results.into_iter() {
