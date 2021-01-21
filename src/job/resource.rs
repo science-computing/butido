@@ -23,6 +23,12 @@ impl From<(EnvironmentVariableName, String)> for JobResource {
     }
 }
 
+impl From<Artifact> for JobResource {
+    fn from(a: Artifact) -> Self {
+        JobResource::Artifact(a)
+    }
+}
+
 impl JobResource {
     pub fn env(&self) -> Option<(&EnvironmentVariableName, &String)> {
         match self {

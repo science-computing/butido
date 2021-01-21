@@ -33,7 +33,6 @@ use crate::filestore::path::StoreRoot;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 use crate::job::JobResource;
-use crate::job::JobSet;
 use crate::log::LogItem;
 use crate::orchestrator::OrchestratorSetup;
 use crate::package::PackageName;
@@ -306,7 +305,7 @@ pub async fn build(
 
     trace!("Setting up job sets");
     let resources: Vec<JobResource> = additional_env.into_iter().map(JobResource::from).collect();
-    let jobsets = JobSet::sets_from_tree(tree, shebang, image_name, phases.clone(), resources)?;
+    let jobtree = crate::job::Tree::from_package_tree(tree, shebang, image_name, phases.clone(), resources);
     trace!("Setting up job sets finished successfully");
 
     trace!("Setting up Orchestrator");
@@ -324,7 +323,7 @@ pub async fn build(
         } else {
             None
         })
-        .jobsets(jobsets)
+        .jobtree(jobtree)
         .config(config)
         .build()
         .setup()

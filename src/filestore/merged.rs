@@ -9,18 +9,17 @@
 //
 
 use std::sync::Arc;
-
-use log::trace;
-use tokio::sync::RwLock;
+use std::path::Path;
 
 use anyhow::Result;
 use getset::Getters;
+use log::trace;
+use tokio::sync::RwLock;
 
 use crate::filestore::Artifact;
+use crate::filestore::path::ArtifactPath;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
-use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
 
 /// A type that merges the release store and the staging store
 ///
@@ -40,43 +39,41 @@ impl MergedStores {
         MergedStores { release, staging }
     }
 
-    pub async fn get_artifact_by_name_and_version(
-        &self,
-        name: &PackageName,
-        version: &PackageVersionConstraint,
-    ) -> Result<Vec<Artifact>> {
-        let v = self
-            .staging
-            .read()
-            .await
-            .0
-            .values()
-            .filter(|a| {
-                trace!(
-                    "Checking {:?} == {:?} && {:?} == {:?}",
-                    a.name(),
-                    name,
-                    version,
-                    a.version()
-                );
-                a.name() == name && version.matches(a.version())
-            })
-            .cloned()
-            .collect::<Vec<_>>();
+    pub async fn get_artifact_by_path(&self, p: &Path) -> Result<Option<Artifact>> {
+        trace!("Fetching artifact from path: {:?}", p.display());
+        let artifact_path = ArtifactPath::new(p.to_path_buf())?;
 
-        if v.is_empty() {
-            Ok({
-                self.release
-                    .read()
-                    .await
-                    .0
-                    .values()
-                    .filter(|a| a.name() == name && version.matches(a.version()))
-                    .cloned()
-                    .collect()
-            })
-        } else {
-            Ok(v)
+        let staging = &mut self.staging.write().await.0;
+        let staging_path = staging.root_path().join(&artifact_path)?;
+        trace!("staging_path = {:?}", staging_path.display());
+
+        if staging_path.exists() {
+            let art = if let Some(art) = staging.get(&artifact_path) {
+                art
+            } else {
+                trace!("Loading path from staging store: {:?}", artifact_path.display());
+                staging.load_from_path(&artifact_path)?
+            };
+
+            return Ok(Some(art.clone()))
         }
+
+        drop(staging);
+
+        let release = &mut self.release.write().await.0;
+        let release_path = release.root_path().join(&artifact_path)?;
+        trace!("release_path = {:?}", release_path);
+
+        if release_path.exists() {
+            let art = if let Some(art) = release.get(&artifact_path) {
+                art
+            } else {
+                trace!("Loading path from release store: {:?}", artifact_path.display());
+                release.load_from_path(&artifact_path)?
+            };
+            return Ok(Some(art.clone()))
+        }
+
+        Ok(None)
     }
 }

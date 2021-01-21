@@ -12,7 +12,6 @@
 //!
 
 use std::collections::BTreeMap;
-use std::path::Path;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -51,12 +50,8 @@ impl FileStoreImpl {
         &self.root
     }
 
-    pub fn path_exists_in_store_root(&self, p: &Path) -> bool {
-        self.root.is_file(p)
-    }
-
-    pub(in crate::filestore) fn values(&self) -> impl Iterator<Item = &Artifact> {
-        self.store.values()
+    pub fn get(&self, artifact_path: &ArtifactPath) -> Option<&Artifact> {
+        self.store.get(artifact_path)
     }
 
     pub(in crate::filestore) fn load_from_path(

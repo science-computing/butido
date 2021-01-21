@@ -12,25 +12,22 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use getset::Getters;
-use log::{debug, trace, warn};
-use tokio::stream::StreamExt;
+use log::debug;
 use uuid::Uuid;
 
 use crate::config::Configuration;
-use crate::filestore::MergedStores;
+use crate::filestore::Artifact;
 use crate::job::Job;
 use crate::job::JobResource;
 use crate::package::Package;
-use crate::package::ParseDependency;
 use crate::package::Script;
 use crate::package::ScriptBuilder;
 use crate::source::SourceCache;
 use crate::source::SourceEntry;
-use crate::util::docker::ImageName;
 use crate::util::EnvironmentVariableName;
+use crate::util::docker::ImageName;
 
 /// A job configuration that can be run. All inputs are clear here.
 #[derive(Debug, Getters)]
@@ -56,39 +53,22 @@ pub struct RunnableJob {
 
 impl RunnableJob {
     pub async fn build_from_job(
-        job: Job,
-        merged_stores: &MergedStores,
+        job: &Job,
         source_cache: &SourceCache,
         config: &Configuration,
+        dependencies: Vec<Artifact>,
     ) -> Result<Self> {
-        trace!("Preparing build dependencies");
-        let resources = {
-            let mut resources = job
-                .package()
-                .dependencies()
-                .build()
-                .iter()
-                .map(|dep| Self::build_resource(dep, merged_stores))
-                .chain({
-                    job.package()
-                        .dependencies()
-                        .runtime()
-                        .iter()
-                        .map(|dep| Self::build_resource(dep, merged_stores))
-                })
-                .collect::<futures::stream::FuturesUnordered<_>>()
-                .collect::<Result<Vec<JobResource>>>()
-                .await?;
-
-            resources.extend({
+        // Add the environment from the original Job object to the resources
+        let resources = dependencies
+            .into_iter()
+            .map(JobResource::from)
+            .chain({
                 job.resources()
                     .iter()
                     .filter(|jr| jr.env().is_some())
                     .cloned()
-            });
-
-            resources
-        };
+            })
+            .collect();
 
         if config.containers().check_env_names() {
             debug!("Checking environment if all variables are allowed!");
@@ -121,9 +101,9 @@ impl RunnableJob {
         )?;
 
         Ok(RunnableJob {
-            uuid: job.uuid,
-            package: job.package,
-            image: job.image,
+            uuid: job.uuid.clone(),
+            package: job.package.clone(),
+            image: job.image.clone(),
             resources,
             source_cache: source_cache.clone(),
 
@@ -179,31 +159,4 @@ impl RunnableJob {
         ]
     }
 
-    async fn build_resource(
-        dep: &dyn ParseDependency,
-        merged_stores: &MergedStores,
-    ) -> Result<JobResource> {
-        let (name, vers) = dep.parse_as_name_and_version()?;
-        trace!("Copying dep: {:?} {:?}", name, vers);
-        let mut a = merged_stores
-            .get_artifact_by_name_and_version(&name, &vers)
-            .await?;
-
-        if a.is_empty() {
-            Err(anyhow!("Cannot find dependency: {:?} {:?}", name, vers))
-                .context("Building a runnable job")
-                .map_err(Error::from)
-        } else {
-            a.sort();
-            let a_len = a.len();
-            let found_dependency = a.into_iter().next().unwrap(); // save by above check
-            if a_len > 1 {
-                warn!("Found more than one dependency for {:?} {:?}", name, vers);
-                warn!("Using: {:?}", found_dependency);
-                warn!("Please investigate, this might be a BUG");
-            }
-
-            Ok(JobResource::Artifact(found_dependency))
-        }
-    }
 }

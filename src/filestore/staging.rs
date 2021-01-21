@@ -9,7 +9,6 @@
 //
 
 use std::fmt::Debug;
-use std::path::Path;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -100,9 +99,5 @@ impl StagingStore {
 
     pub fn root_path(&self) -> &StoreRoot {
         self.0.root_path()
-    }
-
-    pub fn path_exists_in_store_root(&self, path: &Path) -> bool {
-        self.0.path_exists_in_store_root(path)
     }
 }

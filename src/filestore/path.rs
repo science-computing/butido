@@ -73,10 +73,6 @@ impl StoreRoot {
         FullArtifactPath(self, ap)
     }
 
-    pub(in crate::filestore) fn is_file(&self, subpath: &Path) -> bool {
-        self.0.join(subpath).is_file()
-    }
-
     pub(in crate::filestore) fn is_dir(&self, subpath: &Path) -> bool {
         self.0.join(subpath).is_dir()
     }
@@ -148,6 +144,10 @@ impl<'a> FullArtifactPath<'a> {
         self.0 .0.join(&self.1 .0)
     }
 
+    pub fn exists(&self) -> bool {
+        self.joined().exists()
+    }
+
     pub fn display(&self) -> FullArtifactPathDisplay<'a> {
         FullArtifactPathDisplay(self.0, self.1)
     }
@@ -165,6 +165,7 @@ impl<'a> FullArtifactPath<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct FullArtifactPathDisplay<'a>(&'a StoreRoot, &'a ArtifactPath);
 
 impl<'a> std::fmt::Display for FullArtifactPathDisplay<'a> {
