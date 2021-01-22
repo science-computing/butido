@@ -29,6 +29,7 @@ use uuid::Uuid;
 use crate::db::models as dbmodels;
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
+use crate::filestore::Artifact;
 use crate::filestore::StagingStore;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
@@ -145,7 +146,7 @@ impl std::fmt::Debug for JobHandle {
 }
 
 impl JobHandle {
-    pub async fn run(self) -> Result<Vec<dbmodels::Artifact>> {
+    pub async fn run(self) -> Result<Vec<Artifact>> {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let ep = self.endpoint.read().await;
         let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;
@@ -241,9 +242,18 @@ impl JobHandle {
 
         // Have to do it the ugly way here because of borrowing semantics
         let mut r = vec![];
+        let staging_store_lock = self.staging_store.read().await;
         for p in paths.iter() {
+            use std::ops::Deref;
             trace!("DB: Creating artifact entry for path: {}", p.display());
-            r.push(dbmodels::Artifact::create(&self.db, p, &job)?);
+            let _ = dbmodels::Artifact::create(&self.db, p, &job)?;
+            r.push({
+                staging_store_lock
+                    .deref()
+                    .get(p)
+                    .ok_or_else(|| anyhow!("Artifact not in store: {:?}", p))?
+                    .clone()
+            });
         }
         Ok(r)
     }
