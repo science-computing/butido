@@ -352,30 +352,30 @@ impl<'a> LogReceiver<'a> {
                     trace!("Setting bar to {}", u as u64);
                     self.bar.set_position(u as u64);
                     self.bar.set_message(&format!(
-                        "Job ({} {}): {} running...",
-                        self.package_name, self.package_version, self.job_id
+                        "[{} {} {}]: running...",
+                        self.job_id, self.package_name, self.package_version
                     ));
                 }
                 LogItem::CurrentPhase(ref phasename) => {
                     trace!("Setting bar phase to {}", phasename);
                     self.bar.set_message(&format!(
-                        "Job ({} {}): {} Phase: {}",
-                        self.package_name, self.package_version, self.job_id, phasename
+                        "[{} {} {}]: Phase: {}",
+                        self.job_id, self.package_name, self.package_version, phasename
                     ));
                 }
                 LogItem::State(Ok(())) => {
                     trace!("Setting bar state to Ok");
                     self.bar.set_message(&format!(
-                        "Job ({} {}): {} State Ok",
-                        self.package_name, self.package_version, self.job_id
+                        "[{} {} {}]: State Ok",
+                        self.job_id, self.package_name, self.package_version
                     ));
                     success = Some(true);
                 }
                 LogItem::State(Err(ref e)) => {
                     trace!("Setting bar state to Err: {}", e);
                     self.bar.set_message(&format!(
-                        "Job ({} {}): {} State Err: {}",
-                        self.package_name, self.package_version, self.job_id, e
+                        "[{} {} {}]: State Err: {}",
+                        self.job_id, self.package_name, self.package_version, e
                     ));
                     success = Some(false);
                 }
@@ -386,16 +386,16 @@ impl<'a> LogReceiver<'a> {
         trace!("Finishing bar = {:?}", success);
         let finish_msg = match success {
             Some(true) => format!(
-                "Job ({} {}): {} finished successfully",
-                self.package_name, self.package_version, self.job_id
+                "[{} {} {}]: finished successfully",
+                self.job_id, self.package_name, self.package_version
             ),
             Some(false) => format!(
-                "Job ({} {}): {} finished with error",
-                self.package_name, self.package_version, self.job_id
+                "[{} {} {}]: finished with error",
+                self.job_id, self.package_name, self.package_version
             ),
             None => format!(
-                "Job ({} {}): {} finished",
-                self.package_name, self.package_version, self.job_id
+                "[{} {} {}]: finished",
+                self.job_id, self.package_name, self.package_version
             ),
         };
         self.bar.finish_with_message(&finish_msg);

@@ -289,7 +289,14 @@ impl<'a> JobTask<'a> {
         // as long as the job definition lists dependencies that are not in the received_dependencies list...
         while !all_dependencies_are_in(&self.jobdef.dependencies, &received_dependencies) {
             // Update the status bar message
-            self.bar.set_message(&format!("Waiting ({}/{})...", received_dependencies.len(), self.jobdef.dependencies.len()));
+            self.bar.set_message({
+                &format!("[{} {} {}]: Waiting ({}/{})...",
+                    self.uuid,
+                    self.jobdef.job.package().name(),
+                    self.jobdef.job.package().version(),
+                    received_dependencies.len(),
+                    self.jobdef.dependencies.len())
+            });
             trace!("[{}]: Updated bar", self.uuid);
 
             trace!("[{}]: receiving...", self.uuid);
@@ -352,7 +359,11 @@ impl<'a> JobTask<'a> {
             .cloned()
             .collect();
         trace!("[{}]: Dependency artifacts = {:?}", self.uuid, dependency_artifacts);
-        self.bar.set_message("Preparing...");
+        self.bar.set_message(&format!("[{} {} {}]: Preparing...",
+            self.uuid,
+            self.jobdef.job.package().name(),
+            self.jobdef.job.package().version()
+        ));
 
         // Create a RunnableJob object
         let runnable = RunnableJob::build_from_job(
@@ -362,7 +373,11 @@ impl<'a> JobTask<'a> {
             dependency_artifacts)
             .await?;
 
-        self.bar.set_message("Scheduling...");
+        self.bar.set_message(&format!("[{} {} {}]: Scheduling...",
+            self.uuid,
+            self.jobdef.job.package().name(),
+            self.jobdef.job.package().version()
+        ));
         let job_uuid = *self.jobdef.job.uuid();
 
         // Schedule the job on the scheduler
