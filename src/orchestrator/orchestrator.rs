@@ -301,40 +301,9 @@ impl<'a> JobTask<'a> {
 
             trace!("[{}]: receiving...", self.uuid);
             // receive from the receiver
-            match self.receiver.recv().await {
-                Some(Ok(v)) => {
-                    // The task we depend on succeeded and returned an
-                    // (uuid of the job, [Artifact])
-                    trace!("[{}]: Received: {:?}", self.uuid, v);
-                    received_dependencies.push(v)
-                },
-                Some(Err(mut e)) => {
-                    // The task we depend on failed
-                    // we log that error for now
-                    trace!("[{}]: Received: {:?}", self.uuid, e);
-                    received_errors.append(&mut e);
-                },
-                None => {
-                    // The task we depend on finished... we must check what we have now...
-                    trace!("[{}]: Received nothing, channel seems to be empty", self.uuid);
-
-                    // Find all dependencies that we need but which are not received
-                    let received = received_dependencies.iter().map(|tpl| tpl.0).collect::<Vec<_>>();
-                    let missing_deps: Vec<_> = self.jobdef
-                        .dependencies
-                        .iter()
-                        .filter(|d| !received.contains(d))
-                        .collect();
-                    trace!("[{}]: Missing dependencies = {:?}", self.uuid, missing_deps);
-
-                    // ... if there are any, error
-                    if !missing_deps.is_empty() {
-                        return Err(anyhow!("Childs finished, but dependencies still missing: {:?}", missing_deps))
-                    } else {
-                        // all dependencies are received
-                        break;
-                    }
-                },
+            let continue_receiving = self.perform_receive(&mut received_dependencies, &mut received_errors).await?;
+            if !continue_receiving {
+                break;
             }
 
             trace!("[{}]: Received errors = {:?}", self.uuid, received_errors);
@@ -346,6 +315,20 @@ impl<'a> JobTask<'a> {
                 // ... and stop operation, because the whole tree will fail anyways.
                 return Ok(())
             }
+        }
+
+        // receive items until the channel is empty.
+        //
+        // In the above loop, it could happen that we have all dependencies to run, but there is
+        // another job that reports artifacts.
+        // We need to collect them, too.
+        //
+        // This is techically not possible, because in a tree, we need all results from all childs.
+        // It just feels better having this in place as well.
+        //
+        // Sorry, not sorry.
+        while self.perform_receive(&mut received_dependencies, &mut received_errors).await? {
+            ;
         }
 
         // Map the list of received dependencies from
@@ -404,5 +387,53 @@ impl<'a> JobTask<'a> {
         trace!("[{}]: Finished successfully", self.uuid);
         Ok(())
     }
+
+    /// Performe a recv() call on the receiving side of the channel
+    ///
+    /// Put the dependencies you received into the `received_dependencies`, the errors in the
+    /// `received_errors`
+    ///
+    /// Return Ok(true) if we should continue operation
+    /// Return Ok(false) if the channel is empty and we're done receiving
+    async fn perform_receive(&mut self, received_dependencies: &mut Vec<(Uuid, Vec<Artifact>)>, received_errors: &mut Vec<(Uuid, Error)>) -> Result<bool> {
+        match self.receiver.recv().await {
+            Some(Ok(v)) => {
+                // The task we depend on succeeded and returned an
+                // (uuid of the job, [Artifact])
+                trace!("[{}]: Received: {:?}", self.uuid, v);
+                received_dependencies.push(v);
+                Ok(true)
+            },
+            Some(Err(mut e)) => {
+                // The task we depend on failed
+                // we log that error for now
+                trace!("[{}]: Received: {:?}", self.uuid, e);
+                received_errors.append(&mut e);
+                Ok(true)
+            },
+            None => {
+                // The task we depend on finished... we must check what we have now...
+                trace!("[{}]: Received nothing, channel seems to be empty", self.uuid);
+
+                // Find all dependencies that we need but which are not received
+                let received = received_dependencies.iter().map(|tpl| tpl.0).collect::<Vec<_>>();
+                let missing_deps: Vec<_> = self.jobdef
+                    .dependencies
+                    .iter()
+                    .filter(|d| !received.contains(d))
+                    .collect();
+                trace!("[{}]: Missing dependencies = {:?}", self.uuid, missing_deps);
+
+                // ... if there are any, error
+                if !missing_deps.is_empty() {
+                    return Err(anyhow!("Childs finished, but dependencies still missing: {:?}", missing_deps))
+                } else {
+                    // all dependencies are received
+                   Ok(false)
+                }
+            },
+        }
+    }
+
 }
 
