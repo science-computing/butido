@@ -8,9 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use log::trace;
@@ -27,23 +25,9 @@ pub async fn find_pkg(
 ) -> Result<()> {
     use std::io::Write;
 
-    let package_name_regex = matches
-        .value_of("package_name_regex")
-        .map(regex::RegexBuilder::new)
-        .map(|mut builder| {
-            #[allow(clippy::identity_op)]
-            builder.size_limit(1 * 1024 * 1024); // max size for the regex is 1MB. Should be enough for everyone
-            builder
-                .build()
-                .with_context(|| {
-                    anyhow!(
-                        "Failed to build regex from '{}'",
-                        matches.value_of("package_name_regex").unwrap()
-                    )
-                })
-                .map_err(Error::from)
-        })
-        .unwrap()?; // safe by clap
+    let package_name_regex = crate::commands::util::mk_package_name_regex({
+        matches.value_of("package_name_regex").unwrap() // safe by clap
+    })?;
 
     let package_version_constraint = matches
         .value_of("package_version_constraint")

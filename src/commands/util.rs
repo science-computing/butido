@@ -10,10 +10,13 @@
 
 use std::path::Path;
 
-use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::ArgMatches;
 use log::{error, info, trace};
+use regex::Regex;
 use tokio::stream::StreamExt;
 
 use crate::config::*;
@@ -131,4 +134,16 @@ fn all_phases_available(pkg: &Package, available_phases: &[PhaseName]) -> Result
     }
 
     Ok(())
+}
+
+pub fn mk_package_name_regex(regex: &str) -> Result<Regex> {
+    let mut builder = regex::RegexBuilder::new(regex);
+
+    #[allow(clippy::identity_op)]
+    builder.size_limit(1 * 1024 * 1024); // max size for the regex is 1MB. Should be enough for everyone
+
+    builder
+        .build()
+        .with_context(|| anyhow!("Failed to build regex from '{}'", regex))
+        .map_err(Error::from)
 }
