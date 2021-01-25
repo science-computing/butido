@@ -17,7 +17,6 @@
     explicit_outlives_requirements,
     improper_ctypes,
     keyword_idents,
-    missing_docs,
     no_mangle_generic_items,
     non_ascii_idents,
     non_camel_case_types,
