@@ -15,6 +15,7 @@ use log::trace;
 use serde::Deserialize;
 use serde::Serialize;
 use url::Url;
+use sha2::Digest;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Source {
@@ -99,17 +100,15 @@ impl HashType {
             }
             HashType::Sha256 => {
                 trace!("SHA256 hashing buffer");
-                //let mut m = sha2::Sha256::new();
-                //m.update(buffer);
-                //Ok(HashValue(String::from(m.finalize())))
-                unimplemented!()
+                let mut m = sha2::Sha256::new();
+                m.update(buffer);
+                Ok(HashValue(String::from_utf8(m.finalize()[..].to_vec())?))
             }
             HashType::Sha512 => {
                 trace!("SHA512 hashing buffer");
-                //let mut m = sha2::Sha512::new();
-                //m.update(buffer);
-                //Ok(HashValue(String::from(m.finalize())))
-                unimplemented!()
+                let mut m = sha2::Sha512::new();
+                m.update(buffer);
+                Ok(HashValue(String::from_utf8(m.finalize()[..].to_vec())?))
             }
         }
     }
