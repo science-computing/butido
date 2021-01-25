@@ -37,6 +37,12 @@ impl Deref for PackageName {
     }
 }
 
+impl AsRef<str> for PackageName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 impl From<String> for PackageName {
     fn from(s: String) -> Self {
         PackageName(s)

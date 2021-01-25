@@ -13,6 +13,7 @@ use std::fmt::Debug;
 use anyhow::Result;
 use indicatif::ProgressBar;
 
+use crate::filestore::path::ArtifactPath;
 use crate::filestore::path::StoreRoot;
 use crate::filestore::util::FileStoreImpl;
 
@@ -28,5 +29,13 @@ impl Debug for ReleaseStore {
 impl ReleaseStore {
     pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
         FileStoreImpl::load(root, progress).map(ReleaseStore)
+    }
+
+    pub fn root_path(&self) -> &StoreRoot {
+        self.0.root_path()
+    }
+
+    pub fn get(&self, p: &ArtifactPath) -> Option<&ArtifactPath> {
+        self.0.get(p)
     }
 }

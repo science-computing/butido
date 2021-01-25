@@ -76,6 +76,12 @@ impl Deref for PackageVersion {
     }
 }
 
+impl AsRef<str> for PackageVersion {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 impl From<String> for PackageVersion {
     fn from(s: String) -> Self {
         PackageVersion(s)

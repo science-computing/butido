@@ -98,7 +98,7 @@ impl StoreRoot {
 pub struct ArtifactPath(PathBuf);
 
 impl ArtifactPath {
-    pub(in crate::filestore) fn new(p: PathBuf) -> Result<Self> {
+    pub fn new(p: PathBuf) -> Result<Self> {
         if p.is_relative() {
             Ok(ArtifactPath(p))
         } else {

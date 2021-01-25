@@ -35,7 +35,10 @@ impl FileStoreImpl {
     pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
         let store = root
             .find_artifacts_recursive()
-            .inspect(|_| progress.tick())
+            .inspect(|path| {
+                log::trace!("Found artifact path: {:?}", path);
+                progress.tick();
+            })
             .collect::<Result<HashSet<ArtifactPath>>>()?;
 
         Ok(FileStoreImpl { root, store })
