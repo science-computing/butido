@@ -43,7 +43,6 @@
     unused_must_use,
     unused_mut,
     unused_parens,
-    unused_results,
     while_true,
 )]
 #![allow(macro_use_extern_crate)]
