@@ -19,6 +19,7 @@ use indicatif::ProgressBar;
 use log::trace;
 use result_inspect::ResultInspect;
 
+use crate::filestore::Artifact;
 use crate::filestore::path::ArtifactPath;
 use crate::filestore::path::StoreRoot;
 use crate::filestore::util::FileStoreImpl;
@@ -99,5 +100,9 @@ impl StagingStore {
 
     pub fn root_path(&self) -> &StoreRoot {
         self.0.root_path()
+    }
+
+    pub fn get(&self, p: &ArtifactPath) -> Option<&Artifact> {
+        self.0.get(p)
     }
 }

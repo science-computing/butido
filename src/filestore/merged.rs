@@ -8,6 +8,11 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+// TODO: The MergedStores is not used at all anymore, because we removed the feature while doing
+// the rewrite
+#![allow(unused)]
+
+
 use std::sync::Arc;
 use std::path::Path;
 
@@ -20,6 +25,7 @@ use crate::filestore::Artifact;
 use crate::filestore::path::ArtifactPath;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
+
 
 /// A type that merges the release store and the staging store
 ///

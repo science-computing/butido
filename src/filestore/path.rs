@@ -149,6 +149,12 @@ impl ArtifactPath {
     }
 }
 
+impl AsRef<Path> for ArtifactPath {
+    fn as_ref(&self) -> &Path {
+        &self.0
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FullArtifactPath<'a>(&'a StoreRoot, &'a ArtifactPath);
 
