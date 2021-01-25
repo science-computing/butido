@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::io::Read;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use getset::Getters;
@@ -50,9 +52,9 @@ pub struct SourceHash {
 }
 
 impl SourceHash {
-    pub fn matches_hash_of(&self, buf: &[u8]) -> Result<()> {
+    pub fn matches_hash_of<R: Read>(&self, reader: R) -> Result<()> {
         trace!("Hashing buffer with: {:?}", self.hashtype);
-        let h = self.hashtype.hash_buffer(&buf)?;
+        let h = self.hashtype.hash_from_reader(reader)?;
         trace!("Hashing buffer with: {} finished", self.hashtype);
 
         if h == self.value {
@@ -90,24 +92,44 @@ pub enum HashType {
 }
 
 impl HashType {
-    fn hash_buffer(&self, buffer: &[u8]) -> Result<HashValue> {
+    fn hash_from_reader<R: Read>(&self, mut reader: R) -> Result<HashValue> {
+        let mut buffer = [0; 1024];
+
         match self {
             HashType::Sha1 => {
                 trace!("SHA1 hashing buffer");
                 let mut m = sha1::Sha1::new();
-                m.update(buffer);
+                loop {
+                    let count = reader.read(&mut buffer)?;
+                    if count == 0 {
+                        break;
+                    }
+                    m.update(&buffer[..count]);
+                }
                 Ok(HashValue(m.digest().to_string()))
             }
             HashType::Sha256 => {
                 trace!("SHA256 hashing buffer");
                 let mut m = sha2::Sha256::new();
-                m.update(buffer);
+                loop {
+                    let count = reader.read(&mut buffer)?;
+                    if count == 0 {
+                        break;
+                    }
+                    m.update(&buffer[..count]);
+                }
                 Ok(HashValue(String::from_utf8(m.finalize()[..].to_vec())?))
             }
             HashType::Sha512 => {
                 trace!("SHA512 hashing buffer");
                 let mut m = sha2::Sha512::new();
-                m.update(buffer);
+                loop {
+                    let count = reader.read(&mut buffer)?;
+                    if count == 0 {
+                        break;
+                    }
+                    m.update(&buffer[..count]);
+                }
                 Ok(HashValue(String::from_utf8(m.finalize()[..].to_vec())?))
             }
         }
