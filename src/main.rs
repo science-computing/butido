@@ -60,6 +60,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 use logcrate::debug;
 use walkdir::WalkDir;
+use rand as _; // Required to make lints happy
 
 mod cli;
 mod commands;
