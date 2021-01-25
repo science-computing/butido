@@ -18,7 +18,6 @@
     improper_ctypes,
     keyword_idents,
     missing_copy_implementations,
-    missing_debug_implementations,
     missing_docs,
     no_mangle_generic_items,
     non_ascii_idents,
