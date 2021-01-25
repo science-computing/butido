@@ -17,6 +17,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use resiter::AndThen;
+use resiter::Filter;
 use resiter::Map;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -84,12 +85,24 @@ impl StoreRoot {
     pub(in crate::filestore) fn find_artifacts_recursive(
         &self,
     ) -> impl Iterator<Item = Result<ArtifactPath>> {
+        log::trace!("Loading artifacts from directory: {:?}", self.0);
+        let root = self.0.clone();
         walkdir::WalkDir::new(&self.0)
             .follow_links(false)
             .into_iter()
-            .filter_entry(|e| e.file_type().is_file())
+            .filter_ok(|e| {
+                let is_file = e.file_type().is_file();
+                log::trace!("{:?} is file = {}", e, is_file);
+                is_file
+            })
+            .inspect(|p| log::trace!("Loading Artifact from path: {:?}", p))
             .map_err(Error::from)
-            .map_ok(|de| de.into_path())
+            .and_then_ok(move |de| {
+                de.path()
+                    .strip_prefix(&root)
+                    .map(|p| p.to_path_buf())
+                    .map_err(Error::from)
+            })
             .and_then_ok(ArtifactPath::new)
     }
 
