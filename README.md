@@ -60,7 +60,7 @@ to explain what it does.
 ### Glossary
 
 | Word        | Explanation                                                                                                      |
-+ ----------- + ---------------------------------------------------------------------------------------------------------------- +
+|-------------|------------------------------------------------------------------------------------------------------------------|
 | build / job | The procedure of transforming a set of sources to a package (or, technically, even to multiple packages)         |
 | dependency  | A "package" that is required during the buildtime or during the runtime of another "package"                     |
 | endpoint    | A docker API endpoint butido can talk to                                                                         |
