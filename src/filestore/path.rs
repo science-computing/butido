@@ -139,6 +139,10 @@ impl AsRef<Path> for ArtifactPath {
 pub struct FullArtifactPath<'a>(&'a StoreRoot, &'a ArtifactPath);
 
 impl<'a> FullArtifactPath<'a> {
+    pub fn artifact_path(&self) -> &ArtifactPath {
+        self.1
+    }
+
     pub fn joined(&self) -> PathBuf {
         self.0 .0.join(&self.1 .0)
     }
