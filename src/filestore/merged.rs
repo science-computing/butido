@@ -33,6 +33,7 @@ use crate::filestore::StagingStore;
 ///
 #[derive(Getters)]
 pub struct MergedStores {
+    #[getset(get = "pub")]
     release: Arc<RwLock<ReleaseStore>>,
 
     #[getset(get = "pub")]
