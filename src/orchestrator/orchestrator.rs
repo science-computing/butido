@@ -40,6 +40,113 @@ use crate::job::Tree as JobTree;
 use crate::source::SourceCache;
 use crate::util::progress::ProgressBars;
 
+#[cfg_attr(doc, aquamarine::aquamarine)]
+/// The Orchestrator
+///
+/// The Orchestrator is used to orchestrate the work on one submit.
+/// On a very high level: It uses a [JobTree](crate::job::Tree) to build a number (list) of
+/// [JobTasks](crate::orchestrator::JobTask) that is then run concurrently.
+///
+/// Because of the implementation of [JobTask], the work happens in
+/// form of a tree, propagating results to the root (which is held by the Orchestrator itself).
+/// The Orchestrator also holds the connection to the database, the access to the filesystem via
+/// the [ReleaseStore](crate::filestore::ReleaseStore) and the
+/// [StagingStore](crate::filestore::StagingStore), which are merged into a
+/// [MergedStores](crate::filestore::MergedStores) object.
+///
+///
+/// # Control Flow
+///
+/// This section describes the control flow starting with the construction of the Orchestrator
+/// until the exit of the Orchestrator.
+///
+/// ```mermaid
+/// sequenceDiagram
+///     participant Caller as User
+///     participant O   as Orchestrator
+///     participant JT1 as JobTask
+///     participant JT2 as JobTask
+///     participant SCH as Scheduler
+///     participant EP1 as Endpoint
+///
+///     Caller->>+O: run()
+///         O->>+O: run_tree()
+///
+///             par Starting jobs
+///                 O->>+JT1: run()
+///             and
+///                 O->>+JT2: run()
+///             end
+///
+///             par Working on jobs
+///                 loop until dependencies received
+///                     JT1->>JT1: recv()
+///                 end
+///
+///                 JT1->>+JT1: build()
+///                 JT1->>SCH: schedule(job)
+///                 SCH->>+EP1: run(job)
+///                 EP1->>-SCH: [Artifacts]
+///                 SCH->>JT1: [Artifacts]
+///                 JT1->>-JT1: send_artifacts
+///             and
+///                 loop until dependencies received
+///                     JT2->>JT2: recv()
+///                 end
+///
+///                 JT2->>+JT2: build()
+///                 JT2->>SCH: schedule(job)
+///                 SCH->>+EP1: run(job)
+///                 EP1->>-SCH: [Artifacts]
+///                 SCH->>JT2: [Artifacts]
+///                 JT2->>-JT2: send_artifacts
+///             end
+///
+///         O->>-O: recv(): [Artifacts]
+///     O-->>-Caller: [Artifacts]
+/// ```
+///
+/// Because the chart from above is already rather big, the described submit works with only two
+/// packages being built on one endpoint.
+///
+/// The Orchestrator starts the JobTasks in parallel, and they are executed in parallel.
+/// Each JobTask receives dependencies until there are no more dependencies to receive. Then, it
+/// starts building the job by forwarding the actual job to the scheduler, which in turn schedules
+/// the Job on one of the endpoints.
+///
+///
+/// # JobTask
+///
+/// A [JobTask] is run in parallel to all other JobTasks (concurrently on the tokio runtime).
+/// Leveraging the async runtime, it waits until it received all dependencies from it's "child
+/// tasks" (the nodes further down in the tree of jobs), which semantically means that it blocks
+/// until it can run.
+///
+/// ```mermaid
+/// graph TD
+///     r[Receiving deps]
+///     dr{All deps received}
+///     ae{Any error received}
+///     se[Send errors to parent]
+///     b[Schedule job]
+///     be{error during sched}
+///     asum[received artifacts + artifacts from sched]
+///     sa[Send artifacts to parent]
+///
+///     r --> dr
+///     dr -->|no| r
+///     dr -->|yes| ae
+///
+///     ae -->|yes| se
+///     ae -->|no| b
+///     b --> be
+///     be -->|yes| se
+///     be -->|no| asum
+///     asum --> sa
+/// ```
+///
+/// The "root" JobTask sends its artifacts to the orchestrator, which returns them to the caller.
+///
 pub struct Orchestrator<'a> {
     scheduler: EndpointScheduler,
     progress_generator: ProgressBars,
