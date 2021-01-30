@@ -325,8 +325,6 @@ struct LogReceiver<'a> {
 
 impl<'a> LogReceiver<'a> {
     async fn join(mut self) -> Result<String> {
-        use resiter::Map;
-
         let mut success = None;
         let mut accu = vec![];
         let mut logfile = self.get_logfile().await.transpose()?;
