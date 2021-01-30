@@ -19,10 +19,10 @@ use anyhow::anyhow;
 use diesel::PgConnection;
 use indicatif::ProgressBar;
 use log::trace;
-use tokio::stream::StreamExt;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
+use tokio_stream::StreamExt;
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
 

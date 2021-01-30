@@ -21,9 +21,9 @@ use indicatif::ProgressBar;
 use itertools::Itertools;
 use log::trace;
 use tokio::io::AsyncWriteExt;
-use tokio::stream::StreamExt;
-use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio_stream::StreamExt;
 use uuid::Uuid;
 
 use crate::db::models as dbmodels;

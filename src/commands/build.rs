@@ -25,8 +25,8 @@ use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
 use log::{debug, info, trace, warn};
-use tokio::stream::StreamExt;
 use tokio::sync::RwLock;
+use tokio_stream::StreamExt;
 
 use crate::config::*;
 use crate::filestore::path::StoreRoot;
