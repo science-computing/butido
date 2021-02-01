@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::io::Read;
-
 use anyhow::anyhow;
 use anyhow::Result;
 use getset::Getters;
@@ -52,9 +50,9 @@ pub struct SourceHash {
 }
 
 impl SourceHash {
-    pub fn matches_hash_of<R: Read>(&self, reader: R) -> Result<()> {
+    pub async fn matches_hash_of<R: tokio::io::AsyncRead + Unpin>(&self, reader: R) -> Result<()> {
         trace!("Hashing buffer with: {:?}", self.hashtype);
-        let h = self.hashtype.hash_from_reader(reader)?;
+        let h = self.hashtype.hash_from_reader(reader).await?;
         trace!("Hashing buffer with: {} finished", self.hashtype);
 
         if h == self.value {
@@ -92,7 +90,9 @@ pub enum HashType {
 }
 
 impl HashType {
-    fn hash_from_reader<R: Read>(&self, mut reader: R) -> Result<HashValue> {
+    async fn hash_from_reader<R: tokio::io::AsyncRead + Unpin>(&self, mut reader: R) -> Result<HashValue> {
+        use tokio::io::AsyncReadExt;
+
         let mut buffer = [0; 1024];
 
         match self {
@@ -100,10 +100,16 @@ impl HashType {
                 trace!("SHA1 hashing buffer");
                 let mut m = sha1::Sha1::new();
                 loop {
-                    let count = reader.read(&mut buffer)?;
+                    trace!("Reading");
+                    let count = reader.read(&mut buffer).await?;
+                    trace!("Read {} bytes", count);
+
                     if count == 0 {
+                        trace!("ready");
                         break;
                     }
+
+                    trace!("Updating buffer");
                     m.update(&buffer[..count]);
                 }
                 Ok(HashValue(m.digest().to_string()))
@@ -112,10 +118,16 @@ impl HashType {
                 trace!("SHA256 hashing buffer");
                 let mut m = sha2::Sha256::new();
                 loop {
-                    let count = reader.read(&mut buffer)?;
+                    trace!("Reading");
+                    let count = reader.read(&mut buffer).await?;
+                    trace!("Read {} bytes", count);
+
                     if count == 0 {
+                        trace!("ready");
                         break;
                     }
+
+                    trace!("Updating buffer");
                     m.update(&buffer[..count]);
                 }
                 Ok(HashValue(String::from_utf8(m.finalize()[..].to_vec())?))
@@ -124,10 +136,16 @@ impl HashType {
                 trace!("SHA512 hashing buffer");
                 let mut m = sha2::Sha512::new();
                 loop {
-                    let count = reader.read(&mut buffer)?;
+                    trace!("Reading");
+                    let count = reader.read(&mut buffer).await?;
+                    trace!("Read {} bytes", count);
+
                     if count == 0 {
+                        trace!("ready");
                         break;
                     }
+
+                    trace!("Updating buffer");
                     m.update(&buffer[..count]);
                 }
                 Ok(HashValue(String::from_utf8(m.finalize()[..].to_vec())?))

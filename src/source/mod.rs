@@ -101,20 +101,19 @@ impl SourceEntry {
         let p = self.source_file_path();
         trace!("Verifying : {}", p.display());
 
-        let path = p.clone();
-        let reader = tokio::task::spawn_blocking(move || {
-            std::fs::OpenOptions::new()
-                .create(false)
-                .create_new(false)
-                .read(true)
-                .open(path)
-                .map(std::io::BufReader::new)
-        })
-        .await??;
+        let reader = tokio::fs::OpenOptions::new()
+            .create(false)
+            .create_new(false)
+            .read(true)
+            .open(&p)
+            .await
+            .map(tokio::io::BufReader::new)?;
 
+        trace!("Reader constructed for path: {}", p.display());
         self.package_source
             .hash()
             .matches_hash_of(reader)
+            .await
     }
 
     pub async fn create(&self) -> Result<tokio::fs::File> {
