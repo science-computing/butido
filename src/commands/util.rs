@@ -17,7 +17,7 @@ use anyhow::anyhow;
 use clap::ArgMatches;
 use log::{error, info, trace};
 use regex::Regex;
-use tokio::stream::StreamExt;
+use tokio_stream::StreamExt;
 
 use crate::config::*;
 use crate::package::Package;

@@ -23,9 +23,9 @@ use log::trace;
 use shiplift::Container;
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
-use tokio::stream::StreamExt;
-use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::UnboundedSender;
+use tokio_stream::StreamExt;
 use typed_builder::TypedBuilder;
 
 use crate::endpoint::EndpointConfiguration;

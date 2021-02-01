@@ -20,7 +20,7 @@ use clap::ArgMatches;
 use colored::Colorize;
 use log::{info, trace};
 use tokio::io::AsyncWriteExt;
-use tokio::stream::StreamExt;
+use tokio_stream::StreamExt;
 
 use crate::config::*;
 use crate::package::Package;

@@ -16,7 +16,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 use diesel::prelude::*;
 use log::{debug, trace};
-use tokio::stream::StreamExt;
+use tokio_stream::StreamExt;
 
 use crate::config::Configuration;
 use crate::db::models as dbmodels;
