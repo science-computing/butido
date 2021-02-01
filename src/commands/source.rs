@@ -72,7 +72,8 @@ pub async fn verify(
                 .as_ref()
                 .map(|v| v.matches(p.version()))
                 .unwrap_or(true)
-        });
+        })
+        .inspect(|p| trace!("Found for verification: {} {}", p.name(), p.version()));
 
     verify_impl(packages, &sc, &progressbars).await
 }
