@@ -179,9 +179,10 @@ impl JobHandle {
             log_dir: self.log_dir.as_ref(),
             job_id,
             log_receiver,
-            bar: &self.bar,
+            bar: self.bar.clone(),
         }
         .join();
+        drop(self.bar);
 
         let (run_container, logres) = tokio::join!(running_container, logres);
         let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", ep.name()))?;
@@ -320,7 +321,7 @@ struct LogReceiver<'a> {
     log_dir: Option<&'a PathBuf>,
     job_id: Uuid,
     log_receiver: UnboundedReceiver<LogItem>,
-    bar: &'a ProgressBar,
+    bar: ProgressBar,
 }
 
 impl<'a> LogReceiver<'a> {
