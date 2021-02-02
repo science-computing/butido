@@ -233,11 +233,14 @@ impl<'a> Orchestrator<'a> {
                 let (sender, receiver) = tokio::sync::mpsc::channel(100);
 
                 trace!("Creating TaskPreparation object for job {}", uuid);
+                let bar = self.progress_generator.bar();
+                let bar = multibar.add(bar);
+                bar.set_length(100);
                 let tp = TaskPreparation {
                     uuid: *uuid,
                     jobdef,
 
-                    bar: multibar.add(self.progress_generator.bar()),
+                    bar,
                     config: self.config,
                     source_cache: &self.source_cache,
                     scheduler: &self.scheduler,
