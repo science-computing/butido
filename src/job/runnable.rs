@@ -52,7 +52,7 @@ pub struct RunnableJob {
 }
 
 impl RunnableJob {
-    pub async fn build_from_job(
+    pub fn build_from_job(
         job: &Job,
         source_cache: &SourceCache,
         config: &Configuration,

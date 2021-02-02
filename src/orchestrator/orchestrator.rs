@@ -460,8 +460,7 @@ impl<'a> JobTask<'a> {
             &self.jobdef.job,
             self.source_cache,
             self.config,
-            dependency_artifacts)
-            .await?;
+            dependency_artifacts)?;
 
         self.bar.set_message(&format!("[{} {} {}]: Scheduling...",
             self.uuid,
