@@ -113,7 +113,8 @@ where
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Vec<Result<_>>>();
 
-    let (results, _) = tokio::join!(results, async move { multi.join() });
+    let multibar_block = tokio::task::spawn_blocking(move || multi.join());
+    let (results, _) = tokio::join!(results, multibar_block);
     info!("Verification processes finished");
 
     let out = std::io::stdout();
