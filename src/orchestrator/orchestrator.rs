@@ -18,6 +18,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
 use indicatif::ProgressBar;
+use log::debug;
 use log::trace;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::Receiver;
@@ -311,11 +312,11 @@ impl<'a> Orchestrator<'a> {
                 }
             })
             .map(|task| task.run())
-            .collect::<futures::stream::FuturesUnordered<_>>()
-            .collect::<Result<()>>();
+            .collect::<futures::stream::FuturesUnordered<_>>();
+        debug!("Built {} jobs", running_jobs.len());
 
         let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
-        let (_, jobs_result) = tokio::join!(multibar_block, running_jobs);
+        let (_, jobs_result) = tokio::join!(multibar_block, running_jobs.collect::<Result<()>>());
         let _ = jobs_result?;
         match root_receiver.recv().await {
             None                     => Err(anyhow!("No result received...")),
