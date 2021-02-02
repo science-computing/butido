@@ -138,7 +138,9 @@ impl HashType {
                     trace!("Updating buffer");
                     m.update(&buffer[..count]);
                 }
-                Ok(HashValue(String::from_utf8(m.finalize()[..].to_vec())?))
+                let h = format!("{:x}", m.finalize());
+                trace!("Hash = {:?}", h);
+                Ok(HashValue(h))
             }
             HashType::Sha512 => {
                 trace!("SHA512 hashing buffer");
