@@ -314,12 +314,10 @@ impl<'a> Orchestrator<'a> {
             .collect::<futures::stream::FuturesUnordered<_>>()
             .collect::<Result<()>>();
 
-        let root_recv = root_receiver.recv();
         let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
-
-        let (root_recv, _, jobs_result) = tokio::join!(root_recv, multibar_block, running_jobs);
+        let (_, jobs_result) = tokio::join!(multibar_block, running_jobs);
         let _ = jobs_result?;
-        match root_recv {
+        match root_receiver.recv().await {
             None                     => Err(anyhow!("No result received...")),
             Some(Ok((_, artifacts))) => Ok((artifacts, vec![])),
             Some(Err(errors))        => Ok((vec![], errors)),
