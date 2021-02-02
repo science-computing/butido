@@ -286,8 +286,9 @@ pub async fn download(
         })
         .flatten()
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Result<()>>()
-        .await;
-    multi.join()?;
+        .collect::<Result<()>>();
+
+    let multibar_block = tokio::task::spawn_blocking(move || multi.join());
+    let (r, _) = tokio::join!(r, multibar_block);
     r
 }
