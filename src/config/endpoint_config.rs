@@ -37,6 +37,9 @@ pub struct Endpoint {
     /// Maximum number of jobs which are allowed on this endpoint
     #[getset(get_copy = "pub")]
     maxjobs: usize,
+
+    #[getset(get = "pub")]
+    network_mode: Option<String>,
 }
 
 /// The type of an endpoint

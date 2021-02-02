@@ -51,6 +51,9 @@ pub struct Endpoint {
     num_max_jobs: usize,
 
     #[getset(get = "pub")]
+    network_mode: Option<String>,
+
+    #[getset(get = "pub")]
     uri: String,
 }
 
@@ -116,6 +119,7 @@ impl Endpoint {
                         .uri(ep.uri().clone())
                         .docker(docker)
                         .num_max_jobs(ep.maxjobs())
+                        .network_mode(ep.network_mode().clone())
                         .build()
                 }),
 
@@ -124,6 +128,7 @@ impl Endpoint {
                     .name(ep.name().clone())
                     .uri(ep.uri().clone())
                     .num_max_jobs(ep.maxjobs())
+                    .network_mode(ep.network_mode().clone())
                     .docker(shiplift::Docker::unix(ep.uri()))
                     .build()
             }),
@@ -301,11 +306,18 @@ impl<'a> PreparedContainer<'a> {
             .collect::<Vec<_>>();
         trace!("Job resources: Environment variables = {:?}", envs);
 
-        let builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref())
-            .env(envs.iter().map(AsRef::as_ref).collect::<Vec<&str>>())
-            .cmd(vec!["/bin/bash"]) // we start the container with /bin/bash, but exec() the script in it later
-            .attach_stdin(true) // we have to attach, otherwise bash exits
-            .build();
+        let builder_opts = {
+            let mut builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref());
+            builder_opts.env(envs.iter().map(AsRef::as_ref).collect::<Vec<&str>>());
+            builder_opts.cmd(vec!["/bin/bash"]); // we start the container with /bin/bash, but exec() the script in it later
+            builder_opts.attach_stdin(true); // we have to attach, otherwise bash exits
+
+            if let Some(network_mode) = endpoint.network_mode().as_ref() {
+                builder_opts.network_mode(network_mode);
+            }
+
+            builder_opts.build()
+        };
         trace!("Builder options = {:?}", builder_opts);
 
         let create_info = endpoint
