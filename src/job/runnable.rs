@@ -15,6 +15,7 @@ use anyhow::Context;
 use anyhow::Result;
 use getset::Getters;
 use log::debug;
+use log::trace;
 use uuid::Uuid;
 
 use crate::config::Configuration;
@@ -76,6 +77,7 @@ impl RunnableJob {
                 .into_iter()
                 .inspect(|(name, _)| debug!("Checking: {}", name))
                 .try_for_each(|(name, _)| {
+                    trace!("{:?} contains? {:?}", config.containers().allowed_env(), name);
                     if !config.containers().allowed_env().contains(&name) {
                         Err(anyhow!("Environment variable name not allowed: {}", name))
                     } else {
@@ -94,6 +96,7 @@ impl RunnableJob {
             debug!("Environment checking disabled");
         }
 
+        debug!("Building script now");
         let script = ScriptBuilder::new(&job.script_shebang).build(
             &job.package,
             &job.script_phases,
