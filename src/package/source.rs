@@ -9,6 +9,7 @@
 //
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use getset::Getters;
 use log::trace;
@@ -52,7 +53,10 @@ pub struct SourceHash {
 impl SourceHash {
     pub async fn matches_hash_of<R: tokio::io::AsyncRead + Unpin>(&self, reader: R) -> Result<()> {
         trace!("Hashing buffer with: {:?}", self.hashtype);
-        let h = self.hashtype.hash_from_reader(reader).await?;
+        let h = self.hashtype
+            .hash_from_reader(reader)
+            .await
+            .context("Hashing failed")?;
         trace!("Hashing buffer with: {} finished", self.hashtype);
 
         if h == self.value {
@@ -101,7 +105,9 @@ impl HashType {
                 let mut m = sha1::Sha1::new();
                 loop {
                     trace!("Reading");
-                    let count = reader.read(&mut buffer).await?;
+                    let count = reader.read(&mut buffer)
+                        .await
+                        .context("Reading buffer failed")?;
                     trace!("Read {} bytes", count);
 
                     if count == 0 {
@@ -119,7 +125,9 @@ impl HashType {
                 let mut m = sha2::Sha256::new();
                 loop {
                     trace!("Reading");
-                    let count = reader.read(&mut buffer).await?;
+                    let count = reader.read(&mut buffer)
+                        .await
+                        .context("Reading buffer failed")?;
                     trace!("Read {} bytes", count);
 
                     if count == 0 {
@@ -137,7 +145,9 @@ impl HashType {
                 let mut m = sha2::Sha512::new();
                 loop {
                     trace!("Reading");
-                    let count = reader.read(&mut buffer).await?;
+                    let count = reader.read(&mut buffer)
+                        .await
+                        .context("Reading buffer failed")?;
                     trace!("Read {} bytes", count);
 
                     if count == 0 {

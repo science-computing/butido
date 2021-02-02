@@ -107,7 +107,8 @@ impl SourceEntry {
             .read(true)
             .open(&p)
             .await
-            .map(tokio::io::BufReader::new)?;
+            .map(tokio::io::BufReader::new)
+            .context("Opening file failed")?;
 
         trace!("Reader constructed for path: {}", p.display());
         self.package_source
