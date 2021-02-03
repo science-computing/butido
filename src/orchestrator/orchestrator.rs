@@ -379,7 +379,10 @@ impl<'a> JobTask<'a> {
     /// This function runs the job from this object on the scheduler as soon as all dependend jobs
     /// returned successfully.
     async fn run(mut self) -> Result<()> {
-        trace!("[{}]: Running", self.uuid);
+        debug!("[{}]: Running", self.uuid);
+        debug!("[{}]: Waiting for dependencies = {:?}", self.uuid, {
+            self.jobdef.dependencies.iter().map(|u| u.to_string()).collect::<Vec<String>>()
+        });
 
         // A list of job run results from dependencies that were received from the tasks for the
         // dependencies
