@@ -12,8 +12,8 @@
 mod job;
 pub use job::*;
 
-mod tree;
-pub use tree::*;
+mod dag;
+pub use dag::*;
 
 mod resource;
 pub use resource::*;

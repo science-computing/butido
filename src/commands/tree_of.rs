@@ -15,7 +15,7 @@ use resiter::AndThen;
 
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
-use crate::package::Tree;
+use crate::package::Dag;
 use crate::repository::Repository;
 use crate::util::progress::ProgressBars;
 
@@ -45,8 +45,7 @@ pub async fn tree_of(
         })
         .map(|package| {
             let bar_tree_building = progressbars.bar();
-            let mut tree = Tree::default();
-            let _ = tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
+            let tree = Dag::for_root_package(package.clone(), &repo, bar_tree_building.clone())?;
             bar_tree_building.finish_with_message("Finished loading Tree");
             Ok(tree)
         })
@@ -54,9 +53,7 @@ pub async fn tree_of(
             let stdout = std::io::stdout();
             let mut outlock = stdout.lock();
 
-            tree.display()
-                .iter()
-                .try_for_each(|d| ptree::write_tree(d, &mut outlock).map_err(Error::from))
+            ptree::write_tree(&tree.display(), &mut outlock).map_err(Error::from)
         })
         .collect::<Result<()>>()
 }

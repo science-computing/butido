@@ -38,7 +38,7 @@ use crate::orchestrator::OrchestratorSetup;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::package::Shebang;
-use crate::package::Tree;
+use crate::package::Dag;
 use crate::repository::Repository;
 use crate::schema;
 use crate::source::SourceCache;
@@ -195,15 +195,12 @@ pub async fn build(
         r.map(RwLock::new).map(Arc::new).map(|store| (store, p))?
     };
 
-    let tree = {
+    let dag = {
         let bar_tree_building = progressbars.bar();
         bar_tree_building.set_length(max_packages);
-
-        let mut tree = Tree::default();
-        tree.add_package(package.clone(), &repo, bar_tree_building.clone())?;
-
-        bar_tree_building.finish_with_message("Finished loading Tree");
-        tree
+        let dag = Dag::for_root_package(package.clone(), &repo, bar_tree_building.clone())?;
+        bar_tree_building.finish_with_message("Finished loading Dag");
+        dag
     };
 
     let source_cache = SourceCache::new(config.source_cache_root().clone());
@@ -212,7 +209,7 @@ pub async fn build(
         warn!("No hash verification will be performed");
     } else {
         crate::commands::source::verify_impl(
-            tree.all_packages().into_iter(),
+            dag.all_packages().into_iter(),
             &source_cache,
             &progressbars,
         )
@@ -223,7 +220,7 @@ pub async fn build(
     if matches.is_present("no_lint") {
         warn!("No script linting will be performed!");
     } else if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
-        let all_packages = tree.all_packages();
+        let all_packages = dag.all_packages();
         let bar = progressbars.bar();
         bar.set_length(all_packages.len() as u64);
         bar.set_message("Linting package scripts...");
@@ -234,7 +231,7 @@ pub async fn build(
         warn!("No linter set in configuration, no script linting will be performed!");
     } // linting
 
-    tree.all_packages()
+    dag.all_packages()
         .into_iter()
         .map(|pkg| {
             if let Some(allowlist) = pkg.allowed_images() {
@@ -304,7 +301,7 @@ pub async fn build(
 
     trace!("Setting up job sets");
     let resources: Vec<JobResource> = additional_env.into_iter().map(JobResource::from).collect();
-    let jobtree = crate::job::Tree::from_package_tree(tree, shebang, image_name, phases.clone(), resources);
+    let jobdag = crate::job::Dag::from_package_dag(dag, shebang, image_name, phases.clone(), resources);
     trace!("Setting up job sets finished successfully");
 
     trace!("Setting up Orchestrator");
@@ -322,7 +319,7 @@ pub async fn build(
         } else {
             None
         })
-        .jobtree(jobtree)
+        .jobdag(jobdag)
         .config(config)
         .build()
         .setup()
