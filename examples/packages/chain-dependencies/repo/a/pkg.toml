@@ -1,0 +1,7 @@
+name = "a"
+version = "1"
+
+[sources.src]
+url = "https://example.com"
+hash.hash = "e5fa44f2b31c1fb553b6021e7360d07d5d91ff5e"
+
