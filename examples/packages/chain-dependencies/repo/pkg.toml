@@ -1,0 +1,20 @@
+version_is_semver = false
+patches = []
+
+[dependencies]
+build = []
+runtime = []
+
+[sources.src]
+hash.type = "sha1"
+download_manually = false
+
+[phases]
+
+dummy.script = '''
+    echo "Dummy"
+
+    mkdir /outputs
+    touch /outputs/{{this.name}}-{{this.version}}.pkg
+'''
+
