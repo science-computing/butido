@@ -1,0 +1,52 @@
+# Example configuration file for butido
+compatibility = "0.1.0"
+script_highlight_theme = "Solarized (dark)"
+
+releases     = "/tmp/butido-test-diamond-dependencies-releases"
+staging      = "/tmp/butido-test-diamond-dependencies-staging"
+source_cache = "/tmp/butido-test-diamond-dependencies-sources"
+log_dir      = "/tmp/butido-test-diamond-dependencies-logs"
+
+
+strict_script_interpolation = true
+
+
+#
+#
+# Log database configuration
+#
+#
+
+# Database configuration should be self-explanatory
+database_host     = "localhost"
+database_port     = 5432
+database_user     = "pgdev"
+database_password = "password"
+database_name     = "butido"
+
+available_phases = [ "dummy" ]
+
+
+[docker]
+
+# Images which can be used to build
+# images not listed here are automatically rejected
+images = [ "debian:bullseye" ]
+verify_images_present = true
+
+#
+# List of docker endpoints
+#
+
+[[docker.endpoints]]
+name          = "testhostname"
+uri           = "http://0.0.0.0:8095" # the URI of the endpoint. Either http or socket path
+endpoint_type = "http" # either "http" or "socket"
+speed         = 1 # currently ignored, but required to be present
+maxjobs       = 1 # currently ignored, but required to be present
+
+
+[containers]
+check_env_names = true
+allowed_env     = [ ]
+
