@@ -51,28 +51,26 @@ impl Dag {
         ) -> Result<()> {
             p.get_self_packaged_dependencies()
                 .and_then_ok(|(name, constr)| {
-                    trace!("Dependency: {:?}", name);
+                    trace!("Dependency for {} {} found: {:?}", p.name(), p.version(), name);
                     let packs = repo.find_with_version(&name, &constr);
-                    trace!("Found: {:?}", packs);
+                    trace!("Found in repo: {:?}", packs);
 
-                    if mappings.keys().any(|p| packs.iter().any(|pk| pk.name() == p.name() && pk.version() == p.version())) {
-                        return Err(anyhow!(
-                            "Duplicate version of some package in {:?} found",
-                            packs
-                        ));
+                    // If we didn't check that dependency already
+                    if !mappings.keys().any(|p| packs.iter().any(|pk| pk.name() == p.name() && pk.version() == p.version())) {
+                        // recurse
+                        packs.into_iter()
+                            .try_for_each(|p| {
+                                progress.tick();
+
+                                let idx = dag.add_node(p);
+                                mappings.insert(p, idx);
+
+                                trace!("Recursing for: {:?}", p);
+                                add_sub_packages(repo, mappings, dag, p, progress)
+                            })
+                    } else {
+                        Ok(())
                     }
-                    trace!("All dependecies available...");
-
-                    packs.into_iter()
-                        .map(|p| {
-                            progress.tick();
-                            trace!("Following dependecy: {:?}", p);
-
-                            let idx = dag.add_node(p);
-                            mappings.insert(p, idx);
-                            add_sub_packages(repo, mappings, dag, p, progress)
-                        })
-                        .collect()
                 })
                 .collect::<Result<()>>()
         }
