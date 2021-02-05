@@ -150,3 +150,412 @@ impl<'a> TreeItem for DagDisplay<'a> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::collections::BTreeMap;
+
+    use crate::package::tests::package;
+    use crate::package::tests::pname;
+    use crate::package::tests::pversion;
+    use crate::package::Dependencies;
+    use crate::package::Dependency;
+
+    use indicatif::ProgressBar;
+
+    #[test]
+    fn test_add_package() {
+        let mut btree = BTreeMap::new();
+
+        let p1 = {
+            let name = "a";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "123");
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        let repo = Repository::from(btree);
+        let progress = ProgressBar::hidden();
+
+        let r = Dag::for_root_package(p1, &repo, progress);
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn test_add_two_dependent_packages() {
+        let mut btree = BTreeMap::new();
+
+        let mut p1 = {
+            let name = "a";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "123");
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        {
+            let name = "b";
+            let vers = "2";
+            let pack = package(name, vers, "https://rust-lang.org", "124");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let d = Dependency::from(String::from("b =2"));
+            let ds = Dependencies::with_runtime_dependency(d);
+            p1.set_dependencies(ds);
+        }
+
+        let repo = Repository::from(btree);
+        let progress = ProgressBar::hidden();
+
+        let dag = Dag::for_root_package(p1, &repo, progress);
+        assert!(dag.is_ok());
+        let dag = dag.unwrap();
+        let ps = dag.all_packages();
+
+        assert!(ps.iter().any(|p| *p.name() == pname("a")));
+        assert!(ps.iter().any(|p| *p.version() == pversion("1")));
+        assert!(ps.iter().any(|p| *p.name() == pname("b")));
+        assert!(ps.iter().any(|p| *p.version() == pversion("2")));
+    }
+
+    #[test]
+    fn test_add_deep_package_tree() {
+        let mut btree = BTreeMap::new();
+
+        //
+        // Test the following (made up) tree:
+        //
+        //  p1
+        //   - p2
+        //     - p3
+        //   - p4
+        //     - p5
+        //     - p6
+        //
+
+        let p1 = {
+            let name = "p1";
+            let vers = "1";
+            let mut pack = package(name, vers, "https://rust-lang.org", "123");
+            {
+                let d1 = Dependency::from(String::from("p2 =2"));
+                let d2 = Dependency::from(String::from("p4 =4"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        {
+            let name = "p2";
+            let vers = "2";
+            let mut pack = package(name, vers, "https://rust-lang.org", "124");
+            {
+                let d1 = Dependency::from(String::from("p3 =3"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p3";
+            let vers = "3";
+            let pack = package(name, vers, "https://rust-lang.org", "125");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p4";
+            let vers = "4";
+            let mut pack = package(name, vers, "https://rust-lang.org", "125");
+            {
+                let d1 = Dependency::from(String::from("p5 =5"));
+                let d2 = Dependency::from(String::from("p6 =66.6.6"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p5";
+            let vers = "5";
+            let pack = package(name, vers, "https://rust-lang.org", "129");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p6";
+            let vers = "66.6.6";
+            let pack = package(name, vers, "https://rust-lang.org", "666");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        let repo = Repository::from(btree);
+        let progress = ProgressBar::hidden();
+
+        let r = Dag::for_root_package(p1, &repo, progress);
+        assert!(r.is_ok());
+        let r = r.unwrap();
+        let ps = r.all_packages();
+        assert!(ps.iter().any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p2")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p4")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p3")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p5")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p6")));
+    }
+
+    #[test]
+    fn test_add_deep_package_tree_with_irrelevant_packages() {
+        // this is the same test as test_add_deep_package_tree(), but with a bunch of irrelevant
+        // packages added to the repository, so that we can be sure that the algorithm finds the
+        // actually required packages
+        //
+        // The irrelevant packages are all packages that already exist, but with different versions
+
+        let mut btree = BTreeMap::new();
+
+        //
+        // Test the following (made up) tree:
+        //
+        //  p1
+        //   - p2
+        //     - p3
+        //   - p4
+        //     - p5
+        //     - p6
+        //
+
+        let p1 = {
+            let name = "p1";
+            let vers = "1";
+            let mut pack = package(name, vers, "https://rust-lang.org", "123");
+            {
+                let d1 = Dependency::from(String::from("p2 =2"));
+                let d2 = Dependency::from(String::from("p4 =4"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        {
+            let name = "p1";
+            let vers = "2";
+            let mut pack = package(name, vers, "https://rust-lang.org", "123");
+            {
+                let d1 = Dependency::from(String::from("p2 =2"));
+                let d2 = Dependency::from(String::from("p4 =5"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p2";
+            let vers = "2";
+            let mut pack = package(name, vers, "https://rust-lang.org", "124");
+            {
+                let d1 = Dependency::from(String::from("p3 =3"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p3";
+            let vers = "3";
+            let pack = package(name, vers, "https://rust-lang.org", "125");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p3";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "128");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p3";
+            let vers = "3.1";
+            let pack = package(name, vers, "https://rust-lang.org", "118");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p4";
+            let vers = "4";
+            let mut pack = package(name, vers, "https://rust-lang.org", "125");
+            {
+                let d1 = Dependency::from(String::from("p5 =5"));
+                let d2 = Dependency::from(String::from("p6 =66.6.6"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p4";
+            let vers = "5";
+            let mut pack = package(name, vers, "https://rust-lang.org", "125");
+            {
+                let d1 = Dependency::from(String::from("p5 =5"));
+                let d2 = Dependency::from(String::from("p6 =66.6.8"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p5";
+            let vers = "5";
+            let pack = package(name, vers, "https://rust-lang.org", "129");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p6";
+            let vers = "66.6.6";
+            let pack = package(name, vers, "https://rust-lang.org", "666");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p6";
+            let vers = "66.6.8";
+            let pack = package(name, vers, "https://rust-lang.org", "666");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        let repo = Repository::from(btree);
+        let progress = ProgressBar::hidden();
+
+        let r = Dag::for_root_package(p1, &repo, progress);
+        assert!(r.is_ok());
+        let r = r.unwrap();
+        let ps = r.all_packages();
+        assert!(ps.iter().any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p2")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p3")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p4")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p5")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p6")));
+    }
+
+    #[test]
+    fn test_add_dag() {
+        let mut btree = BTreeMap::new();
+
+        //
+        // Test the following (made up) tree:
+        //
+        //  p1
+        //   - p2
+        //     - p3
+        //   - p4
+        //     - p3
+        //
+        // where "p3" is referenced from "p2" and "p4"
+        //
+        // The tree also contains a few irrelevant packages.
+        //
+
+        let p1 = {
+            let name = "p1";
+            let vers = "1";
+            let mut pack = package(name, vers, "https://rust-lang.org", "123");
+            {
+                let d1 = Dependency::from(String::from("p2 =2"));
+                let d2 = Dependency::from(String::from("p4 =4"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        {
+            let name = "p1";
+            let vers = "2";
+            let mut pack = package(name, vers, "https://rust-lang.org", "123");
+            {
+                let d1 = Dependency::from(String::from("p2 =2"));
+                let d2 = Dependency::from(String::from("p4 =5"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p2";
+            let vers = "2";
+            let mut pack = package(name, vers, "https://rust-lang.org", "124");
+            {
+                let d1 = Dependency::from(String::from("p3 =3"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p3";
+            let vers = "3";
+            let pack = package(name, vers, "https://rust-lang.org", "125");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p3";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "128");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p3";
+            let vers = "3.1";
+            let pack = package(name, vers, "https://rust-lang.org", "118");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p4";
+            let vers = "4";
+            let mut pack = package(name, vers, "https://rust-lang.org", "125");
+            {
+                let d1 = Dependency::from(String::from("p3 =3"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        let repo = Repository::from(btree);
+        let progress = ProgressBar::hidden();
+
+        let r = Dag::for_root_package(p1, &repo, progress);
+        assert!(r.is_ok());
+        let r = r.unwrap();
+        let ps = r.all_packages();
+        assert!(ps.iter().any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p2")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p3")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p4")));
+    }
+}
+
