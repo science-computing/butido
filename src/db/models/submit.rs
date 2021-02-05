@@ -8,7 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -33,7 +32,6 @@ pub struct Submit {
     pub requested_image_id: i32,
     pub requested_package_id: i32,
     pub repo_hash_id: i32,
-    pub tree: serde_json::Value,
 }
 
 #[derive(Insertable)]
@@ -44,30 +42,23 @@ struct NewSubmit<'a> {
     pub requested_image_id: i32,
     pub requested_package_id: i32,
     pub repo_hash_id: i32,
-    pub tree: serde_json::Value,
 }
 
 impl Submit {
     pub fn create(
         database_connection: &PgConnection,
-        t: &crate::package::Tree,
         submit_datetime: &NaiveDateTime,
         submit_id: &::uuid::Uuid,
         requested_image: &Image,
         requested_package: &Package,
         repo_hash: &GitHash,
     ) -> Result<Submit> {
-        let tree_json = serde_json::to_value(t)
-            .context("Converting tree to JSON string")
-            .with_context(|| anyhow!("Tree = {:#?}", t))?;
-
         let new_submit = NewSubmit {
             uuid: submit_id,
             submit_time: submit_datetime,
             requested_image_id: requested_image.id,
             requested_package_id: requested_package.id,
             repo_hash_id: repo_hash.id,
-            tree: tree_json,
         };
 
         diesel::insert_into(submits::table)

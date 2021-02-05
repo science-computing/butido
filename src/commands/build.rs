@@ -291,7 +291,6 @@ pub async fn build(
     trace!("Creating Submit in database");
     let submit = Submit::create(
         &database_connection,
-        &tree,
         &now,
         &submit_id,
         &db_image,

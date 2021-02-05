@@ -105,7 +105,6 @@ table! {
         requested_image_id -> Int4,
         requested_package_id -> Int4,
         repo_hash_id -> Int4,
-        tree -> Jsonb,
     }
 }
 
