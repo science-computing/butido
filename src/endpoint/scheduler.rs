@@ -344,10 +344,6 @@ impl<'a> LogReceiver<'a> {
                 LogItem::Progress(u) => {
                     trace!("Setting bar to {}", u as u64);
                     self.bar.set_position(u as u64);
-                    self.bar.set_message(&format!(
-                        "[{} {} {}]: running...",
-                        self.job_id, self.package_name, self.package_version
-                    ));
                 }
                 LogItem::CurrentPhase(ref phasename) => {
                     trace!("Setting bar phase to {}", phasename);
