@@ -42,16 +42,6 @@ impl StoreRoot {
         }
     }
 
-    /// Unchecked variant of StoreRoot::new()
-    ///
-    /// Because StoreRoot::new() accesses the filesystem, this method is necessary to construct an
-    /// object of StoreRoot for a non-existing path, so that we can test its implementation without
-    /// the need to create objects on the filesystem.
-    #[cfg(test)]
-    pub fn new_unchecked(root: PathBuf) -> Self {
-        StoreRoot(root)
-    }
-
     pub fn join<'a>(&'a self, ap: &'a ArtifactPath) -> Result<FullArtifactPath<'a>> {
         let join = self.0.join(&ap.0);
 
@@ -62,16 +52,6 @@ impl StoreRoot {
         } else {
             Err(anyhow!("Path does not exist: {}", join.display()))
         }
-    }
-
-    /// Unchecked variant of StoreRoot::join()
-    ///
-    /// This function is needed (like StoreRoot::new_unchecked()) to perform a construction of
-    /// FullArtifactPath like StoreRoot::join() in without its side effects (accessing the
-    /// filesystem) for testing purposes
-    #[cfg(test)]
-    pub fn join_unchecked<'a>(&'a self, ap: &'a ArtifactPath) -> FullArtifactPath<'a> {
-        FullArtifactPath(self, ap)
     }
 
     pub(in crate::filestore) fn is_dir(&self, subpath: &Path) -> bool {
@@ -169,10 +149,6 @@ impl<'a> FullArtifactPath<'a> {
 
     pub fn display(&self) -> FullArtifactPathDisplay<'a> {
         FullArtifactPathDisplay(self.0, self.1)
-    }
-
-    pub(in crate::filestore) fn file_stem(&self) -> Option<&OsStr> {
-        self.1 .0.file_stem()
     }
 
     pub async fn read(self) -> Result<Vec<u8>> {
