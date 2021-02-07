@@ -10,16 +10,15 @@
 
 use std::fmt::Debug;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
 use log::trace;
 use result_inspect::ResultInspect;
 
-use crate::filestore::Artifact;
 use crate::filestore::path::ArtifactPath;
 use crate::filestore::path::StoreRoot;
 use crate::filestore::util::FileStoreImpl;
@@ -84,14 +83,12 @@ impl StagingStore {
                     None
                 } else {
                     Some({
-                        ArtifactPath::new(path).and_then(|ap| {
-                            self.0
-                                .load_from_path(&ap)
-                                .inspect(|r| trace!("Loaded from path {} = {:?}", ap.display(), r))
-                                .with_context(|| anyhow!("Loading from path: {}", ap.display()))
-                                .map_err(Error::from)
-                                .map(|art| art.path().clone())
-                        })
+                        // Clippy doesn't detect this properly
+                        #[allow(clippy::redundant_clone)]
+                        ArtifactPath::new(path.to_path_buf())
+                            .inspect(|r| trace!("Loaded from path {} = {:?}", path.display(), r))
+                            .with_context(|| anyhow!("Loading from path: {}", path.display()))
+                            .map(|ap| self.0.load_from_path(&ap).clone())
                     })
                 }
             })
@@ -102,7 +99,7 @@ impl StagingStore {
         self.0.root_path()
     }
 
-    pub fn get(&self, p: &ArtifactPath) -> Option<&Artifact> {
+    pub fn get(&self, p: &ArtifactPath) -> Option<&ArtifactPath> {
         self.0.get(p)
     }
 }

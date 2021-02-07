@@ -8,9 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-mod artifact;
-pub use artifact::*;
-
 mod release;
 pub use release::*;
 
@@ -21,5 +18,6 @@ mod merged;
 pub use merged::*;
 
 pub mod path;
+pub use path::ArtifactPath;
 
 mod util;

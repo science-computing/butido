@@ -32,7 +32,7 @@ use crate::config::Configuration;
 use crate::db::models as dbmodels;
 use crate::endpoint::EndpointConfiguration;
 use crate::endpoint::EndpointScheduler;
-use crate::filestore::Artifact;
+use crate::filestore::ArtifactPath;
 use crate::filestore::MergedStores;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
@@ -203,16 +203,16 @@ impl<'a> OrchestratorSetup<'a> {
 /// It is either a list of artifacts with the UUID of the job they were produced by,
 /// or a UUID and an Error object, where the UUID is the job UUID and the error is the
 /// anyhow::Error that was issued.
-type JobResult = std::result::Result<HashMap<Uuid, Vec<Artifact>>, HashMap<Uuid, Error>>;
+type JobResult = std::result::Result<HashMap<Uuid, Vec<ArtifactPath>>, HashMap<Uuid, Error>>;
 
 impl<'a> Orchestrator<'a> {
-    pub async fn run(self, output: &mut Vec<Artifact>) -> Result<HashMap<Uuid, Error>> {
+    pub async fn run(self, output: &mut Vec<ArtifactPath>) -> Result<HashMap<Uuid, Error>> {
         let (results, errors) = self.run_tree().await?;
         output.extend(results.into_iter());
         Ok(errors)
     }
 
-    async fn run_tree(self) -> Result<(Vec<Artifact>, HashMap<Uuid, Error>)> {
+    async fn run_tree(self) -> Result<(Vec<ArtifactPath>, HashMap<Uuid, Error>)> {
         let multibar = Arc::new(indicatif::MultiProgress::new());
 
         // For each job in the jobdag, built a tuple with
@@ -403,7 +403,7 @@ impl<'a> JobTask<'a> {
 
         // A list of job run results from dependencies that were received from the tasks for the
         // dependencies
-        let mut received_dependencies: HashMap<Uuid, Vec<Artifact>> = HashMap::new();
+        let mut received_dependencies: HashMap<Uuid, Vec<ArtifactPath>> = HashMap::new();
 
         // A list of errors that were received from the tasks for the dependencies
         let mut received_errors: HashMap<Uuid, Error> = HashMap::with_capacity(self.jobdef.dependencies.len());
@@ -464,15 +464,15 @@ impl<'a> JobTask<'a> {
         }
 
         // Map the list of received dependencies from
-        //      Vec<(Uuid, Vec<Artifact>)>
+        //      Vec<(Uuid, Vec<ArtifactPath>)>
         // to
-        //      Vec<Artifact>
+        //      Vec<ArtifactPath>
         let dependency_artifacts = received_dependencies
             .values()
             .map(|v| v.iter())
             .flatten()
             .cloned()
-            .collect();
+            .collect::<Vec<ArtifactPath>>();
         trace!("[{}]: Dependency artifacts = {:?}", self.jobdef.job.uuid(), dependency_artifacts);
         self.bar.set_message(&format!("[{} {} {}]: Preparing...",
             self.jobdef.job.uuid(),
@@ -531,11 +531,11 @@ impl<'a> JobTask<'a> {
     ///
     /// Return Ok(true) if we should continue operation
     /// Return Ok(false) if the channel is empty and we're done receiving
-    async fn perform_receive(&mut self, received_dependencies: &mut HashMap<Uuid, Vec<Artifact>>, received_errors: &mut HashMap<Uuid, Error>) -> Result<bool> {
+    async fn perform_receive(&mut self, received_dependencies: &mut HashMap<Uuid, Vec<ArtifactPath>>, received_errors: &mut HashMap<Uuid, Error>) -> Result<bool> {
         match self.receiver.recv().await {
             Some(Ok(mut v)) => {
                 // The task we depend on succeeded and returned an
-                // (uuid of the job, [Artifact])
+                // (uuid of the job, [ArtifactPath])
                 trace!("[{}]: Received: {:?}", self.jobdef.job.uuid(), v);
                 received_dependencies.extend(v);
                 Ok(true)

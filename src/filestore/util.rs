@@ -11,15 +11,13 @@
 //! Module containing utilities for the filestore implementation
 //!
 
-use std::collections::BTreeMap;
+use std::collections::HashSet;
 
-use anyhow::anyhow;
 use anyhow::Result;
 use indicatif::ProgressBar;
-use resiter::AndThen;
 
-use crate::filestore::path::*;
-use crate::filestore::Artifact;
+use crate::filestore::path::ArtifactPath;
+use crate::filestore::path::StoreRoot;
 
 /// The actual filestore implementation
 ///
@@ -29,19 +27,16 @@ use crate::filestore::Artifact;
 /// It can then be wrapped into the actual interface of this module with specialized functionality.
 pub struct FileStoreImpl {
     pub(in crate::filestore) root: StoreRoot,
-    store: BTreeMap<ArtifactPath, Artifact>,
+    store: HashSet<ArtifactPath>,
 }
 
 impl FileStoreImpl {
-    /// Loads the passed path recursively into a Path => Artifact mapping
+    /// Loads the passed path recursively 
     pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
         let store = root
             .find_artifacts_recursive()
-            .and_then_ok(|artifact_path| {
-                progress.tick();
-                Artifact::load(&root, artifact_path.clone()).map(|a| (artifact_path, a))
-            })
-            .collect::<Result<BTreeMap<ArtifactPath, Artifact>>>()?;
+            .inspect(|_| progress.tick())
+            .collect::<Result<HashSet<ArtifactPath>>>()?;
 
         Ok(FileStoreImpl { root, store })
     }
@@ -50,21 +45,17 @@ impl FileStoreImpl {
         &self.root
     }
 
-    pub fn get(&self, artifact_path: &ArtifactPath) -> Option<&Artifact> {
+    pub fn get(&self, artifact_path: &ArtifactPath) -> Option<&ArtifactPath> {
         self.store.get(artifact_path)
     }
 
-    pub(in crate::filestore) fn load_from_path(
+    pub(in crate::filestore) fn load_from_path<'a>(
         &mut self,
-        artifact_path: &ArtifactPath,
-    ) -> Result<&Artifact> {
-        if self.store.get(&artifact_path).is_some() {
-            Err(anyhow!("Entry exists: {}", artifact_path.display()))
-        } else {
-            Ok(self
-                .store
-                .entry(artifact_path.clone())
-                .or_insert(Artifact::load(&self.root, artifact_path.clone())?))
+        artifact_path: &'a ArtifactPath,
+    ) -> &'a ArtifactPath {
+        if !self.store.contains(artifact_path) {
+            self.store.insert(artifact_path.clone());
         }
+        artifact_path
     }
 }

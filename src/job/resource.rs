@@ -8,13 +8,13 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use crate::filestore::Artifact;
+use crate::filestore::ArtifactPath;
 use crate::util::EnvironmentVariableName;
 
 #[derive(Clone, Debug)]
 pub enum JobResource {
     Environment(EnvironmentVariableName, String),
-    Artifact(Artifact),
+    Artifact(ArtifactPath),
 }
 
 impl From<(EnvironmentVariableName, String)> for JobResource {
@@ -23,8 +23,8 @@ impl From<(EnvironmentVariableName, String)> for JobResource {
     }
 }
 
-impl From<Artifact> for JobResource {
-    fn from(a: Artifact) -> Self {
+impl From<ArtifactPath> for JobResource {
+    fn from(a: ArtifactPath) -> Self {
         JobResource::Artifact(a)
     }
 }
@@ -36,7 +36,7 @@ impl JobResource {
             _ => None,
         }
     }
-    pub fn artifact(&self) -> Option<&Artifact> {
+    pub fn artifact(&self) -> Option<&ArtifactPath> {
         match self {
             JobResource::Artifact(a) => Some(a),
             _ => None,

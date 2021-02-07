@@ -390,9 +390,8 @@ impl<'a> PreparedContainer<'a> {
             .cloned()
             .map(|art| async {
                 let artifact_file_name = art
-                    .path()
                     .file_name()
-                    .ok_or_else(|| anyhow!("BUG: artifact {} is not a file", art.path().display()))
+                    .ok_or_else(|| anyhow!("BUG: artifact {} is not a file", art.display()))
                     .with_context(|| {
                         anyhow!(
                             "Collecting artifacts for copying to container {}",
@@ -402,7 +401,7 @@ impl<'a> PreparedContainer<'a> {
                 let destination = PathBuf::from("/inputs/").join(artifact_file_name);
                 trace!(
                     "Copying {} to container: {}:{}",
-                    art.path().display(),
+                    art.display(),
                     container.id(),
                     destination.display()
                 );
@@ -410,13 +409,13 @@ impl<'a> PreparedContainer<'a> {
                     .read()
                     .await
                     .root_path()
-                    .join(art.path())?
+                    .join(&art)?
                     .read()
                     .await
                     .with_context(|| {
                         anyhow!(
                             "Reading artifact {}, so it can be copied to container",
-                            art.path().display()
+                            art.display()
                         )
                     })?;
 
@@ -426,7 +425,7 @@ impl<'a> PreparedContainer<'a> {
                     .with_context(|| {
                         anyhow!(
                             "Copying artifact {} to container {} at {}",
-                            art.path().display(),
+                            art.display(),
                             container.id(),
                             destination.display()
                         )

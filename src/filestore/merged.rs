@@ -21,7 +21,6 @@ use getset::Getters;
 use log::trace;
 use tokio::sync::RwLock;
 
-use crate::filestore::Artifact;
 use crate::filestore::path::ArtifactPath;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
@@ -45,7 +44,7 @@ impl MergedStores {
         MergedStores { release, staging }
     }
 
-    pub async fn get_artifact_by_path(&self, p: &Path) -> Result<Option<Artifact>> {
+    pub async fn get_artifact_by_path(&self, p: &Path) -> Result<Option<ArtifactPath>> {
         trace!("Fetching artifact from path: {:?}", p.display());
         let artifact_path = ArtifactPath::new(p.to_path_buf())?;
 
@@ -58,7 +57,7 @@ impl MergedStores {
                 art
             } else {
                 trace!("Loading path from staging store: {:?}", artifact_path.display());
-                staging.load_from_path(&artifact_path)?
+                staging.load_from_path(&artifact_path)
             };
 
             return Ok(Some(art.clone()))
@@ -73,7 +72,7 @@ impl MergedStores {
                 art
             } else {
                 trace!("Loading path from release store: {:?}", artifact_path.display());
-                release.load_from_path(&artifact_path)?
+                release.load_from_path(&artifact_path)
             };
             return Ok(Some(art.clone()))
         }
