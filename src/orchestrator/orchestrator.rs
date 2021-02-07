@@ -268,20 +268,23 @@ impl<'a> Orchestrator<'a> {
                     .filter(|j| j.1.jobdef.dependencies.contains(job.1.jobdef.job.uuid()))
                     .map(|j| j.2.clone())
                 });
-            } else {
-                *job.3.borrow_mut() = {
-                    let depending_on_job = jobs.iter()
-                        .filter(|j| j.1.jobdef.dependencies.contains(job.1.jobdef.job.uuid()))
-                        .map(|j| j.2.clone())
-                        .collect::<Vec<Sender<JobResult>>>();
 
-                    if depending_on_job.is_empty() {
-                        None
-                    } else {
-                        Some(depending_on_job)
-                    }
-                };
+                continue;
             }
+
+            // else, but not in else {} because of borrowing
+            *job.3.borrow_mut() = {
+                let depending_on_job = jobs.iter()
+                    .filter(|j| j.1.jobdef.dependencies.contains(job.1.jobdef.job.uuid()))
+                    .map(|j| j.2.clone())
+                    .collect::<Vec<Sender<JobResult>>>();
+
+                if depending_on_job.is_empty() {
+                    None
+                } else {
+                    Some(depending_on_job)
+                }
+            };
         }
 
         // Find the id of the root task
