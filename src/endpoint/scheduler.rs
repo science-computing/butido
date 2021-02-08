@@ -15,6 +15,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use colored::Colorize;
 use diesel::PgConnection;
 use futures::FutureExt;
 use indicatif::ProgressBar;
@@ -263,21 +264,27 @@ impl JobHandle {
     fn create_job_run_error(job_id: &Uuid, package_name: &str, package_version: &str, endpoint_uri: &str, container_id: &str) -> Error {
         anyhow!(indoc::formatdoc!(
             r#"Error while running job
+
             {job_id}
+
         for package
+
             {package_name} {package_version}
 
         Connect to docker using
 
-            docker --host {endpoint_uri} exec -it {container_id} /bin/bash
+            {docker_connect_string}
 
         to debug.
         "#,
-            job_id = job_id,
-            package_name = package_name,
-            package_version = package_version,
-            endpoint_uri = endpoint_uri,
-            container_id = container_id,
+            job_id = job_id.to_string().red(),
+            package_name = package_name.to_string().red(),
+            package_version = package_version.to_string().red(),
+
+            docker_connect_string = format!("docker --host {endpoint_uri} exec -it {container_id} /bin/bash",
+                endpoint_uri = endpoint_uri,
+                container_id = container_id
+            ).yellow().bold(),
         ))
     }
 
