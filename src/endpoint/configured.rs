@@ -617,28 +617,7 @@ impl<'a> ExecutedContainer<'a> {
     }
 
     pub async fn finalize(self, staging: Arc<RwLock<StagingStore>>) -> Result<FinalizedContainer> {
-        trace!("Fetching /outputs from container {}", self.create_info.id);
-        let container = self.endpoint.docker.containers().get(&self.create_info.id);
-        let tar_stream = container
-            .copy_from(&PathBuf::from("/outputs/"))
-            .map(|item| {
-                item.with_context(|| {
-                    anyhow!(
-                        "Copying item from container {} to host",
-                        self.create_info.id
-                    )
-                })
-                .map_err(Error::from)
-            });
-
-        let mut writelock = staging.write().await;
-
-        let artifacts = writelock
-            .write_files_from_tar_stream(tar_stream)
-            .await
-            .with_context(|| anyhow!("Copying the TAR stream to the staging store"))?;
-
-        let exit_info = match self.exit_info {
+        let (exit_info, artifacts) = match self.exit_info {
             Some((false, msg)) => {
                 let err = anyhow!("Error during container run:\n\tMessage: '{msg}'\n\tConnect using\n\n\t\t`docker --host {uri} exec -it {container_id} /bin/bash`\n\n\tto debug.",
                     container_id = self.create_info.id,
@@ -647,16 +626,36 @@ impl<'a> ExecutedContainer<'a> {
                     );
 
                 // error because the container errored
-                Err(err)
+                (Err(err), vec![])
             }
 
             Some((true, _)) | None => {
                 let container = self.endpoint.docker.containers().get(&self.create_info.id);
+
+                trace!("Fetching /outputs from container {}", self.create_info.id);
+                let tar_stream = container
+                    .copy_from(&PathBuf::from("/outputs/"))
+                    .map(|item| {
+                        item.with_context(|| {
+                            anyhow!(
+                                "Copying item from container {} to host",
+                                self.create_info.id
+                            )
+                        })
+                        .map_err(Error::from)
+                    });
+
+                let mut writelock = staging.write().await;
+
+                let artifacts = writelock
+                    .write_files_from_tar_stream(tar_stream)
+                    .await
+                    .with_context(|| anyhow!("Copying the TAR stream to the staging store"))?;
                 container
                     .stop(Some(std::time::Duration::new(1, 0)))
                     .await
                     .with_context(|| anyhow!("Stopping container {}", self.create_info.id))?;
-                Ok(())
+                (Ok(()), artifacts)
             }
         };
 
