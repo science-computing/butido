@@ -29,8 +29,8 @@ pub use script::*;
 mod source;
 pub use source::*;
 
-mod tree;
-pub use tree::*;
+mod dag;
+pub use dag::*;
 
 mod version;
 pub use version::*;

@@ -75,6 +75,13 @@ pub struct Package {
     meta: Option<HashMap<String, String>>,
 }
 
+impl std::hash::Hash for Package {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.version.hash(state);
+    }
+}
+
 impl Package {
     #[cfg(test)]
     pub fn new(

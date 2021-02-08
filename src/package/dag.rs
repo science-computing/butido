@@ -9,108 +9,105 @@
 //
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::io::Result as IoResult;
 use std::io::Write;
 
-use anyhow::anyhow;
+use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
+use daggy::Walker;
 use indicatif::ProgressBar;
 use log::trace;
 use ptree::Style;
 use ptree::TreeItem;
 use resiter::AndThen;
-use serde::Deserialize;
-use serde::Serialize;
+use getset::Getters;
 
 use crate::package::Package;
 use crate::repository::Repository;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Tree {
-    root: Vec<Mapping>,
+#[derive(Debug, Getters)]
+pub struct Dag {
+    #[getset(get = "pub")]
+    dag: daggy::Dag<Package, i8>,
+
+    #[getset(get = "pub")]
+    root_idx: daggy::NodeIndex,
 }
 
-/// Helper type
-///
-/// This helper type is required so that the serialized JSON is a bit more readable.
-#[derive(Debug, Serialize, Deserialize)]
-struct Mapping {
-    package: Package,
-    dependencies: Tree,
-}
-
-impl Tree {
-    pub fn add_package(
-        &mut self,
+impl Dag {
+    pub fn for_root_package(
         p: Package,
         repo: &Repository,
         progress: ProgressBar,
-    ) -> Result<()> {
-        macro_rules! mk_add_package_tree {
-            ($this:ident, $pack:ident, $repo:ident, $root:ident, $progress:ident) => {{
-                let mut subtree = Tree::default();
-                ($pack)
-                    .get_self_packaged_dependencies()
-                    .and_then_ok(|(name, constr)| {
-                        trace!("Dependency: {:?}", name);
-                        let pack = ($repo).find_with_version(&name, &constr);
-                        trace!("Found: {:?}", pack);
-
-                        if pack.iter().any(|p| ($root).has_package(p)) {
-                            return Err(anyhow!(
-                                "Duplicate version of some package in {:?} found",
-                                pack
-                            ));
-                        }
-                        trace!("All dependecies available...");
-
-                        pack.into_iter()
-                            .map(|p| {
-                                ($progress).tick();
-                                trace!("Following dependecy: {:?}", p);
-                                add_package_tree(
-                                    &mut subtree,
-                                    p.clone(),
-                                    ($repo),
-                                    ($root),
-                                    ($progress).clone(),
-                                )
-                            })
-                            .collect()
-                    })
-                    .collect::<Result<Vec<()>>>()?;
-
-                trace!("Inserting subtree: {:?} -> {:?}", ($pack), subtree);
-                ($this).root.push(Mapping {
-                    package: ($pack),
-                    dependencies: subtree,
-                });
-                Ok(())
-            }};
-        };
-
-        fn add_package_tree(
-            this: &mut Tree,
-            p: Package,
-            repo: &Repository,
-            root: &mut Tree,
-            progress: ProgressBar,
+    ) -> Result<Self> {
+        fn add_sub_packages<'a>(
+            repo: &'a Repository,
+            mappings: &mut HashMap<&'a Package, daggy::NodeIndex>,
+            dag: &mut daggy::Dag<&'a Package, i8>,
+            p: &'a Package,
+            progress: &ProgressBar
         ) -> Result<()> {
-            mk_add_package_tree!(this, p, repo, root, progress)
+            p.get_self_packaged_dependencies()
+                .and_then_ok(|(name, constr)| {
+                    trace!("Dependency for {} {} found: {:?}", p.name(), p.version(), name);
+                    let packs = repo.find_with_version(&name, &constr);
+                    trace!("Found in repo: {:?}", packs);
+
+                    // If we didn't check that dependency already
+                    if !mappings.keys().any(|p| packs.iter().any(|pk| pk.name() == p.name() && pk.version() == p.version())) {
+                        // recurse
+                        packs.into_iter()
+                            .try_for_each(|p| {
+                                progress.tick();
+
+                                let idx = dag.add_node(p);
+                                mappings.insert(p, idx);
+
+                                trace!("Recursing for: {:?}", p);
+                                add_sub_packages(repo, mappings, dag, p, progress)
+                            })
+                    } else {
+                        Ok(())
+                    }
+                })
+                .collect::<Result<()>>()
         }
 
-        trace!("Making package Tree for {:?}", p);
-        let r = mk_add_package_tree!(self, p, repo, self, progress);
-        trace!("Finished makeing package Tree");
-        r
-    }
+        fn add_edges(mappings: &HashMap<&Package, daggy::NodeIndex>, dag: &mut daggy::Dag<&Package, i8>) -> Result<()> {
+            for (package, idx) in mappings {
+                package.get_self_packaged_dependencies()
+                    .and_then_ok(|(name, constr)| {
+                        mappings
+                            .iter()
+                            .filter(|(package, _)| *package.name() == name && constr.matches(package.version()))
+                            .try_for_each(|(_, dep_idx)| {
+                                dag.add_edge(*idx, *dep_idx, 0)
+                                    .map(|_| ())
+                                    .map_err(Error::from)
+                            })
+                    })
+                    .collect::<Result<()>>()?
+            }
 
-    /// Get packages of the tree
-    ///
-    /// This does not yield packages which are dependencies of this tree node.
-    /// It yields only packages for this particular Tree instance.
-    pub fn packages(&self) -> impl Iterator<Item = &Package> {
-        self.root.iter().map(|mapping| &mapping.package)
+            Ok(())
+        }
+
+        let mut dag: daggy::Dag<&Package, i8> = daggy::Dag::new();
+        let mut mappings = HashMap::new();
+
+        trace!("Making package Tree for {:?}", p);
+        let root_idx = dag.add_node(&p);
+        mappings.insert(&p, root_idx);
+        add_sub_packages(repo, &mut mappings, &mut dag, &p, &progress)?;
+        add_edges(&mappings, &mut dag)?;
+        trace!("Finished makeing package Tree");
+
+        Ok(Dag {
+            dag: dag.map(|_, p: &&Package| -> Package { (*p).clone() }, |_, e| *e),
+            root_idx
+        })
     }
 
     /// Get all packages in the tree by reference
@@ -119,60 +116,37 @@ impl Tree {
     ///
     /// The order of the packages is _NOT_ guaranteed by the implementation
     pub fn all_packages(&self) -> Vec<&Package> {
-        self.root
-            .iter()
-            .map(|m| m.dependencies.all_packages())
-            .flatten()
-            .chain(self.root.iter().map(|m| &m.package))
+        self.dag
+            .graph()
+            .node_indices()
+            .filter_map(|idx| self.dag.graph().node_weight(idx))
             .collect()
     }
 
-    /// Get dependencies stored in this tree
-    pub fn dependencies(&self) -> impl Iterator<Item = &Tree> {
-        self.root.iter().map(|mapping| &mapping.dependencies)
-    }
-
-    pub fn into_iter(self) -> impl IntoIterator<Item = (Package, Tree)> {
-        self.root.into_iter().map(|m| (m.package, m.dependencies))
-    }
-
-    pub fn has_package(&self, p: &Package) -> bool {
-        let name_eq = |k: &Package| k.name() == p.name();
-        self.packages().any(name_eq) || self.dependencies().any(|t| t.has_package(p))
-    }
-
-    pub fn display(&self) -> Vec<DisplayTree> {
-        self.root.iter().map(DisplayTree).collect()
+    pub fn display(&self) -> DagDisplay {
+        DagDisplay(self, self.root_idx)
     }
 }
 
 #[derive(Clone)]
-pub struct DisplayTree<'a>(&'a Mapping);
+pub struct DagDisplay<'a>(&'a Dag, daggy::NodeIndex);
 
-impl<'a> TreeItem for DisplayTree<'a> {
+impl<'a> TreeItem for DagDisplay<'a> {
     type Child = Self;
 
     fn write_self<W: Write>(&self, f: &mut W, _: &Style) -> IoResult<()> {
-        write!(f, "{} {}", self.0.package.name(), self.0.package.version())
+        let p = self.0.dag.graph().node_weight(self.1)
+            .ok_or_else(|| anyhow!("Error finding node: {:?}", self.1))
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        write!(f, "{} {}", p.name(), p.version())
     }
 
     fn children(&self) -> Cow<[Self::Child]> {
-        Cow::from(
-            self.0
-                .dependencies
-                .root
-                .iter()
-                .map(DisplayTree)
-                .collect::<Vec<_>>(),
+        let c = self.0.dag.children(self.1);
+        Cow::from(c.iter(&self.0.dag)
+            .map(|(_, idx)| DagDisplay(self.0, idx))
+            .collect::<Vec<_>>()
         )
-    }
-}
-
-impl Default for Tree {
-    fn default() -> Tree {
-        Tree {
-            root: Vec::default(),
-        }
     }
 }
 
@@ -205,38 +179,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress);
-        assert!(r.is_ok());
-    }
-
-    #[test]
-    fn test_add_two_packages() {
-        let mut btree = BTreeMap::new();
-
-        let p1 = {
-            let name = "a";
-            let vers = "1";
-            let pack = package(name, vers, "https://rust-lang.org", "123");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
-            pack
-        };
-        let p2 = {
-            let name = "b";
-            let vers = "2";
-            let pack = package(name, vers, "https://rust-lang.org", "124");
-            btree.insert((pname(name), pversion(vers)), pack.clone());
-            pack
-        };
-
-        let repo = Repository::from(btree);
-        let progress = ProgressBar::hidden();
-
-        let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress.clone());
-        assert!(r.is_ok());
-
-        let r = tree.add_package(p2, &repo, progress);
+        let r = Dag::for_root_package(p1, &repo, progress);
         assert!(r.is_ok());
     }
 
@@ -268,17 +211,15 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress);
-        assert!(r.is_ok());
-        assert!(tree.packages().all(|p| *p.name() == pname("a")));
-        assert!(tree.packages().all(|p| *p.version() == pversion("1")));
+        let dag = Dag::for_root_package(p1, &repo, progress);
+        assert!(dag.is_ok());
+        let dag = dag.unwrap();
+        let ps = dag.all_packages();
 
-        let subtree: Vec<&Tree> = tree.dependencies().collect();
-        assert_eq!(subtree.len(), 1);
-        let subtree = subtree[0];
-        assert!(subtree.packages().all(|p| *p.name() == pname("b")));
-        assert!(subtree.packages().all(|p| *p.version() == pversion("2")));
+        assert!(ps.iter().any(|p| *p.name() == pname("a")));
+        assert!(ps.iter().any(|p| *p.version() == pversion("1")));
+        assert!(ps.iter().any(|p| *p.name() == pname("b")));
+        assert!(ps.iter().any(|p| *p.version() == pversion("2")));
     }
 
     #[test]
@@ -359,37 +300,16 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress);
+        let r = Dag::for_root_package(p1, &repo, progress);
         assert!(r.is_ok());
-        assert!(tree.packages().all(|p| *p.name() == pname("p1")));
-        assert!(tree.packages().all(|p| *p.version() == pversion("1")));
-
-        let subtrees: Vec<&Tree> = tree.dependencies().collect();
-        assert_eq!(subtrees.len(), 1);
-
-        let subtree = subtrees[0];
-        assert_eq!(subtree.packages().count(), 2);
-
-        assert!(subtree
-            .packages()
-            .all(|p| { *p.name() == pname("p2") || *p.name() == pname("p4") }));
-
-        let subsubtrees: Vec<&Tree> = subtree.dependencies().collect();
-        assert_eq!(subsubtrees.len(), 2);
-
-        assert!(subsubtrees.iter().any(|st| { st.packages().count() == 1 }));
-
-        assert!(subsubtrees.iter().any(|st| { st.packages().count() == 2 }));
-
-        assert!(subsubtrees
-            .iter()
-            .any(|st| { st.packages().all(|p| *p.name() == pname("p3")) }));
-
-        assert!(subsubtrees.iter().any(|st| {
-            st.packages()
-                .all(|p| *p.name() == pname("p5") || *p.name() == pname("p6"))
-        }));
+        let r = r.unwrap();
+        let ps = r.all_packages();
+        assert!(ps.iter().any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p2")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p4")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p3")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p5")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p6")));
     }
 
     #[test]
@@ -523,36 +443,119 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let mut tree = Tree::default();
-        let r = tree.add_package(p1, &repo, progress);
+        let r = Dag::for_root_package(p1, &repo, progress);
         assert!(r.is_ok());
-        assert!(tree.packages().all(|p| *p.name() == pname("p1")));
-        assert!(tree.packages().all(|p| *p.version() == pversion("1")));
+        let r = r.unwrap();
+        let ps = r.all_packages();
+        assert!(ps.iter().any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p2")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p3")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p4")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p5")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p6")));
+    }
 
-        let subtrees: Vec<&Tree> = tree.dependencies().collect();
-        assert_eq!(subtrees.len(), 1);
+    #[test]
+    fn test_add_dag() {
+        let mut btree = BTreeMap::new();
 
-        let subtree = subtrees[0];
-        assert_eq!(subtree.packages().count(), 2);
+        //
+        // Test the following (made up) tree:
+        //
+        //  p1
+        //   - p2
+        //     - p3
+        //   - p4
+        //     - p3
+        //
+        // where "p3" is referenced from "p2" and "p4"
+        //
+        // The tree also contains a few irrelevant packages.
+        //
 
-        assert!(subtree
-            .packages()
-            .all(|p| { *p.name() == pname("p2") || *p.name() == pname("p4") }));
+        let p1 = {
+            let name = "p1";
+            let vers = "1";
+            let mut pack = package(name, vers, "https://rust-lang.org", "123");
+            {
+                let d1 = Dependency::from(String::from("p2 =2"));
+                let d2 = Dependency::from(String::from("p4 =4"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
 
-        let subsubtrees: Vec<&Tree> = subtree.dependencies().collect();
-        assert_eq!(subsubtrees.len(), 2);
+        {
+            let name = "p1";
+            let vers = "2";
+            let mut pack = package(name, vers, "https://rust-lang.org", "123");
+            {
+                let d1 = Dependency::from(String::from("p2 =2"));
+                let d2 = Dependency::from(String::from("p4 =5"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1, d2]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
 
-        assert!(subsubtrees.iter().any(|st| { st.packages().count() == 1 }));
+        {
+            let name = "p2";
+            let vers = "2";
+            let mut pack = package(name, vers, "https://rust-lang.org", "124");
+            {
+                let d1 = Dependency::from(String::from("p3 =3"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
 
-        assert!(subsubtrees.iter().any(|st| { st.packages().count() == 2 }));
+        {
+            let name = "p3";
+            let vers = "3";
+            let pack = package(name, vers, "https://rust-lang.org", "125");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
 
-        assert!(subsubtrees
-            .iter()
-            .any(|st| { st.packages().all(|p| *p.name() == pname("p3")) }));
+        {
+            let name = "p3";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "128");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
 
-        assert!(subsubtrees.iter().any(|st| {
-            st.packages()
-                .all(|p| *p.name() == pname("p5") || *p.name() == pname("p6"))
-        }));
+        {
+            let name = "p3";
+            let vers = "3.1";
+            let pack = package(name, vers, "https://rust-lang.org", "118");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let name = "p4";
+            let vers = "4";
+            let mut pack = package(name, vers, "https://rust-lang.org", "125");
+            {
+                let d1 = Dependency::from(String::from("p3 =3"));
+                let ds = Dependencies::with_runtime_dependencies(vec![d1]);
+                pack.set_dependencies(ds);
+            }
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        let repo = Repository::from(btree);
+        let progress = ProgressBar::hidden();
+
+        let r = Dag::for_root_package(p1, &repo, progress);
+        assert!(r.is_ok());
+        let r = r.unwrap();
+        let ps = r.all_packages();
+        assert!(ps.iter().any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p2")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p3")));
+        assert!(ps.iter().any(|p| *p.name() == pname("p4")));
     }
 }
+
