@@ -618,11 +618,7 @@ impl<'a> ExecutedContainer<'a> {
     pub async fn finalize(self, staging: Arc<RwLock<StagingStore>>) -> Result<FinalizedContainer> {
         let (exit_info, artifacts) = match self.exit_info {
             Some((false, msg)) => {
-                let err = anyhow!("Error during container run:\n\tMessage: '{msg}'\n\tConnect using\n\n\t\t`docker --host {uri} exec -it {container_id} /bin/bash`\n\n\tto debug.",
-                    container_id = self.create_info.id,
-                    uri = self.endpoint.uri(),
-                    msg = msg.as_deref().unwrap_or(""),
-                    );
+                let err = anyhow!("Error during container run: '{msg}'", msg = msg.as_deref().unwrap_or(""));
 
                 // error because the container errored
                 (Err(err), vec![])
