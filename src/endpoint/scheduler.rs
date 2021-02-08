@@ -29,7 +29,7 @@ use uuid::Uuid;
 use crate::db::models as dbmodels;
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
-use crate::filestore::Artifact;
+use crate::filestore::ArtifactPath;
 use crate::filestore::StagingStore;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
@@ -146,7 +146,7 @@ impl std::fmt::Debug for JobHandle {
 }
 
 impl JobHandle {
-    pub async fn run(self) -> Result<Vec<Artifact>> {
+    pub async fn run(self) -> Result<Vec<ArtifactPath>> {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let ep = self.endpoint.read().await;
         let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;

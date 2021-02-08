@@ -19,7 +19,7 @@ use log::trace;
 use uuid::Uuid;
 
 use crate::config::Configuration;
-use crate::filestore::Artifact;
+use crate::filestore::ArtifactPath;
 use crate::job::Job;
 use crate::job::JobResource;
 use crate::package::Package;
@@ -57,7 +57,7 @@ impl RunnableJob {
         job: &Job,
         source_cache: &SourceCache,
         config: &Configuration,
-        dependencies: Vec<Artifact>,
+        dependencies: Vec<ArtifactPath>,
     ) -> Result<Self> {
         // Add the environment from the original Job object to the resources
         let resources = dependencies
