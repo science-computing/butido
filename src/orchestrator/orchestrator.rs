@@ -471,6 +471,10 @@ impl<'a> JobTask<'a> {
                 self.sender[0].send(Err(received_errors)).await;
 
                 // ... and stop operation, because the whole tree will fail anyways.
+                self.bar.finish_with_message(&format!("[{} {} {}] Stopping, errors from child received",
+                    self.jobdef.job.uuid(),
+                    self.jobdef.job.package().name(),
+                    self.jobdef.job.package().version()));
                 return Ok(())
             }
         }
