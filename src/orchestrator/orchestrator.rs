@@ -479,20 +479,6 @@ impl<'a> JobTask<'a> {
             }
         }
 
-        // receive items until the channel is empty.
-        //
-        // In the above loop, it could happen that we have all dependencies to run, but there is
-        // another job that reports artifacts.
-        // We need to collect them, too.
-        //
-        // This is techically not possible, because in a tree, we need all results from all childs.
-        // It just feels better having this in place as well.
-        //
-        // Sorry, not sorry.
-        while self.perform_receive(&mut received_dependencies, &mut received_errors).await? {
-            ;
-        }
-
         // Map the list of received dependencies from
         //      Vec<(Uuid, Vec<Artifact>)>
         // to
