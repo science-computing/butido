@@ -354,12 +354,13 @@ pub async fn build(
         writeln!(
             outlock,
             "Last {} lines of Job {}",
-            number_log_lines, job_uuid
+            number_log_lines, job_uuid.to_string().red()
         )?;
         writeln!(
             outlock,
             "for package {} {}\n\n",
-            data.1.name, data.1.version
+            data.1.name.to_string().red(),
+            data.1.version.to_string().red()
         )?;
 
         let parsed_log = crate::log::ParsedLog::build_from(&data.0.log_text)?;
@@ -395,7 +396,8 @@ pub async fn build(
                 }
             })
             .try_for_each(|(i, line)| {
-                writeln!(outlock, "{:>4} | {}", i, line).map_err(Error::from)
+                let lineno = format!("{:>4} | ", i).bright_black();
+                writeln!(outlock, "{}{}", lineno, line).map_err(Error::from)
             })?;
 
         writeln!(outlock, "\n\n")?;
