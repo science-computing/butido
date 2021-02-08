@@ -311,23 +311,9 @@ impl<'a> Orchestrator<'a> {
             .into_iter()
             .map(|prep| {
                 trace!("Creating JobTask for = {}", prep.1.jobdef.job.uuid());
-                let root_sender = root_sender.clone();
-                JobTask {
-                    jobdef: prep.1.jobdef,
-
-                    bar: prep.1.bar.clone(),
-
-                    config: prep.1.config,
-                    source_cache: prep.1.source_cache,
-                    scheduler: prep.1.scheduler,
-                    merged_stores: prep.1.merged_stores,
-                    database: prep.1.database.clone(),
-
-                    receiver: prep.0,
-
-                    // the sender is set or we need to use the root sender
-                    sender: prep.3.into_inner().unwrap_or_else(|| vec![root_sender]),
-                }
+                // the sender is set or we need to use the root sender
+                let sender = prep.3.into_inner().unwrap_or_else(|| vec![root_sender.clone()]);
+                JobTask::new(prep.0, prep.1, sender)
             })
             .map(|task| task.run())
             .collect::<futures::stream::FuturesUnordered<_>>();
@@ -387,6 +373,28 @@ struct JobTask<'a> {
 }
 
 impl<'a> JobTask<'a> {
+    fn new(receiver: Receiver<JobResult>, prep: TaskPreparation<'a>, sender: Vec<Sender<JobResult>>) -> Self {
+        let bar = prep.bar.clone();
+        bar.set_message(&format!("[{} {} {}]: Booting",
+            prep.jobdef.job.uuid(),
+            prep.jobdef.job.package().name(),
+            prep.jobdef.job.package().version()
+        ));
+        JobTask {
+            jobdef: prep.jobdef,
+
+            bar,
+
+            config: prep.config,
+            source_cache: prep.source_cache,
+            scheduler: prep.scheduler,
+            merged_stores: prep.merged_stores,
+            database: prep.database.clone(),
+
+            receiver,
+            sender,
+        }
+    }
 
     /// Run the job
     ///
