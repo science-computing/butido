@@ -18,7 +18,6 @@ use chrono::NaiveDateTime;
 use diesel::BoolExpressionMethods;
 use diesel::ExpressionMethods;
 use diesel::JoinOnDsl;
-use diesel::NullableExpressionMethods;
 use diesel::PgConnection;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
@@ -91,48 +90,26 @@ pub fn find_artifacts<'a>(
 
     trace!("Build dependency names: {:?}", build_dependencies_names);
     trace!("Runtime dependency names: {:?}", runtime_dependencies_names);
-
-    let mut query = schema::submits::table
-        .inner_join(schema::jobs::table)
-        .inner_join(schema::packages::table)
+    let mut query = schema::packages::table
         .filter({
             // The package with pkg.name() and pkg.version()
             let package_name_filter = schema::packages::name.eq(pkg.name().as_ref() as &str);
             let package_version_filter =
                 schema::packages::version.eq(pkg.version().as_ref() as &str);
 
-            let dependency_filter = {
-                // Filter for dependencies
-                //
-                // We select only packages where the submit contained a job for the
-                // dependencies (by name for now).
-                let build_refs = build_dependencies_names
-                    .iter()
-                    .map(AsRef::<str>::as_ref)
-                    .collect::<Vec<_>>();
-                let runtime_refs = runtime_dependencies_names
-                    .iter()
-                    .map(AsRef::<str>::as_ref)
-                    .collect::<Vec<_>>();
-                schema::packages::name
-                    .eq_any(build_refs)
-                    .or(schema::packages::name.eq_any(runtime_refs))
-            };
+            package_name_filter.and(package_version_filter)
+        })
 
-            package_name_filter
-                .and(package_version_filter)
-                .or(dependency_filter)
-        })
+        // TODO: Only select from submits where the submit contained jobs that are in the
+        // dependencies of `pkg`.
+        .inner_join(schema::jobs::table.inner_join(schema::submits::table))
         .inner_join(schema::artifacts::table.on(schema::jobs::id.eq(schema::artifacts::job_id)))
-        .left_join(
-            schema::releases::table.on(schema::releases::artifact_id.eq(schema::artifacts::id)),
-        )
-        .inner_join({
-            schema::job_envs::table
-                .inner_join(schema::envvars::table)
-                .on(schema::jobs::id.eq(schema::job_envs::job_id))
-        })
-        .inner_join(schema::images::table)
+
+        // TODO: We do not yet have a method to "left join" properly, because diesel only has
+        // left_outer_join (left_join is an alias)
+        // So do not include release dates here, for now
+        //.left_outer_join(schema::releases::table.on(schema::releases::artifact_id.eq(schema::artifacts::id)))
+        .inner_join(schema::images::table.on(schema::submits::requested_image_id.eq(schema::images::id)))
         .into_boxed();
 
     if let Some(allowed_images) = pkg.allowed_images() {
@@ -163,17 +140,18 @@ pub fn find_artifacts<'a>(
         .select({
             let arts = schema::artifacts::all_columns;
             let jobs = schema::jobs::all_columns;
-            let rels = schema::releases::release_date.nullable();
+            //let rels = schema::releases::release_date.nullable();
 
-            (arts, jobs, rels)
+            (arts, jobs)
         })
-        .load::<(dbmodels::Artifact, dbmodels::Job, Option<NaiveDateTime>)>(
+        .load::<(dbmodels::Artifact, dbmodels::Job)>(
             &*database_connection,
         )
         .map_err(Error::from)
         .and_then(|results: Vec<_>| {
             results
                 .into_iter()
+                .inspect(|(art, job)| log::debug!("Filtering further: {:?}, job {:?}", art, job.id))
                 //
                 // Filter by environment variables
                 // All environment variables of the package must be present in the loaded
@@ -184,7 +162,7 @@ pub fn find_artifacts<'a>(
                 // Doing this in the database query would be way nicer, but I was not able
                 // to implement it.
                 //
-                .map(|tpl| -> Result<(_, _, _)> {
+                .map(|tpl| -> Result<(_, _)> {
                     // This is a Iterator::filter() but because our condition here might fail, we
                     // map() and do the actual filtering later.
 
@@ -205,16 +183,23 @@ pub fn find_artifacts<'a>(
                                     .any(|(key, value)| k == key.as_ref() && v == value)
                             });
 
-                        Ok((tpl.0, filter_result, tpl.2))
+                        Ok((tpl.0, filter_result))
                     } else {
-                        Ok((tpl.0, true, tpl.2))
+                        Ok((tpl.0, true))
                     }
                 })
                 .filter(|r| match r { // the actual filtering from above
                     Err(_)         => true,
-                    Ok((_, bl, _)) => *bl,
+                    Ok((_, bl)) => *bl,
                 })
-                .and_then_ok(|(p, _, ndt)| ArtifactPath::new(PathBuf::from(p.path)).map(|a| (a, ndt)))
+                .and_then_ok(|(art, _)| {
+                    if let Some(release) = art.get_release(&*database_connection)? {
+                        Ok((art, Some(release.release_date)))
+                    } else {
+                        Ok((art, None))
+                    }
+                })
+                .and_then_ok(|(p, ndt)| ArtifactPath::new(PathBuf::from(p.path)).map(|a| (a, ndt)))
                 .and_then_ok(|(artpath, ndt)| {
                     if let Some(staging) = staging_store.as_ref() {
                         trace!(
