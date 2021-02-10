@@ -1,0 +1,10 @@
+name = "k"
+version = "11"
+
+[dependencies]
+runtime = ["u =21"]
+
+[sources.src]
+url = "https://example.com"
+hash.hash = "dd71038f3463f511ee7403dbcbc87195302d891c"
+

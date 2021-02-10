@@ -1,9 +1,0 @@
-name = "b"
-version = "2"
-
-[dependencies]
-build = ["a =1"]
-
-[sources.src]
-url = "https://example.com"
-hash.hash = "7448d8798a4380162d4b56f9b452e2f6f9e24e7a"
