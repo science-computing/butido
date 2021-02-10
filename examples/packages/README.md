@@ -67,3 +67,16 @@ N, M, T and S starting right away.
 
 Multiple versions of one package are not yet considered in this setup.
 
+
+# The packaging
+
+The packaging script does the following:
+
+* In the "sourcecheck" phase, it checks whether the input is present (that would
+  be the .tar.gz file of the package to compile)
+* In the "depcheck" phase, it checks whether all dependencies are present. This
+  is done to demonstrate what could be done, not because it makes a great deal
+  of sense
+* In the "build" phase, it "builds" a package, by piping the version number of
+  the package itself to the output file.
+

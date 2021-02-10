@@ -24,7 +24,11 @@ database_user     = "pgdev"
 database_password = "password"
 database_name     = "butido"
 
-available_phases = [ "dummy" ]
+available_phases = [
+    "sourcecheck",
+    "depcheck",
+    "build"
+]
 
 
 [docker]
