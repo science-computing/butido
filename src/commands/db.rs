@@ -12,6 +12,7 @@ use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -138,6 +139,7 @@ fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result
 fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::artifacts::dsl;
 
+    let limit = matches.value_of("limit").map(i64::from_str).transpose()?.unwrap_or(50);
     let csv = matches.is_present("csv");
     let hdrs = mk_header(vec!["id", "path", "released", "job id"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
@@ -150,6 +152,7 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 .inner_join(schema::jobs::table)
                 .left_join(schema::releases::table)
                 .filter(schema::jobs::dsl::uuid.eq(job_uuid))
+                .limit(limit)
                 .load::<(models::Artifact, models::Job, Option<models::Release>)>(&conn)
                 .map_err(Error::from)
         })
@@ -157,6 +160,8 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
             dsl::artifacts
                 .inner_join(schema::jobs::table)
                 .left_join(schema::releases::table)
+                .limit(limit)
+                .order_by(schema::artifacts::id.asc())
                 .load::<(models::Artifact, models::Job, Option<models::Release>)>(&conn)
                 .map_err(Error::from)
         })?
@@ -186,10 +191,12 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::envvars::dsl;
 
+    let limit = matches.value_of("limit").map(i64::from_str).transpose()?.unwrap_or(50);
     let csv = matches.is_present("csv");
     let hdrs = mk_header(vec!["id", "name", "value"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let data = dsl::envvars
+        .limit(limit)
         .load::<models::EnvVar>(&conn)?
         .into_iter()
         .map(|evar| vec![format!("{}", evar.id), evar.name, evar.value])
@@ -207,10 +214,12 @@ fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::images::dsl;
 
+    let limit = matches.value_of("limit").map(i64::from_str).transpose()?.unwrap_or(50);
     let csv = matches.is_present("csv");
     let hdrs = mk_header(vec!["id", "name"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let data = dsl::images
+        .limit(limit)
         .load::<models::Image>(&conn)?
         .into_iter()
         .map(|image| vec![format!("{}", image.id), image.name])
@@ -226,6 +235,7 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 }
 
 fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+    let limit = matches.value_of("limit").map(i64::from_str).transpose()?.unwrap_or(50);
     let csv = matches.is_present("csv");
     let hdrs = mk_header(vec!["id", "time", "uuid"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
@@ -272,6 +282,7 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     } else {
         // default: Get all submits
         schema::submits::table
+            .limit(limit)
             .load::<models::Submit>(&conn)?
             .into_iter()
             .map(submit_to_vec)
@@ -290,6 +301,7 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::jobs::dsl;
 
+    let limit = matches.value_of("limit").map(i64::from_str).transpose()?.unwrap_or(50);
     let csv = matches.is_present("csv");
     let hdrs = mk_header(vec![
         "id",
@@ -327,6 +339,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                         .eq(env_name.as_ref())
                         .and(schema::envvars::dsl::value.eq(env_value))
                 })
+                .limit(limit)
                 .load::<(
                     models::Job,
                     models::Submit,
@@ -336,7 +349,8 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 )>(&conn)
                 .map_err(Error::from)
             } else {
-                sel.load::<(
+                sel.limit(limit)
+                   .load::<(
                     models::Job,
                     models::Submit,
                     models::Endpoint,
@@ -352,6 +366,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 .inner_join(crate::schema::endpoints::table)
                 .inner_join(crate::schema::packages::table)
                 .left_outer_join(schema::job_envs::table.inner_join(schema::envvars::table))
+                .limit(limit)
                 .load::<(
                     models::Job,
                     models::Submit,

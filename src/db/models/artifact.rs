@@ -20,6 +20,7 @@ use diesel::prelude::*;
 use diesel::PgConnection;
 
 use crate::db::models::Job;
+use crate::db::models::Release;
 use crate::schema::artifacts;
 use crate::schema::artifacts::*;
 
@@ -49,6 +50,18 @@ impl Artifact {
         release_date: &NaiveDateTime,
     ) -> Result<crate::db::models::Release> {
         crate::db::models::Release::create(database_connection, &self, release_date)
+    }
+
+    pub fn get_release(&self, database_connection: &PgConnection) -> Result<Option<Release>> {
+        use crate::schema;
+
+        schema::artifacts::table
+            .inner_join(schema::releases::table)
+            .filter(schema::releases::artifact_id.eq(self.id))
+            .select(schema::releases::all_columns)
+            .first::<Release>(database_connection)
+            .optional()
+            .map_err(Error::from)
     }
 
     pub fn create(

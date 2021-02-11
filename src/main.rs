@@ -161,6 +161,12 @@ async fn main() -> Result<()> {
             crate::commands::env_of(matches, repo).await?
         }
 
+        Some(("find-artifact", matches)) => {
+            let repo = load_repo()?;
+            let conn = crate::db::establish_connection(db_connection_config)?;
+            crate::commands::find_artifact(matches, &config, progressbars, repo, conn, max_packages).await?
+        }
+
         Some(("find-pkg", matches)) => {
             let repo = load_repo()?;
             crate::commands::find_pkg(matches, &config, repo).await?

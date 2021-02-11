@@ -86,4 +86,15 @@ impl Job {
             .first::<Job>(database_connection)
             .map_err(Error::from)
     }
+
+    pub fn env(&self, database_connection: &PgConnection) -> Result<Vec<crate::db::models::EnvVar>> {
+        use crate::schema;
+
+        schema::job_envs::table
+            .inner_join(schema::envvars::table)
+            .filter(schema::job_envs::job_id.eq(self.id))
+            .select(schema::envvars::all_columns)
+            .load::<crate::db::models::EnvVar>(database_connection)
+            .map_err(Error::from)
+    }
 }

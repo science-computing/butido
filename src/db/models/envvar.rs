@@ -17,7 +17,7 @@ use crate::schema::envvars;
 use crate::schema::envvars::*;
 use crate::util::EnvironmentVariableName;
 
-#[derive(Identifiable, Queryable)]
+#[derive(Debug, Identifiable, Queryable)]
 #[table_name = "envvars"]
 pub struct EnvVar {
     pub id: i32,

@@ -33,6 +33,7 @@ use crate::filestore::StagingStore;
 ///
 #[derive(Getters)]
 pub struct MergedStores {
+    #[getset(get = "pub")]
     release: Arc<RwLock<ReleaseStore>>,
 
     #[getset(get = "pub")]
@@ -78,5 +79,13 @@ impl MergedStores {
         }
 
         Ok(None)
+    }
+
+    pub async fn get(&self, p: &ArtifactPath) -> Option<ArtifactPath> {
+        if let Some(a) = self.staging.read().await.get(p).cloned() {
+            return Some(a)
+        }
+
+        self.release.read().await.get(p).cloned()
     }
 }
