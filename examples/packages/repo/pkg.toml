@@ -1,0 +1,41 @@
+version_is_semver = false
+patches = []
+
+[dependencies]
+build = []
+runtime = []
+
+[sources.src]
+hash.type = "sha1"
+download_manually = false
+
+[phases]
+
+sourcecheck.script = '''
+    filename="/inputs/src-{{this.sources.src.hash.hash}}.source"
+    [[ -e $filename ]] || {
+        echo  "MISSING: $filename"
+        {{state "ERR" "Missing input"}}
+        exit 1
+    }
+'''
+
+depcheck.script = '''
+    {{#each this.dependencies.runtime}}
+        # Try to find sha of dependency {{this}}
+        exp_sha="$(echo {{this}} | sed 's,.*\ =,,' | sha1sum | sed 's,\ \ -,,')"
+        sha1sum /inputs/*pkg | grep "$exp_sha" || {
+            echo "FAILED TO FIND SHA: $exp_sha"
+            {{state "ERR" "Failed to find SHA"}}
+            exit 1
+        }
+    {{/each}}
+'''
+
+build.script = '''
+    mkdir /outputs
+    echo "{{this.version}}" > /outputs/{{this.name}}-{{this.version}}.pkg
+
+    {{state "OK"}}
+'''
+

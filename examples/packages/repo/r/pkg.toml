@@ -1,0 +1,7 @@
+name = "r"
+version = "18"
+
+[sources.src]
+url = "https://example.com"
+hash.hash = "24b9c1f3fddff79893e5304f998f2f95ebebd149"
+

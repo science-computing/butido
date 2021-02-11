@@ -1,0 +1,10 @@
+name = "g"
+version = "7"
+
+[dependencies]
+runtime = ["m =13", "n =14", "o =15", "p =16"]
+
+[sources.src]
+url = "https://example.com"
+hash.hash = "d3964f9dad9f60363c81b688324d95b4ec7c8038"
+
