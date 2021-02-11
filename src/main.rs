@@ -118,7 +118,7 @@ async fn main() -> Result<()> {
 
     let db_connection_config = crate::db::parse_db_connection_config(&config, &cli);
     match cli.subcommand() {
-        Some(("generate-completions", matches)) => generate_completions(matches)?,
+        Some(("generate-completions", matches)) => generate_completions(matches),
         Some(("db", matches)) => crate::commands::db(db_connection_config, &config, matches)?,
         Some(("build", matches)) => {
             let conn = crate::db::establish_connection(db_connection_config)?;
@@ -207,7 +207,7 @@ fn count_pkg_files(p: &Path) -> u64 {
         .count() as u64
 }
 
-fn generate_completions(matches: &ArgMatches) -> Result<()> {
+fn generate_completions(matches: &ArgMatches) {
     use clap_generate::generate;
     use clap_generate::generators::{Bash, Elvish, Fish, Zsh};
 
@@ -228,6 +228,4 @@ fn generate_completions(matches: &ArgMatches) -> Result<()> {
         }
         _ => unreachable!(),
     }
-
-    Ok(())
 }
