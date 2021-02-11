@@ -132,5 +132,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
                 })
         })
         .inspect(|r| trace!("Query resulted in: {:?}", r))
-        .collect::<Result<()>>()
+        .collect::<Vec<Result<()>>>()
+        .into_iter()
+        .collect()
 }
