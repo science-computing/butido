@@ -19,6 +19,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
 use indicatif::ProgressBar;
+use itertools::Itertools;
 use log::debug;
 use log::trace;
 use tokio::sync::RwLock;
@@ -276,9 +277,19 @@ impl<'a> Orchestrator<'a> {
             *job.3.borrow_mut() = {
                 let depending_on_job = jobs.iter()
                     .filter(|j| j.1.jobdef.dependencies.contains(job.1.jobdef.job.uuid()))
-                    .map(|j| j.2.clone())
-                    .collect::<Vec<Sender<JobResult>>>();
+                    .map(|j| {
+                        if j.1.jobdef.job.uuid() == job.1.jobdef.job.uuid() {
+                            Err(anyhow!("Package does depend on itself: {} {}",
+                                    job.1.jobdef.job.package().name(),
+                                    job.1.jobdef.job.package().version()))
+                        } else {
+                            Ok(j)
+                        }
+                    })
+                    .map_ok(|j| j.2.clone())
+                    .collect::<Result<Vec<Sender<JobResult>>>>()?;
 
+                trace!("{:?} is depending on {}", depending_on_job, job.1.jobdef.job.uuid());
                 if depending_on_job.is_empty() {
                     None
                 } else {
