@@ -157,6 +157,7 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
             dsl::artifacts
                 .inner_join(schema::jobs::table)
                 .left_join(schema::releases::table)
+                .order_by(schema::artifacts::id.asc())
                 .load::<(models::Artifact, models::Job, Option<models::Release>)>(&conn)
                 .map_err(Error::from)
         })?
