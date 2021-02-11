@@ -471,7 +471,7 @@ impl<'a> JobTask<'a> {
                     self.jobdef.job.uuid(),
                     self.jobdef.job.package().name(),
                     self.jobdef.job.package().version(),
-                    received_dependencies.len(),
+                    received_dependencies.iter().filter(|(rd_uuid, _)| self.jobdef.dependencies.contains(rd_uuid)).count(),
                     self.jobdef.dependencies.len())
             });
             trace!("[{}]: Updated bar", self.jobdef.job.uuid());
