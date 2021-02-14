@@ -132,8 +132,10 @@ pub async fn build(
         .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
 
     let packages = if let Some(pvers) = pvers {
+        debug!("Searching for package with version: '{}' '{}'", pname, pvers);
         repo.find(&pname, &pvers)
     } else {
+        debug!("Searching for package by name: '{}'", pname);
         repo.find_by_name(&pname)
     };
     debug!("Found {} relevant packages", packages.len());
