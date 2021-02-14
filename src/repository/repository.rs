@@ -14,6 +14,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Result;
+use log::trace;
 use resiter::Map;
 
 use crate::package::Package;
@@ -101,6 +102,7 @@ impl Repository {
         let inner = load_recursive(path, config::Config::default(), progress)
             .with_context(|| format!("Recursing for {}", path.display()))?
             .into_iter()
+            .inspect(|p| trace!("Loading into repository: {:?}", p))
             .map_ok(|p| ((p.name().clone(), p.version().clone()), p))
             .collect::<Result<_>>()?;
 
