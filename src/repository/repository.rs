@@ -110,9 +110,13 @@ impl Repository {
     }
 
     pub fn find_by_name<'a>(&'a self, name: &PackageName) -> Vec<&'a Package> {
+        trace!("Searching for '{}' in repository", name);
         self.inner
             .iter()
-            .filter(|((n, _), _)| name == n)
+            .filter(|((n, _), _)| {
+                trace!("{} == {} -> {}", name, n, name == n);
+                name == n
+            })
             .map(|(_, pack)| pack)
             .collect()
     }
