@@ -209,15 +209,19 @@ impl JobHandle {
             &run_container.container_hash(),
             run_container.script(),
             &log,
-        )?;
+        )
+        .context("Recording job that is ready in database")?;
+
         trace!("DB: Job entry for job {} created: {}", job.uuid, job.id);
         for env in envs {
-            let _ = dbmodels::JobEnv::create(&self.db, &job, &env)?;
+            let _ = dbmodels::JobEnv::create(&self.db, &job, &env)
+                .with_context(|| format!("Creating Environment Variable mapping for Job: {}", job.uuid))?;
         }
 
         let res: crate::endpoint::FinalizedContainer = run_container
             .finalize(self.staging_store.clone())
             .await
+            .context("Finalizing container")
             .with_context(|| {
                 Self::create_job_run_error(
                     &job.uuid,

@@ -9,6 +9,7 @@
 //
 
 use anyhow::Error;
+use anyhow::Context;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel::PgConnection;
@@ -79,11 +80,13 @@ impl Job {
         diesel::insert_into(jobs::table)
             .values(&new_job)
             .on_conflict_do_nothing()
-            .execute(database_connection)?;
+            .execute(database_connection)
+            .context("Creating job in database")?;
 
         dsl::jobs
             .filter(uuid.eq(job_uuid))
             .first::<Job>(database_connection)
+            .with_context(|| format!("Finding created job in database: {}", job_uuid))
             .map_err(Error::from)
     }
 
