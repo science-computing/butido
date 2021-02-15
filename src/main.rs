@@ -58,6 +58,7 @@ use logcrate::debug;
 use walkdir::WalkDir;
 use rand as _; // Required to make lints happy
 use aquamarine as _; // doc-helper crate
+use funty as _; // doc-helper crate
 
 mod cli;
 mod commands;
