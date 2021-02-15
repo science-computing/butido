@@ -1,0 +1,1 @@
+-- Your SQL goes hereDROP TABLE job_input_artifacts
