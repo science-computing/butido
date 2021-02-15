@@ -532,6 +532,7 @@ impl<'a> JobTask<'a> {
                 true
             )?;
 
+            debug!("[{}]: Found {} replacement artifacts", self.jobdef.job.uuid(), replacement_artifacts.len());
             trace!("[{}]: Found replacement artifacts: {:?}", self.jobdef.job.uuid(), replacement_artifacts);
             let merged_stores = self.merged_stores;
             let mut artifacts = replacement_artifacts
