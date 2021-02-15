@@ -47,8 +47,8 @@ struct NewJob<'a> {
     pub package_id: i32,
     pub image_id: i32,
     pub container_hash: &'a str,
-    pub script_text: &'a str,
-    pub log_text: &'a str,
+    pub script_text: String,
+    pub log_text: String,
     pub uuid: &'a ::uuid::Uuid,
 }
 
@@ -72,8 +72,8 @@ impl Job {
             package_id: package.id,
             image_id: image.id,
             container_hash: container.as_ref(),
-            script_text: script.as_ref(),
-            log_text: log,
+            script_text: script.as_ref().replace('\0', ""),
+            log_text: log.replace('\0', ""),
         };
 
         trace!("Creating Job in database: {:?}", new_job);
