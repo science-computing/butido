@@ -77,9 +77,13 @@ impl Job {
         };
 
         trace!("Creating Job in database: {:?}", new_job);
-        diesel::insert_into(jobs::table)
+        let query = diesel::insert_into(jobs::table)
             .values(&new_job)
-            .on_conflict_do_nothing()
+            .on_conflict_do_nothing();
+
+        log::trace!("Query = {}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
+
+        query
             .execute(database_connection)
             .context("Creating job in database")?;
 
