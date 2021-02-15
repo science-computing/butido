@@ -175,16 +175,20 @@ pub fn find_artifacts<'a>(
 
                     trace!("The job we found had env: {:?}", job_env);
                     if let Some(pkg_env) = package_environment.as_ref() {
+                        trace!("Filtering environment...");
                         let filter_result = job_env.iter()
                             .all(|(k, v)| {
                                 pkg_env
                                     .iter()
                                     .chain(additional_env.iter().map(|tpl| (&tpl.0, &tpl.1)))
+                                    .inspect(|(key, value)| trace!("{k} == {key} && {v} == {value}", k = k, key = key, v = v, value = value))
                                     .any(|(key, value)| k == key.as_ref() && v == value)
                             });
 
+                        trace!("Filder result = {}", filter_result);
                         Ok((tpl.0, filter_result))
                     } else {
+                        trace!("Not filtering environment...");
                         Ok((tpl.0, true))
                     }
                 })
