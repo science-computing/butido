@@ -14,6 +14,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Result;
+use log::trace;
 use resiter::Map;
 
 use crate::package::Package;
@@ -101,6 +102,7 @@ impl Repository {
         let inner = load_recursive(path, config::Config::default(), progress)
             .with_context(|| format!("Recursing for {}", path.display()))?
             .into_iter()
+            .inspect(|p| trace!("Loading into repository: {:?}", p))
             .map_ok(|p| ((p.name().clone(), p.version().clone()), p))
             .collect::<Result<_>>()?;
 
@@ -108,9 +110,13 @@ impl Repository {
     }
 
     pub fn find_by_name<'a>(&'a self, name: &PackageName) -> Vec<&'a Package> {
+        trace!("Searching for '{}' in repository", name);
         self.inner
             .iter()
-            .filter(|((n, _), _)| name == n)
+            .filter(|((n, _), _)| {
+                trace!("{} == {} -> {}", name, n, name == n);
+                name == n
+            })
             .map(|(_, pack)| pack)
             .collect()
     }
