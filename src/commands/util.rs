@@ -71,7 +71,7 @@ where
             let stderr = tpl.4;
 
             if status.success() {
-                info!("Linting {pkg_name} {pkg_vers} script (exit {status}):\nstdout:\n{stdout}\n\nstderr:\n\n{stderr}",
+                info!("Linting {pkg_name} {pkg_vers} script ({status}):\nstdout:\n{stdout}\n\nstderr:\n\n{stderr}",
                     pkg_name = pkg_name,
                     pkg_vers = pkg_vers,
                     status = status,
