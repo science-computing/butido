@@ -147,7 +147,7 @@ impl std::fmt::Debug for JobHandle {
 }
 
 impl JobHandle {
-    pub async fn run(self) -> Result<Vec<ArtifactPath>> {
+    pub async fn run(self) -> Result<Result<Vec<ArtifactPath>>> {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let ep = self.endpoint.read().await;
         let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;
@@ -230,7 +230,7 @@ impl JobHandle {
 
         trace!("Found result for job {}: {:?}", job_id, res);
         let (paths, res) = res.unpack();
-        let _ = res
+        let res = res
             .with_context(|| anyhow!("Error during running job on '{}'", ep.name()))
             .with_context(|| {
                 Self::create_job_run_error(
@@ -240,7 +240,15 @@ impl JobHandle {
                     ep.uri(),
                     &container_id,
                 )
-            })?;
+            })
+            .map_err(Error::from);
+
+        if res.is_err() {
+            trace!("Error was returned from script");
+            return Ok({
+                res.map(|_| vec![]) // to have the proper type, will never be executed
+             })
+        }
 
         // Have to do it the ugly way here because of borrowing semantics
         let mut r = vec![];
@@ -257,7 +265,7 @@ impl JobHandle {
                     .clone()
             });
         }
-        Ok(r)
+        Ok(Ok(r))
     }
 
     /// Helper to create an error object with a nice message.

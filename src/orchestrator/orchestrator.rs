@@ -595,9 +595,7 @@ impl<'a> JobTask<'a> {
         let job_uuid = *self.jobdef.job.uuid();
 
         // Schedule the job on the scheduler
-        match self.scheduler.schedule_job(runnable, self.bar.clone()).await?.run().await {
-            // if the scheduler run reports an error,
-            // that is an error from the actual execution of the job ...
+        match self.scheduler.schedule_job(runnable, self.bar.clone()).await?.run().await? {
             Err(e) => {
                 trace!("[{}]: Scheduler returned error = {:?}", self.jobdef.job.uuid(), e);
                 // ... and we send that to our parent
@@ -607,6 +605,7 @@ impl<'a> JobTask<'a> {
                 let mut errormap = HashMap::with_capacity(1);
                 errormap.insert(job_uuid, e);
                 self.sender[0].send(Err(errormap)).await?;
+                return Ok(())
             },
 
             // if the scheduler run reports success,
