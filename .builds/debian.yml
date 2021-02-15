@@ -9,7 +9,7 @@ packages:
 tasks:
   - install: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.50.0
   - prepare_lint: |
-      PATH="$HOME/.cargo/bin:$PATH" cargo install cargo-deny
+      PATH="$HOME/.cargo/bin:$PATH" cargo install cargo-deny --locked
   - lint-licenses: |
       cd butido
       PATH="$HOME/.cargo/bin:$PATH" cargo deny check licenses
