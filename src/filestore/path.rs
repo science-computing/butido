@@ -90,7 +90,7 @@ impl StoreRoot {
     where
         R: std::io::Read,
     {
-        ar.unpack(&self.0).map_err(Error::from).map(|_| ())
+        ar.unpack(&self.0).map_err(Error::from)
     }
 }
 
