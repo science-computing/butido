@@ -506,7 +506,17 @@ impl<'a> JobTask<'a> {
         {
             let release_store = self.merged_stores.release().read().await;
             let staging_store = self.merged_stores.staging().read().await;
-            let additional_env = vec![];
+
+            // Use the environment of the job definition, as it appears in the job DAG.
+            //
+            // This is because we do not have access to the commandline-passed (additional)
+            // environment variables at this point. But using the JobResource::env() variables
+            // works as well.
+            let additional_env = self.jobdef.job.resources()
+                .iter()
+                .filter_map(crate::job::JobResource::env)
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect::<Vec<_>>();
 
             let replacement_artifacts = crate::db::find_artifacts(
                 self.database.clone(),
