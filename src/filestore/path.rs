@@ -20,6 +20,8 @@ use resiter::AndThen;
 use resiter::Filter;
 use resiter::Map;
 
+use crate::filestore::staging::StagingStore;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StoreRoot(PathBuf);
 
@@ -139,6 +141,11 @@ impl AsRef<Path> for ArtifactPath {
 pub struct FullArtifactPath<'a>(&'a StoreRoot, &'a ArtifactPath);
 
 impl<'a> FullArtifactPath<'a> {
+
+    pub fn is_in_staging_store(&self, store: &StagingStore) -> bool {
+        store.0.root == *self.0
+    }
+
     pub fn artifact_path(&self) -> &ArtifactPath {
         self.1
     }
