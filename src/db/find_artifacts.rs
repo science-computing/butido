@@ -11,7 +11,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use chrono::NaiveDateTime;
@@ -23,6 +22,7 @@ use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use log::trace;
 use resiter::AndThen;
+use resiter::FilterMap;
 use resiter::Map;
 
 use crate::config::Configuration;
@@ -213,16 +213,21 @@ pub fn find_artifacts<'a>(
                         );
                         if let Some(art) = staging.get(&artpath) {
                             trace!("Found in staging: {:?}", art);
-                            return staging.root_path().join(art).map(|p| (p, ndt));
+                            return staging.root_path().join(art).map(|p| (p, ndt)).map(Some)
                         }
                     }
 
-                    let art = release_store
-                        .get(&artpath)
-                        .ok_or_else(|| anyhow!("Failed to find artifact for: {:?}", artpath))?;
-                    trace!("Found in release: {:?}", art);
-                    release_store.root_path().join(art).map(|p| (p, ndt))
+                    // If we cannot find the artifact in the release store either, we return None.
+                    // This is the case if there indeed was a release, but it was removed from the
+                    // filesystem.
+                    if let Some(art) = release_store.get(&artpath) {
+                        trace!("Found in release: {:?}", art);
+                        return release_store.root_path().join(art).map(|p| (p, ndt)).map(Some)
+                    }
+
+                    Ok(None)
                 })
+                .filter_map_ok(|opt| opt)
                 .collect::<Result<Vec<(FullArtifactPath<'a>, Option<NaiveDateTime>)>>>()
         })
 }
