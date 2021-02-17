@@ -213,7 +213,7 @@ pub fn find_artifacts<'a>(
                         );
                         if let Some(art) = staging.get(&artpath) {
                             trace!("Found in staging: {:?}", art);
-                            return staging.root_path().join(art).map(|p| (p, ndt)).map(Some)
+                            return staging.root_path().join(art).map(|p| p.map(|p| (p, ndt)))
                         }
                     }
 
@@ -222,7 +222,7 @@ pub fn find_artifacts<'a>(
                     // filesystem.
                     if let Some(art) = release_store.get(&artpath) {
                         trace!("Found in release: {:?}", art);
-                        return release_store.root_path().join(art).map(|p| (p, ndt)).map(Some)
+                        return release_store.root_path().join(art).map(|p| p.map(|p| (p, ndt)))
                     }
 
                     Ok(None)

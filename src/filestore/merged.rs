@@ -12,16 +12,17 @@
 // the rewrite
 #![allow(unused)]
 
-
 use std::sync::Arc;
 use std::path::Path;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use getset::Getters;
 use log::trace;
 use tokio::sync::RwLock;
 
 use crate::filestore::path::ArtifactPath;
+use crate::filestore::path::FullArtifactPath;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 
@@ -31,7 +32,7 @@ use crate::filestore::StagingStore;
 /// The stores are not actually merged (on disk or in memory), but the querying mechanism works in
 /// a way where it _always_ preferes the staging store over the release store.
 ///
-#[derive(Getters)]
+#[derive(Clone, Getters)]
 pub struct MergedStores {
     #[getset(get = "pub")]
     release: Arc<RwLock<ReleaseStore>>,
@@ -50,7 +51,10 @@ impl MergedStores {
         let artifact_path = ArtifactPath::new(p.to_path_buf())?;
 
         let staging = &mut self.staging.write().await.0;
-        let staging_path = staging.root_path().join(&artifact_path)?;
+        let staging_path = staging
+            .root_path()
+            .join(&artifact_path)?
+            .ok_or_else(|| anyhow!("Does not exist in staging store: {:?}", artifact_path))?;
         trace!("staging_path = {:?}", staging_path.display());
 
         if staging_path.exists() {
@@ -65,7 +69,9 @@ impl MergedStores {
         }
 
         let release = &mut self.release.write().await.0;
-        let release_path = release.root_path().join(&artifact_path)?;
+        let release_path = release.root_path()
+            .join(&artifact_path)?
+            .ok_or_else(|| anyhow!("Not found in release store: {:?}", artifact_path))?;
         trace!("release_path = {:?}", release_path);
 
         if release_path.exists() {
@@ -88,4 +94,5 @@ impl MergedStores {
 
         self.release.read().await.get(p).cloned()
     }
+
 }

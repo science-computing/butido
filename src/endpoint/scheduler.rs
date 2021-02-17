@@ -31,7 +31,7 @@ use crate::db::models as dbmodels;
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::ArtifactPath;
-use crate::filestore::StagingStore;
+use crate::filestore::MergedStores;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
@@ -40,7 +40,7 @@ pub struct EndpointScheduler {
     log_dir: Option<PathBuf>,
     endpoints: Vec<Arc<RwLock<Endpoint>>>,
 
-    staging_store: Arc<RwLock<StagingStore>>,
+    merged_stores: MergedStores,
     db: Arc<PgConnection>,
     submit: crate::db::models::Submit,
 }
@@ -48,7 +48,7 @@ pub struct EndpointScheduler {
 impl EndpointScheduler {
     pub async fn setup(
         endpoints: Vec<EndpointConfiguration>,
-        staging_store: Arc<RwLock<StagingStore>>,
+        merged_stores: MergedStores,
         db: Arc<PgConnection>,
         submit: crate::db::models::Submit,
         log_dir: Option<PathBuf>,
@@ -58,7 +58,7 @@ impl EndpointScheduler {
         Ok(EndpointScheduler {
             log_dir,
             endpoints,
-            staging_store,
+            merged_stores,
             db,
             submit,
         })
@@ -94,7 +94,7 @@ impl EndpointScheduler {
             bar,
             endpoint,
             job,
-            staging_store: self.staging_store.clone(),
+            merged_stores: self.merged_stores.clone(),
             db: self.db.clone(),
             submit: self.submit.clone(),
         })
@@ -136,7 +136,7 @@ pub struct JobHandle {
     job: RunnableJob,
     bar: ProgressBar,
     db: Arc<PgConnection>,
-    staging_store: Arc<RwLock<StagingStore>>,
+    merged_stores: MergedStores,
     submit: crate::db::models::Submit,
 }
 
@@ -157,7 +157,7 @@ impl JobHandle {
         let job_id = *self.job.uuid();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let prepared_container = ep
-            .prepare_container(self.job, self.staging_store.clone())
+            .prepare_container(self.job, self.merged_stores.clone())
             .await?;
         let container_id = prepared_container.create_info().id.clone();
         let running_container = prepared_container
@@ -219,7 +219,7 @@ impl JobHandle {
         }
 
         let res: crate::endpoint::FinalizedContainer = run_container
-            .finalize(self.staging_store.clone())
+            .finalize(self.merged_stores.clone())
             .await
             .context("Finalizing container")
             .with_context(|| {
@@ -256,15 +256,13 @@ impl JobHandle {
 
         // Have to do it the ugly way here because of borrowing semantics
         let mut r = vec![];
-        let staging_store_lock = self.staging_store.read().await;
         for p in paths.iter() {
-            use std::ops::Deref;
             trace!("DB: Creating artifact entry for path: {}", p.display());
             let _ = dbmodels::Artifact::create(&self.db, p, &job)?;
             r.push({
-                staging_store_lock
-                    .deref()
+                self.merged_stores
                     .get(p)
+                    .await
                     .ok_or_else(|| anyhow!("Artifact not in store: {:?}", p))?
                     .clone()
             });

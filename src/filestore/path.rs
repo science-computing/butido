@@ -44,15 +44,15 @@ impl StoreRoot {
         }
     }
 
-    pub fn join<'a>(&'a self, ap: &'a ArtifactPath) -> Result<FullArtifactPath<'a>> {
+    pub fn join<'a>(&'a self, ap: &'a ArtifactPath) -> Result<Option<FullArtifactPath<'a>>> {
         let join = self.0.join(&ap.0);
 
         if join.is_file() {
-            Ok(FullArtifactPath(&self, ap))
+            Ok(Some(FullArtifactPath(&self, ap)))
         } else if join.is_dir() {
             Err(anyhow!("Cannot load non-file path: {}", join.display()))
         } else {
-            Err(anyhow!("Path does not exist: {}", join.display()))
+            Ok(None)
         }
     }
 

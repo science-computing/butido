@@ -176,9 +176,10 @@ pub struct OrchestratorSetup<'a> {
 
 impl<'a> OrchestratorSetup<'a> {
     pub async fn setup(self) -> Result<Orchestrator<'a>> {
+        let merged_stores = MergedStores::new(self.release_store, self.staging_store);
         let scheduler = EndpointScheduler::setup(
             self.endpoint_config,
-            self.staging_store.clone(),
+            merged_stores.clone(),
             self.database.clone(),
             self.submit.clone(),
             self.log_dir,
@@ -187,8 +188,8 @@ impl<'a> OrchestratorSetup<'a> {
 
         Ok(Orchestrator {
             scheduler,
+            merged_stores,
             progress_generator: self.progress_generator,
-            merged_stores: MergedStores::new(self.release_store, self.staging_store),
             source_cache: self.source_cache,
             jobdag: self.jobdag,
             config: self.config,

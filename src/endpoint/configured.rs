@@ -11,7 +11,6 @@
 use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -23,14 +22,13 @@ use log::trace;
 use shiplift::Container;
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
-use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_stream::StreamExt;
 use typed_builder::TypedBuilder;
 
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::path::ArtifactPath;
-use crate::filestore::StagingStore;
+use crate::filestore::MergedStores;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::buffer_stream_to_line_stream;
@@ -221,9 +219,9 @@ impl Endpoint {
     pub async fn prepare_container(
         &self,
         job: RunnableJob,
-        staging: Arc<RwLock<StagingStore>>,
+        merged_stores: MergedStores,
     ) -> Result<PreparedContainer<'_>> {
-        PreparedContainer::new(self, job, staging).await
+        PreparedContainer::new(self, job, merged_stores).await
     }
 
     pub async fn number_of_running_containers(&self) -> Result<usize> {
@@ -250,7 +248,7 @@ impl<'a> PreparedContainer<'a> {
     async fn new(
         endpoint: &'a Endpoint,
         job: RunnableJob,
-        staging: Arc<RwLock<StagingStore>>,
+        merged_stores: MergedStores,
     ) -> Result<PreparedContainer<'a>> {
         let script = job.script().clone();
         let create_info = Self::build_container(endpoint, &job).await?;
@@ -258,7 +256,7 @@ impl<'a> PreparedContainer<'a> {
 
         let (cpysrc, cpyart, cpyscr) = tokio::join!(
             Self::copy_source_to_container(&container, &job),
-            Self::copy_artifacts_to_container(&container, &job, staging),
+            Self::copy_artifacts_to_container(&container, &job, merged_stores),
             Self::copy_script_to_container(&container, &script)
         );
 
@@ -382,7 +380,7 @@ impl<'a> PreparedContainer<'a> {
     async fn copy_artifacts_to_container<'ca>(
         container: &Container<'ca>,
         job: &RunnableJob,
-        staging: Arc<RwLock<StagingStore>>,
+        merged_stores: MergedStores,
     ) -> Result<()> {
         job.resources()
             .iter()
@@ -405,19 +403,25 @@ impl<'a> PreparedContainer<'a> {
                     container.id(),
                     destination.display()
                 );
-                let buf = staging
-                    .read()
-                    .await
-                    .root_path()
-                    .join(&art)?
-                    .read()
-                    .await
-                    .with_context(|| {
-                        anyhow!(
-                            "Reading artifact {}, so it can be copied to container",
-                            art.display()
-                        )
-                    })?;
+                let staging_read = merged_stores.staging().read().await;
+                let release_read = merged_stores.release().read().await;
+                let buf = match staging_read.root_path().join(&art)?  {
+                    Some(fp) => fp,
+                    None     => {
+                        release_read
+                            .root_path()
+                            .join(&art)?
+                            .ok_or_else(|| anyhow!("Not found in staging or release store: {:?}", art))?
+                    },
+                }
+                .read()
+                .await
+                .with_context(|| {
+                    anyhow!(
+                        "Reading artifact {}, so it can be copied to container",
+                        art.display()
+                    )
+                })?;
 
                 let r = container
                     .copy_file_into(&destination, &buf)
@@ -615,7 +619,7 @@ impl<'a> ExecutedContainer<'a> {
         &self.script
     }
 
-    pub async fn finalize(self, staging: Arc<RwLock<StagingStore>>) -> Result<FinalizedContainer> {
+    pub async fn finalize(self, merged_stores: MergedStores) -> Result<FinalizedContainer> {
         let (exit_info, artifacts) = match self.exit_info {
             Some((false, msg)) => {
                 let err = anyhow!("Error during container run: '{msg}'", msg = msg.as_deref().unwrap_or(""));
@@ -640,7 +644,7 @@ impl<'a> ExecutedContainer<'a> {
                         .map_err(Error::from)
                     });
 
-                let mut writelock = staging.write().await;
+                let mut writelock = merged_stores.staging().write().await;
 
                 let artifacts = writelock
                     .write_files_from_tar_stream(tar_stream)
