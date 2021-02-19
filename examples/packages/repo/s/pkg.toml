@@ -1,6 +1,8 @@
 name = "s"
 version = "19"
 
+patches [ "./foo.patch" ]
+
 [sources.src]
 url = "https://example.com"
 hash.hash = "ba9f376fa71904ccde2a756a24a4e47ec014ee0a"
