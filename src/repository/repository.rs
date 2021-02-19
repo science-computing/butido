@@ -12,7 +12,9 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use log::trace;
 use resiter::Map;
@@ -57,6 +59,7 @@ impl Repository {
         }
 
         fn load_recursive(
+            root: &Path,
             path: &Path,
             mut config: config::Config,
             progress: &indicatif::ProgressBar,
@@ -67,9 +70,112 @@ impl Repository {
                 let buf = std::fs::read_to_string(&pkg_file)
                     .with_context(|| format!("Reading {}", pkg_file.display()))?;
 
+                // This function has an issue: It loads packages recursively, but if there are
+                // patches set for a package, these patches are set _relative_ to the current
+                // pkg.toml file.
+                //
+                // E.G.:
+                // (1) /pkg.toml
+                // (2) /a/pkg.toml
+                // (3) /a/1.0/pkg.toml
+                // (4) /a/2.0/pkg.toml
+                //
+                // If (2) defines a patches = ["./1.patch"], the patch exists at /a/1.patch.
+                // We can fix that by modifying the Config object after loading (2) and fixing the
+                // path of the patch to be relative to the repostory root.
+                //
+                // But if we continue loading the /a/ subdirectory recursively, this value gets
+                // overwritten by Config::refresh(), which is called by Config::merge, for example.
+                //
+                // The trick is, to get the list of patches _before_ the merge, and later
+                // re-setting them after the merge, if there were no new patches set.
+                //
+                // If (3), for example, does set a new patches=[] array, the old array is
+                // invalidated and no longer relevant for that package!
+                // Thus, we can savely throw it away and continue with the new array, fixing the
+                // pathes to be relative to repo root again.
+                //
+                // If (4) does _not_ set any patches, we must ensure that the patches from the
+                // loading of (2) are used and not overwritten by the Config::refresh() call
+                // happening during Config::merge().
+                //
+
+                // Get the patches of the package before merging the new pkg.toml file in
+                let patches_before = match config.get_array("patches") {
+                    Ok(v)                                 => v,
+                    Err(config::ConfigError::NotFound(_)) => vec![],
+                    Err(e)                                => return Err(e).map_err(Error::from),
+                };
+
+                trace!("Patches before merging: {:?}", patches_before);
+
+                // Merge the new pkg.toml file over the already loaded configuration
                 config
                     .merge(config::File::from_str(&buf, config::FileFormat::Toml))
                     .with_context(|| format!("Loading contents of {}", pkg_file.display()))?;
+
+                // Now, map all "patches" in the package to be relative to the repository root, if
+                // there are any
+                match config.get_value_mut("patches")?.kind {
+                    config::ValueKind::Array(ref mut patches) => {
+                        trace!("Patches = {:?}", patches);
+                        let mut overwritten_patches = false; // Remember whether we did overwrite patches
+                        for patch in patches.iter_mut() {
+                            match patch.kind {
+                                config::ValueKind::String(ref mut s) => {
+                                    // make sure we strip the root from the path, so we get a path
+                                    // relative to root
+                                    let path_relative_to_root = path.strip_prefix(root)?;
+
+                                    // then join the patch path we currently iterate for into the
+                                    // path relative to root
+                                    trace!("Joining {} + {}", path_relative_to_root.display(), s);
+                                    let new_p = path_relative_to_root.join(&s);
+
+                                    // if that patch path exists...
+                                    if new_p.exists() {
+                                        let new_s = new_p
+                                            .to_str()
+                                            .map(String::from)
+                                            .ok_or_else(|| anyhow!("UTF8 error in path: '{}'", s))?;
+
+                                        // Set it in the Config object and remember that we've
+                                        // altered the patch array
+                                        trace!("Setting {} to {}", s, new_s);
+                                        *s = new_s;
+                                        overwritten_patches = true;
+                                    } else {
+                                        trace!("Does not exist, ignoring: {}", new_p.display())
+                                    }
+                                },
+                                _ => return Err(anyhow!("BUG: patches should never be able to be something else than String"))
+                            }
+                        }
+
+                        //// Make sure we only record patches that exist.
+                        //trace!("Patches after mutating: {:?}", patches);
+                        //*patches = patches
+                        //    .into_iter()
+                        //    .filter(|s| {
+                        //        match s.kind {
+                        //            config::ValueKind::String(ref s) => (s as &dyn AsRef<Path>).as_ref().exists(),
+                        //            _ => false
+                        //        }
+                        //    })
+                        //    .map(|v| v.clone())
+                        //    .collect();
+                        //trace!("Patches after filtering: {:?}", patches);
+
+                        // If there are no patches overwritten by this procedure, we did not have a
+                        // new patches=[] array, and we have to use the one from before
+                        if !overwritten_patches {
+                            *patches = patches_before;
+                        }
+                        trace!("Patches after adding patches from before: {:?}", patches);
+                    },
+
+                    _ => return Err(anyhow!("BUG: patches should never be able to be something else than Vec<String>")),
+                }
             }
 
             let subdirs = all_subdirs(path)
@@ -89,7 +195,8 @@ impl Repository {
             } else {
                 subdirs.into_iter().fold(Ok(Vec::new()), |vec, dir| {
                     vec.and_then(|mut v| {
-                        let mut loaded = load_recursive(&dir, config.clone(), progress)
+                        trace!("Recursing into {}", dir.display());
+                        let mut loaded = load_recursive(root, &dir, config.clone(), progress)
                             .with_context(|| format!("Recursing for {}", pkg_file.display()))?;
 
                         v.append(&mut loaded);
@@ -99,7 +206,7 @@ impl Repository {
             }
         }
 
-        let inner = load_recursive(path, config::Config::default(), progress)
+        let inner = load_recursive(path, path, config::Config::default(), progress)
             .with_context(|| format!("Recursing for {}", path.display()))?
             .into_iter()
             .inspect(|p| trace!("Loading into repository: {:?}", p))
