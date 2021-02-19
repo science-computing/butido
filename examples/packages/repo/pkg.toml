@@ -20,6 +20,18 @@ sourcecheck.script = '''
     }
 '''
 
+patchcheck.script = '''
+    {{#if this.patches[0]}}
+        {{#each this.patches}}
+            if [[ ! -e "/patches/{{this}}" ]]; then
+                echo "Does not exist: /patches/{{this}}"
+                {{state "ERR" "Missing patch"}}
+                exit 1
+            fi
+        {{/each}}
+    {{/if}}
+'''
+
 depcheck.script = '''
     {{#each this.dependencies.runtime}}
         # Try to find sha of dependency {{this}}
