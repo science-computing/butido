@@ -2,7 +2,7 @@ name = "j"
 version = "10"
 
 [dependencies]
-runtime = ["s =19", "t =20"]
+runtime = ["s =19.0", "t =20"]
 
 [sources.src]
 url = "https://example.com"

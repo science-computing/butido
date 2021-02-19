@@ -1,5 +1,4 @@
 name = "s"
-version = "19"
 
 patches [ "./foo.patch" ]
 
