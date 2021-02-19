@@ -287,8 +287,9 @@ impl<'a> PreparedContainer<'a> {
         let create_info = Self::build_container(endpoint, &job).await?;
         let container = endpoint.docker.containers().get(&create_info.id);
 
-        let (cpysrc, cpyart, cpyscr) = tokio::join!(
+        let (cpysrc, cpypch, cpyart, cpyscr) = tokio::join!(
             Self::copy_source_to_container(&container, &job),
+            Self::copy_patches_to_container(&container, &job),
             Self::copy_artifacts_to_container(&container, &job, staging_store, &release_stores),
             Self::copy_script_to_container(&container, &script)
         );
@@ -296,6 +297,14 @@ impl<'a> PreparedContainer<'a> {
         let _ = cpysrc.with_context(|| {
             anyhow!(
                 "Copying the sources to container {} on '{}'",
+                create_info.id,
+                endpoint.name
+            )
+        })?;
+
+        let _ = cpypch.with_context(|| {
+            anyhow!(
+                "Copying the patches to container {} on '{}'",
                 create_info.id,
                 endpoint.name
             )
@@ -406,6 +415,44 @@ impl<'a> PreparedContainer<'a> {
             .collect::<Result<()>>()
             .await
             .with_context(|| anyhow!("Copying sources to container {}", container.id()))
+            .map_err(Error::from)
+    }
+
+    async fn copy_patches_to_container<'ca>(
+        container: &Container<'ca>,
+        job: &RunnableJob,
+    ) -> Result<()> {
+        use tokio::io::AsyncReadExt;
+
+        log::debug!("Copying patches to container: {:?}", job.package().patches());
+        job.package()
+            .patches()
+            .iter()
+            .map(|patch| async move {
+                let destination = PathBuf::from("/patches").join(patch);
+                trace!("Copying patch {} to container at /patches/{}", patch.display(), destination.display());
+
+                let mut buf = vec![];
+                tokio::fs::OpenOptions::new()
+                    .create(false)
+                    .create_new(false)
+                    .append(false)
+                    .write(false)
+                    .read(true)
+                    .open(&patch)
+                    .await
+                    .with_context(|| anyhow!("Getting patch file: {}", patch.display()))?
+                    .read_to_end(&mut buf)
+                    .await
+                    .with_context(|| anyhow!("Reading file {}", patch.display()))?;
+
+                let _ = container.copy_file_into(destination, &buf).await?;
+                Ok(())
+            })
+            .collect::<futures::stream::FuturesUnordered<_>>()
+            .collect::<Result<()>>()
+            .await
+            .with_context(|| anyhow!("Copying patches to container {}", container.id()))
             .map_err(Error::from)
     }
 
