@@ -46,13 +46,13 @@ serde          = "1"
 serde_json     = "1"
 sha1           = { version = "0.6", features = ["std"] }
 sha2           = "0.9"
-shiplift       = { git = "https://github.com/softprops/shiplift", rev = "f5017f603afab9821966032ea652cb3161051f17" }
+shiplift       = "0.7"
 syntect        = "4.4"
 tar            = "0.4"
 terminal_size  = "0.1"
 tokio          = { version = "1.0", features = ["macros", "fs", "process", "io-util"] }
 tokio-stream   = "0.1"
-typed-builder  = "0.8"
+typed-builder  = "0.9"
 unindent       = "0.1"
 url            = { version = "2", features = ["serde"] }
 uuid           = { version = "0.6", features = ["serde", "v4"] }
