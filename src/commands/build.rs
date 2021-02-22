@@ -27,6 +27,7 @@ use itertools::Itertools;
 use log::{debug, info, trace, warn};
 use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
+use uuid::Uuid;
 
 use crate::config::*;
 use crate::filestore::path::StoreRoot;
@@ -62,8 +63,6 @@ pub async fn build(
 
     let _ = crate::ui::package_repo_cleanness_check(&repo_root)?;
     let now = chrono::offset::Local::now().naive_local();
-    let submit_id = uuid::Uuid::new_v4();
-    println!("Submit {}, started {}", submit_id, now);
 
     let shebang = Shebang::from({
         matches
@@ -167,20 +166,34 @@ pub async fn build(
         r.map(RwLock::new).map(Arc::new)?
     };
 
-    let (staging_store, staging_dir) = {
+    let (staging_store, staging_dir, submit_id) = {
         let bar_staging_loading = progressbars.bar();
         bar_staging_loading.set_length(max_packages);
 
-        let p = if let Some(staging_dir) = matches.value_of("staging_dir").map(PathBuf::from) {
+        let (submit_id, p) = if let Some(staging_dir) = matches.value_of("staging_dir").map(PathBuf::from) {
             info!(
                 "Setting staging dir to {} for this run",
                 staging_dir.display()
             );
-            staging_dir
+
+            let uuid = staging_dir.file_name()
+                .ok_or_else(|| anyhow!("Seems not to be a directory: {}", staging_dir.display()))?
+                .to_owned()
+                .into_string()
+                .map_err(|_| anyhow!("Type conversion of staging dir name to UTF8 String"))
+                .context("Parsing staging dir name to UUID")?;
+            let uuid = Uuid::parse_str(&uuid)
+                .context("Parsing directory name as UUID")
+                .with_context(|| anyhow!("Seems not to be a submit UUID: {}", uuid))?;
+
+            (uuid, staging_dir)
         } else {
-            config
+            let submit_id = uuid::Uuid::new_v4();
+            let staging_dir = config
                 .staging_directory()
-                .join(submit_id.hyphenated().to_string())
+                .join(submit_id.hyphenated().to_string());
+
+            (submit_id, staging_dir)
         };
 
         if !p.is_dir() {
@@ -194,7 +207,7 @@ pub async fn build(
         } else {
             bar_staging_loading.finish_with_message("Failed to load staging");
         }
-        r.map(RwLock::new).map(Arc::new).map(|store| (store, p))?
+        r.map(RwLock::new).map(Arc::new).map(|store| (store, p, submit_id))?
     };
 
     let dag = {
