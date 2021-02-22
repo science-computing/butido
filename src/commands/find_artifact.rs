@@ -50,20 +50,26 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
 
     log::debug!("Finding artifacts for '{:?}' '{:?}'", package_name_regex, package_version_constraint);
 
-    let release_store = {
-        let bar_release_loading = progressbars.bar();
-        bar_release_loading.set_length(max_packages);
+    let release_stores = config
+        .release_stores()
+        .iter()
+        .map(|storename| {
+            let bar_release_loading = progressbars.bar();
+            bar_release_loading.set_length(max_packages);
 
-        let p = config.releases_directory();
-        debug!("Loading release directory: {}", p.display());
-        let r = ReleaseStore::load(StoreRoot::new(p.clone())?, bar_release_loading.clone());
-        if r.is_ok() {
-            bar_release_loading.finish_with_message("Loaded releases successfully");
-        } else {
-            bar_release_loading.finish_with_message("Failed to load releases");
-        }
-        r?
-    };
+            let p = config.releases_directory().join(storename);
+            debug!("Loading release directory: {}", p.display());
+            let r = ReleaseStore::load(StoreRoot::new(p)?, bar_release_loading.clone());
+            if r.is_ok() {
+                bar_release_loading.finish_with_message("Loaded releases successfully");
+            } else {
+                bar_release_loading.finish_with_message("Failed to load releases");
+            }
+
+            r.map(Arc::new)
+        })
+        .collect::<Result<Vec<_>>>()?;
+
     let staging_store = if let Some(p) = matches.value_of("staging_dir").map(PathBuf::from) {
         let bar_staging_loading = progressbars.bar();
         bar_staging_loading.set_length(max_packages);
@@ -96,7 +102,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .inspect(|pkg| trace!("Found package: {:?}", pkg))
         .map(|pkg| {
             let script_filter = !matches.is_present("no_script_filter");
-            let pathes = crate::db::find_artifacts(database.clone(), config, &pkg, &release_store, staging_store.as_ref(), &env_filter, script_filter)?;
+            let pathes = crate::db::find_artifacts(database.clone(), config, &pkg, &release_stores, staging_store.as_ref(), &env_filter, script_filter)?;
 
             pathes.iter()
                 .map(|tpl| (tpl.0.joined(), tpl.1))

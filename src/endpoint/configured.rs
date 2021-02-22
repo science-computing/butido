@@ -223,9 +223,9 @@ impl Endpoint {
         &self,
         job: RunnableJob,
         staging_store: Arc<RwLock<StagingStore>>,
-        release_store: Arc<RwLock<ReleaseStore>>,
+        release_stores: Vec<Arc<ReleaseStore>>,
     ) -> Result<PreparedContainer<'_>> {
-        PreparedContainer::new(self, job, staging_store, release_store).await
+        PreparedContainer::new(self, job, staging_store, release_stores).await
     }
 
     pub async fn number_of_running_containers(&self) -> Result<usize> {
@@ -253,7 +253,7 @@ impl<'a> PreparedContainer<'a> {
         endpoint: &'a Endpoint,
         job: RunnableJob,
         staging_store: Arc<RwLock<StagingStore>>,
-        release_store: Arc<RwLock<ReleaseStore>>,
+        release_stores: Vec<Arc<ReleaseStore>>,
     ) -> Result<PreparedContainer<'a>> {
         let script = job.script().clone();
         let create_info = Self::build_container(endpoint, &job).await?;
@@ -261,7 +261,7 @@ impl<'a> PreparedContainer<'a> {
 
         let (cpysrc, cpyart, cpyscr) = tokio::join!(
             Self::copy_source_to_container(&container, &job),
-            Self::copy_artifacts_to_container(&container, &job, staging_store, release_store),
+            Self::copy_artifacts_to_container(&container, &job, staging_store, &release_stores),
             Self::copy_script_to_container(&container, &script)
         );
 
@@ -386,7 +386,7 @@ impl<'a> PreparedContainer<'a> {
         container: &Container<'ca>,
         job: &RunnableJob,
         staging_store: Arc<RwLock<StagingStore>>,
-        release_store: Arc<RwLock<ReleaseStore>>,
+        release_stores: &[Arc<ReleaseStore>],
     ) -> Result<()> {
         job.resources()
             .iter()
@@ -410,14 +410,24 @@ impl<'a> PreparedContainer<'a> {
                     destination.display()
                 );
                 let staging_read = staging_store.read().await;
-                let release_read = release_store.read().await;
                 let buf = match staging_read.root_path().join(&art)?  {
                     Some(fp) => fp,
                     None     => {
-                        release_read
-                            .root_path()
-                            .join(&art)?
-                            .ok_or_else(|| anyhow!("Not found in staging or release store: {:?}", art))?
+                        // TODO: Optimize.
+                        // I know this is not nice, but it works for now.
+                        let mut found = None;
+                        for release_store in release_stores.iter() {
+                            let p = release_store.root_path().join(&art);
+                            match p {
+                                Ok(Some(path)) => {
+                                    found = Some(path);
+                                    break;
+                                },
+                                Err(e) => return Err(e),
+                                Ok(None) =>  continue,
+                            }
+                        }
+                        found.ok_or_else(|| anyhow!("Not found in staging or release store: {:?}", art))?
                     },
                 }
                 .read()

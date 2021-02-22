@@ -47,6 +47,7 @@ impl Release {
         let new_rel = NewRelease {
             artifact_id: art.id,
             release_date: date,
+            release_store_id: store.id,
         };
 
         diesel::insert_into(releases::table)

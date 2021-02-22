@@ -54,7 +54,7 @@ pub fn find_artifacts<'a>(
     database_connection: Arc<PgConnection>,
     config: &Configuration,
     pkg: &Package,
-    release_store: &'a ReleaseStore,
+    release_stores: &'a [Arc<ReleaseStore>],
     staging_store: Option<&'a StagingStore>,
     additional_env: &[(EnvironmentVariableName, String)],
     script_filter: bool,
@@ -220,11 +220,14 @@ pub fn find_artifacts<'a>(
                     // If we cannot find the artifact in the release store either, we return None.
                     // This is the case if there indeed was a release, but it was removed from the
                     // filesystem.
-                    if let Some(art) = release_store.get(&artpath) {
-                        trace!("Found in release: {:?}", art);
-                        return release_store.root_path().join(art).map(|p| p.map(|p| (p, ndt)))
+                    for release_store in release_stores {
+                        if let Some(art) = release_store.get(&artpath) {
+                            trace!("Found in release: {:?}", art);
+                            return release_store.root_path().join(art).map(|p| p.map(|p| (p, ndt)))
+                        }
                     }
 
+                    trace!("Found no release for artifact {:?} in any release store", artpath.display());
                     Ok(None)
                 })
                 .filter_map_ok(|opt| opt)

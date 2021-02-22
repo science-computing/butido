@@ -670,6 +670,17 @@ pub fn cli<'a>() -> App<'a> {
                 .value_name("SUBMIT")
                 .about("The submit uuid from which to release a package")
             )
+            .arg(Arg::new("release_store_name")
+                .required(true)
+                .multiple(false)
+                .long("to")
+                .value_name("RELEASE_STORE_NAME")
+                .about("Release store name to release to")
+                .long_about(indoc::indoc!(r#"
+                    Butido can release to different release stores, based on this CLI flag.
+                    The release stores that are available must be listed in the configuration.
+                "#))
+            )
             .arg(Arg::new("package_name")
                 .required(false)
                 .multiple(false)
