@@ -14,9 +14,6 @@ pub use release::*;
 mod staging;
 pub use staging::*;
 
-mod merged;
-pub use merged::*;
-
 pub mod path;
 pub use path::ArtifactPath;
 

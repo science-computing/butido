@@ -11,6 +11,7 @@
 use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -23,16 +24,18 @@ use shiplift::Container;
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
 use typed_builder::TypedBuilder;
 
 use crate::endpoint::EndpointConfiguration;
+use crate::filestore::ReleaseStore;
+use crate::filestore::StagingStore;
 use crate::filestore::path::ArtifactPath;
-use crate::filestore::MergedStores;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
-use crate::log::buffer_stream_to_line_stream;
 use crate::log::LogItem;
+use crate::log::buffer_stream_to_line_stream;
 use crate::package::Script;
 use crate::util::docker::ContainerHash;
 use crate::util::docker::ImageName;
@@ -219,9 +222,10 @@ impl Endpoint {
     pub async fn prepare_container(
         &self,
         job: RunnableJob,
-        merged_stores: MergedStores,
+        staging_store: Arc<RwLock<StagingStore>>,
+        release_store: Arc<RwLock<ReleaseStore>>,
     ) -> Result<PreparedContainer<'_>> {
-        PreparedContainer::new(self, job, merged_stores).await
+        PreparedContainer::new(self, job, staging_store, release_store).await
     }
 
     pub async fn number_of_running_containers(&self) -> Result<usize> {
@@ -248,7 +252,8 @@ impl<'a> PreparedContainer<'a> {
     async fn new(
         endpoint: &'a Endpoint,
         job: RunnableJob,
-        merged_stores: MergedStores,
+        staging_store: Arc<RwLock<StagingStore>>,
+        release_store: Arc<RwLock<ReleaseStore>>,
     ) -> Result<PreparedContainer<'a>> {
         let script = job.script().clone();
         let create_info = Self::build_container(endpoint, &job).await?;
@@ -256,7 +261,7 @@ impl<'a> PreparedContainer<'a> {
 
         let (cpysrc, cpyart, cpyscr) = tokio::join!(
             Self::copy_source_to_container(&container, &job),
-            Self::copy_artifacts_to_container(&container, &job, merged_stores),
+            Self::copy_artifacts_to_container(&container, &job, staging_store, release_store),
             Self::copy_script_to_container(&container, &script)
         );
 
@@ -380,7 +385,8 @@ impl<'a> PreparedContainer<'a> {
     async fn copy_artifacts_to_container<'ca>(
         container: &Container<'ca>,
         job: &RunnableJob,
-        merged_stores: MergedStores,
+        staging_store: Arc<RwLock<StagingStore>>,
+        release_store: Arc<RwLock<ReleaseStore>>,
     ) -> Result<()> {
         job.resources()
             .iter()
@@ -403,8 +409,8 @@ impl<'a> PreparedContainer<'a> {
                     container.id(),
                     destination.display()
                 );
-                let staging_read = merged_stores.staging().read().await;
-                let release_read = merged_stores.release().read().await;
+                let staging_read = staging_store.read().await;
+                let release_read = release_store.read().await;
                 let buf = match staging_read.root_path().join(&art)?  {
                     Some(fp) => fp,
                     None     => {
@@ -619,7 +625,7 @@ impl<'a> ExecutedContainer<'a> {
         &self.script
     }
 
-    pub async fn finalize(self, merged_stores: MergedStores) -> Result<FinalizedContainer> {
+    pub async fn finalize(self, staging_store: Arc<RwLock<StagingStore>>) -> Result<FinalizedContainer> {
         let (exit_info, artifacts) = match self.exit_info {
             Some((false, msg)) => {
                 let err = anyhow!("Error during container run: '{msg}'", msg = msg.as_deref().unwrap_or(""));
@@ -644,8 +650,7 @@ impl<'a> ExecutedContainer<'a> {
                         .map_err(Error::from)
                     });
 
-                let mut writelock = merged_stores.staging().write().await;
-
+                let mut writelock = staging_store.write().await;
                 let artifacts = writelock
                     .write_files_from_tar_stream(tar_stream)
                     .await

@@ -31,7 +31,8 @@ use crate::db::models as dbmodels;
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::ArtifactPath;
-use crate::filestore::MergedStores;
+use crate::filestore::ReleaseStore;
+use crate::filestore::StagingStore;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
@@ -40,7 +41,8 @@ pub struct EndpointScheduler {
     log_dir: Option<PathBuf>,
     endpoints: Vec<Arc<RwLock<Endpoint>>>,
 
-    merged_stores: MergedStores,
+    staging_store: Arc<RwLock<StagingStore>>,
+    release_store: Arc<RwLock<ReleaseStore>>,
     db: Arc<PgConnection>,
     submit: crate::db::models::Submit,
 }
@@ -48,7 +50,8 @@ pub struct EndpointScheduler {
 impl EndpointScheduler {
     pub async fn setup(
         endpoints: Vec<EndpointConfiguration>,
-        merged_stores: MergedStores,
+        staging_store: Arc<RwLock<StagingStore>>,
+        release_store: Arc<RwLock<ReleaseStore>>,
         db: Arc<PgConnection>,
         submit: crate::db::models::Submit,
         log_dir: Option<PathBuf>,
@@ -58,7 +61,8 @@ impl EndpointScheduler {
         Ok(EndpointScheduler {
             log_dir,
             endpoints,
-            merged_stores,
+            staging_store,
+            release_store,
             db,
             submit,
         })
@@ -94,7 +98,8 @@ impl EndpointScheduler {
             bar,
             endpoint,
             job,
-            merged_stores: self.merged_stores.clone(),
+            staging_store: self.staging_store.clone(),
+            release_store: self.release_store.clone(),
             db: self.db.clone(),
             submit: self.submit.clone(),
         })
@@ -136,7 +141,8 @@ pub struct JobHandle {
     job: RunnableJob,
     bar: ProgressBar,
     db: Arc<PgConnection>,
-    merged_stores: MergedStores,
+    staging_store: Arc<RwLock<StagingStore>>,
+    release_store: Arc<RwLock<ReleaseStore>>,
     submit: crate::db::models::Submit,
 }
 
@@ -157,7 +163,7 @@ impl JobHandle {
         let job_id = *self.job.uuid();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let prepared_container = ep
-            .prepare_container(self.job, self.merged_stores.clone())
+            .prepare_container(self.job, self.staging_store.clone(), self.release_store.clone())
             .await?;
         let container_id = prepared_container.create_info().id.clone();
         let running_container = prepared_container
@@ -219,7 +225,7 @@ impl JobHandle {
         }
 
         let res: crate::endpoint::FinalizedContainer = run_container
-            .finalize(self.merged_stores.clone())
+            .finalize(self.staging_store.clone())
             .await
             .context("Finalizing container")
             .with_context(|| {
@@ -256,13 +262,13 @@ impl JobHandle {
 
         // Have to do it the ugly way here because of borrowing semantics
         let mut r = vec![];
+        let staging_read = self.staging_store.read().await;
         for p in paths.iter() {
             trace!("DB: Creating artifact entry for path: {}", p.display());
             let _ = dbmodels::Artifact::create(&self.db, p, &job)?;
             r.push({
-                self.merged_stores
+                staging_read
                     .get(p)
-                    .await
                     .ok_or_else(|| anyhow!("Artifact not in store: {:?}", p))?
                     .clone()
             });
