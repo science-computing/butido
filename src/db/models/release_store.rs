@@ -1,0 +1,53 @@
+//
+// Copyright (c) 2020-2021 science+computing ag and other contributors
+//
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+
+use anyhow::Error;
+use anyhow::Result;
+use diesel::ExpressionMethods;
+use diesel::PgConnection;
+use diesel::QueryDsl;
+use diesel::RunQueryDsl;
+
+use crate::schema::release_stores;
+use crate::schema;
+
+#[derive(Debug, Identifiable, Queryable)]
+#[table_name = "release_stores"]
+pub struct ReleaseStore {
+    pub id: i32,
+    pub store_name: String,
+}
+
+#[derive(Insertable)]
+#[table_name = "release_stores"]
+struct NewReleaseStore<'a> {
+    pub store_name : &'a str,
+}
+
+impl ReleaseStore {
+    pub fn create(
+        database_connection: &PgConnection,
+        name: &str,
+    ) -> Result<ReleaseStore> {
+        let new_relstore = NewReleaseStore {
+            store_name: name,
+        };
+
+        diesel::insert_into(schema::release_stores::table)
+            .values(&new_relstore)
+            .execute(database_connection)?;
+
+        schema::release_stores::table
+            .filter(schema::release_stores::store_name.eq(name))
+            .first::<ReleaseStore>(database_connection)
+            .map_err(Error::from)
+    }
+}
+

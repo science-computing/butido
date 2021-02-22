@@ -1,0 +1,1 @@
+-- Your SQL goes hereCREATE TABLE release_stores (    id SERIAL PRIMARY KEY NOT NULL,     store_name VARCHAR(255) NOT NULL UNIQUE);ALTER TABLE    releasesADD COLUMN    release_store_id INTEGER REFERENCES release_stores(id) NOT NULL;

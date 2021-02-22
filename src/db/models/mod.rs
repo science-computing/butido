@@ -35,5 +35,8 @@ pub use package::*;
 mod releases;
 pub use releases::*;
 
+mod release_store;
+pub use release_store::*;
+
 mod submit;
 pub use submit::*;
