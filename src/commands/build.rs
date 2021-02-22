@@ -63,7 +63,6 @@ pub async fn build(
     let _ = crate::ui::package_repo_cleanness_check(&repo_root)?;
     let now = chrono::offset::Local::now().naive_local();
     let submit_id = uuid::Uuid::new_v4();
-    println!("Submit {}, started {}", submit_id, now);
 
     let shebang = Shebang::from({
         matches
