@@ -216,7 +216,13 @@ impl<'a> Orchestrator<'a> {
     }
 
     async fn run_tree(self) -> Result<(Vec<ArtifactPath>, HashMap<Uuid, Error>)> {
-        let multibar = Arc::new(indicatif::MultiProgress::new());
+        let multibar = Arc::new({
+            let mp = indicatif::MultiProgress::new();
+            if self.progress_generator.hide() {
+                mp.set_draw_target(indicatif::ProgressDrawTarget::hidden());
+            }
+            mp
+        });
 
         // For each job in the jobdag, built a tuple with
         //

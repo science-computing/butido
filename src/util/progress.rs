@@ -9,11 +9,14 @@
 //
 
 use indicatif::*;
+use getset::CopyGetters;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, CopyGetters)]
 pub struct ProgressBars {
     bar_template: String,
     spinner_template: String,
+
+    #[getset(get_copy = "pub")]
     hide: bool,
 }
 

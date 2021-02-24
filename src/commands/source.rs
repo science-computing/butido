@@ -86,7 +86,13 @@ pub(in crate::commands) async fn verify_impl<'a, I>(
 where
     I: Iterator<Item = &'a Package> + 'a,
 {
-    let multi = Arc::new(indicatif::MultiProgress::new());
+    let multi = Arc::new({
+        let mp = indicatif::MultiProgress::new();
+        if progressbars.hide() {
+            mp.set_draw_target(indicatif::ProgressDrawTarget::hidden());
+        }
+        mp
+    });
 
     let results = packages
         .map(|p| sc.sources_for(p).into_iter())
@@ -222,7 +228,13 @@ pub async fn download(
         .map(String::from)
         .map(PackageVersionConstraint::new)
         .transpose()?;
-    let multi = indicatif::MultiProgress::new();
+    let multi = {
+        let mp = indicatif::MultiProgress::new();
+        if progressbars.hide() {
+            mp.set_draw_target(indicatif::ProgressDrawTarget::hidden());
+        }
+        mp
+    };
 
     let r = repo
         .packages()
