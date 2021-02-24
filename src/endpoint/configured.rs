@@ -343,7 +343,7 @@ impl<'a> PreparedContainer<'a> {
             .into_iter()
             .map(|entry| async {
                 let source_path = entry.path();
-                let destination = PathBuf::from("/inputs").join({
+                let destination = PathBuf::from(crate::consts::INPUTS_DIR_PATH).join({
                     source_path
                         .file_name()
                         .ok_or_else(|| anyhow!("Not a file: {}", source_path.display()))
@@ -402,7 +402,7 @@ impl<'a> PreparedContainer<'a> {
                             container.id()
                         )
                     })?;
-                let destination = PathBuf::from("/inputs/").join(artifact_file_name);
+                let destination = PathBuf::from(crate::consts::INPUTS_DIR_PATH).join(artifact_file_name);
                 trace!(
                     "Copying {} to container: {}:{}",
                     art.display(),
@@ -456,7 +456,7 @@ impl<'a> PreparedContainer<'a> {
         container: &Container<'ca>,
         script: &Script,
     ) -> Result<()> {
-        let script_path = PathBuf::from("/script");
+        let script_path = PathBuf::from(crate::consts::SCRIPT_PATH);
         container
             .copy_file_into(script_path, script.as_ref().as_bytes())
             .await
@@ -637,9 +637,9 @@ impl<'a> ExecutedContainer<'a> {
             Some((true, _)) | None => {
                 let container = self.endpoint.docker.containers().get(&self.create_info.id);
 
-                trace!("Fetching /outputs from container {}", self.create_info.id);
+                trace!("Fetching {} from container {}", crate::consts::OUTPUTS_DIR_PATH, self.create_info.id);
                 let tar_stream = container
-                    .copy_from(&PathBuf::from("/outputs/"))
+                    .copy_from(&PathBuf::from(crate::consts::OUTPUTS_DIR_PATH))
                     .map(|item| {
                         item.with_context(|| {
                             anyhow!(

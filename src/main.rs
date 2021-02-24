@@ -63,6 +63,7 @@ use funty as _; // doc-helper crate
 mod cli;
 mod commands;
 mod config;
+mod consts;
 mod db;
 mod endpoint;
 mod filestore;
