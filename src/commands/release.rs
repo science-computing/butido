@@ -28,6 +28,7 @@ pub async fn release(
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
+    let release_store_name = matches.value_of("release_store_name").unwrap(); // safe by clap
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
         return Err(anyhow!(
             "Release directory does not exist or does not point to directory: {}",
@@ -103,7 +104,7 @@ pub async fn release(
         .filter_map(|art| {
             art.path_buf()
                 .parent()
-                .map(|p| config.releases_directory().join(p))
+                .map(|p| config.releases_directory().join(release_store_name).join(p))
         })
         .map(|p| async {
             debug!("mkdir {:?}", p);
@@ -115,11 +116,13 @@ pub async fn release(
 
     let staging_base: &PathBuf = &config.staging_directory().join(submit.uuid.to_string());
 
+    let release_store = crate::db::models::ReleaseStore::create(&conn, release_store_name)?;
+
     let now = chrono::offset::Local::now().naive_local();
     arts.into_iter()
         .map(|art| async move {
             let art_path = staging_base.join(&art.path);
-            let dest_path = config.releases_directory().join(&art.path);
+            let dest_path = config.releases_directory().join(release_store_name).join(&art.path);
             debug!(
                 "Trying to release {} to {}",
                 art_path.display(),
@@ -147,7 +150,7 @@ pub async fn release(
         .into_iter()
         .try_for_each(|art| {
             debug!("Updating {:?} to set released = true", art);
-            let rel = crate::db::models::Release::create(&conn, &art, &now)?;
+            let rel = crate::db::models::Release::create(&conn, &art, &now, &release_store)?;
             debug!("Release object = {:?}", rel);
             Ok(())
         })

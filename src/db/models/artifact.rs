@@ -48,8 +48,10 @@ impl Artifact {
         self,
         database_connection: &PgConnection,
         release_date: &NaiveDateTime,
+        release_store_name: &str,
     ) -> Result<crate::db::models::Release> {
-        crate::db::models::Release::create(database_connection, &self, release_date)
+        let rs = crate::db::models::ReleaseStore::create(database_connection, release_store_name)?;
+        crate::db::models::Release::create(database_connection, &self, release_date, &rs)
     }
 
     pub fn get_release(&self, database_connection: &PgConnection) -> Result<Option<Release>> {

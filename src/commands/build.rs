@@ -151,20 +151,24 @@ pub async fn build(
         .get(0)
         .ok_or_else(|| anyhow!("Found no package."))?;
 
-    let release_dir = {
-        let bar_release_loading = progressbars.bar();
-        bar_release_loading.set_length(max_packages);
+    let release_stores = config
+        .release_stores()
+        .iter()
+        .map(|storename| {
+            let bar_release_loading = progressbars.bar();
+            bar_release_loading.set_length(max_packages);
 
-        let p = config.releases_directory();
-        debug!("Loading release directory: {}", p.display());
-        let r = ReleaseStore::load(StoreRoot::new(p.clone())?, bar_release_loading.clone());
-        if r.is_ok() {
-            bar_release_loading.finish_with_message("Loaded releases successfully");
-        } else {
-            bar_release_loading.finish_with_message("Failed to load releases");
-        }
-        r.map(RwLock::new).map(Arc::new)?
-    };
+            let p = config.releases_directory().join(storename);
+            debug!("Loading release directory: {}", p.display());
+            let r = ReleaseStore::load(StoreRoot::new(p)?, bar_release_loading.clone());
+            if r.is_ok() {
+                bar_release_loading.finish_with_message("Loaded releases successfully");
+            } else {
+                bar_release_loading.finish_with_message("Failed to load releases");
+            }
+            r.map(Arc::new)
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     let (staging_store, staging_dir, submit_id) = {
         let bar_staging_loading = progressbars.bar();
@@ -325,7 +329,7 @@ pub async fn build(
         .progress_generator(progressbars)
         .endpoint_config(endpoint_configurations)
         .staging_store(staging_store)
-        .release_store(release_dir)
+        .release_stores(release_stores)
         .database(database_connection.clone())
         .source_cache(source_cache)
         .submit(submit)

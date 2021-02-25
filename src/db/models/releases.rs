@@ -15,15 +15,18 @@ use diesel::prelude::*;
 use diesel::PgConnection;
 
 use crate::db::models::Artifact;
+use crate::db::models::ReleaseStore;
 use crate::schema::releases;
 use crate::schema::releases::*;
 
 #[derive(Debug, Identifiable, Queryable, Associations)]
 #[belongs_to(Artifact)]
+#[belongs_to(ReleaseStore)]
 pub struct Release {
     pub id: i32,
     pub artifact_id: i32,
     pub release_date: NaiveDateTime,
+    pub release_store_id: i32,
 }
 
 #[derive(Insertable)]
@@ -31,6 +34,7 @@ pub struct Release {
 struct NewRelease<'a> {
     pub artifact_id: i32,
     pub release_date: &'a NaiveDateTime,
+    pub release_store_id: i32,
 }
 
 impl Release {
@@ -38,10 +42,12 @@ impl Release {
         database_connection: &PgConnection,
         art: &Artifact,
         date: &'a NaiveDateTime,
+        store: &'a ReleaseStore,
     ) -> Result<Release> {
         let new_rel = NewRelease {
             artifact_id: art.id,
             release_date: date,
+            release_store_id: store.id,
         };
 
         diesel::insert_into(releases::table)

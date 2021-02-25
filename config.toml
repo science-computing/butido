@@ -81,7 +81,13 @@ script_highlight_theme = "Solarized (dark)"
 #package_print_format = ""
 
 # The position of the release binaries
-releases = "/tmp/releases"
+releases_root = "/tmp/releases"
+
+# You can have several release stores, but you need to have at least one
+# All release stores exist under "$releases/"
+release_stores = [
+    "default"
+]
 
 # The position of the staging binaries
 staging = "/tmp/staging"

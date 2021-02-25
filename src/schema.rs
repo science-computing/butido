@@ -82,10 +82,18 @@ table! {
 }
 
 table! {
+    release_stores (id) {
+        id -> Int4,
+        store_name -> Varchar,
+    }
+}
+
+table! {
     releases (id) {
         id -> Int4,
         artifact_id -> Int4,
         release_date -> Timestamptz,
+        release_store_id -> Int4,
     }
 }
 
@@ -120,6 +128,7 @@ joinable!(jobs -> images (image_id));
 joinable!(jobs -> packages (package_id));
 joinable!(jobs -> submits (submit_id));
 joinable!(releases -> artifacts (artifact_id));
+joinable!(releases -> release_stores (release_store_id));
 joinable!(submit_envs -> envvars (env_id));
 joinable!(submit_envs -> submits (submit_id));
 joinable!(submits -> githashes (repo_hash_id));
@@ -137,6 +146,7 @@ allow_tables_to_appear_in_same_query!(
     job_output_artifacts,
     jobs,
     packages,
+    release_stores,
     releases,
     submit_envs,
     submits,

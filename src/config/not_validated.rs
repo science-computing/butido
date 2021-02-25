@@ -60,9 +60,13 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     shebang: String,
 
-    #[serde(rename = "releases")]
+    #[serde(rename = "releases_root")]
     #[getset(get = "pub")]
     releases_directory: PathBuf,
+
+    #[serde(rename = "release_stores")]
+    #[getset(get = "pub")]
+    release_stores: Vec<String>,
 
     #[serde(rename = "staging")]
     #[getset(get = "pub")]
@@ -140,6 +144,10 @@ impl NotValidatedConfiguration {
                 "Not a directory: releases = {}",
                 self.releases_directory.display()
             ));
+        }
+
+        if self.release_stores.is_empty() {
+            return Err(anyhow!("You need at least one release store in 'release_stores'"))
         }
 
         // Error if source_cache_root is not a directory

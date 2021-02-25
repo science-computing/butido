@@ -1,0 +1,1 @@
+-- This file should undo anything in `up.sql`DROP TABLE release_stores;ALTER TABLE    releasesDROP COLUMN    release_store_id;

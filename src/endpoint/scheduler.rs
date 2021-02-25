@@ -42,7 +42,7 @@ pub struct EndpointScheduler {
     endpoints: Vec<Arc<RwLock<Endpoint>>>,
 
     staging_store: Arc<RwLock<StagingStore>>,
-    release_store: Arc<RwLock<ReleaseStore>>,
+    release_stores: Vec<Arc<ReleaseStore>>,
     db: Arc<PgConnection>,
     submit: crate::db::models::Submit,
 }
@@ -51,7 +51,7 @@ impl EndpointScheduler {
     pub async fn setup(
         endpoints: Vec<EndpointConfiguration>,
         staging_store: Arc<RwLock<StagingStore>>,
-        release_store: Arc<RwLock<ReleaseStore>>,
+        release_stores: Vec<Arc<ReleaseStore>>,
         db: Arc<PgConnection>,
         submit: crate::db::models::Submit,
         log_dir: Option<PathBuf>,
@@ -62,7 +62,7 @@ impl EndpointScheduler {
             log_dir,
             endpoints,
             staging_store,
-            release_store,
+            release_stores,
             db,
             submit,
         })
@@ -99,7 +99,7 @@ impl EndpointScheduler {
             endpoint,
             job,
             staging_store: self.staging_store.clone(),
-            release_store: self.release_store.clone(),
+            release_stores: self.release_stores.clone(),
             db: self.db.clone(),
             submit: self.submit.clone(),
         })
@@ -142,7 +142,7 @@ pub struct JobHandle {
     bar: ProgressBar,
     db: Arc<PgConnection>,
     staging_store: Arc<RwLock<StagingStore>>,
-    release_store: Arc<RwLock<ReleaseStore>>,
+    release_stores: Vec<Arc<ReleaseStore>>,
     submit: crate::db::models::Submit,
 }
 
@@ -163,7 +163,7 @@ impl JobHandle {
         let job_id = *self.job.uuid();
         trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
         let prepared_container = ep
-            .prepare_container(self.job, self.staging_store.clone(), self.release_store.clone())
+            .prepare_container(self.job, self.staging_store.clone(), self.release_stores.clone())
             .await?;
         let container_id = prepared_container.create_info().id.clone();
         let running_container = prepared_container
