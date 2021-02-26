@@ -42,6 +42,7 @@ impl ReleaseStore {
 
         diesel::insert_into(schema::release_stores::table)
             .values(&new_relstore)
+            .on_conflict_do_nothing()
             .execute(database_connection)?;
 
         schema::release_stores::table
