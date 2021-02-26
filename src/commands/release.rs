@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
@@ -15,7 +16,7 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use diesel::prelude::*;
-use log::{debug, trace};
+use log::{debug, info, trace};
 use tokio_stream::StreamExt;
 
 use crate::config::Configuration;
@@ -24,6 +25,20 @@ use crate::db::DbConnectionConfig;
 
 /// Implementation of the "release" subcommand
 pub async fn release(
+    db_connection_config: DbConnectionConfig,
+    config: &Configuration,
+    matches: &ArgMatches,
+) -> Result<()> {
+    match matches.subcommand() {
+        Some(("new", matches))  => new_release(db_connection_config, config, matches).await,
+        Some(("rm", matches))   => rm_release(db_connection_config, config, matches).await,
+        Some((other, _matches)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        None => Err(anyhow!("Missing subcommand")),
+    }
+}
+
+
+async fn new_release(
     db_connection_config: DbConnectionConfig,
     config: &Configuration,
     matches: &ArgMatches,
@@ -155,3 +170,57 @@ pub async fn release(
             Ok(())
         })
 }
+
+pub async fn rm_release(
+    db_connection_config: DbConnectionConfig,
+    config: &Configuration,
+    matches: &ArgMatches,
+) -> Result<()> {
+    let release_store_name = matches.value_of("release_store_name").unwrap(); // safe by clap
+    if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
+        return Err(anyhow!(
+            "Release directory does not exist or does not point to directory: {}",
+            config.releases_directory().display()
+        ));
+    }
+
+    let pname = matches.value_of("package_name").map(String::from).unwrap(); // TODO: FIXME
+    let pvers = matches.value_of("package_version").map(String::from).unwrap(); // TODO: FIXME
+    debug!("Remove Release called for: {:?} {:?}", pname, pvers);
+
+    let conn = crate::db::establish_connection(db_connection_config)?;
+
+    let (release, artifact) = crate::schema::jobs::table
+        .inner_join(crate::schema::packages::table)
+        .inner_join(crate::schema::artifacts::table)
+        .inner_join(crate::schema::releases::table
+            .on(crate::schema::releases::artifact_id.eq(crate::schema::artifacts::id)))
+        .inner_join(crate::schema::release_stores::table
+            .on(crate::schema::release_stores::id.eq(crate::schema::releases::release_store_id)))
+        .filter(crate::schema::packages::dsl::name.eq(&pname)
+            .and(crate::schema::packages::dsl::version.eq(&pvers)))
+        .filter(crate::schema::release_stores::dsl::store_name.eq(&release_store_name))
+        .order(crate::schema::releases::dsl::release_date.desc())
+        .select((crate::schema::releases::all_columns, crate::schema::artifacts::all_columns))
+        .first::<(crate::db::models::Release, crate::db::models::Artifact)>(&conn)?;
+
+    let artifact_path = config.releases_directory().join(release_store_name).join(&artifact.path);
+    if !artifact_path.is_file() {
+        return Err(anyhow!("Not a file: {}", artifact_path.display()))
+    }
+
+    writeln!(std::io::stderr(), "Going to delete: {}", artifact_path.display())?;
+    writeln!(std::io::stderr(), "Going to remove from database: Release with ID {} from {}", release.id, release.release_date)?;
+    if !dialoguer::Confirm::new().with_prompt("Continue?").interact()? {
+        return Ok(())
+    }
+
+    tokio::fs::remove_file(&artifact_path).await?;
+    info!("File removed");
+
+    diesel::delete(&release).execute(&conn)?;
+    info!("Release deleted from database");
+
+    Ok(())
+}
+

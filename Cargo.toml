@@ -22,6 +22,7 @@ colored        = "2"
 config         = "0.10"
 csv            = "1.1"
 daggy          = { version = "0.7", features = [ "serde" ] }
+dialoguer      = "0.7"
 diesel         = { version = "1.4", features = ["postgres", "chrono", "uuid", "serde_json"] }
 env_logger     = "0.8"
 filters        = "0.4.0"
