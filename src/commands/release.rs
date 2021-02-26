@@ -176,12 +176,15 @@ pub async fn rm_release(
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
-    let release_store_name = matches.value_of("release_store_name").unwrap(); // safe by clap
+    let release_store_name = matches.value_of("release_store_name").map(String::from).unwrap(); // safe by clap
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
         return Err(anyhow!(
             "Release directory does not exist or does not point to directory: {}",
             config.releases_directory().display()
         ));
+    }
+    if !config.release_stores().contains(&release_store_name) {
+        return Err(anyhow!("Unknown release store name: {}", release_store_name))
     }
 
     let pname = matches.value_of("package_name").map(String::from).unwrap(); // TODO: FIXME

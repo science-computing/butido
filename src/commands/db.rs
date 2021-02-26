@@ -13,14 +13,15 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::ArgMatches;
 use colored::Colorize;
 use diesel::BelongingToDsl;
 use diesel::ExpressionMethods;
+use diesel::JoinOnDsl;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
@@ -47,6 +48,7 @@ pub fn db(
         Some(("submits", matches)) => submits(db_connection_config, matches),
         Some(("jobs", matches)) => jobs(db_connection_config, matches),
         Some(("job", matches)) => job(db_connection_config, config, matches),
+        Some(("releases", matches)) => releases(db_connection_config, config, matches),
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -582,6 +584,50 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
     }
 }
 
+fn releases(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
+    let csv    = matches.is_present("csv");
+    let conn   = crate::db::establish_connection(conn_cfg)?;
+    let header = mk_header(["Package", "Version", "Date", "Path"].to_vec());
+    let data   = schema::jobs::table
+        .inner_join(schema::packages::table)
+        .inner_join(schema::artifacts::table)
+        .inner_join(schema::releases::table
+            .on(schema::releases::artifact_id.eq(schema::artifacts::id)))
+        .inner_join(schema::release_stores::table
+            .on(schema::release_stores::id.eq(schema::releases::release_store_id)))
+        .order_by(schema::packages::dsl::name.asc())
+        .then_order_by(schema::packages::dsl::version.asc())
+        .then_order_by(schema::releases::release_date.asc())
+        .select({
+            let art = schema::artifacts::all_columns;
+            let pac = schema::packages::all_columns;
+            let rel = schema::releases::all_columns;
+            let rst = schema::release_stores::all_columns;
+            (art, pac, rel, rst)
+        })
+        .load::<(models::Artifact, models::Package, models::Release, models::ReleaseStore)>(&conn)?
+        .into_iter()
+        .filter_map(|(art, pack, rel, rstore)| {
+            let p = config.releases_directory().join(rstore.store_name).join(&art.path);
+
+            if p.is_file() {
+                Some(vec![
+                    pack.name,
+                    pack.version,
+                    rel.release_date.to_string(),
+                    p.display().to_string(),
+                ])
+            } else {
+                log::warn!("Released file for {} {} not found: {}", pack.name, pack.version, p.display());
+                None
+            }
+        })
+        .collect::<Vec<Vec<_>>>();
+
+    display_data(header, data, csv)
+}
+
+
 fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
     vec.into_iter()
         .map(|name| ascii_table::Column {
@@ -638,3 +684,4 @@ fn display_data<D: Display>(
         Ok(())
     }
 }
+
