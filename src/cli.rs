@@ -694,7 +694,6 @@ pub fn cli<'a>() -> App<'a> {
                     .index(1)
                     .value_name("PKG")
                     .about("The name of the package")
-                    .conflicts_with("artifact_path")
                     .requires("package_version")
                 )
 
@@ -704,23 +703,7 @@ pub fn cli<'a>() -> App<'a> {
                     .index(2)
                     .value_name("VERSION")
                     .about("The exact version of the package (string match)")
-                    .conflicts_with("artifact_path")
                     .requires("package_name")
-                )
-
-                .arg(Arg::new("artifact_path")
-                    .required(false)
-                    .multiple(false)
-                    .long("path")
-                    .value_name("PATH")
-                    .about("Path to a released artifact")
-                    .conflicts_with_all(&["package_name", "package_version"])
-                )
-
-                .group(ArgGroup::new("artifact_or_package")
-                    .args(&["package_name", "package_version", "artifact_path"])
-                    .multiple(true)
-                    .required(true)
                 )
             )
 

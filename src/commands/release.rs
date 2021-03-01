@@ -187,8 +187,8 @@ pub async fn rm_release(
         return Err(anyhow!("Unknown release store name: {}", release_store_name))
     }
 
-    let pname = matches.value_of("package_name").map(String::from).unwrap(); // TODO: FIXME
-    let pvers = matches.value_of("package_version").map(String::from).unwrap(); // TODO: FIXME
+    let pname = matches.value_of("package_name").map(String::from).unwrap(); // safe by clap
+    let pvers = matches.value_of("package_version").map(String::from).unwrap(); // safe by clap
     debug!("Remove Release called for: {:?} {:?}", pname, pvers);
 
     let conn = crate::db::establish_connection(db_connection_config)?;
