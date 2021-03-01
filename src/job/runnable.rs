@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::collections::HashMap;
-
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
@@ -57,24 +55,25 @@ impl RunnableJob {
         job: &Job,
         source_cache: &SourceCache,
         config: &Configuration,
+        git_author_env: Option<&(EnvironmentVariableName, String)>,
+        git_commit_env: Option<&(EnvironmentVariableName, String)>,
         dependencies: Vec<ArtifactPath>,
     ) -> Result<Self> {
-        // Add the environment from the original Job object to the resources
-        let resources = dependencies
-            .into_iter()
-            .map(JobResource::from)
-            .chain({
-                job.resources()
-                    .iter()
-                    .filter(|jr| jr.env().is_some())
-                    .cloned()
-            })
-            .collect();
-
         if config.containers().check_env_names() {
             debug!("Checking environment if all variables are allowed!");
-            let _ = Self::env_resources(job.resources(), job.package().environment().as_ref())
-                .into_iter()
+            let _ = job.resources()
+                .iter()
+                .filter_map(|r| r.env())
+                .chain({
+                    job.package()
+                        .environment()
+                        .as_ref()
+                        .map(|hm| hm.iter())
+                        .into_iter()
+                        .flatten()
+                })
+                .chain(git_author_env.as_ref().into_iter().map(|(k, v)| (k, v)))
+                .chain(git_commit_env.as_ref().into_iter().map(|(k, v)| (k, v)))
                 .inspect(|(name, _)| debug!("Checking: {}", name))
                 .try_for_each(|(name, _)| {
                     trace!("{:?} contains? {:?}", config.containers().allowed_env(), name);
@@ -95,6 +94,19 @@ impl RunnableJob {
         } else {
             debug!("Environment checking disabled");
         }
+
+        let resources = dependencies
+            .into_iter()
+            .map(JobResource::from)
+            .chain({
+                job.resources()
+                    .iter()
+                    .filter(|jr| jr.env().is_some())
+                    .cloned()
+            })
+            .chain(git_author_env.into_iter().cloned().map(JobResource::from))
+            .chain(git_commit_env.into_iter().cloned().map(JobResource::from))
+            .collect();
 
         debug!("Building script now");
         let script = ScriptBuilder::new(&job.script_shebang).build(
@@ -118,27 +130,18 @@ impl RunnableJob {
         self.source_cache.sources_for(&self.package())
     }
 
-    pub fn environment(&self) -> Vec<(EnvironmentVariableName, String)> {
-        Self::env_resources(&self.resources, self.package().environment().as_ref())
-    }
-
-    /// Helper function to collect a list of resources and the result of package.environment() into
-    /// a Vec of environment variables
-    fn env_resources(
-        resources: &[JobResource],
-        pkgenv: Option<&HashMap<EnvironmentVariableName, String>>,
-    ) -> Vec<(EnvironmentVariableName, String)> {
-        let iter = resources
+    pub fn environment(&self) -> impl Iterator<Item = (&EnvironmentVariableName, &String)> {
+        self.resources
             .iter()
-            .filter_map(JobResource::env)
-            .map(|(k, v)| (k.clone(), v.clone()));
-
-        if let Some(hm) = pkgenv {
-            iter.chain(hm.iter().map(|(k, v)| (k.clone(), v.clone())))
-                .collect()
-        } else {
-            iter.collect()
-        }
+            .filter_map(|r| r.env())
+            .chain({
+                self.package()
+                    .environment()
+                    .as_ref()
+                    .map(|hm| hm.iter())
+                    .into_iter()
+                    .flatten()
+            })
     }
 
 }
