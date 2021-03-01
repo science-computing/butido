@@ -132,6 +132,8 @@ async fn new_release(
     let staging_base: &PathBuf = &config.staging_directory().join(submit.uuid.to_string());
 
     let release_store = crate::db::models::ReleaseStore::create(&conn, release_store_name)?;
+    let do_update = matches.is_present("package_do_update");
+    let interactive = !matches.is_present("noninteractive");
 
     let now = chrono::offset::Local::now().naive_local();
     arts.into_iter()
@@ -150,9 +152,17 @@ async fn new_release(
                     art
                 );
                 Err(anyhow!("Not a file: {}", art_path.display()))
-            } else if dest_path.exists() {
-                Err(anyhow!("Does already exist: {}", dest_path.display()))
             } else {
+                if dest_path.exists() && !do_update {
+                    return Err(anyhow!("Does already exist: {}", dest_path.display()));
+                } else if dest_path.exists() && do_update {
+                    writeln!(std::io::stderr(), "Going to update: {}", dest_path.display())?;
+                    if interactive && !dialoguer::Confirm::new().with_prompt("Continue?").interact()? {
+                        return Err(anyhow!("Does already exist: {} and update was denied", dest_path.display()));
+                    }
+                }
+
+                // else !dest_path.exists()
                 tokio::fs::rename(art_path, dest_path)
                     .await
                     .map_err(Error::from)
