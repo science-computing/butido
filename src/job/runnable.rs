@@ -60,20 +60,15 @@ impl RunnableJob {
         dependencies: Vec<ArtifactPath>,
     ) -> Result<Self> {
         // Add the environment from the original Job object to the resources
-        let resources = dependencies
-            .into_iter()
-            .map(JobResource::from)
-            .chain({
-                job.resources()
-                    .iter()
-                    .filter(|jr| jr.env().is_some())
-                    .cloned()
-            })
-            .collect();
+        let job_env_resources = job.resources()
+            .iter()
+            .filter(|jr| jr.env().is_some())
+            .cloned()
+            .collect::<Vec<_>>();
 
         if config.containers().check_env_names() {
             debug!("Checking environment if all variables are allowed!");
-            let _ = Self::env_resources(job.resources(), job.package().environment().as_ref())
+            let _ = Self::env_resources(&job_env_resources, job.package().environment().as_ref())
                 .into_iter()
                 .inspect(|(name, _)| debug!("Checking: {}", name))
                 .try_for_each(|(name, _)| {
@@ -95,6 +90,13 @@ impl RunnableJob {
         } else {
             debug!("Environment checking disabled");
         }
+
+        let resources = dependencies
+            .into_iter()
+            .map(JobResource::from)
+            .chain(job_env_resources.into_iter())
+            .collect();
+
 
         debug!("Building script now");
         let script = ScriptBuilder::new(&job.script_shebang).build(
@@ -124,20 +126,25 @@ impl RunnableJob {
 
     /// Helper function to collect a list of resources and the result of package.environment() into
     /// a Vec of environment variables
+    ///
+    /// TODO: Make nice
     fn env_resources(
         resources: &[JobResource],
         pkgenv: Option<&HashMap<EnvironmentVariableName, String>>,
     ) -> Vec<(EnvironmentVariableName, String)> {
-        let iter = resources
-            .iter()
-            .filter_map(JobResource::env)
-            .map(|(k, v)| (k.clone(), v.clone()));
-
         if let Some(hm) = pkgenv {
-            iter.chain(hm.iter().map(|(k, v)| (k.clone(), v.clone())))
+            resources
+                .iter()
+                .filter_map(JobResource::env)
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .chain(hm.iter().map(|(k, v)| (k.clone(), v.clone())))
                 .collect()
         } else {
-            iter.collect()
+            resources
+                .iter()
+                .filter_map(JobResource::env)
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect()
         }
     }
 
