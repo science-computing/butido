@@ -776,6 +776,13 @@ pub fn cli<'a>() -> App<'a> {
                     .long("update")
                     .about("Do update a package if it already exists in the release store")
                 )
+                .arg(Arg::new("noninteractive")
+                    .required(false)
+                    .multiple(false)
+                    .long("non-interactive")
+                    .about("Dont be interactive (only with --update at the moment)")
+                    .requires("package_do_update")
+                )
             )
 
         )
