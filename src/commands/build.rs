@@ -61,7 +61,10 @@ pub async fn build(
 ) -> Result<()> {
     use crate::db::models::{EnvVar, GitHash, Image, Job, Package, Submit};
 
-    let _ = crate::ui::package_repo_cleanness_check(&repo_root)?;
+    let git_repo = git2::Repository::open(repo_path)
+        .with_context(|| anyhow!("Opening repository at {}", repo_path.display()))?;
+
+    let _ = crate::ui::package_repo_cleanness_check(&git_repo)?;
     let now = chrono::offset::Local::now().naive_local();
 
     let shebang = Shebang::from({
@@ -92,7 +95,7 @@ pub async fn build(
     }
 
     debug!("Getting repository HEAD");
-    let hash_str = crate::util::git::get_repo_head_commit_hash(repo_path)?;
+    let hash_str = crate::util::git::get_repo_head_commit_hash(&git_repo)?;
     trace!("Repository HEAD = {}", hash_str);
     let phases = config.available_phases();
 

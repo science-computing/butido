@@ -28,15 +28,15 @@ use crate::package::Script;
 use crate::package::ScriptBuilder;
 use crate::package::Shebang;
 
-pub fn package_repo_cleanness_check(repo_path: &Path) -> Result<()> {
-    if !crate::util::git::repo_is_clean(&repo_path)? {
+pub fn package_repo_cleanness_check(repo: &git2::Repository) -> Result<()> {
+    if !crate::util::git::repo_is_clean(&repo)? {
         error!(
             "Repository not clean, refusing to go on: {}",
-            repo_path.display()
+            repo.path().display()
         );
         Err(anyhow!(
             "Repository not clean, refusing to go on: {}",
-            repo_path.display()
+            repo.path().display()
         ))
     } else {
         Ok(())

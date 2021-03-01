@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::path::Path;
-
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
@@ -17,9 +15,7 @@ use anyhow::Result;
 use git2::Repository;
 use log::trace;
 
-pub fn repo_is_clean(p: &Path) -> Result<bool> {
-    let r = Repository::open(p)?;
-
+pub fn repo_is_clean(r: &Repository) -> Result<bool> {
     r.diff_index_to_workdir(None, None)
         .and_then(|d| d.stats())
         .map_err(Error::from)
@@ -30,13 +26,10 @@ pub fn repo_is_clean(p: &Path) -> Result<bool> {
         })
 }
 
-pub fn get_repo_head_commit_hash(p: &Path) -> Result<String> {
-    let r =
-        Repository::open(p).with_context(|| anyhow!("Opening repository at {}", p.display()))?;
-
+pub fn get_repo_head_commit_hash(r: &Repository) -> Result<String> {
     let s = r
         .head()
-        .with_context(|| anyhow!("Getting HEAD from repository at {}", p.display()))?
+        .with_context(|| anyhow!("Getting HEAD from repository at {}", r.path().display()))?
         .peel_to_commit()
         .with_context(|| anyhow!("Failed to get commit hash: Not valid UTF8"))?
         .id()
