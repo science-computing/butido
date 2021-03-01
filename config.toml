@@ -203,3 +203,19 @@ check_env_names = true
 # Double-check this list
 allowed_env = [ "FOO", "BAR" ]
 
+# Use the git author information and pass it to each container as environment
+# variable.
+# The information is passed with
+#
+#   Bob Baumeister <bob@meister.com>
+#
+# in the environment variable named as value here.
+#
+# If this is not set, this feature is disabled.
+#git_author = "GIT_AUTHOR_INFO"
+
+# Use the git hash of the repository and pass it to each container as
+# environment variable.
+# If this is not set, this feature is disabled.
+#git_commit_hash = "GIT_COMMIT_HASH"
+

@@ -343,6 +343,7 @@ pub async fn build(
         })
         .jobdag(jobdag)
         .config(config)
+        .repository(git_repo)
         .build()
         .setup()
         .await?;

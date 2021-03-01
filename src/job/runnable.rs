@@ -55,6 +55,8 @@ impl RunnableJob {
         job: &Job,
         source_cache: &SourceCache,
         config: &Configuration,
+        git_author_env: Option<&(EnvironmentVariableName, String)>,
+        git_commit_env: Option<&(EnvironmentVariableName, String)>,
         dependencies: Vec<ArtifactPath>,
     ) -> Result<Self> {
         if config.containers().check_env_names() {
@@ -70,6 +72,8 @@ impl RunnableJob {
                         .into_iter()
                         .flatten()
                 })
+                .chain(git_author_env.as_ref().into_iter().map(|(k, v)| (k, v)))
+                .chain(git_commit_env.as_ref().into_iter().map(|(k, v)| (k, v)))
                 .inspect(|(name, _)| debug!("Checking: {}", name))
                 .try_for_each(|(name, _)| {
                     trace!("{:?} contains? {:?}", config.containers().allowed_env(), name);
@@ -100,6 +104,8 @@ impl RunnableJob {
                     .filter(|jr| jr.env().is_some())
                     .cloned()
             })
+            .chain(git_author_env.into_iter().cloned().map(JobResource::from))
+            .chain(git_commit_env.into_iter().cloned().map(JobResource::from))
             .collect();
 
         debug!("Building script now");

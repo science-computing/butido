@@ -19,17 +19,18 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
+use git2::Repository;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use log::debug;
 use log::trace;
+use resiter::FilterMap;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 use tokio_stream::StreamExt;
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
-use resiter::FilterMap;
 
 use crate::config::Configuration;
 use crate::db::models as dbmodels;
@@ -38,10 +39,11 @@ use crate::endpoint::EndpointScheduler;
 use crate::filestore::ArtifactPath;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
+use crate::job::Dag;
 use crate::job::JobDefinition;
 use crate::job::RunnableJob;
-use crate::job::Dag;
 use crate::source::SourceCache;
+use crate::util::EnvironmentVariableName;
 use crate::util::progress::ProgressBars;
 
 #[cfg_attr(doc, aquamarine::aquamarine)]
@@ -159,6 +161,7 @@ pub struct Orchestrator<'a> {
     source_cache: SourceCache,
     jobdag: Dag,
     config: &'a Configuration,
+    repository: Repository,
     database: Arc<PgConnection>,
 }
 
@@ -174,6 +177,7 @@ pub struct OrchestratorSetup<'a> {
     submit: dbmodels::Submit,
     log_dir: Option<PathBuf>,
     config: &'a Configuration,
+    repository: Repository,
 }
 
 impl<'a> OrchestratorSetup<'a> {
@@ -197,6 +201,7 @@ impl<'a> OrchestratorSetup<'a> {
             jobdag: self.jobdag,
             config: self.config,
             database: self.database,
+            repository: self.repository,
         })
     }
 }
@@ -226,6 +231,33 @@ impl<'a> Orchestrator<'a> {
             mp
         });
 
+        let git_author_env = {
+            self.config
+                .containers()
+                .git_author()
+                .as_ref()
+                .map(|varname| -> Result<_> {
+                    let username = self.repository
+                        .config()?
+                        .get_string("user.name")?;
+
+                    Ok((varname.clone(), username))
+                })
+                .transpose()?
+        };
+
+        let git_commit_env = {
+            self.config
+                .containers()
+                .git_commit_hash()
+                .as_ref()
+                .map(|varname| -> Result<_> {
+                    let hash = crate::util::git::get_repo_head_commit_hash(&self.repository)?;
+                    Ok((varname.clone(), hash))
+                })
+                .transpose()?
+        };
+
         // For each job in the jobdag, built a tuple with
         //
         // 1. The receiver that is used by the task to receive results from dependency tasks from
@@ -252,6 +284,8 @@ impl<'a> Orchestrator<'a> {
 
                     bar,
                     config: self.config,
+                    git_author_env: git_author_env.as_ref(),
+                    git_commit_env: git_commit_env.as_ref(),
                     source_cache: &self.source_cache,
                     scheduler: &self.scheduler,
                     staging_store: self.staging_store.clone(),
@@ -370,6 +404,8 @@ struct TaskPreparation<'a> {
     bar: ProgressBar,
 
     config: &'a Configuration,
+    git_author_env: Option<&'a (EnvironmentVariableName, String)>,
+    git_commit_env: Option<&'a (EnvironmentVariableName, String)>,
     source_cache: &'a SourceCache,
     scheduler: &'a EndpointScheduler,
     staging_store: Arc<RwLock<StagingStore>>,
@@ -386,6 +422,8 @@ struct JobTask<'a> {
     bar: ProgressBar,
 
     config: &'a Configuration,
+    git_author_env: Option<&'a (EnvironmentVariableName, String)>,
+    git_commit_env: Option<&'a (EnvironmentVariableName, String)>,
     source_cache: &'a SourceCache,
     scheduler: &'a EndpointScheduler,
     staging_store: Arc<RwLock<StagingStore>>,
@@ -442,6 +480,8 @@ impl<'a> JobTask<'a> {
             bar,
 
             config: prep.config,
+            git_author_env: prep.git_author_env,
+            git_commit_env: prep.git_commit_env,
             source_cache: prep.source_cache,
             scheduler: prep.scheduler,
             staging_store: prep.staging_store,
@@ -625,6 +665,8 @@ impl<'a> JobTask<'a> {
             &self.jobdef.job,
             self.source_cache,
             self.config,
+            self.git_author_env,
+            self.git_commit_env,
             dependency_artifacts)?;
 
         self.bar.set_message(&format!("[{} {} {}]: Scheduling...",
