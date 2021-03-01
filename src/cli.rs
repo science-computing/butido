@@ -770,6 +770,12 @@ pub fn cli<'a>() -> App<'a> {
                     .value_name("VERSION")
                     .about("The exact version of the package (string match)")
                 )
+                .arg(Arg::new("package_do_update")
+                    .required(false)
+                    .multiple(false)
+                    .long("update")
+                    .about("Do update a package if it already exists in the release store")
+                )
             )
 
         )
