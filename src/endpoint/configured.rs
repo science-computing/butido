@@ -304,7 +304,6 @@ impl<'a> PreparedContainer<'a> {
     ) -> Result<shiplift::rep::ContainerCreateInfo> {
         let envs = job
             .environment()
-            .into_iter()
             .map(|(k, v)| format!("{}={}", k.as_ref(), v))
             .collect::<Vec<_>>();
         trace!("Job resources: Environment variables = {:?}", envs);

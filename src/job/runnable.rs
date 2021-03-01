@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::collections::HashMap;
-
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
@@ -59,17 +57,19 @@ impl RunnableJob {
         config: &Configuration,
         dependencies: Vec<ArtifactPath>,
     ) -> Result<Self> {
-        // Add the environment from the original Job object to the resources
-        let job_env_resources = job.resources()
-            .iter()
-            .filter(|jr| jr.env().is_some())
-            .cloned()
-            .collect::<Vec<_>>();
-
         if config.containers().check_env_names() {
             debug!("Checking environment if all variables are allowed!");
-            let _ = Self::env_resources(&job_env_resources, job.package().environment().as_ref())
-                .into_iter()
+            let _ = job.resources()
+                .iter()
+                .filter_map(|r| r.env())
+                .chain({
+                    job.package()
+                        .environment()
+                        .as_ref()
+                        .map(|hm| hm.iter())
+                        .into_iter()
+                        .flatten()
+                })
                 .inspect(|(name, _)| debug!("Checking: {}", name))
                 .try_for_each(|(name, _)| {
                     trace!("{:?} contains? {:?}", config.containers().allowed_env(), name);
@@ -94,9 +94,13 @@ impl RunnableJob {
         let resources = dependencies
             .into_iter()
             .map(JobResource::from)
-            .chain(job_env_resources.into_iter())
+            .chain({
+                job.resources()
+                    .iter()
+                    .filter(|jr| jr.env().is_some())
+                    .cloned()
+            })
             .collect();
-
 
         debug!("Building script now");
         let script = ScriptBuilder::new(&job.script_shebang).build(
@@ -120,32 +124,18 @@ impl RunnableJob {
         self.source_cache.sources_for(&self.package())
     }
 
-    pub fn environment(&self) -> Vec<(EnvironmentVariableName, String)> {
-        Self::env_resources(&self.resources, self.package().environment().as_ref())
-    }
-
-    /// Helper function to collect a list of resources and the result of package.environment() into
-    /// a Vec of environment variables
-    ///
-    /// TODO: Make nice
-    fn env_resources(
-        resources: &[JobResource],
-        pkgenv: Option<&HashMap<EnvironmentVariableName, String>>,
-    ) -> Vec<(EnvironmentVariableName, String)> {
-        if let Some(hm) = pkgenv {
-            resources
-                .iter()
-                .filter_map(JobResource::env)
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .chain(hm.iter().map(|(k, v)| (k.clone(), v.clone())))
-                .collect()
-        } else {
-            resources
-                .iter()
-                .filter_map(JobResource::env)
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect()
-        }
+    pub fn environment(&self) -> impl Iterator<Item = (&EnvironmentVariableName, &String)> {
+        self.resources
+            .iter()
+            .filter_map(|r| r.env())
+            .chain({
+                self.package()
+                    .environment()
+                    .as_ref()
+                    .map(|hm| hm.iter())
+                    .into_iter()
+                    .flatten()
+            })
     }
 
 }
