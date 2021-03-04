@@ -59,7 +59,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
 
             let p = config.releases_directory().join(storename);
             debug!("Loading release directory: {}", p.display());
-            let r = ReleaseStore::load(StoreRoot::new(p)?, bar_release_loading.clone());
+            let r = ReleaseStore::load(StoreRoot::new(p)?, &bar_release_loading);
             if r.is_ok() {
                 bar_release_loading.finish_with_message("Loaded releases successfully");
             } else {
@@ -79,7 +79,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         }
 
         debug!("Loading staging directory: {}", p.display());
-        let r = StagingStore::load(StoreRoot::new(p.clone())?, bar_staging_loading.clone());
+        let r = StagingStore::load(StoreRoot::new(p.clone())?, &bar_staging_loading);
         if r.is_ok() {
             bar_staging_loading.finish_with_message("Loaded staging successfully");
         } else {

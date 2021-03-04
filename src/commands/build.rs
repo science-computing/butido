@@ -163,7 +163,7 @@ pub async fn build(
 
             let p = config.releases_directory().join(storename);
             debug!("Loading release directory: {}", p.display());
-            let r = ReleaseStore::load(StoreRoot::new(p)?, bar_release_loading.clone());
+            let r = ReleaseStore::load(StoreRoot::new(p)?, &bar_release_loading);
             if r.is_ok() {
                 bar_release_loading.finish_with_message("Loaded releases successfully");
             } else {
@@ -208,7 +208,7 @@ pub async fn build(
         }
 
         debug!("Loading staging directory: {}", p.display());
-        let r = StagingStore::load(StoreRoot::new(p.clone())?, bar_staging_loading.clone());
+        let r = StagingStore::load(StoreRoot::new(p.clone())?, &bar_staging_loading);
         if r.is_ok() {
             bar_staging_loading.finish_with_message("Loaded staging successfully");
         } else {
@@ -220,7 +220,7 @@ pub async fn build(
     let dag = {
         let bar_tree_building = progressbars.bar();
         bar_tree_building.set_length(max_packages);
-        let dag = Dag::for_root_package(package.clone(), &repo, bar_tree_building.clone())?;
+        let dag = Dag::for_root_package(package.clone(), &repo, &bar_tree_building)?;
         bar_tree_building.finish_with_message("Finished loading Dag");
         dag
     };

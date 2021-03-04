@@ -27,7 +27,7 @@ impl Debug for ReleaseStore {
 }
 
 impl ReleaseStore {
-    pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
+    pub fn load(root: StoreRoot, progress: &ProgressBar) -> Result<Self> {
         FileStoreImpl::load(root, progress).map(ReleaseStore)
     }
 

@@ -40,7 +40,7 @@ impl Dag {
     pub fn for_root_package(
         p: Package,
         repo: &Repository,
-        progress: ProgressBar,
+        progress: &ProgressBar,
     ) -> Result<Self> {
         fn add_sub_packages<'a>(
             repo: &'a Repository,
@@ -100,7 +100,7 @@ impl Dag {
         trace!("Making package Tree for {:?}", p);
         let root_idx = dag.add_node(&p);
         mappings.insert(&p, root_idx);
-        add_sub_packages(repo, &mut mappings, &mut dag, &p, &progress)?;
+        add_sub_packages(repo, &mut mappings, &mut dag, &p, progress)?;
         add_edges(&mappings, &mut dag)?;
         trace!("Finished makeing package Tree");
 
@@ -179,7 +179,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, progress);
+        let r = Dag::for_root_package(p1, &repo, &progress);
         assert!(r.is_ok());
     }
 
@@ -211,7 +211,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let dag = Dag::for_root_package(p1, &repo, progress);
+        let dag = Dag::for_root_package(p1, &repo, &progress);
         assert!(dag.is_ok());
         let dag = dag.unwrap();
         let ps = dag.all_packages();
@@ -300,7 +300,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, progress);
+        let r = Dag::for_root_package(p1, &repo, &progress);
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();
@@ -443,7 +443,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, progress);
+        let r = Dag::for_root_package(p1, &repo, &progress);
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();
@@ -548,7 +548,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, progress);
+        let r = Dag::for_root_package(p1, &repo, &progress);
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();

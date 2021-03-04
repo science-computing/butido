@@ -33,7 +33,7 @@ impl Debug for StagingStore {
 }
 
 impl StagingStore {
-    pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
+    pub fn load(root: StoreRoot, progress: &ProgressBar) -> Result<Self> {
         FileStoreImpl::load(root, progress).map(StagingStore)
     }
 

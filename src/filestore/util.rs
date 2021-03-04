@@ -31,8 +31,8 @@ pub struct FileStoreImpl {
 }
 
 impl FileStoreImpl {
-    /// Loads the passed path recursively 
-    pub fn load(root: StoreRoot, progress: ProgressBar) -> Result<Self> {
+    /// Loads the passed path recursively
+    pub fn load(root: StoreRoot, progress: &ProgressBar) -> Result<Self> {
         let store = root
             .find_artifacts_recursive()
             .inspect(|path| {
