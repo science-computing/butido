@@ -832,6 +832,11 @@ pub fn cli<'a>() -> App<'a> {
                 .about("A version constraint to search for (optional), E.G. '=1.0.0'")
             )
         )
+
+        .subcommand(App::new("metrics")
+            .version(crate_version!())
+            .about("Print metrics about butido")
+        )
 }
 
 fn script_arg_line_numbers<'a>() -> clap::Arg<'a> {

@@ -184,6 +184,12 @@ async fn main() -> Result<()> {
             crate::commands::tree_of(matches, repo, progressbars).await?
         }
 
+        Some(("metrics", _)) => {
+            let repo = load_repo()?;
+            let conn = crate::db::establish_connection(db_connection_config)?;
+            crate::commands::metrics(&repo_path, &config, repo, conn).await?
+        }
+
         Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
         None => return Err(anyhow!("No subcommand")),
     }
