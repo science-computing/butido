@@ -30,7 +30,7 @@ use crate::repository::Repository;
 use crate::util::progress::ProgressBars;
 
 /// Implementation of the "find_artifact" subcommand
-pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progressbars: ProgressBars, repo: Repository, database_connection: PgConnection, max_packages: u64) -> Result<()> {
+pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progressbars: ProgressBars, repo: Repository, database_connection: PgConnection) -> Result<()> {
     let package_name_regex = crate::commands::util::mk_package_name_regex({
         matches.value_of("package_name_regex").unwrap() // safe by clap
     })?;
@@ -55,7 +55,6 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .iter()
         .map(|storename| {
             let bar_release_loading = progressbars.bar();
-            bar_release_loading.set_length(max_packages);
 
             let p = config.releases_directory().join(storename);
             debug!("Loading release directory: {}", p.display());
@@ -72,7 +71,6 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
 
     let staging_store = if let Some(p) = matches.value_of("staging_dir").map(PathBuf::from) {
         let bar_staging_loading = progressbars.bar();
-        bar_staging_loading.set_length(max_packages);
 
         if !p.is_dir() {
             let _ = tokio::fs::create_dir_all(&p).await?;

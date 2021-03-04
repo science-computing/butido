@@ -57,7 +57,6 @@ pub async fn build(
     config: &Configuration,
     repo: Repository,
     repo_path: &Path,
-    max_packages: u64,
 ) -> Result<()> {
     use crate::db::models::{EnvVar, GitHash, Image, Job, Package, Submit};
 
@@ -159,7 +158,6 @@ pub async fn build(
         .iter()
         .map(|storename| {
             let bar_release_loading = progressbars.bar();
-            bar_release_loading.set_length(max_packages);
 
             let p = config.releases_directory().join(storename);
             debug!("Loading release directory: {}", p.display());
@@ -175,7 +173,6 @@ pub async fn build(
 
     let (staging_store, staging_dir, submit_id) = {
         let bar_staging_loading = progressbars.bar();
-        bar_staging_loading.set_length(max_packages);
 
         let (submit_id, p) = if let Some(staging_dir) = matches.value_of("staging_dir").map(PathBuf::from) {
             info!(
@@ -219,7 +216,6 @@ pub async fn build(
 
     let dag = {
         let bar_tree_building = progressbars.bar();
-        bar_tree_building.set_length(max_packages);
         let dag = Dag::for_root_package(package.clone(), &repo, &bar_tree_building)?;
         bar_tree_building.finish_with_message("Finished loading Dag");
         dag

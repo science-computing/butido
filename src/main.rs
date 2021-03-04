@@ -48,14 +48,12 @@ extern crate log as logcrate;
 #[macro_use]
 extern crate diesel;
 
-use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use clap::ArgMatches;
 use logcrate::debug;
-use walkdir::WalkDir;
 use rand as _; // Required to make lints happy
 use aquamarine as _; // doc-helper crate
 use funty as _; // doc-helper crate
@@ -102,7 +100,6 @@ async fn main() -> Result<()> {
 
     let config = config.try_into::<NotValidatedConfiguration>()?.validate()?;
 
-    let max_packages = count_pkg_files(&repo_path);
     let hide_bars = cli.is_present("hide_bars") || crate::util::stdout_is_pipe();
     let progressbars = ProgressBars::setup(
         config.progress_format().clone(),
@@ -112,7 +109,6 @@ async fn main() -> Result<()> {
 
     let load_repo = || -> Result<Repository> {
         let bar = progressbars.bar();
-        bar.set_length(max_packages);
         let repo = Repository::load(&repo_path, &bar)?;
         bar.finish_with_message("Repository loading finished");
         Ok(repo)
@@ -135,21 +131,16 @@ async fn main() -> Result<()> {
                 &config,
                 repo,
                 &repo_path,
-                max_packages,
             )
             .await?
         }
         Some(("what-depends", matches)) => {
             let repo = load_repo()?;
-            let bar = progressbars.bar();
-            bar.set_length(max_packages);
             crate::commands::what_depends(matches, &config, repo).await?
         }
 
         Some(("dependencies-of", matches)) => {
             let repo = load_repo()?;
-            let bar = progressbars.bar();
-            bar.set_length(max_packages);
             crate::commands::dependencies_of(matches, &config, repo).await?
         }
 
@@ -166,7 +157,7 @@ async fn main() -> Result<()> {
         Some(("find-artifact", matches)) => {
             let repo = load_repo()?;
             let conn = crate::db::establish_connection(db_connection_config)?;
-            crate::commands::find_artifact(matches, &config, progressbars, repo, conn, max_packages).await?
+            crate::commands::find_artifact(matches, &config, progressbars, repo, conn).await?
         }
 
         Some(("find-pkg", matches)) => {
@@ -198,21 +189,6 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
-}
-
-fn count_pkg_files(p: &Path) -> u64 {
-    WalkDir::new(p)
-        .follow_links(true)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|d| d.file_type().is_file())
-        .filter(|f| {
-            f.path()
-                .file_name()
-                .map(|name| name == "pkg.toml")
-                .unwrap_or(false)
-        })
-        .count() as u64
 }
 
 fn generate_completions(matches: &ArgMatches) {
