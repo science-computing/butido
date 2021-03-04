@@ -29,6 +29,7 @@ use uuid::Uuid;
 
 use crate::db::models as dbmodels;
 use crate::endpoint::Endpoint;
+use crate::endpoint::EndpointHandle;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::ArtifactPath;
 use crate::filestore::ReleaseStore;
@@ -39,7 +40,7 @@ use crate::log::LogItem;
 
 pub struct EndpointScheduler {
     log_dir: Option<PathBuf>,
-    endpoints: Vec<Arc<RwLock<Endpoint>>>,
+    endpoints: Vec<Arc<Endpoint>>,
 
     staging_store: Arc<RwLock<StagingStore>>,
     release_stores: Vec<Arc<ReleaseStore>>,
@@ -68,14 +69,12 @@ impl EndpointScheduler {
         })
     }
 
-    async fn setup_endpoints(
-        endpoints: Vec<EndpointConfiguration>,
-    ) -> Result<Vec<Arc<RwLock<Endpoint>>>> {
+    async fn setup_endpoints(endpoints: Vec<EndpointConfiguration>) -> Result<Vec<Arc<Endpoint>>> {
         let unordered = futures::stream::FuturesUnordered::new();
 
         for cfg in endpoints.into_iter() {
             unordered
-                .push(Endpoint::setup(cfg).map(|r_ep| r_ep.map(RwLock::new).map(Arc::new)));
+                .push(Endpoint::setup(cfg).map(|r_ep| r_ep.map(Arc::new)));
         }
 
         unordered.collect().await
@@ -86,11 +85,7 @@ impl EndpointScheduler {
     /// # Warning
     ///
     /// This function blocks as long as there is no free endpoint available!
-    pub async fn schedule_job(
-        &self,
-        job: RunnableJob,
-        bar: indicatif::ProgressBar,
-    ) -> Result<JobHandle> {
+    pub async fn schedule_job(&self, job: RunnableJob, bar: indicatif::ProgressBar) -> Result<JobHandle> {
         let endpoint = self.select_free_endpoint().await?;
 
         Ok(JobHandle {
@@ -105,31 +100,24 @@ impl EndpointScheduler {
         })
     }
 
-    async fn select_free_endpoint(&self) -> Result<Arc<RwLock<Endpoint>>> {
+    async fn select_free_endpoint(&self) -> Result<EndpointHandle> {
         loop {
             let ep = self
                 .endpoints
                 .iter()
-                .cloned()
-                .map(|ep| async move {
-                    ep.write()
-                        .await
-                        .number_of_running_containers()
-                        .await
-                        .map(|num_running| (num_running, ep.clone()))
+                .filter(|ep| { // filter out all running containers where the number of max jobs is reached
+                    let r = ep.running_jobs() < ep.num_max_jobs();
+                    trace!("Endpoint {} considered for scheduling job: {}", ep.name(), r);
+                    r
                 })
-                .collect::<futures::stream::FuturesUnordered<_>>()
-                .collect::<Result<Vec<_>>>()
-                .await?
-                .iter()
-                .sorted_by(|tpla, tplb| tpla.0.cmp(&tplb.0))
-                .map(|tpl| tpl.1.clone())
+                .sorted_by(|ep1, ep2| ep1.running_jobs().cmp(&ep2.running_jobs()))
                 .next();
 
             if let Some(endpoint) = ep {
-                return Ok(endpoint);
+                return Ok(EndpointHandle::new(endpoint.clone()));
             } else {
                 trace!("No free endpoint found, retry...");
+                tokio::task::yield_now().await
             }
         }
     }
@@ -137,7 +125,7 @@ impl EndpointScheduler {
 
 pub struct JobHandle {
     log_dir: Option<PathBuf>,
-    endpoint: Arc<RwLock<Endpoint>>,
+    endpoint: EndpointHandle,
     job: RunnableJob,
     bar: ProgressBar,
     db: Arc<PgConnection>,
@@ -155,14 +143,15 @@ impl std::fmt::Debug for JobHandle {
 impl JobHandle {
     pub async fn run(self) -> Result<Result<Vec<ArtifactPath>>> {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
-        let ep = self.endpoint.read().await;
-        let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, ep.name())?;
+        let endpoint_uri = self.endpoint.uri().clone();
+        let endpoint_name = self.endpoint.name().clone();
+        let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, self.endpoint.name())?;
         let package = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
         let image = dbmodels::Image::create_or_fetch(&self.db, self.job.image())?;
         let envs = self.create_env_in_db()?;
         let job_id = *self.job.uuid();
-        trace!("Running on Job {} on Endpoint {}", job_id, ep.name());
-        let prepared_container = ep
+        trace!("Running on Job {} on Endpoint {}", job_id, self.endpoint.name());
+        let prepared_container = self.endpoint
             .prepare_container(self.job, self.staging_store.clone(), self.release_stores.clone())
             .await?;
         let container_id = prepared_container.create_info().id.clone();
@@ -174,7 +163,7 @@ impl JobHandle {
                     &job_id,
                     &package.name,
                     &package.version,
-                    ep.uri(),
+                    &endpoint_uri,
                     &container_id,
                 )
             })?
@@ -192,7 +181,7 @@ impl JobHandle {
         drop(self.bar);
 
         let (run_container, logres) = tokio::join!(running_container, logres);
-        let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", ep.name()))?;
+        let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", endpoint_name))?;
         let run_container = run_container
             .with_context(|| anyhow!("Running container {} failed"))
             .with_context(|| {
@@ -200,7 +189,7 @@ impl JobHandle {
                     &job_id,
                     &package.name,
                     &package.version,
-                    ep.uri(),
+                    &endpoint_uri,
                     &container_id,
                 )
             })?;
@@ -233,7 +222,7 @@ impl JobHandle {
                     &job.uuid,
                     &package.name,
                     &package.version,
-                    ep.uri(),
+                    &endpoint_uri,
                     &container_id,
                 )
             })?;
@@ -241,13 +230,13 @@ impl JobHandle {
         trace!("Found result for job {}: {:?}", job_id, res);
         let (paths, res) = res.unpack();
         let res = res
-            .with_context(|| anyhow!("Error during running job on '{}'", ep.name()))
+            .with_context(|| anyhow!("Error during running job on '{}'", endpoint_name))
             .with_context(|| {
                 Self::create_job_run_error(
                     &job.uuid,
                     &package.name,
                     &package.version,
-                    ep.uri(),
+                    &endpoint_uri,
                     &container_id,
                 )
             })

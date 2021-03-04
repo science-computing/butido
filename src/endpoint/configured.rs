@@ -56,6 +56,9 @@ pub struct Endpoint {
 
     #[getset(get = "pub")]
     uri: String,
+
+    #[builder(default)]
+    running_jobs: std::sync::atomic::AtomicUsize,
 }
 
 impl Debug for Endpoint {
@@ -228,16 +231,34 @@ impl Endpoint {
         PreparedContainer::new(self, job, staging_store, release_stores).await
     }
 
-    pub async fn number_of_running_containers(&self) -> Result<usize> {
-        self.docker
-            .containers()
-            .list(&Default::default())
-            .await
-            .with_context(|| anyhow!("Getting number of running containers on {}", self.name))
-            .map_err(Error::from)
-            .map(|list| list.len())
+    pub fn running_jobs(&self) -> usize {
+        self.running_jobs.load(std::sync::atomic::Ordering::Relaxed)
     }
 }
+
+pub struct EndpointHandle(Arc<Endpoint>);
+
+impl EndpointHandle {
+    pub fn new(ep: Arc<Endpoint>) -> Self {
+        let _ = ep.running_jobs.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        EndpointHandle(ep)
+    }
+}
+
+impl Drop for EndpointHandle {
+    fn drop(&mut self) {
+        let _ = self.0.running_jobs.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+impl std::ops::Deref for EndpointHandle {
+    type Target = Endpoint;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.deref()
+    }
+}
+
 
 #[derive(Getters)]
 pub struct PreparedContainer<'a> {
