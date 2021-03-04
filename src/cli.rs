@@ -71,6 +71,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("generate-completions")
+            .version(crate_version!())
             .about("Generate and print commandline completions")
             .arg(Arg::new("shell")
                 .possible_values(&["bash", "elvish", "fish", "zsh"])
@@ -82,8 +83,10 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("db")
+            .version(crate_version!())
             .about("Database CLI interface")
             .subcommand(App::new("cli")
+                .version(crate_version!())
                 .about("Start a database CLI, if installed on the current host")
                 .long_about(indoc::indoc!(r#"
                     Starts a database shell on the configured database using one of the following
@@ -105,6 +108,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("artifacts")
+                .version(crate_version!())
                 .about("List artifacts from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -125,6 +129,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("envvars")
+                .version(crate_version!())
                 .about("List envvars from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -136,6 +141,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("images")
+                .version(crate_version!())
                 .about("List images from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -147,6 +153,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("submits")
+                .version(crate_version!())
                 .about("List submits from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -176,6 +183,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("jobs")
+                .version(crate_version!())
                 .about("List jobs from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -207,6 +215,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("job")
+                .version(crate_version!())
                 .about("Show a specific job from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -255,6 +264,7 @@ pub fn cli<'a>() -> App<'a> {
                 .arg(script_arg_no_highlight())
             )
             .subcommand(App::new("releases")
+                .version(crate_version!())
                 .about("List releases")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -267,6 +277,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("build")
+            .version(crate_version!())
             .about("Build packages in containers")
 
             .arg(Arg::new("package_name")
@@ -346,6 +357,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("what-depends")
+            .version(crate_version!())
             .about("List all packages that depend on a specific package")
             .arg(Arg::new("package_name")
                 .required(true)
@@ -372,6 +384,7 @@ pub fn cli<'a>() -> App<'a> {
             )
         )
         .subcommand(App::new("dependencies-of")
+            .version(crate_version!())
             .alias("depsof")
             .about("List the depenendcies of a package")
             .arg(Arg::new("package_name")
@@ -407,6 +420,7 @@ pub fn cli<'a>() -> App<'a> {
             )
         )
         .subcommand(App::new("versions-of")
+            .version(crate_version!())
             .alias("versions")
             .about("List the versions of a package")
             .arg(Arg::new("package_name")
@@ -418,6 +432,7 @@ pub fn cli<'a>() -> App<'a> {
             )
         )
         .subcommand(App::new("env-of")
+            .version(crate_version!())
             .alias("env")
             .about("Show the ENV configured for a package")
             .arg(Arg::new("package_name")
@@ -437,6 +452,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("find-artifact")
+            .version(crate_version!())
             .about("Find artifacts for packages")
             .arg(Arg::new("package_name_regex")
                 .required(true)
@@ -482,6 +498,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("find-pkg")
+            .version(crate_version!())
             .about("Find a package by regex")
             .arg(Arg::new("package_name_regex")
                 .required(true)
@@ -608,8 +625,10 @@ pub fn cli<'a>() -> App<'a> {
 
         )
         .subcommand(App::new("source")
+            .version(crate_version!())
             .about("Handle package sources")
             .subcommand(App::new("verify")
+                .version(crate_version!())
                 .about("Hash-check all source files")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -627,9 +646,11 @@ pub fn cli<'a>() -> App<'a> {
                 )
             )
             .subcommand(App::new("list-missing")
+                .version(crate_version!())
                 .about("List packages where the source is missing")
             )
             .subcommand(App::new("url")
+                .version(crate_version!())
                 .about("Show the URL of the source of a package")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -647,6 +668,7 @@ pub fn cli<'a>() -> App<'a> {
                 )
             )
             .subcommand(App::new("download")
+                .version(crate_version!())
                 .about("Download the source for one or multiple packages")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -672,7 +694,9 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("release")
+            .version(crate_version!())
             .subcommand(App::new("rm")
+                .version(crate_version!())
                 .about("Remove release artifacts")
                 .long_about(indoc::indoc!(r#"
                     Removes a released artifact from the release store and deletes the according database entry.
@@ -708,6 +732,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("new")
+                .version(crate_version!())
                 .about("Release artifacts")
                 .arg(Arg::new("submit_uuid")
                     .required(true)
@@ -771,6 +796,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("lint")
+            .version(crate_version!())
             .about("Lint the package script of one or multiple packages")
             .arg(Arg::new("package_name")
                 .required(false)
@@ -789,6 +815,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("tree-of")
+            .version(crate_version!())
             .about("Print the dependency tree of one or multiple packages")
             .arg(Arg::new("package_name")
                 .required(true)
