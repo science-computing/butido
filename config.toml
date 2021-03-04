@@ -174,12 +174,14 @@ verify_images_present = true
 name          = "testhostname"
 uri           = "http://0.0.0.0:8095" # the URI of the endpoint. Either http or socket path
 endpoint_type = "http" # either "http" or "socket"
-speed         = 1 # currently ignored, but required to be present
 
 # maximum number of jobs running on this endpoint.
 # Set this to a reasonable high number to be able to run a lot of small jobs.
 # For example, if you're compiling with `make -j 1`, this should at least be the
 # number of CPU cores, maybe a bit more (eg. (ncpu * 1.1))
+#
+# Also, if two nodes have the same number of running jobs, and a new job comes
+# in, the node with more "free slots" will be considered first.
 maxjobs       = 1
 
 

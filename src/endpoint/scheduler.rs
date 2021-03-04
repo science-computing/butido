@@ -110,7 +110,9 @@ impl EndpointScheduler {
                     trace!("Endpoint {} considered for scheduling job: {}", ep.name(), r);
                     r
                 })
-                .sorted_by(|ep1, ep2| ep1.running_jobs().cmp(&ep2.running_jobs()))
+                .sorted_by(|ep1, ep2| {
+                    ep1.utilization().partial_cmp(&ep2.utilization()).unwrap_or(std::cmp::Ordering::Equal)
+                })
                 .next();
 
             if let Some(endpoint) = ep {

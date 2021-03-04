@@ -234,6 +234,13 @@ impl Endpoint {
     pub fn running_jobs(&self) -> usize {
         self.running_jobs.load(std::sync::atomic::Ordering::Relaxed)
     }
+
+    /// Super non-scientific utilization calculation for the endpoint
+    pub fn utilization(&self) -> f64 {
+        let max_jobs = self.num_max_jobs() as f64;
+        let run_jobs = self.running_jobs() as f64;
+        100.0 / max_jobs * run_jobs
+    }
 }
 
 pub struct EndpointHandle(Arc<Endpoint>);
