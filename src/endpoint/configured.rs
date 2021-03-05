@@ -272,6 +272,17 @@ impl Endpoint {
                     .collect()
             })
     }
+
+    pub async fn has_container_with_id(&self, id: &str) -> Result<bool> {
+        self.container_stats()
+            .await?
+            .iter()
+            .find(|st| st.id == id)
+            .map(Ok)
+            .transpose()
+            .map(|o| o.is_some())
+    }
+
 }
 
 /// Helper type to store endpoint statistics
