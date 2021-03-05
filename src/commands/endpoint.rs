@@ -39,6 +39,7 @@ pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_gen
     match matches.subcommand() {
         Some(("ping", matches)) => ping(endpoint_names, matches, config, progress_generator).await,
         Some(("stats", matches)) => stats(endpoint_names, matches, config, progress_generator).await,
+        Some(("containers", matches)) => containers(endpoint_names, matches, config).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -151,6 +152,60 @@ async fn stats(endpoint_names: Vec<String>,
     crate::commands::util::display_data(hdr, data, csv)
 }
 
+async fn containers(endpoint_names: Vec<String>,
+    matches: &ArgMatches,
+    config: &Configuration,
+) -> Result<()> {
+    match matches.subcommand() {
+        Some(("list", matches)) => containers_list(endpoint_names, matches, config).await,
+        Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        None => Err(anyhow!("No subcommand")),
+    }
+}
+
+async fn containers_list(endpoint_names: Vec<String>,
+    matches: &ArgMatches,
+    config: &Configuration,
+) -> Result<()> {
+    let csv = matches.is_present("csv");
+    let hdr = crate::commands::util::mk_header([
+        "Endpoint",
+        "Container id",
+        "Image",
+        "Created",
+        "Status",
+    ].to_vec());
+
+    let data = connect_to_endpoints(config, &endpoint_names)
+        .await?
+        .into_iter()
+        .map(|ep| async move {
+            ep.container_stats().await.map(|stats| (ep.name().clone(), stats))
+        })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<Result<Vec<(_, _)>>>()
+        .await?
+        .into_iter()
+        .map(|tpl| {
+            let endpoint_name = tpl.0;
+            tpl.1
+                .into_iter()
+                .map(|stat| {
+                    vec![
+                        endpoint_name.clone(),
+                        stat.id,
+                        stat.image,
+                        stat.created.to_string(),
+                        stat.status,
+                    ]
+                })
+                .collect::<Vec<Vec<String>>>()
+        })
+        .flatten()
+        .collect::<Vec<Vec<String>>>();
+
+    crate::commands::util::display_data(hdr, data, csv)
+}
 
 /// Helper function to connect to all endpoints from the configuration, that appear (by name) in
 /// the `endpoint_names` list
