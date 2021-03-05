@@ -39,6 +39,7 @@ pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_gen
     match matches.subcommand() {
         Some(("ping", matches)) => ping(endpoint_names, matches, config, progress_generator).await,
         Some(("stats", matches)) => stats(endpoint_names, matches, config, progress_generator).await,
+        Some(("container", matches)) => container(endpoint_names, matches, config).await,
         Some(("containers", matches)) => containers(endpoint_names, matches, config).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
@@ -150,6 +151,63 @@ async fn stats(endpoint_names: Vec<String>,
 
     bar.finish_with_message("Fetching stats successful");
     crate::commands::util::display_data(hdr, data, csv)
+}
+
+async fn container(endpoint_names: Vec<String>,
+    matches: &ArgMatches,
+    config: &Configuration,
+) -> Result<()> {
+    let container_id = matches.value_of("container_id").unwrap();
+    let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
+    let relevant_endpoints = endpoints.into_iter()
+        .map(|ep| async {
+            ep.has_container_with_id(container_id)
+                .await
+                .map(|b| (ep, b))
+        })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<Result<Vec<(_, bool)>>>()
+        .await?
+        .into_iter()
+        .filter_map(|tpl| {
+            if tpl.1 {
+                Some(tpl.0)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    if relevant_endpoints.len() > 1 {
+        return Err(anyhow!("Found more than one container for id {}", container_id))
+    }
+
+    let relevant_endpoint = relevant_endpoints.get(0).ok_or_else(|| {
+        anyhow!("Found no container for id {}", container_id)
+    })?;
+
+    match matches.subcommand() {
+        Some(("top", matches)) => container_top(matches, relevant_endpoint, container_id).await,
+        Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        None => Err(anyhow!("No subcommand")),
+    }
+}
+
+async fn container_top(
+    matches: &ArgMatches,
+    endpoint: &Endpoint,
+    container_id: &str,
+) -> Result<()> {
+    let csv = matches.is_present("csv");
+    let top = endpoint
+        .get_container_by_id(container_id)
+        .await?
+        .ok_or_else(|| anyhow!("Cannot find container {} on {}", container_id, endpoint.name()))?
+        .top(None)
+        .await?;
+
+    let hdr = crate::commands::util::mk_header(top.titles.iter().map(|s| s.as_ref()).collect());
+    crate::commands::util::display_data(hdr, top.processes, csv)
 }
 
 async fn containers(endpoint_names: Vec<String>,
