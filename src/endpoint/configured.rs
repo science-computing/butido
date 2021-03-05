@@ -246,6 +246,50 @@ impl Endpoint {
     pub async fn ping(&self) -> Result<String> {
         self.docker.ping().await.map_err(Error::from)
     }
+
+    pub async fn stats(&self) -> Result<EndpointStats> {
+        self.docker
+            .info()
+            .await
+            .map(EndpointStats::from)
+            .map_err(Error::from)
+    }
+}
+
+/// Helper type to store endpoint statistics
+///
+/// Currently, this can only be generated from a shiplift::rep::Info, but it does not hold all
+/// values the shiplift::rep::Info type holds, because some of these are not relevant for us.
+///
+/// Later, this might hold endpoint stats from other endpoint implementations as well
+pub struct EndpointStats {
+    pub name: String,
+    pub containers: u64,
+    pub images: u64,
+    pub id: String,
+    pub kernel_version: String,
+    pub mem_total: u64,
+    pub memory_limit: bool,
+    pub n_cpu: u64,
+    pub operating_system: String,
+    pub system_time: Option<String>,
+}
+
+impl From<shiplift::rep::Info> for EndpointStats {
+    fn from(info: shiplift::rep::Info) -> Self {
+        EndpointStats {
+            name: info.name,
+            containers: info.containers,
+            images: info.images,
+            id: info.id,
+            kernel_version: info.kernel_version,
+            mem_total: info.mem_total,
+            memory_limit: info.memory_limit,
+            n_cpu: info.n_cpu,
+            operating_system: info.operating_system,
+            system_time: info.system_time,
+        }
+    }
 }
 
 pub struct EndpointHandle(Arc<Endpoint>);
