@@ -283,6 +283,19 @@ impl Endpoint {
             .map(|o| o.is_some())
     }
 
+    pub async fn get_container_by_id<'a>(&'a self, id: &str) -> Result<Option<Container<'a>>> {
+        self.container_stats()
+            .await?
+            .iter()
+            .find(|st| st.id == id)
+            .map(|_| {
+                self.docker
+                    .containers()
+                    .get(id)
+            })
+            .map(Ok)
+            .transpose()
+    }
 }
 
 /// Helper type to store endpoint statistics
