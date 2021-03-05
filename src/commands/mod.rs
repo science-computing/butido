@@ -14,6 +14,9 @@ pub use build::build;
 mod db;
 pub use db::db;
 
+mod endpoint;
+pub use endpoint::endpoint;
+
 mod env_of;
 pub use env_of::env_of;
 

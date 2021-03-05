@@ -184,6 +184,8 @@ async fn main() -> Result<()> {
             crate::commands::tree_of(matches, repo, progressbars).await?
         }
 
+        Some(("endpoint", matches)) => crate::commands::endpoint(matches, &config, progressbars).await?,
+
         Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
         None => return Err(anyhow!("No subcommand")),
     }
