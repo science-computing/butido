@@ -241,6 +241,11 @@ impl Endpoint {
         let run_jobs = self.running_jobs() as f64;
         100.0 / max_jobs * run_jobs
     }
+
+    /// Ping the endpoint (once)
+    pub async fn ping(&self) -> Result<String> {
+        self.docker.ping().await.map_err(Error::from)
+    }
 }
 
 pub struct EndpointHandle(Arc<Endpoint>);
