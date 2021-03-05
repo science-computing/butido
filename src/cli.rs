@@ -865,6 +865,17 @@ pub fn cli<'a>() -> App<'a> {
                     .about("How long to sleep between pings")
                 )
             )
+            .subcommand(App::new("stats")
+                .version(crate_version!())
+                .about("Get stats for the endpoint(s)")
+                .arg(Arg::new("csv")
+                    .required(false)
+                    .multiple(false)
+                    .long("csv")
+                    .takes_value(false)
+                    .about("Format output as CSV")
+                )
+            )
         )
 }
 

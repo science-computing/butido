@@ -37,6 +37,7 @@ pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_gen
 
     match matches.subcommand() {
         Some(("ping", matches)) => ping(endpoint_names, matches, config, progress_generator).await,
+        Some(("stats", matches)) => stats(endpoint_names, matches, config, progress_generator).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -110,4 +111,87 @@ async fn ping(endpoint_names: Vec<String>,
 
     let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
     tokio::join!(ping_process, multibar_block).0
+}
+
+async fn stats(endpoint_names: Vec<String>,
+    matches: &ArgMatches,
+    config: &Configuration,
+    progress_generator: ProgressBars
+) -> Result<()> {
+    let csv = matches.is_present("csv");
+
+    let endpoint_configurations = config
+        .docker()
+        .endpoints()
+        .iter()
+        .filter(|ep| endpoint_names.contains(ep.name()))
+        .cloned()
+        .map(|ep_cfg| {
+            crate::endpoint::EndpointConfiguration::builder()
+                .endpoint(ep_cfg)
+                .required_images(config.docker().images().clone())
+                .required_docker_versions(config.docker().docker_versions().clone())
+                .required_docker_api_versions(config.docker().docker_api_versions().clone())
+                .build()
+        })
+        .collect::<Vec<_>>();
+
+    info!("Endpoint config build");
+    info!("Connecting to {n} endpoints: {eps}",
+        n = endpoint_configurations.len(),
+        eps = endpoint_configurations.iter().map(|epc| epc.endpoint().name()).join(", "));
+
+    let bar = progress_generator.bar();
+    bar.set_length(endpoint_configurations.len() as u64);
+    bar.set_message("Fetching stats");
+
+    let endpoints = crate::endpoint::util::setup_endpoints(endpoint_configurations).await?;
+
+    let hdr = crate::commands::util::mk_header([
+        "Name",
+        "Containers",
+        "Images",
+        "Kernel",
+        "Memory",
+        "Memory limit",
+        "Cores",
+        "OS",
+        "System Time",
+    ].to_vec());
+
+    let data = endpoints
+        .into_iter()
+        .map(|endpoint| {
+            let bar = bar.clone();
+            async move {
+                let r = endpoint.stats().await;
+                bar.inc(1);
+                r
+            }
+        })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<Result<Vec<_>>>()
+        .await
+        .map_err(|e| {
+            bar.finish_with_message("Fetching stats errored");
+            e
+        })?
+        .into_iter()
+        .map(|stat| {
+            vec![
+                stat.name,
+                stat.containers.to_string(),
+                stat.images.to_string(),
+                stat.kernel_version,
+                stat.mem_total.to_string(),
+                stat.memory_limit.to_string(),
+                stat.n_cpu.to_string(),
+                stat.operating_system.to_string(),
+                stat.system_time.map(|t| t.to_string()).unwrap_or_else(|| String::from("unknown")),
+            ]
+        })
+        .collect();
+
+    bar.finish_with_message("Fetching stats successful");
+    crate::commands::util::display_data(hdr, data, csv)
 }
