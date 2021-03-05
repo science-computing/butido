@@ -20,6 +20,7 @@ use tokio_stream::StreamExt;
 
 use crate::config::Configuration;
 use crate::util::progress::ProgressBars;
+use crate::endpoint::Endpoint;
 
 pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_generator: ProgressBars) -> Result<()> {
     let endpoint_names = matches
@@ -50,30 +51,7 @@ async fn ping(endpoint_names: Vec<String>,
 ) -> Result<()> {
     let n_pings = matches.value_of("ping_n").map(u64::from_str).transpose()?.unwrap(); // safe by clap
     let sleep = matches.value_of("ping_sleep").map(u64::from_str).transpose()?.unwrap(); // safe by clap
-
-    let endpoint_configurations = config
-        .docker()
-        .endpoints()
-        .iter()
-        .filter(|ep| endpoint_names.contains(ep.name()))
-        .cloned()
-        .map(|ep_cfg| {
-            crate::endpoint::EndpointConfiguration::builder()
-                .endpoint(ep_cfg)
-                .required_images(config.docker().images().clone())
-                .required_docker_versions(config.docker().docker_versions().clone())
-                .required_docker_api_versions(config.docker().docker_api_versions().clone())
-                .build()
-        })
-        .collect::<Vec<_>>();
-
-    info!("Endpoint config build");
-    info!("Connecting to {n} endpoints: {eps}", 
-        n = endpoint_configurations.len(), 
-        eps = endpoint_configurations.iter().map(|epc| epc.endpoint().name()).join(", "));
-
-    let endpoints = crate::endpoint::util::setup_endpoints(endpoint_configurations).await?;
-
+    let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
     let multibar = Arc::new({
         let mp = indicatif::MultiProgress::new();
         if progress_generator.hide() {
@@ -119,33 +97,10 @@ async fn stats(endpoint_names: Vec<String>,
     progress_generator: ProgressBars
 ) -> Result<()> {
     let csv = matches.is_present("csv");
-
-    let endpoint_configurations = config
-        .docker()
-        .endpoints()
-        .iter()
-        .filter(|ep| endpoint_names.contains(ep.name()))
-        .cloned()
-        .map(|ep_cfg| {
-            crate::endpoint::EndpointConfiguration::builder()
-                .endpoint(ep_cfg)
-                .required_images(config.docker().images().clone())
-                .required_docker_versions(config.docker().docker_versions().clone())
-                .required_docker_api_versions(config.docker().docker_api_versions().clone())
-                .build()
-        })
-        .collect::<Vec<_>>();
-
-    info!("Endpoint config build");
-    info!("Connecting to {n} endpoints: {eps}",
-        n = endpoint_configurations.len(),
-        eps = endpoint_configurations.iter().map(|epc| epc.endpoint().name()).join(", "));
-
+    let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
     let bar = progress_generator.bar();
-    bar.set_length(endpoint_configurations.len() as u64);
+    bar.set_length(endpoint_names.len() as u64);
     bar.set_message("Fetching stats");
-
-    let endpoints = crate::endpoint::util::setup_endpoints(endpoint_configurations).await?;
 
     let hdr = crate::commands::util::mk_header([
         "Name",
@@ -194,4 +149,32 @@ async fn stats(endpoint_names: Vec<String>,
 
     bar.finish_with_message("Fetching stats successful");
     crate::commands::util::display_data(hdr, data, csv)
+}
+
+
+/// Helper function to connect to all endpoints from the configuration, that appear (by name) in
+/// the `endpoint_names` list
+async fn connect_to_endpoints(config: &Configuration, endpoint_names: &[String]) -> Result<Vec<Arc<Endpoint>>> {
+    let endpoint_configurations = config
+        .docker()
+        .endpoints()
+        .iter()
+        .filter(|ep| endpoint_names.contains(ep.name()))
+        .cloned()
+        .map(|ep_cfg| {
+            crate::endpoint::EndpointConfiguration::builder()
+                .endpoint(ep_cfg)
+                .required_images(config.docker().images().clone())
+                .required_docker_versions(config.docker().docker_versions().clone())
+                .required_docker_api_versions(config.docker().docker_api_versions().clone())
+                .build()
+        })
+        .collect::<Vec<_>>();
+
+    info!("Endpoint config build");
+    info!("Connecting to {n} endpoints: {eps}",
+        n = endpoint_configurations.len(),
+        eps = endpoint_configurations.iter().map(|epc| epc.endpoint().name()).join(", "));
+
+    crate::endpoint::util::setup_endpoints(endpoint_configurations).await
 }
