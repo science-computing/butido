@@ -17,14 +17,12 @@ use anyhow::Error;
 use anyhow::Result;
 use colored::Colorize;
 use diesel::PgConnection;
-use futures::FutureExt;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use log::trace;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver;
-use tokio_stream::StreamExt;
 use uuid::Uuid;
 
 use crate::db::models as dbmodels;
@@ -57,7 +55,7 @@ impl EndpointScheduler {
         submit: crate::db::models::Submit,
         log_dir: Option<PathBuf>,
     ) -> Result<Self> {
-        let endpoints = Self::setup_endpoints(endpoints).await?;
+        let endpoints = crate::endpoint::util::setup_endpoints(endpoints).await?;
 
         Ok(EndpointScheduler {
             log_dir,
@@ -67,17 +65,6 @@ impl EndpointScheduler {
             db,
             submit,
         })
-    }
-
-    async fn setup_endpoints(endpoints: Vec<EndpointConfiguration>) -> Result<Vec<Arc<Endpoint>>> {
-        let unordered = futures::stream::FuturesUnordered::new();
-
-        for cfg in endpoints.into_iter() {
-            unordered
-                .push(Endpoint::setup(cfg).map(|r_ep| r_ep.map(Arc::new)));
-        }
-
-        unordered.collect().await
     }
 
     /// Schedule a Job
