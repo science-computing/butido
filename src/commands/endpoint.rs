@@ -167,6 +167,16 @@ async fn containers_list(endpoint_names: Vec<String>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
+    let list_stopped = matches.is_present("list_stopped");
+    let filter_image = matches.value_of("filter_image");
+    let older_than_filter = matches.value_of("older_than")
+        .map(humantime::parse_rfc3339_weak)
+        .transpose()?
+        .map(chrono::DateTime::<chrono::Local>::from);
+    let newer_than_filter = matches.value_of("newer_than")
+        .map(humantime::parse_rfc3339_weak)
+        .transpose()?
+        .map(chrono::DateTime::<chrono::Local>::from);
     let csv = matches.is_present("csv");
     let hdr = crate::commands::util::mk_header([
         "Endpoint",
@@ -190,6 +200,10 @@ async fn containers_list(endpoint_names: Vec<String>,
             let endpoint_name = tpl.0;
             tpl.1
                 .into_iter()
+                .filter(|stat| list_stopped || stat.state != "exited")
+                .filter(|stat| filter_image.map(|fim| fim == stat.image).unwrap_or(true))
+                .filter(|stat| older_than_filter.as_ref().map(|time| time > &stat.created).unwrap_or(true))
+                .filter(|stat| newer_than_filter.as_ref().map(|time| time < &stat.created).unwrap_or(true))
                 .map(|stat| {
                     vec![
                         endpoint_name.clone(),

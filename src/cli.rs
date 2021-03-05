@@ -889,6 +889,45 @@ pub fn cli<'a>() -> App<'a> {
                         .takes_value(false)
                         .about("Format output as CSV")
                     )
+
+                    .arg(Arg::new("list_stopped")
+                        .required(false)
+                        .multiple(false)
+                        .long("list-stopped")
+                        .takes_value(false)
+                        .about("List stopped containers too")
+                    )
+
+                    .arg(Arg::new("filter_image")
+                        .required(false)
+                        .multiple(false)
+                        .long("image")
+                        .takes_value(true)
+                        .value_name("IMAGE")
+                        .about("List only containers of IMAGE")
+                    )
+
+                    .arg(Arg::new("older_than")
+                        .required(false)
+                        .multiple(false)
+                        .long("older-than")
+                        .takes_value(true)
+                        .value_name("DATE")
+                        .about("List only containers that are older than DATE")
+                        .validator(parse_date_from_string)
+                        .conflicts_with("newer_than")
+                    )
+
+                    .arg(Arg::new("newer_than")
+                        .required(false)
+                        .multiple(false)
+                        .long("newer-than")
+                        .takes_value(true)
+                        .value_name("DATE")
+                        .about("List only containers that are newer than DATE")
+                        .validator(parse_date_from_string)
+                        .conflicts_with("older_than")
+                    )
                 )
             )
         )
@@ -967,6 +1006,10 @@ fn dir_exists_validator(s: &str) -> Result<(), String> {
     } else {
         Err(format!("Directory does not exist: {}", s))
     }
+}
+
+fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
+    humantime::parse_rfc3339_weak(s).map_err(|e| e.to_string()).map(|_| ())
 }
 
 #[cfg(test)]
