@@ -147,3 +147,15 @@ pub fn mk_package_name_regex(regex: &str) -> Result<Regex> {
         .with_context(|| anyhow!("Failed to build regex from '{}'", regex))
         .map_err(Error::from)
 }
+
+
+pub fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
+    vec.into_iter()
+        .map(|name| ascii_table::Column {
+            header: name.into(),
+            align: ascii_table::Align::Left,
+            ..Default::default()
+        })
+        .collect()
+}
+

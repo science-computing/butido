@@ -141,7 +141,7 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::artifacts::dsl;
 
     let csv = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "path", "released", "job id"]);
+    let hdrs = crate::commands::util::mk_header(vec!["id", "path", "released", "job id"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let data = matches
         .value_of("job_uuid")
@@ -190,7 +190,7 @@ fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::envvars::dsl;
 
     let csv = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "name", "value"]);
+    let hdrs = crate::commands::util::mk_header(vec!["id", "name", "value"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let data = dsl::envvars
         .load::<models::EnvVar>(&conn)?
@@ -211,7 +211,7 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::images::dsl;
 
     let csv = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "name"]);
+    let hdrs = crate::commands::util::mk_header(vec!["id", "name"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let data = dsl::images
         .load::<models::Image>(&conn)?
@@ -230,7 +230,7 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 
 fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "time", "uuid"]);
+    let hdrs = crate::commands::util::mk_header(vec!["id", "time", "uuid"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
 
     // Helper to map Submit -> Vec<String>
@@ -294,7 +294,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::jobs::dsl;
 
     let csv = matches.is_present("csv");
-    let hdrs = mk_header(vec![
+    let hdrs = crate::commands::util::mk_header(vec![
         "id",
         "submit uuid",
         "job uuid",
@@ -448,7 +448,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
     let success = parsed_log.is_successfull();
 
     if csv {
-        let hdrs = mk_header(vec![
+        let hdrs = crate::commands::util::mk_header(vec![
             "UUID",
             "success",
             "Package Name",
@@ -595,7 +595,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
 fn releases(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     let csv    = matches.is_present("csv");
     let conn   = crate::db::establish_connection(conn_cfg)?;
-    let header = mk_header(["Package", "Version", "Date", "Path"].to_vec());
+    let header = crate::commands::util::mk_header(["Package", "Version", "Date", "Path"].to_vec());
     let data   = schema::jobs::table
         .inner_join(schema::packages::table)
         .inner_join(schema::artifacts::table)
@@ -635,16 +635,6 @@ fn releases(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgM
     display_data(header, data, csv)
 }
 
-
-fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
-    vec.into_iter()
-        .map(|name| ascii_table::Column {
-            header: name.into(),
-            align: ascii_table::Align::Left,
-            ..Default::default()
-        })
-        .collect()
-}
 
 /// Display the passed data as nice ascii table,
 /// or, if stdout is a pipe, print it nicely parseable
