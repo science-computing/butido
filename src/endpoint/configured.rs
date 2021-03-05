@@ -254,6 +254,24 @@ impl Endpoint {
             .map(EndpointStats::from)
             .map_err(Error::from)
     }
+
+    pub async fn container_stats(&self) -> Result<Vec<ContainerStat>> {
+        self.docker
+            .containers()
+            .list({
+                &shiplift::builder::ContainerListOptions::builder()
+                .all()
+                .build()
+            })
+            .await
+            .map_err(Error::from)
+            .map(|containers| {
+                containers
+                    .into_iter()
+                    .map(ContainerStat::from)
+                    .collect()
+            })
+    }
 }
 
 /// Helper type to store endpoint statistics
@@ -288,6 +306,29 @@ impl From<shiplift::rep::Info> for EndpointStats {
             n_cpu: info.n_cpu,
             operating_system: info.operating_system,
             system_time: info.system_time,
+        }
+    }
+}
+
+/// Helper type to store stats about a container
+pub struct ContainerStat {
+    pub created: chrono::DateTime<chrono::Utc>,
+    pub id: String,
+    pub image: String,
+    pub image_id: String,
+    pub state: String,
+    pub status: String,
+}
+
+impl From<shiplift::rep::Container> for ContainerStat {
+    fn from(cont: shiplift::rep::Container) -> Self {
+        ContainerStat {
+            created: cont.created,
+            id: cont.id,
+            image: cont.image,
+            image_id: cont.image_id,
+            state: cont.state,
+            status: cont.status,
         }
     }
 }
