@@ -169,6 +169,10 @@ pub fn display_data<D: Display>(
     data: Vec<Vec<D>>,
     csv: bool,
 ) -> Result<()> {
+    if data.is_empty() {
+        return Ok(())
+    }
+
     if csv {
         use csv::WriterBuilder;
         let mut wtr = WriterBuilder::new().from_writer(vec![]);
