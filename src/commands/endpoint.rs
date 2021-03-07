@@ -192,6 +192,7 @@ async fn container(endpoint_names: Vec<String>,
         Some(("kill", matches)) => container_kill(matches, relevant_endpoint, container_id).await,
         Some(("delete", _)) => container_delete(relevant_endpoint, container_id).await,
         Some(("start", _)) => container_start(relevant_endpoint, container_id).await,
+        Some(("stop", matches)) => container_stop(matches, relevant_endpoint, container_id).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -265,6 +266,24 @@ async fn container_start(
         .await?
         .ok_or_else(|| anyhow!("Cannot find container {} on {}", container_id, endpoint.name()))?
         .start()
+        .await
+        .map_err(Error::from)
+}
+
+async fn container_stop(
+    matches: &ArgMatches,
+    endpoint: &Endpoint,
+    container_id: &str,
+) -> Result<()> {
+    let timeout = matches.value_of("timeout").map(u64::from_str).transpose()?.map(std::time::Duration::from_secs);
+    let prompt = format!("Really stop {}?", container_id);
+    dialoguer::Confirm::new().with_prompt(prompt).interact()?;
+
+    endpoint
+        .get_container_by_id(container_id)
+        .await?
+        .ok_or_else(|| anyhow!("Cannot find container {} on {}", container_id, endpoint.name()))?
+        .stop(timeout)
         .await
         .map_err(Error::from)
 }
