@@ -11,6 +11,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
@@ -188,6 +189,7 @@ async fn container(endpoint_names: Vec<String>,
 
     match matches.subcommand() {
         Some(("top", matches)) => container_top(matches, relevant_endpoint, container_id).await,
+        Some(("kill", matches)) => container_kill(matches, relevant_endpoint, container_id).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -208,6 +210,29 @@ async fn container_top(
 
     let hdr = crate::commands::util::mk_header(top.titles.iter().map(|s| s.as_ref()).collect());
     crate::commands::util::display_data(hdr, top.processes, csv)
+}
+
+async fn container_kill(
+    matches: &ArgMatches,
+    endpoint: &Endpoint,
+    container_id: &str,
+) -> Result<()> {
+    let signal = matches.value_of("signal");
+    let prompt = if let Some(sig) = signal.as_ref() {
+        format!("Really kill {} with {}?", container_id, sig)
+    } else {
+        format!("Really kill {}?", container_id)
+    };
+
+    dialoguer::Confirm::new().with_prompt(prompt).interact()?;
+
+    endpoint
+        .get_container_by_id(container_id)
+        .await?
+        .ok_or_else(|| anyhow!("Cannot find container {} on {}", container_id, endpoint.name()))?
+        .kill(signal)
+        .await
+        .map_err(Error::from)
 }
 
 async fn containers(endpoint_names: Vec<String>,
