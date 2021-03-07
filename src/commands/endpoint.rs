@@ -190,6 +190,7 @@ async fn container(endpoint_names: Vec<String>,
     match matches.subcommand() {
         Some(("top", matches)) => container_top(matches, relevant_endpoint, container_id).await,
         Some(("kill", matches)) => container_kill(matches, relevant_endpoint, container_id).await,
+        Some(("delete", _)) => container_delete(relevant_endpoint, container_id).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -234,6 +235,23 @@ async fn container_kill(
         .await
         .map_err(Error::from)
 }
+
+async fn container_delete(
+    endpoint: &Endpoint,
+    container_id: &str,
+) -> Result<()> {
+    let prompt = format!("Really delete {}?", container_id);
+    dialoguer::Confirm::new().with_prompt(prompt).interact()?;
+
+    endpoint
+        .get_container_by_id(container_id)
+        .await?
+        .ok_or_else(|| anyhow!("Cannot find container {} on {}", container_id, endpoint.name()))?
+        .delete()
+        .await
+        .map_err(Error::from)
+}
+
 
 async fn containers(endpoint_names: Vec<String>,
     matches: &ArgMatches,
