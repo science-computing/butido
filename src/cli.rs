@@ -988,7 +988,7 @@ pub fn cli<'a>() -> App<'a> {
                     .version(crate_version!())
                     .about("Execute commands in the container")
                     .arg(Arg::new("commands")
-                        .required(false)
+                        .required(true)
                         .multiple(true)
                         .index(1)
                         .takes_value(true)

@@ -193,6 +193,7 @@ async fn container(endpoint_names: Vec<String>,
         Some(("delete", _)) => container_delete(relevant_endpoint, container_id).await,
         Some(("start", _)) => container_start(relevant_endpoint, container_id).await,
         Some(("stop", matches)) => container_stop(matches, relevant_endpoint, container_id).await,
+        Some(("exec", matches)) => container_exec(matches, relevant_endpoint, container_id).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -286,6 +287,42 @@ async fn container_stop(
         .stop(timeout)
         .await
         .map_err(Error::from)
+}
+
+async fn container_exec(
+    matches: &ArgMatches,
+    endpoint: &Endpoint,
+    container_id: &str,
+) -> Result<()> {
+    use std::io::Write;
+    use futures::TryStreamExt;
+
+    let commands = matches.values_of("commands").unwrap().collect::<Vec<&str>>();
+    let prompt = format!("Really run '{}' in {}?", commands.join(" "), container_id);
+    dialoguer::Confirm::new().with_prompt(prompt).interact()?;
+
+    let execopts = shiplift::builder::ExecContainerOptions::builder()
+        .cmd(commands)
+        .attach_stdout(true)
+        .attach_stderr(true)
+        .build();
+
+    endpoint
+        .get_container_by_id(container_id)
+        .await?
+        .ok_or_else(|| anyhow!("Cannot find container {} on {}", container_id, endpoint.name()))?
+        .exec(&execopts)
+        .map_err(Error::from)
+        .try_for_each(|chunk| async {
+            let mut stdout = std::io::stdout();
+            let mut stderr = std::io::stderr();
+            match chunk {
+                shiplift::tty::TtyChunk::StdIn(_) => Err(anyhow!("Cannot handle STDIN TTY chunk")),
+                shiplift::tty::TtyChunk::StdOut(v) => stdout.write(&v).map_err(Error::from).map(|_| ()),
+                shiplift::tty::TtyChunk::StdErr(v) => stderr.write(&v).map_err(Error::from).map(|_| ()),
+            }
+        })
+        .await
 }
 
 
