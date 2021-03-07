@@ -16,6 +16,7 @@ pub use db::db;
 
 mod endpoint;
 pub use endpoint::endpoint;
+pub(super) mod endpoint_container;
 
 mod env_of;
 pub use env_of::env_of;
