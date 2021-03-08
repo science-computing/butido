@@ -11,6 +11,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
@@ -160,6 +161,7 @@ async fn containers(endpoint_names: Vec<String>,
 ) -> Result<()> {
     match matches.subcommand() {
         Some(("list", matches)) => containers_list(endpoint_names, matches, config).await,
+        Some(("prune", matches)) => containers_prune(endpoint_names, matches, config).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -221,6 +223,56 @@ async fn containers_list(endpoint_names: Vec<String>,
         .collect::<Vec<Vec<String>>>();
 
     crate::commands::util::display_data(hdr, data, csv)
+}
+
+async fn containers_prune(endpoint_names: Vec<String>,
+    matches: &ArgMatches,
+    config: &Configuration,
+) -> Result<()> {
+    let older_than_filter = matches.value_of("older_than")
+        .map(humantime::parse_rfc3339_weak)
+        .transpose()?
+        .map(chrono::DateTime::<chrono::Local>::from);
+    let newer_than_filter = matches.value_of("newer_than")
+        .map(humantime::parse_rfc3339_weak)
+        .transpose()?
+        .map(chrono::DateTime::<chrono::Local>::from);
+
+    let stats = connect_to_endpoints(config, &endpoint_names)
+        .await?
+        .into_iter()
+        .map(move |ep| async move {
+            let stats = ep.container_stats()
+                .await?
+                .into_iter()
+                .filter(|stat| stat.state == "exited")
+                .filter(|stat| older_than_filter.as_ref().map(|time| time > &stat.created).unwrap_or(true))
+                .filter(|stat| newer_than_filter.as_ref().map(|time| time < &stat.created).unwrap_or(true))
+                .map(|stat| (ep.clone(), stat))
+                .collect::<Vec<(_, _)>>();
+            Ok(stats)
+        })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<Result<Vec<_>>>()
+        .await?;
+
+    let prompt = format!("Really delete {} Containers?", stats.iter().flatten().count());
+    dialoguer::Confirm::new().with_prompt(prompt).interact()?;
+
+    stats.into_iter()
+        .map(Vec::into_iter)
+        .flatten()
+        .map(|(ep, stat)| async move {
+            ep.get_container_by_id(&stat.id)
+                .await?
+                .ok_or_else(|| anyhow!("Failed to find existing container {}", stat.id))?
+                .delete()
+                .await
+                .map_err(Error::from)
+        })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<Result<()>>()
+        .await
 }
 
 /// Helper function to connect to all endpoints from the configuration, that appear (by name) in
