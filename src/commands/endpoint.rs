@@ -173,14 +173,8 @@ async fn containers_list(endpoint_names: Vec<String>,
 ) -> Result<()> {
     let list_stopped = matches.is_present("list_stopped");
     let filter_image = matches.value_of("filter_image");
-    let older_than_filter = matches.value_of("older_than")
-        .map(humantime::parse_rfc3339_weak)
-        .transpose()?
-        .map(chrono::DateTime::<chrono::Local>::from);
-    let newer_than_filter = matches.value_of("newer_than")
-        .map(humantime::parse_rfc3339_weak)
-        .transpose()?
-        .map(chrono::DateTime::<chrono::Local>::from);
+    let older_than_filter = get_date_filter("older_than", matches)?;
+    let newer_than_filter = get_date_filter("newer_than", matches)?;
     let csv = matches.is_present("csv");
     let hdr = crate::commands::util::mk_header([
         "Endpoint",
@@ -229,14 +223,8 @@ async fn containers_prune(endpoint_names: Vec<String>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let older_than_filter = matches.value_of("older_than")
-        .map(humantime::parse_rfc3339_weak)
-        .transpose()?
-        .map(chrono::DateTime::<chrono::Local>::from);
-    let newer_than_filter = matches.value_of("newer_than")
-        .map(humantime::parse_rfc3339_weak)
-        .transpose()?
-        .map(chrono::DateTime::<chrono::Local>::from);
+    let older_than_filter = get_date_filter("older_than", matches)?;
+    let newer_than_filter = get_date_filter("newer_than", matches)?;
 
     let stats = connect_to_endpoints(config, &endpoint_names)
         .await?
@@ -273,6 +261,15 @@ async fn containers_prune(endpoint_names: Vec<String>,
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Result<()>>()
         .await
+}
+
+fn get_date_filter(name: &str, matches: &ArgMatches) -> Result<Option<chrono::DateTime::<chrono::Local>>> {
+    matches.value_of(name)
+        .map(humantime::parse_rfc3339_weak)
+        .transpose()?
+        .map(chrono::DateTime::<chrono::Local>::from)
+        .map(Ok)
+        .transpose()
 }
 
 /// Helper function to connect to all endpoints from the configuration, that appear (by name) in
