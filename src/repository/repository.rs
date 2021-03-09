@@ -12,12 +12,12 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use log::trace;
 use resiter::Map;
+use resiter::FilterMap;
 
 use crate::package::Package;
 use crate::package::PackageName;
@@ -88,7 +88,9 @@ impl Repository {
                 // overwritten by Config::refresh(), which is called by Config::merge, for example.
                 //
                 // The trick is, to get the list of patches _before_ the merge, and later
-                // re-setting them after the merge, if there were no new patches set.
+                // re-setting them after the merge, if there were no new patches set (which itself
+                // is tricky to find out, because the `Config` object _looks like_ there is a new
+                // array set).
                 //
                 // If (3), for example, does set a new patches=[] array, the old array is
                 // invalidated and no longer relevant for that package!
@@ -100,82 +102,49 @@ impl Repository {
                 // happening during Config::merge().
                 //
 
-                // Get the patches of the package before merging the new pkg.toml file in
-                let patches_before = match config.get_array("patches") {
+                let patches_before_merge = match config.get_array("patches") {
                     Ok(v)                                 => v,
                     Err(config::ConfigError::NotFound(_)) => vec![],
                     Err(e)                                => return Err(e).map_err(Error::from),
                 };
-
-                trace!("Patches before merging: {:?}", patches_before);
+                trace!("Patches before merging: {:?}", patches_before_merge);
 
                 // Merge the new pkg.toml file over the already loaded configuration
                 config
                     .merge(config::File::from_str(&buf, config::FileFormat::Toml))
                     .with_context(|| format!("Loading contents of {}", pkg_file.display()))?;
 
-                // Now, map all "patches" in the package to be relative to the repository root, if
-                // there are any
-                match config.get_value_mut("patches")?.kind {
-                    config::ValueKind::Array(ref mut patches) => {
-                        trace!("Patches = {:?}", patches);
-                        let mut overwritten_patches = false; // Remember whether we did overwrite patches
-                        for patch in patches.iter_mut() {
-                            match patch.kind {
-                                config::ValueKind::String(ref mut s) => {
-                                    // make sure we strip the root from the path, so we get a path
-                                    // relative to root
-                                    let path_relative_to_root = path.strip_prefix(root)?;
+                let patches_after_merge = match config.get_array("patches") {
+                    Ok(v)                                 => v,
+                    Err(config::ConfigError::NotFound(_)) => vec![],
+                    Err(e)                                => return Err(e).map_err(Error::from),
+                };
+                trace!("Patches after merging: {:?}", patches_after_merge);
 
-                                    // then join the patch path we currently iterate for into the
-                                    // path relative to root
-                                    trace!("Joining {} + {}", path_relative_to_root.display(), s);
-                                    let new_p = path_relative_to_root.join(&s);
-
-                                    // if that patch path exists...
-                                    if new_p.exists() {
-                                        let new_s = new_p
-                                            .to_str()
-                                            .map(String::from)
-                                            .ok_or_else(|| anyhow!("UTF8 error in path: '{}'", s))?;
-
-                                        // Set it in the Config object and remember that we've
-                                        // altered the patch array
-                                        trace!("Setting {} to {}", s, new_s);
-                                        *s = new_s;
-                                        overwritten_patches = true;
-                                    } else {
-                                        trace!("Does not exist, ignoring: {}", new_p.display())
-                                    }
-                                },
-                                _ => return Err(anyhow!("BUG: patches should never be able to be something else than String"))
-                            }
+                let path_relative_to_root = path.strip_prefix(root)?;
+                let patches_after_merge = patches_after_merge
+                    .into_iter()
+                    .map(|patch| {
+                        let patch = patch.into_str()?;
+                        let new_path = path_relative_to_root.join(&patch);
+                        if new_path.exists() {
+                            Ok(Some(new_path))
+                        } else {
+                            Ok(None)
                         }
+                    })
+                    .filter_map_ok(|x| x)
+                    .map_ok(|p| config::Value::from(p.display().to_string()))
+                    .collect::<Result<Vec<_>>>()?;
 
-                        //// Make sure we only record patches that exist.
-                        //trace!("Patches after mutating: {:?}", patches);
-                        //*patches = patches
-                        //    .into_iter()
-                        //    .filter(|s| {
-                        //        match s.kind {
-                        //            config::ValueKind::String(ref s) => (s as &dyn AsRef<Path>).as_ref().exists(),
-                        //            _ => false
-                        //        }
-                        //    })
-                        //    .map(|v| v.clone())
-                        //    .collect();
-                        //trace!("Patches after filtering: {:?}", patches);
+                let patches = if patches_after_merge.is_empty() {
+                    patches_before_merge
+                } else {
+                    patches_after_merge
+                };
 
-                        // If there are no patches overwritten by this procedure, we did not have a
-                        // new patches=[] array, and we have to use the one from before
-                        if !overwritten_patches {
-                            *patches = patches_before;
-                        }
-                        trace!("Patches after adding patches from before: {:?}", patches);
-                    },
-
-                    _ => return Err(anyhow!("BUG: patches should never be able to be something else than Vec<String>")),
-                }
+                trace!("Patches after postprocessing merge: {:?}", patches);
+                config.set_once("patches", config::Value::from(patches))?;
             }
 
             let subdirs = all_subdirs(path)
