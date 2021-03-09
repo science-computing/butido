@@ -102,6 +102,9 @@ impl Repository {
                 // happening during Config::merge().
                 //
 
+                // first of all, we get the patches array.
+                // This is either the patches array from the last recursion or the newly set one,
+                // that doesn't matter here.
                 let patches_before_merge = match config.get_array("patches") {
                     Ok(v)                                 => v,
                     Err(config::ConfigError::NotFound(_)) => vec![],
@@ -115,17 +118,28 @@ impl Repository {
                     .with_context(|| format!("Loading contents of {}", pkg_file.display()))?;
 
                 let path_relative_to_root = path.strip_prefix(root)?;
+
+                // get the patches that are in the `config` object after the merge
                 let patches = match config.get_array("patches") {
                     Ok(v) => {
                         trace!("Patches after merging: {:?}", v);
                         v
                     },
-                    Err(config::ConfigError::NotFound(_)) => vec![],
+
+                    // if there was none, we simply use an empty array
+                    // This is cheap because Vec::with_capacity(0) does not allocate
+                    Err(config::ConfigError::NotFound(_)) => Vec::with_capacity(0),
                     Err(e)                                => return Err(e).map_err(Error::from),
                 }
                 .into_iter()
+
+                // Map all `Value`s to String and then join them on the path that is relative to
+                // the root directory of the repository.
                 .map(|patch| patch.into_str().map_err(Error::from))
                 .map_ok(|patch| path_relative_to_root.join(patch))
+
+                // if the patch file exists, use it (as config::Value), otherwise ignore the
+                // element in the iterator
                 .filter_map_ok(|patch| if patch.exists() {
                     Some(config::Value::from(patch.display().to_string()))
                 } else {
@@ -133,10 +147,12 @@ impl Repository {
                 })
                 .collect::<Result<Vec<_>>>()?;
 
-                let patches = if patches.is_empty() {
-                    patches_before_merge
-                } else {
+                // If we found any patches, use them. Otherwise use the array from before the merge
+                // (which already has the correct pathes from the previous recursion).
+                let patches = if !patches.is_empty() {
                     patches
+                } else {
+                    patches_before_merge
                 };
 
                 trace!("Patches after postprocessing merge: {:?}", patches);
