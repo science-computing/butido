@@ -114,33 +114,29 @@ impl Repository {
                     .merge(config::File::from_str(&buf, config::FileFormat::Toml))
                     .with_context(|| format!("Loading contents of {}", pkg_file.display()))?;
 
-                let patches_after_merge = match config.get_array("patches") {
-                    Ok(v)                                 => v,
+                let path_relative_to_root = path.strip_prefix(root)?;
+                let patches = match config.get_array("patches") {
+                    Ok(v) => {
+                        trace!("Patches after merging: {:?}", v);
+                        v
+                    },
                     Err(config::ConfigError::NotFound(_)) => vec![],
                     Err(e)                                => return Err(e).map_err(Error::from),
-                };
-                trace!("Patches after merging: {:?}", patches_after_merge);
+                }
+                .into_iter()
+                .map(|patch| patch.into_str().map_err(Error::from))
+                .map_ok(|patch| path_relative_to_root.join(patch))
+                .filter_map_ok(|patch| if patch.exists() {
+                    Some(config::Value::from(patch.display().to_string()))
+                } else {
+                    None
+                })
+                .collect::<Result<Vec<_>>>()?;
 
-                let path_relative_to_root = path.strip_prefix(root)?;
-                let patches_after_merge = patches_after_merge
-                    .into_iter()
-                    .map(|patch| {
-                        let patch = patch.into_str()?;
-                        let new_path = path_relative_to_root.join(&patch);
-                        if new_path.exists() {
-                            Ok(Some(new_path))
-                        } else {
-                            Ok(None)
-                        }
-                    })
-                    .filter_map_ok(|x| x)
-                    .map_ok(|p| config::Value::from(p.display().to_string()))
-                    .collect::<Result<Vec<_>>>()?;
-
-                let patches = if patches_after_merge.is_empty() {
+                let patches = if patches.is_empty() {
                     patches_before_merge
                 } else {
-                    patches_after_merge
+                    patches
                 };
 
                 trace!("Patches after postprocessing merge: {:?}", patches);
