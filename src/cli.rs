@@ -1019,6 +1019,12 @@ pub fn cli<'a>() -> App<'a> {
                         .takes_value(true)
                         .value_name("CMD")
                         .about("Commands to execute in the container")
+                        .long_about(indoc::indoc!(r#"
+                            Execute a command in the container.
+
+                            This does not handle TTY forwarding, so you cannot execute interactive commands in the container (e.g. htop).
+                            For executing interactive things, you have to login to the container.
+                        "#))
                     )
                 )
             )
