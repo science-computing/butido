@@ -96,26 +96,26 @@ pub async fn container(endpoint_names: Vec<String>,
     }
 }
 
-async fn top<'a>(matches: &ArgMatches, container: Container<'a>) -> Result<()> {
+async fn top(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     let top = container.top(None).await?;
     let hdr = crate::commands::util::mk_header(top.titles.iter().map(|s| s.as_ref()).collect());
     crate::commands::util::display_data(hdr, top.processes, matches.is_present("csv"))
 }
 
-async fn kill<'a>(matches: &ArgMatches, container: Container<'a>) -> Result<()> {
+async fn kill(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     let signal = matches.value_of("signal");
     container.kill(signal).await.map_err(Error::from)
 }
 
-async fn delete<'a>(container: Container<'a>) -> Result<()> {
+async fn delete(container: Container<'_>) -> Result<()> {
     container.delete().await.map_err(Error::from)
 }
 
-async fn start<'a>(container: Container<'a>) -> Result<()> {
+async fn start(container: Container<'_>) -> Result<()> {
     container.start().await.map_err(Error::from)
 }
 
-async fn stop<'a>(matches: &ArgMatches, container: Container<'a>) -> Result<()> {
+async fn stop(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     container.stop({
         matches
             .value_of("timeout")
@@ -127,7 +127,7 @@ async fn stop<'a>(matches: &ArgMatches, container: Container<'a>) -> Result<()> 
     .map_err(Error::from)
 }
 
-async fn exec<'a>(matches: &ArgMatches, container: Container<'a>) -> Result<()> {
+async fn exec(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     use std::io::Write;
     use futures::TryStreamExt;
 
@@ -164,7 +164,7 @@ async fn exec<'a>(matches: &ArgMatches, container: Container<'a>) -> Result<()> 
 //
 // This is the most ugly function of the whole codebase. As ugly as it is: It is simply printing
 // things, nothing here is too complex code-wise (except some nested formatting stuff...)
-async fn inspect<'a>(container: Container<'a>) -> Result<()> {
+async fn inspect(container: Container<'_>) -> Result<()> {
     use std::io::Write;
     use itertools::Itertools;
 
