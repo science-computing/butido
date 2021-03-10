@@ -8,7 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
@@ -141,7 +140,7 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::artifacts::dsl;
 
     let csv = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "path", "released", "job id"]);
+    let hdrs = crate::commands::util::mk_header(vec!["id", "path", "released", "job id"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let data = matches
         .value_of("job_uuid")
@@ -180,7 +179,7 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     if data.is_empty() {
         info!("No artifacts in database");
     } else {
-        display_data(hdrs, data, csv)?;
+        crate::commands::util::display_data(hdrs, data, csv)?;
     }
 
     Ok(())
@@ -190,7 +189,7 @@ fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::envvars::dsl;
 
     let csv = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "name", "value"]);
+    let hdrs = crate::commands::util::mk_header(vec!["id", "name", "value"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let data = dsl::envvars
         .load::<models::EnvVar>(&conn)?
@@ -201,7 +200,7 @@ fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     if data.is_empty() {
         info!("No environment variables in database");
     } else {
-        display_data(hdrs, data, csv)?;
+        crate::commands::util::display_data(hdrs, data, csv)?;
     }
 
     Ok(())
@@ -211,7 +210,7 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::images::dsl;
 
     let csv = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "name"]);
+    let hdrs = crate::commands::util::mk_header(vec!["id", "name"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let data = dsl::images
         .load::<models::Image>(&conn)?
@@ -222,7 +221,7 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     if data.is_empty() {
         info!("No images in database");
     } else {
-        display_data(hdrs, data, csv)?;
+        crate::commands::util::display_data(hdrs, data, csv)?;
     }
 
     Ok(())
@@ -230,7 +229,7 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 
 fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
-    let hdrs = mk_header(vec!["id", "time", "uuid"]);
+    let hdrs = crate::commands::util::mk_header(vec!["id", "time", "uuid"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
 
     // Helper to map Submit -> Vec<String>
@@ -284,7 +283,7 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     if data.is_empty() {
         info!("No submits in database");
     } else {
-        display_data(hdrs, data, csv)?;
+        crate::commands::util::display_data(hdrs, data, csv)?;
     }
 
     Ok(())
@@ -294,7 +293,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     use crate::schema::jobs::dsl;
 
     let csv = matches.is_present("csv");
-    let hdrs = mk_header(vec![
+    let hdrs = crate::commands::util::mk_header(vec![
         "id",
         "submit uuid",
         "job uuid",
@@ -410,7 +409,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     if data.is_empty() {
         info!("No submits in database");
     } else {
-        display_data(hdrs, data, csv)?;
+        crate::commands::util::display_data(hdrs, data, csv)?;
     }
 
     Ok(())
@@ -448,7 +447,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
     let success = parsed_log.is_successfull();
 
     if csv {
-        let hdrs = mk_header(vec![
+        let hdrs = crate::commands::util::mk_header(vec![
             "UUID",
             "success",
             "Package Name",
@@ -471,7 +470,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
             data.4.name.to_string(),
             data.0.container_hash,
         ]];
-        display_data(hdrs, data, csv)
+        crate::commands::util::display_data(hdrs, data, csv)
     } else {
         let env_vars = if matches.is_present("show_env") {
             Some({
@@ -595,7 +594,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
 fn releases(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     let csv    = matches.is_present("csv");
     let conn   = crate::db::establish_connection(conn_cfg)?;
-    let header = mk_header(["Package", "Version", "Date", "Path"].to_vec());
+    let header = crate::commands::util::mk_header(["Package", "Version", "Date", "Path"].to_vec());
     let data   = schema::jobs::table
         .inner_join(schema::packages::table)
         .inner_join(schema::artifacts::table)
@@ -632,64 +631,6 @@ fn releases(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgM
         })
         .collect::<Vec<Vec<_>>>();
 
-    display_data(header, data, csv)
-}
-
-
-fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
-    vec.into_iter()
-        .map(|name| ascii_table::Column {
-            header: name.into(),
-            align: ascii_table::Align::Left,
-            ..Default::default()
-        })
-        .collect()
-}
-
-/// Display the passed data as nice ascii table,
-/// or, if stdout is a pipe, print it nicely parseable
-fn display_data<D: Display>(
-    headers: Vec<ascii_table::Column>,
-    data: Vec<Vec<D>>,
-    csv: bool,
-) -> Result<()> {
-    if csv {
-        use csv::WriterBuilder;
-        let mut wtr = WriterBuilder::new().from_writer(vec![]);
-        for record in data.into_iter() {
-            let r: Vec<String> = record.into_iter().map(|e| e.to_string()).collect();
-
-            wtr.write_record(&r)?;
-        }
-
-        let out = std::io::stdout();
-        let mut lock = out.lock();
-
-        wtr.into_inner()
-            .map_err(Error::from)
-            .and_then(|t| String::from_utf8(t).map_err(Error::from))
-            .and_then(|text| writeln!(lock, "{}", text).map_err(Error::from))
-    } else if atty::is(atty::Stream::Stdout) {
-        let mut ascii_table = ascii_table::AsciiTable {
-            columns: Default::default(),
-            max_width: terminal_size::terminal_size()
-                .map(|tpl| tpl.0 .0 as usize) // an ugly interface indeed!
-                .unwrap_or(80),
-        };
-
-        headers.into_iter().enumerate().for_each(|(i, c)| {
-            ascii_table.columns.insert(i, c);
-        });
-
-        ascii_table.print(data);
-        Ok(())
-    } else {
-        let out = std::io::stdout();
-        let mut lock = out.lock();
-        for list in data {
-            writeln!(lock, "{}", list.iter().map(|d| d.to_string()).join(" "))?;
-        }
-        Ok(())
-    }
+    crate::commands::util::display_data(header, data, csv)
 }
 

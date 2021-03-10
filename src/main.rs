@@ -190,6 +190,7 @@ async fn main() -> Result<()> {
             crate::commands::metrics(&repo_path, &config, repo, conn).await?
         }
 
+        Some(("endpoint", matches)) => crate::commands::endpoint(matches, &config, progressbars).await?,
         Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
         None => return Err(anyhow!("No subcommand")),
     }

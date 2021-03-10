@@ -241,6 +241,114 @@ impl Endpoint {
         let run_jobs = self.running_jobs() as f64;
         100.0 / max_jobs * run_jobs
     }
+
+    /// Ping the endpoint (once)
+    pub async fn ping(&self) -> Result<String> {
+        self.docker.ping().await.map_err(Error::from)
+    }
+
+    pub async fn stats(&self) -> Result<EndpointStats> {
+        self.docker
+            .info()
+            .await
+            .map(EndpointStats::from)
+            .map_err(Error::from)
+    }
+
+    pub async fn container_stats(&self) -> Result<Vec<ContainerStat>> {
+        self.docker
+            .containers()
+            .list({
+                &shiplift::builder::ContainerListOptions::builder()
+                .all()
+                .build()
+            })
+            .await
+            .map_err(Error::from)
+            .map(|containers| {
+                containers
+                    .into_iter()
+                    .map(ContainerStat::from)
+                    .collect()
+            })
+    }
+
+    pub async fn has_container_with_id(&self, id: &str) -> Result<bool> {
+        self.container_stats()
+            .await?
+            .iter()
+            .find(|st| st.id == id)
+            .map(Ok)
+            .transpose()
+            .map(|o| o.is_some())
+    }
+
+    pub async fn get_container_by_id(&self, id: &str) -> Result<Option<Container<'_>>> {
+        if self.has_container_with_id(id).await? {
+            Ok(Some(self.docker.containers().get(id)))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+/// Helper type to store endpoint statistics
+///
+/// Currently, this can only be generated from a shiplift::rep::Info, but it does not hold all
+/// values the shiplift::rep::Info type holds, because some of these are not relevant for us.
+///
+/// Later, this might hold endpoint stats from other endpoint implementations as well
+pub struct EndpointStats {
+    pub name: String,
+    pub containers: u64,
+    pub images: u64,
+    pub id: String,
+    pub kernel_version: String,
+    pub mem_total: u64,
+    pub memory_limit: bool,
+    pub n_cpu: u64,
+    pub operating_system: String,
+    pub system_time: Option<String>,
+}
+
+impl From<shiplift::rep::Info> for EndpointStats {
+    fn from(info: shiplift::rep::Info) -> Self {
+        EndpointStats {
+            name: info.name,
+            containers: info.containers,
+            images: info.images,
+            id: info.id,
+            kernel_version: info.kernel_version,
+            mem_total: info.mem_total,
+            memory_limit: info.memory_limit,
+            n_cpu: info.n_cpu,
+            operating_system: info.operating_system,
+            system_time: info.system_time,
+        }
+    }
+}
+
+/// Helper type to store stats about a container
+pub struct ContainerStat {
+    pub created: chrono::DateTime<chrono::Utc>,
+    pub id: String,
+    pub image: String,
+    pub image_id: String,
+    pub state: String,
+    pub status: String,
+}
+
+impl From<shiplift::rep::Container> for ContainerStat {
+    fn from(cont: shiplift::rep::Container) -> Self {
+        ContainerStat {
+            created: cont.created,
+            id: cont.id,
+            image: cont.image,
+            image_id: cont.image_id,
+            state: cont.state,
+            status: cont.status,
+        }
+    }
 }
 
 pub struct EndpointHandle(Arc<Endpoint>);
