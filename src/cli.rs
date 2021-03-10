@@ -1027,6 +1027,12 @@ pub fn cli<'a>() -> App<'a> {
                         "#))
                     )
                 )
+
+                .subcommand(App::new("inspect")
+                    .version(crate_version!())
+                    .about("Display details about the container")
+                    .long_about("Display details about the container. Do not assume the output format to be stable.")
+                )
             )
         )
 }
