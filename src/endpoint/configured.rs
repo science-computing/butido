@@ -284,17 +284,11 @@ impl Endpoint {
     }
 
     pub async fn get_container_by_id<'a>(&'a self, id: &str) -> Result<Option<Container<'a>>> {
-        self.container_stats()
-            .await?
-            .iter()
-            .find(|st| st.id == id)
-            .map(|_| {
-                self.docker
-                    .containers()
-                    .get(id)
-            })
-            .map(Ok)
-            .transpose()
+        if self.has_container_with_id(id).await? {
+            Ok(Some(self.docker.containers().get(id)))
+        } else {
+            Ok(None)
+        }
     }
 }
 
