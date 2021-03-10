@@ -123,13 +123,6 @@ impl NotValidatedConfiguration {
             ));
         }
 
-        // Error if linter is not a file
-        if let Some(linter) = self.script_linter.as_ref() {
-            if !linter.is_file() {
-                return Err(anyhow!("Lint script is not a file: {}", linter.display()));
-            }
-        }
-
         // Error if staging_directory is not a directory
         if !self.staging_directory.is_dir() {
             return Err(anyhow!(
