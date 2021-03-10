@@ -1,5 +1,6 @@
 name = "s"
-version = "19"
+
+patches [ "./foo.patch" ]
 
 [sources.src]
 url = "https://example.com"
