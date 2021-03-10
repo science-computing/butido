@@ -145,7 +145,7 @@ async fn stats(endpoint_names: Vec<String>,
                 stat.memory_limit.to_string(),
                 stat.n_cpu.to_string(),
                 stat.operating_system.to_string(),
-                stat.system_time.map(|t| t.to_string()).unwrap_or_else(|| String::from("unknown")),
+                stat.system_time.unwrap_or_else(|| String::from("unknown")),
             ]
         })
         .collect();
