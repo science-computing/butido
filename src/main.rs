@@ -52,6 +52,7 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use logcrate::debug;
@@ -90,6 +91,10 @@ async fn main() -> Result<()> {
     let cli = app.get_matches();
 
     let repo = git2::Repository::discover(PathBuf::from("."))
+        .map_err(|e| match e.code() {
+            git2::ErrorCode::NotFound => anyhow!("Failed to load the git repository from ./."),
+            _ => Error::from(e),
+        })
         .context("Loading the git repository")
         .context("Butido must be executed within the package repository")?;
     let repo_path = repo
