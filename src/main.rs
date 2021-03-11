@@ -87,7 +87,9 @@ async fn main() -> Result<()> {
     let app = cli::cli();
     let cli = app.get_matches();
 
-    let repo = git2::Repository::discover(PathBuf::from("."))?;
+    let repo = git2::Repository::discover(PathBuf::from("."))
+        .context("Loading the git repository")
+        .context("Butido must be executed within the package repository")?;
     let repo_path = repo
         .workdir()
         .ok_or_else(|| anyhow!("Not a repository with working directory. Cannot do my job!"))?;
@@ -109,7 +111,8 @@ async fn main() -> Result<()> {
 
     let load_repo = || -> Result<Repository> {
         let bar = progressbars.bar();
-        let repo = Repository::load(&repo_path, &bar)?;
+        let repo = Repository::load(&repo_path, &bar)
+            .context("Loading the repository")?;
         bar.finish_with_message("Repository loading finished");
         Ok(repo)
     };
