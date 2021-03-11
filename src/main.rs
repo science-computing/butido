@@ -102,7 +102,7 @@ async fn main() -> Result<()> {
         .ok_or_else(|| anyhow!("Not a repository with working directory. Cannot do my job!"))?;
 
     let mut config = ::config::Config::default();
-    config.merge(::config::File::from(repo_path.join("config.toml")))
+    config.merge(::config::File::from(repo_path.join("config.toml")).required(true))
         .context("Failed to load config.toml from repository")?;
 
     {
@@ -110,7 +110,7 @@ async fn main() -> Result<()> {
         let xdg_config_file = xdg.find_config_file("config.toml");
         if let Some(xdg_config) = xdg_config_file {
             debug!("Configuration file found with XDG: {}", xdg_config.display());
-            config.merge(::config::File::from(xdg_config))
+            config.merge(::config::File::from(xdg_config).required(false))
                 .context("Failed to load config.toml from XDG configuration directory")?;
         } else {
             debug!("No configuration file found with XDG: {}", xdg.get_config_home().display());
