@@ -51,6 +51,7 @@ extern crate diesel;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use clap::ArgMatches;
 use logcrate::debug;
@@ -93,14 +94,16 @@ async fn main() -> Result<()> {
         .ok_or_else(|| anyhow!("Not a repository with working directory. Cannot do my job!"))?;
 
     let mut config = ::config::Config::default();
-    config.merge(::config::File::from(repo_path.join("config.toml")))?;
+    config.merge(::config::File::from(repo_path.join("config.toml")))
+        .context("Failed to load config.toml from repository")?;
 
     {
         let xdg = xdg::BaseDirectories::with_prefix("butido")?;
         let xdg_config_file = xdg.find_config_file("config.toml");
         if let Some(xdg_config) = xdg_config_file {
             debug!("Configuration file found with XDG: {}", xdg_config.display());
-            config.merge(::config::File::from(xdg_config))?;
+            config.merge(::config::File::from(xdg_config))
+                .context("Failed to load config.toml from XDG configuration directory")?;
         } else {
             debug!("No configuration file found with XDG: {}", xdg.get_config_home().display());
         }
@@ -108,7 +111,10 @@ async fn main() -> Result<()> {
 
     config.merge(::config::Environment::with_prefix("BUTIDO"))?;
 
-    let config = config.try_into::<NotValidatedConfiguration>()?.validate()?;
+    let config = config.try_into::<NotValidatedConfiguration>()
+        .context("Failed to load Configuration object")?
+        .validate()
+        .context("Failed to validate configuration")?;
 
     let hide_bars = cli.is_present("hide_bars") || crate::util::stdout_is_pipe();
     let progressbars = ProgressBars::setup(
