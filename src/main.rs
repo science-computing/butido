@@ -228,7 +228,11 @@ async fn main() -> Result<()> {
             error!("Use --help to find available subcommands");
             return Err(anyhow!("Unknown subcommand: {}", other))
         },
-        None => return Err(anyhow!("No subcommand")),
+        None => {
+            error!("No subcommand.");
+            error!("Use --help to find available subcommands");
+            return Err(anyhow!("No subcommand"))
+        },
     }
 
     Ok(())
