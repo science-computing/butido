@@ -55,6 +55,7 @@ use anyhow::Context;
 use anyhow::Result;
 use clap::ArgMatches;
 use logcrate::debug;
+use logcrate::error;
 use rand as _; // Required to make lints happy
 use aquamarine as _; // doc-helper crate
 use funty as _; // doc-helper crate
@@ -222,7 +223,11 @@ async fn main() -> Result<()> {
                 .await
                 .context("endpoint command failed")?
         },
-        Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
+        Some((other, _)) => {
+            error!("Unknown subcommand: {}", other);
+            error!("Use --help to find available subcommands");
+            return Err(anyhow!("Unknown subcommand: {}", other))
+        },
         None => return Err(anyhow!("No subcommand")),
     }
 
