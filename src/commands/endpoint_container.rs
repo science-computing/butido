@@ -18,8 +18,9 @@ use tokio_stream::StreamExt;
 use shiplift::Container;
 
 use crate::config::Configuration;
+use crate::config::EndpointName;
 
-pub async fn container(endpoint_names: Vec<String>,
+pub async fn container(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {

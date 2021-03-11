@@ -28,6 +28,7 @@ use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
 use typed_builder::TypedBuilder;
 
+use crate::config::EndpointName;
 use crate::endpoint::EndpointConfiguration;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
@@ -43,7 +44,7 @@ use crate::util::docker::ImageName;
 #[derive(Getters, CopyGetters, TypedBuilder)]
 pub struct Endpoint {
     #[getset(get = "pub")]
-    name: String,
+    name: EndpointName,
 
     #[getset(get = "pub")]
     docker: Docker,
@@ -69,10 +70,10 @@ impl Debug for Endpoint {
 
 impl Endpoint {
     pub(super) async fn setup(epc: EndpointConfiguration) -> Result<Self> {
-        let ep = Endpoint::setup_endpoint(epc.endpoint()).with_context(|| {
+        let ep = Endpoint::setup_endpoint(epc.endpoint_name(), epc.endpoint()).with_context(|| {
             anyhow!(
                 "Setting up endpoint: {} -> {}",
-                epc.endpoint().name(),
+                epc.endpoint_name(),
                 epc.endpoint().uri()
             )
         })?;
@@ -89,21 +90,21 @@ impl Endpoint {
         let _ = versions_compat.with_context(|| {
             anyhow!(
                 "Checking version compatibility for {} -> {}",
-                epc.endpoint().name(),
+                epc.endpoint_name(),
                 epc.endpoint().uri()
             )
         })?;
         let _ = api_versions_compat.with_context(|| {
             anyhow!(
                 "Checking API version compatibility for {} -> {}",
-                epc.endpoint().name(),
+                epc.endpoint_name(),
                 epc.endpoint().uri()
             )
         })?;
         let _ = imgs_avail.with_context(|| {
             anyhow!(
                 "Checking for available images on {} -> {}",
-                epc.endpoint().name(),
+                epc.endpoint_name(),
                 epc.endpoint().uri()
             )
         })?;
@@ -111,7 +112,7 @@ impl Endpoint {
         Ok(ep)
     }
 
-    fn setup_endpoint(ep: &crate::config::Endpoint) -> Result<Endpoint> {
+    fn setup_endpoint(ep_name: &EndpointName, ep: &crate::config::Endpoint) -> Result<Endpoint> {
         match ep.endpoint_type() {
             crate::config::EndpointType::Http => shiplift::Uri::from_str(ep.uri())
                 .map(shiplift::Docker::host)
@@ -119,7 +120,7 @@ impl Endpoint {
                 .map_err(Error::from)
                 .map(|docker| {
                     Endpoint::builder()
-                        .name(ep.name().clone())
+                        .name(ep_name.clone())
                         .uri(ep.uri().clone())
                         .docker(docker)
                         .num_max_jobs(ep.maxjobs())
@@ -129,7 +130,7 @@ impl Endpoint {
 
             crate::config::EndpointType::Socket => Ok({
                 Endpoint::builder()
-                    .name(ep.name().clone())
+                    .name(ep_name.clone())
                     .uri(ep.uri().clone())
                     .num_max_jobs(ep.maxjobs())
                     .network_mode(ep.network_mode().clone())

@@ -20,6 +20,7 @@ use itertools::Itertools;
 use tokio_stream::StreamExt;
 
 use crate::config::Configuration;
+use crate::config::EndpointName;
 use crate::util::progress::ProgressBars;
 use crate::endpoint::Endpoint;
 
@@ -27,12 +28,13 @@ pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_gen
     let endpoint_names = matches
         .value_of("endpoint_name")
         .map(String::from)
+        .map(EndpointName::from)
         .map(|ep| vec![ep])
         .unwrap_or_else(|| {
             config.docker()
                 .endpoints()
                 .iter()
-                .map(|ep| ep.name())
+                .map(|(ep_name, _)| ep_name)
                 .cloned()
                 .collect()
         });
@@ -47,7 +49,7 @@ pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_gen
     }
 }
 
-async fn ping(endpoint_names: Vec<String>,
+async fn ping(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
     progress_generator: ProgressBars
@@ -94,7 +96,7 @@ async fn ping(endpoint_names: Vec<String>,
     tokio::join!(ping_process, multibar_block).0
 }
 
-async fn stats(endpoint_names: Vec<String>,
+async fn stats(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
     progress_generator: ProgressBars
@@ -155,7 +157,7 @@ async fn stats(endpoint_names: Vec<String>,
 }
 
 
-async fn containers(endpoint_names: Vec<String>,
+async fn containers(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
@@ -167,7 +169,7 @@ async fn containers(endpoint_names: Vec<String>,
     }
 }
 
-async fn containers_list(endpoint_names: Vec<String>,
+async fn containers_list(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
@@ -204,7 +206,7 @@ async fn containers_list(endpoint_names: Vec<String>,
                 .filter(|stat| newer_than_filter.as_ref().map(|time| time < &stat.created).unwrap_or(true))
                 .map(|stat| {
                     vec![
-                        endpoint_name.clone(),
+                        endpoint_name.as_ref().to_owned(),
                         stat.id,
                         stat.image,
                         stat.created.to_string(),
@@ -219,7 +221,7 @@ async fn containers_list(endpoint_names: Vec<String>,
     crate::commands::util::display_data(hdr, data, csv)
 }
 
-async fn containers_prune(endpoint_names: Vec<String>,
+async fn containers_prune(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
@@ -274,16 +276,16 @@ fn get_date_filter(name: &str, matches: &ArgMatches) -> Result<Option<chrono::Da
 
 /// Helper function to connect to all endpoints from the configuration, that appear (by name) in
 /// the `endpoint_names` list
-pub(super) async fn connect_to_endpoints(config: &Configuration, endpoint_names: &[String]) -> Result<Vec<Arc<Endpoint>>> {
+pub(super) async fn connect_to_endpoints(config: &Configuration, endpoint_names: &[EndpointName]) -> Result<Vec<Arc<Endpoint>>> {
     let endpoint_configurations = config
         .docker()
         .endpoints()
         .iter()
-        .filter(|ep| endpoint_names.contains(ep.name()))
-        .cloned()
-        .map(|ep_cfg| {
+        .filter(|(ep_name, _)| endpoint_names.contains(ep_name))
+        .map(|(ep_name, ep_cfg)| {
             crate::endpoint::EndpointConfiguration::builder()
-                .endpoint(ep_cfg)
+                .endpoint_name(ep_name.clone())
+                .endpoint(ep_cfg.clone())
                 .required_images(config.docker().images().clone())
                 .required_docker_versions(config.docker().docker_versions().clone())
                 .required_docker_api_versions(config.docker().docker_api_versions().clone())
@@ -294,7 +296,7 @@ pub(super) async fn connect_to_endpoints(config: &Configuration, endpoint_names:
     info!("Endpoint config build");
     info!("Connecting to {n} endpoints: {eps}",
         n = endpoint_configurations.len(),
-        eps = endpoint_configurations.iter().map(|epc| epc.endpoint().name()).join(", "));
+        eps = endpoint_configurations.iter().map(|epc| epc.endpoint_name()).join(", "));
 
     crate::endpoint::util::setup_endpoints(endpoint_configurations).await
 }

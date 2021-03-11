@@ -13,6 +13,7 @@ use anyhow::Result;
 use diesel::prelude::*;
 use diesel::PgConnection;
 
+use crate::config::EndpointName;
 use crate::schema::endpoints;
 use crate::schema::endpoints::*;
 
@@ -29,8 +30,8 @@ struct NewEndpoint<'a> {
 }
 
 impl Endpoint {
-    pub fn create_or_fetch(database_connection: &PgConnection, ep_name: &str) -> Result<Endpoint> {
-        let new_ep = NewEndpoint { name: ep_name };
+    pub fn create_or_fetch(database_connection: &PgConnection, ep_name: &EndpointName) -> Result<Endpoint> {
+        let new_ep = NewEndpoint { name: ep_name.as_ref() };
 
         diesel::insert_into(endpoints::table)
             .values(&new_ep)
@@ -38,7 +39,7 @@ impl Endpoint {
             .execute(database_connection)?;
 
         dsl::endpoints
-            .filter(name.eq(ep_name))
+            .filter(name.eq(ep_name.as_ref()))
             .first::<Endpoint>(database_connection)
             .map_err(Error::from)
     }

@@ -102,10 +102,10 @@ pub async fn build(
         .docker()
         .endpoints()
         .iter()
-        .cloned()
-        .map(|ep_cfg| {
+        .map(|(ep_name, ep_cfg)| {
             crate::endpoint::EndpointConfiguration::builder()
-                .endpoint(ep_cfg)
+                .endpoint_name(ep_name.clone())
+                .endpoint(ep_cfg.clone())
                 .required_images(config.docker().images().clone())
                 .required_docker_versions(config.docker().docker_versions().clone())
                 .required_docker_api_versions(config.docker().docker_api_versions().clone())

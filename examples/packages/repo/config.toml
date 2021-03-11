@@ -40,11 +40,9 @@ images = [ "debian:bullseye" ]
 verify_images_present = true
 
 #
-# List of docker endpoints
+# Docker endpoints
 #
-
-[[docker.endpoints]]
-name          = "testhostname"
+[docker.endpoints.testhostname]
 uri           = "http://0.0.0.0:8095" # the URI of the endpoint. Either http or socket path
 endpoint_type = "http" # either "http" or "socket"
 speed         = 1 # currently ignored, but required to be present
