@@ -93,10 +93,20 @@ async fn main() -> Result<()> {
         .ok_or_else(|| anyhow!("Not a repository with working directory. Cannot do my job!"))?;
 
     let mut config = ::config::Config::default();
+    config.merge(::config::File::from(repo_path.join("config.toml")))?;
 
-    config
-        .merge(::config::File::from(repo_path.join("config.toml")))?
-        .merge(::config::Environment::with_prefix("BUTIDO"))?;
+    {
+        let xdg = xdg::BaseDirectories::with_prefix("butido")?;
+        let xdg_config_file = xdg.find_config_file("config.toml");
+        if let Some(xdg_config) = xdg_config_file {
+            debug!("Configuration file found with XDG: {}", xdg_config.display());
+            config.merge(::config::File::from(xdg_config))?;
+        } else {
+            debug!("No configuration file found with XDG: {}", xdg.get_config_home().display());
+        }
+    }
+
+    config.merge(::config::Environment::with_prefix("BUTIDO"))?;
 
     let config = config.try_into::<NotValidatedConfiguration>()?.validate()?;
 
