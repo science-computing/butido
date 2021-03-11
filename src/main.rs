@@ -52,9 +52,11 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use logcrate::debug;
+use logcrate::error;
 use rand as _; // Required to make lints happy
 use aquamarine as _; // doc-helper crate
 use funty as _; // doc-helper crate
@@ -88,7 +90,13 @@ async fn main() -> Result<()> {
     let app = cli::cli();
     let cli = app.get_matches();
 
-    let repo = git2::Repository::discover(PathBuf::from("."))?;
+    let repo = git2::Repository::discover(PathBuf::from("."))
+        .map_err(|e| match e.code() {
+            git2::ErrorCode::NotFound => anyhow!("Failed to load the git repository from ./."),
+            _ => Error::from(e),
+        })
+        .context("Loading the git repository")
+        .context("Butido must be executed within the package repository")?;
     let repo_path = repo
         .workdir()
         .ok_or_else(|| anyhow!("Not a repository with working directory. Cannot do my job!"))?;
@@ -125,7 +133,8 @@ async fn main() -> Result<()> {
 
     let load_repo = || -> Result<Repository> {
         let bar = progressbars.bar();
-        let repo = Repository::load(&repo_path, &bar)?;
+        let repo = Repository::load(&repo_path, &bar)
+            .context("Loading the repository")?;
         bar.finish_with_message("Repository loading finished");
         Ok(repo)
     };
@@ -148,67 +157,102 @@ async fn main() -> Result<()> {
                 repo,
                 &repo_path,
             )
-            .await?
+            .await
+            .context("build command failed")?
         }
         Some(("what-depends", matches)) => {
             let repo = load_repo()?;
-            crate::commands::what_depends(matches, &config, repo).await?
+            crate::commands::what_depends(matches, &config, repo)
+                .await
+                .context("what-depends command failed")?
         }
 
         Some(("dependencies-of", matches)) => {
             let repo = load_repo()?;
-            crate::commands::dependencies_of(matches, &config, repo).await?
+            crate::commands::dependencies_of(matches, &config, repo)
+                .await
+                .context("dependencies-of command failed")?
         }
 
         Some(("versions-of", matches)) => {
             let repo = load_repo()?;
-            crate::commands::versions_of(matches, repo).await?
+            crate::commands::versions_of(matches, repo)
+                .await
+                .context("versions-of command failed")?
         }
 
         Some(("env-of", matches)) => {
             let repo = load_repo()?;
-            crate::commands::env_of(matches, repo).await?
+            crate::commands::env_of(matches, repo)
+                .await
+                .context("env-of command failed")?
         }
 
         Some(("find-artifact", matches)) => {
             let repo = load_repo()?;
             let conn = crate::db::establish_connection(db_connection_config)?;
-            crate::commands::find_artifact(matches, &config, progressbars, repo, conn).await?
+            crate::commands::find_artifact(matches, &config, progressbars, repo, conn)
+                .await
+                .context("find-artifact command failed")?
         }
 
         Some(("find-pkg", matches)) => {
             let repo = load_repo()?;
-            crate::commands::find_pkg(matches, &config, repo).await?
+            crate::commands::find_pkg(matches, &config, repo)
+                .await
+                .context("find-pkg command failed")?
         }
 
         Some(("source", matches)) => {
             let repo = load_repo()?;
-            crate::commands::source(matches, &config, repo, progressbars).await?
+            crate::commands::source(matches, &config, repo, progressbars)
+                .await
+                .context("source command failed")?
         }
 
         Some(("release", matches)) => {
-            crate::commands::release(db_connection_config, &config, matches).await?
+            crate::commands::release(db_connection_config, &config, matches)
+                .await
+                .context("release command failed")?
         }
 
         Some(("lint", matches)) => {
             let repo = load_repo()?;
-            crate::commands::lint(&repo_path, matches, progressbars, &config, repo).await?
+            crate::commands::lint(&repo_path, matches, progressbars, &config, repo)
+                .await
+                .context("lint command failed")?
         }
 
         Some(("tree-of", matches)) => {
             let repo = load_repo()?;
-            crate::commands::tree_of(matches, repo, progressbars).await?
+            crate::commands::tree_of(matches, repo, progressbars)
+                .await
+                .context("tree-of command failed")?
         }
 
         Some(("metrics", _)) => {
             let repo = load_repo()?;
             let conn = crate::db::establish_connection(db_connection_config)?;
-            crate::commands::metrics(&repo_path, &config, repo, conn).await?
+            crate::commands::metrics(&repo_path, &config, repo, conn)
+                .await
+                .context("metrics command failed")?
         }
 
-        Some(("endpoint", matches)) => crate::commands::endpoint(matches, &config, progressbars).await?,
-        Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
-        None => return Err(anyhow!("No subcommand")),
+        Some(("endpoint", matches)) => {
+            crate::commands::endpoint(matches, &config, progressbars)
+                .await
+                .context("endpoint command failed")?
+        },
+        Some((other, _)) => {
+            error!("Unknown subcommand: {}", other);
+            error!("Use --help to find available subcommands");
+            return Err(anyhow!("Unknown subcommand: {}", other))
+        },
+        None => {
+            error!("No subcommand.");
+            error!("Use --help to find available subcommands");
+            return Err(anyhow!("No subcommand"))
+        },
     }
 
     Ok(())

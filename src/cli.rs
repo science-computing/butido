@@ -695,6 +695,7 @@ pub fn cli<'a>() -> App<'a> {
 
         .subcommand(App::new("release")
             .version(crate_version!())
+            .about("Manage artifact releases")
             .subcommand(App::new("rm")
                 .version(crate_version!())
                 .about("Remove release artifacts")

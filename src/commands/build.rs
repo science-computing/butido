@@ -88,7 +88,7 @@ pub async fn build(
         return Err(anyhow!(
             "Requested build image {} is not in the configured images", image_name
         ))
-        .with_context(|| anyhow!("Available images: {:?}", config.docker().images()))
+        .with_context(|| anyhow!("Available images: {}", config.docker().images().iter().join(", ")))
         .with_context(|| anyhow!("Image present verification failed"))
         .map_err(Error::from);
     }

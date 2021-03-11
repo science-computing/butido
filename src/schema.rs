@@ -44,22 +44,6 @@ table! {
 }
 
 table! {
-    job_input_artifacts (id) {
-        id -> Int4,
-        job_id -> Int4,
-        artifact_id -> Int4,
-    }
-}
-
-table! {
-    job_output_artifacts (id) {
-        id -> Int4,
-        job_id -> Int4,
-        artifact_id -> Int4,
-    }
-}
-
-table! {
     jobs (id) {
         id -> Int4,
         submit_id -> Int4,
@@ -119,10 +103,6 @@ table! {
 joinable!(artifacts -> jobs (job_id));
 joinable!(job_envs -> envvars (env_id));
 joinable!(job_envs -> jobs (job_id));
-joinable!(job_input_artifacts -> artifacts (artifact_id));
-joinable!(job_input_artifacts -> jobs (job_id));
-joinable!(job_output_artifacts -> artifacts (artifact_id));
-joinable!(job_output_artifacts -> jobs (job_id));
 joinable!(jobs -> endpoints (endpoint_id));
 joinable!(jobs -> images (image_id));
 joinable!(jobs -> packages (package_id));
@@ -142,8 +122,6 @@ allow_tables_to_appear_in_same_query!(
     githashes,
     images,
     job_envs,
-    job_input_artifacts,
-    job_output_artifacts,
     jobs,
     packages,
     release_stores,
