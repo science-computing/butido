@@ -8,10 +8,13 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::collections::HashMap;
+
 use getset::{CopyGetters, Getters};
 use serde::Deserialize;
 
 use crate::config::Endpoint;
+use crate::config::EndpointName;
 use crate::util::docker::ImageName;
 
 /// Configuration of the docker daemon interfacing functionality
@@ -48,5 +51,5 @@ pub struct DockerConfig {
     images: Vec<ImageName>,
 
     #[getset(get = "pub")]
-    endpoints: Vec<Endpoint>,
+    endpoints: HashMap<EndpointName, Endpoint>,
 }

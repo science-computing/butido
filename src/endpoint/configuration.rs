@@ -16,6 +16,9 @@ use crate::util::docker::ImageName;
 #[derive(Getters, TypedBuilder)]
 pub struct EndpointConfiguration {
     #[getset(get = "pub")]
+    endpoint_name: crate::config::EndpointName,
+
+    #[getset(get = "pub")]
     endpoint: crate::config::Endpoint,
 
     #[getset(get = "pub")]

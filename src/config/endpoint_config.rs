@@ -11,13 +11,31 @@
 use getset::{CopyGetters, Getters};
 use serde::Deserialize;
 
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[serde(transparent)]
+pub struct EndpointName(String);
+
+impl From<String> for EndpointName {
+    fn from(s: String) -> Self {
+        EndpointName(s)
+    }
+}
+
+impl std::fmt::Display for EndpointName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        self.0.fmt(f)
+    }
+}
+
+impl AsRef<str> for EndpointName {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
 /// Configuration of a single endpoint
 #[derive(Clone, Debug, Getters, CopyGetters, Deserialize)]
 pub struct Endpoint {
-    /// A human-readable name of the endpoint
-    #[getset(get = "pub")]
-    name: String,
-
     /// The URI where the endpoint is reachable
     #[getset(get = "pub")]
     uri: String,
@@ -42,3 +60,4 @@ pub enum EndpointType {
     #[serde(rename = "http")]
     Http,
 }
+
