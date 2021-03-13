@@ -47,7 +47,7 @@ result-inspect = "0.2"
 semver		   = { version = "0.11", features = [ "serde" ] }
 serde          = "1"
 serde_json     = "1"
-sha1           = { version = "0.6", features = ["std"] }
+sha-1          = "0.9"
 sha2           = "0.9"
 shiplift       = "0.7"
 syntect        = "4.4"
