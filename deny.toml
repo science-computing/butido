@@ -48,6 +48,7 @@ allow = [
 deny = [
     # Each entry the name of a crate and a version range. If version is
     # not specified, all versions will be matched.
+    { name = "fuchsia-cprng" }
 ]
 
 # Certain crates/versions that will be skipped when doing duplicate detection.

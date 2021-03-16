@@ -13,6 +13,9 @@ tasks:
   - lint-licenses: |
       cd butido
       PATH="$HOME/.cargo/bin:$PATH" cargo deny check licenses
+  - lint-bans: |
+      cd butido
+      PATH="$HOME/.cargo/bin:$PATH" cargo deny check bans
   - lint-sources: |
       cd butido
       PATH="$HOME/.cargo/bin:$PATH" cargo deny check sources
