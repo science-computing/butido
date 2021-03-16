@@ -73,23 +73,33 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
             kill(matches, container).await
         },
         Some(("delete", _)) => {
-            confirm(format!("Really delete {}?", container_id))?;
-            delete(container).await
+            if confirm(format!("Really delete {}?", container_id))? {
+                delete(container).await
+            } else {
+                Ok(())
+            }
         },
         Some(("start", _))      => {
-            confirm(format!("Really start {}?", container_id))?;
-            start(container).await
+            if confirm(format!("Really start {}?", container_id))? {
+                start(container).await
+            } else {
+                Ok(())
+            }
         },
         Some(("stop", matches)) => {
-            confirm(format!("Really stop {}?", container_id))?;
-            stop(matches, container).await
+            if confirm(format!("Really stop {}?", container_id))? {
+                stop(matches, container).await
+            } else {
+                Ok(())
+            }
         },
         Some(("exec", matches)) => {
-            confirm({
-                let commands = matches.values_of("commands").unwrap().collect::<Vec<&str>>();
-                format!("Really run '{}' in {}?", commands.join(" "), container_id)
-            })?;
-            exec(matches, container).await
+            let commands = matches.values_of("commands").unwrap().collect::<Vec<&str>>();
+            if confirm(format!("Really run '{}' in {}?", commands.join(" "), container_id))? {
+                exec(matches, container).await
+            } else {
+                Ok(())
+            }
         },
         Some(("inspect", _)) => inspect(container).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
