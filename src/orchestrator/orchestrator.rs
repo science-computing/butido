@@ -16,6 +16,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Error;
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
@@ -633,7 +634,15 @@ impl<'a> JobTask<'a> {
                 received_dependencies.insert(*self.jobdef.job.uuid(), artifacts);
                 trace!("[{}]: Sending to parent: {:?}", self.jobdef.job.uuid(), received_dependencies);
                 for s in self.sender.iter() {
-                    s.send(Ok(received_dependencies.clone())).await?;
+                    s.send(Ok(received_dependencies.clone()))
+                        .await
+                        .context("Cannot send received dependencies to parent")
+                        .with_context(|| {
+                            format!("Sending-Channel is closed in Task for {}: {} {}",
+                                self.jobdef.job.uuid(),
+                                self.jobdef.job.package().name(),
+                                self.jobdef.job.package().version())
+                        })?;
                 }
                 self.bar.finish_with_message(&format!("[{} {} {}] Reusing artifact",
                     self.jobdef.job.uuid(),
@@ -686,7 +695,13 @@ impl<'a> JobTask<'a> {
                 // We know that we have at least one sender available
                 let mut errormap = HashMap::with_capacity(1);
                 errormap.insert(job_uuid, e);
-                self.sender[0].send(Err(errormap)).await?;
+
+                // Every JobTask has at least one sender, so we can [] here.
+                self.sender[0]
+                    .send(Err(errormap))
+                    .await
+                    .context("Failed sending scheduler errors to parent")
+                    .with_context(|| format!("Failed sending error from job {}", self.jobdef.job.uuid()))?;
                 return Ok(())
             },
 
