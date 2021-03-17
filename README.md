@@ -57,6 +57,9 @@ Now you should be ready to try butido. butido takes `--help` in every subcommand
 to explain what it does.
 
 
+Butido is built and tested with Rust 1.50.0 as MSRV.
+
+
 ### Glossary
 
 | Word        | Explanation                                                                                                      |
