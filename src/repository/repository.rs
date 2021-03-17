@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -165,9 +166,17 @@ impl Repository {
             if subdirs.is_empty() {
                 progress.tick();
                 if pkg_file.is_file() {
-                    let package = config.try_into().with_context(|| {
-                        format!("Failed to parse {} into package", path.display())
-                    });
+                    let package = config.try_into()
+                        .with_context(|| format!("Failed to parse {} into package", path.display()))
+                        .and_then(|package: Package| {
+                            if package.name().is_empty() {
+                                Err(anyhow!("Package name cannot be empty: {}", pkg_file.display()))
+                            } else if package.version().is_empty() {
+                                Err(anyhow!("Package version cannot be empty: {}", pkg_file.display()))
+                            } else {
+                                Ok(package)
+                            }
+                        });
 
                     Ok(vec![package])
                 } else {
