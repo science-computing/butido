@@ -8,6 +8,16 @@ authors = ["Matthias Beyer <mail@beyermatthias.de>",
 edition = "2018"
 license = "EPL-2.0"
 
+description = "Linux package tool utilizing docker, postgres and toml"
+homepage    = "https://github.com/science-computing/butido"
+repository  = "https://github.com/science-computing/butido"
+readme      = "README.md"
+keywords    = ["docker", "postgres", "linux", "packaging", "packages"]
+categories  = ["development-tools"]
+
+[badges]
+maintenance = { status = "actively-developed" }
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
