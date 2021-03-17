@@ -16,7 +16,6 @@ use log::trace;
 use serde::Deserialize;
 use serde::Serialize;
 use url::Url;
-use sha2::Digest;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Source {
@@ -101,6 +100,8 @@ impl HashType {
 
         match self {
             HashType::Sha1 => {
+                use sha1::Digest;
+
                 trace!("SHA1 hashing buffer");
                 let mut m = sha1::Sha1::new();
                 loop {
@@ -118,9 +119,11 @@ impl HashType {
                     trace!("Updating buffer");
                     m.update(&buffer[..count]);
                 }
-                Ok(HashValue(m.digest().to_string()))
+                Ok(HashValue(format!("{:x}", m.finalize())))
             }
             HashType::Sha256 => {
+                use sha2::Digest;
+
                 trace!("SHA256 hashing buffer");
                 let mut m = sha2::Sha256::new();
                 loop {
@@ -143,6 +146,8 @@ impl HashType {
                 Ok(HashValue(h))
             }
             HashType::Sha512 => {
+                use sha2::Digest;
+
                 trace!("SHA512 hashing buffer");
                 let mut m = sha2::Sha512::new();
                 loop {

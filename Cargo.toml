@@ -23,7 +23,7 @@ colored        = "2"
 config         = { git = "https://github.com/matthiasbeyer/config-rs", branch = "add-setter" }
 csv            = "1.1"
 daggy          = { version = "0.7", features = [ "serde" ] }
-dialoguer      = "0.7"
+dialoguer      = "0.8"
 diesel         = { version = "1.4", features = ["postgres", "chrono", "uuid", "serde_json"] }
 env_logger     = "0.8"
 filters        = "0.4.0"
@@ -47,7 +47,7 @@ result-inspect = "0.2"
 semver		   = { version = "0.11", features = [ "serde" ] }
 serde          = "1"
 serde_json     = "1"
-sha1           = { version = "0.6", features = ["std"] }
+sha-1          = "0.9"
 sha2           = "0.9"
 shiplift       = "0.7"
 syntect        = "4.4"
