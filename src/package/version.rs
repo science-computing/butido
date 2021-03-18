@@ -29,7 +29,7 @@ impl PackageVersionConstraint {
         Self::parser().parse(s.as_bytes()).map_err(Error::from)
     }
 
-    pub fn parser<'a>() -> PomParser<'a, u8, Self> {
+    fn parser<'a>() -> PomParser<'a, u8, Self> {
         (pom::parser::sym(b'=') + PackageVersion::parser())
             .convert(|(constraint, version)| {
                 String::from_utf8(vec![constraint]).map(|c| (c, version))
