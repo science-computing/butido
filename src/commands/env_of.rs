@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::convert::TryFrom;
+
 use anyhow::Result;
 use clap::ArgMatches;
 use log::trace;
@@ -29,8 +31,7 @@ pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
             .unwrap();
         let constraint = matches
             .value_of("package_version_constraint")
-            .map(String::from)
-            .map(PackageVersionConstraint::new)
+            .map(PackageVersionConstraint::try_from)
             .unwrap()?;
         trace!(
             "Checking for package with name = {} and version = {:?}",

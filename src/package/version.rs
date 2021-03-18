@@ -25,10 +25,6 @@ pub struct PackageVersionConstraint {
 }
 
 impl PackageVersionConstraint {
-    pub fn new(s: String) -> Result<Self> {
-        Self::parser().parse(s.as_bytes()).map_err(Error::from)
-    }
-
     fn parser<'a>() -> PomParser<'a, u8, Self> {
         (pom::parser::sym(b'=') + PackageVersion::parser())
             .convert(|(constraint, version)| {
@@ -50,6 +46,24 @@ impl PackageVersionConstraint {
             constraint,
             version,
         }
+    }
+}
+
+impl std::convert::TryFrom<String> for PackageVersionConstraint {
+    type Error = anyhow::Error;
+
+    fn try_from(s: String) -> Result<Self> {
+        Self::try_from(&s as &str)
+    }
+}
+
+impl std::convert::TryFrom<&str> for PackageVersionConstraint {
+    type Error = anyhow::Error;
+
+    fn try_from(s: &str) -> Result<Self> {
+        PackageVersionConstraint::parser()
+            .parse(s.as_bytes())
+            .map_err(Error::from)
     }
 }
 

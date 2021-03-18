@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::convert::TryFrom;
 use std::path::Path;
 
 use anyhow::anyhow;
@@ -36,8 +37,7 @@ pub async fn lint(
         .map(PackageName::from);
     let pvers = matches
         .value_of("package_version")
-        .map(String::from)
-        .map(PackageVersionConstraint::new)
+        .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
     let bar = progressbars.bar();

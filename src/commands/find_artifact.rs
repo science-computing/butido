@@ -11,6 +11,7 @@
 use std::path::PathBuf;
 use std::io::Write;
 use std::sync::Arc;
+use std::convert::TryFrom;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -37,8 +38,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
 
     let package_version_constraint = matches
         .value_of("package_version_constraint")
-        .map(String::from)
-        .map(PackageVersionConstraint::new)
+        .map(PackageVersionConstraint::try_from)
         .transpose()
         .context("Parsing package version constraint")
         .context("A valid package version constraint looks like this: '=1.0.0'")?;
