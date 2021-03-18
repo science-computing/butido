@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::convert::TryFrom;
+
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
@@ -31,8 +33,7 @@ pub async fn tree_of(
         .map(PackageName::from);
     let pvers = matches
         .value_of("package_version")
-        .map(String::from)
-        .map(PackageVersionConstraint::new)
+        .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
     repo.packages()

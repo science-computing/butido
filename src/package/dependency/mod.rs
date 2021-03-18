@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::convert::TryFrom;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use lazy_static::lazy_static;
@@ -52,15 +54,16 @@ pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_
 
     let name = caps
         .name("name")
+        .map(|m| String::from(m.as_str()))
         .ok_or_else(|| anyhow!("Could not parse name: '{}'", s))?;
 
     let vers = caps
         .name("version")
+        .map(|m| String::from(m.as_str()))
         .ok_or_else(|| anyhow!("Could not parse version: '{}'", s))?;
 
-    let v = PackageVersionConstraint::parser().parse(vers.as_str().as_bytes())?;
-
-    Ok((PackageName::from(String::from(name.as_str())), v))
+    let v = PackageVersionConstraint::try_from(vers)?;
+    Ok((PackageName::from(name), v))
 }
 
 #[cfg(test)]

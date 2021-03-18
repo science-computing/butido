@@ -11,6 +11,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::convert::TryFrom;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -60,8 +61,7 @@ pub async fn verify(
         .map(PackageName::from);
     let pvers = matches
         .value_of("package_version")
-        .map(String::from)
-        .map(PackageVersionConstraint::new)
+        .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
     let packages = repo
@@ -183,8 +183,7 @@ pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
         .map(PackageName::from);
     let pvers = matches
         .value_of("package_version")
-        .map(String::from)
-        .map(PackageVersionConstraint::new)
+        .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
     repo.packages()
@@ -225,8 +224,7 @@ pub async fn download(
         .map(PackageName::from);
     let pvers = matches
         .value_of("package_version")
-        .map(String::from)
-        .map(PackageVersionConstraint::new)
+        .map(PackageVersionConstraint::try_from)
         .transpose()?;
     let multi = {
         let mp = indicatif::MultiProgress::new();
