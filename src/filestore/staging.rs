@@ -23,7 +23,6 @@ use crate::filestore::path::ArtifactPath;
 use crate::filestore::path::StoreRoot;
 use crate::filestore::util::FileStoreImpl;
 
-// The implementation of this type must be available in the merged filestore.
 pub struct StagingStore(pub(in crate::filestore) FileStoreImpl);
 
 impl Debug for StagingStore {
