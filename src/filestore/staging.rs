@@ -27,7 +27,7 @@ pub struct StagingStore(pub(in crate::filestore) FileStoreImpl);
 
 impl Debug for StagingStore {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
-        write!(f, "StagingStore(root: {})", self.0.root.display())
+        write!(f, "StagingStore(root: {})", self.0.root_path().display())
     }
 }
 
@@ -47,7 +47,7 @@ impl StagingStore {
     {
         use futures::stream::TryStreamExt;
 
-        let dest = &self.0.root;
+        let dest = self.0.root_path();
         stream
             .try_concat()
             .await
@@ -78,7 +78,7 @@ impl StagingStore {
             .into_iter()
             .inspect(|p| trace!("Trying to load into staging store: {}", p.display()))
             .filter_map(|path| {
-                if self.0.root.is_dir(&path) {
+                if self.0.root_path().is_dir(&path) {
                     None
                 } else {
                     Some({

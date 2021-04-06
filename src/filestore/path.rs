@@ -143,7 +143,7 @@ pub struct FullArtifactPath<'a>(&'a StoreRoot, &'a ArtifactPath);
 impl<'a> FullArtifactPath<'a> {
 
     pub fn is_in_staging_store(&self, store: &StagingStore) -> bool {
-        store.0.root == *self.0
+        store.0.root_path() == self.0
     }
 
     pub fn artifact_path(&self) -> &ArtifactPath {

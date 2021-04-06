@@ -22,7 +22,7 @@ pub struct ReleaseStore(pub(in crate::filestore) FileStoreImpl);
 
 impl Debug for ReleaseStore {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
-        write!(f, "ReleaseStore(root: {})", self.0.root.display())
+        write!(f, "ReleaseStore(root: {})", self.0.root_path().display())
     }
 }
 

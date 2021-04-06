@@ -25,15 +25,17 @@ use crate::filestore::path::StoreRoot;
 /// provide this type as the implementation.
 ///
 /// It can then be wrapped into the actual interface of this module with specialized functionality.
+#[derive(getset::Getters)]
 pub struct FileStoreImpl {
-    pub(in crate::filestore) root: StoreRoot,
+    #[getset(get = "pub")]
+    root_path: StoreRoot,
     store: HashSet<ArtifactPath>,
 }
 
 impl FileStoreImpl {
     /// Loads the passed path recursively
-    pub fn load(root: StoreRoot, progress: &ProgressBar) -> Result<Self> {
-        let store = root
+    pub fn load(root_path: StoreRoot, progress: &ProgressBar) -> Result<Self> {
+        let store = root_path
             .find_artifacts_recursive()
             .inspect(|path| {
                 log::trace!("Found artifact path: {:?}", path);
@@ -41,11 +43,7 @@ impl FileStoreImpl {
             })
             .collect::<Result<HashSet<ArtifactPath>>>()?;
 
-        Ok(FileStoreImpl { root, store })
-    }
-
-    pub fn root_path(&self) -> &StoreRoot {
-        &self.root
+        Ok(FileStoreImpl { root_path, store })
     }
 
     pub fn get(&self, artifact_path: &ArtifactPath) -> Option<&ArtifactPath> {
