@@ -22,22 +22,22 @@ use crate::util::docker::ImageName;
 pub struct Job {
     /// A unique name for the job, not necessarily human-readable
     #[getset(get = "pub")]
-    pub(super) uuid: Uuid,
+    uuid: Uuid,
 
     #[getset(get = "pub")]
-    pub(super) package: Package,
+    package: Package,
 
     #[getset(get = "pub")]
-    pub(super) image: ImageName,
+    image: ImageName,
 
     #[getset(get = "pub")]
-    pub(super) script_shebang: Shebang,
+    script_shebang: Shebang,
 
     #[getset(get = "pub")]
-    pub(super) script_phases: Vec<PhaseName>,
+    script_phases: Vec<PhaseName>,
 
     #[getset(get = "pub")]
-    pub(super) resources: Vec<JobResource>,
+    resources: Vec<JobResource>,
 }
 
 impl Job {

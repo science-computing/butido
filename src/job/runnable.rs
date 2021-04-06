@@ -109,16 +109,16 @@ impl RunnableJob {
             .collect();
 
         debug!("Building script now");
-        let script = ScriptBuilder::new(&job.script_shebang).build(
-            &job.package,
-            &job.script_phases,
+        let script = ScriptBuilder::new(job.script_shebang()).build(
+            job.package(),
+            job.script_phases(),
             *config.strict_script_interpolation(),
         )?;
 
         Ok(RunnableJob {
-            uuid: job.uuid,
-            package: job.package.clone(),
-            image: job.image.clone(),
+            uuid: *job.uuid(),
+            package: job.package().clone(),
+            image: job.image().clone(),
             resources,
             source_cache: source_cache.clone(),
 
