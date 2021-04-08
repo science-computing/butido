@@ -17,8 +17,8 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use log::trace;
+use resiter::AndThen;
 use resiter::Map;
-use resiter::FilterMap;
 
 use crate::package::Package;
 use crate::package::PackageName;
@@ -138,13 +138,17 @@ impl Repository {
                 // the root directory of the repository.
                 .map(|patch| patch.into_str().map_err(Error::from))
                 .map_ok(|patch| path_relative_to_root.join(patch))
+                .inspect(|patch| trace!("Patch relative to root: {:?}", patch.as_ref().map(|p| p.display())))
 
-                // if the patch file exists, use it (as config::Value), otherwise ignore the
-                // element in the iterator
-                .filter_map_ok(|patch| if patch.exists() {
-                    Some(config::Value::from(patch.display().to_string()))
+                // if the patch file exists, use it (as config::Value).
+                //
+                // Otherwise we have an error here, because we're refering to a non-existing file.
+                .and_then_ok(|patch| if patch.exists() {
+                    trace!("Path to patch exists: {}", patch.display());
+                    Ok(config::Value::from(patch.display().to_string()))
                 } else {
-                    None
+                    trace!("Path to patch does not exist: {}", patch.display());
+                    Err(anyhow!("Patch does not exist: {}", patch.display()))
                 })
                 .collect::<Result<Vec<_>>>()?;
 
