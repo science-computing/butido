@@ -317,6 +317,24 @@ pub async fn build(
         submit
     );
 
+    {
+        let out = std::io::stdout();
+        let mut outlock = out.lock();
+
+        #[inline]
+        fn mkgreen<T: ToString>(t: &T) -> colored::ColoredString {
+            t.to_string().green()
+        }
+
+        writeln!(outlock, "Starting submit: {}", mkgreen(&submit_id))?;
+        writeln!(outlock, "Started at:      {}", mkgreen(&now))?;
+        writeln!(outlock, "On Image:        {}", mkgreen(&db_image.name))?;
+        writeln!(outlock, "For Package:     {p} {v}",
+            p = mkgreen(&db_package.name),
+            v = mkgreen(&db_package.version))?;
+        writeln!(outlock, "On repo hash:    {}", mkgreen(&db_githash.hash))?;
+    }
+
     trace!("Setting up job sets");
     let resources: Vec<JobResource> = additional_env.into_iter().map(JobResource::from).collect();
     let jobdag = crate::job::Dag::from_package_dag(dag, shebang, image_name, phases.clone(), resources);
