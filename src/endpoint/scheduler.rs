@@ -331,7 +331,29 @@ impl<'a> LogReceiver<'a> {
         let mut accu = vec![];
         let mut logfile = self.get_logfile().await.transpose()?;
 
-        while let Some(logitem) = self.log_receiver.recv().await {
+        // The timeout for the log-receive-timeout
+        //
+        // We're using a rather small timeout of just 250ms here, because we have some worktime
+        // overhead as well, and we want to ping the progressbar for the process in a way so that
+        // it updates each second.
+        // Having a timeout of 1 sec proofed to be too long to update the time field in the
+        // progress bar secondly.
+        let timeout_duration = std::time::Duration::from_millis(250);
+
+        loop {
+            // Timeout for receiving from the log receiver channel
+            // This way we can update (`tick()`) the progress bar and show the user that things are
+            // happening, even if there was no log output for several seconds.
+            let logitem = match tokio::time::timeout(timeout_duration, self.log_receiver.recv()).await {
+                Err(_ /* elapsed */) => {
+                    self.bar.tick(); // just ping the progressbar here
+                    continue
+                },
+
+                Ok(None) => break, // if the log is empty, we're done
+                Ok(Some(logitem)) => logitem,
+            };
+
             if let Some(lf) = logfile.as_mut() {
                 lf.write_all(logitem.display()?.to_string().as_bytes())
                     .await?;
