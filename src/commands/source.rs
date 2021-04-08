@@ -10,7 +10,6 @@
 
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::convert::TryFrom;
 
 use anyhow::anyhow;
@@ -86,21 +85,19 @@ pub(in crate::commands) async fn verify_impl<'a, I>(
 where
     I: Iterator<Item = &'a Package> + 'a,
 {
-    let multi = Arc::new({
-        let mp = indicatif::MultiProgress::new();
-        if progressbars.hide() {
-            mp.set_draw_target(indicatif::ProgressDrawTarget::hidden());
-        }
-        mp
-    });
-
-    let results = packages
+    let sources = packages
         .map(|p| sc.sources_for(p).into_iter())
         .flatten()
-        .map(|src| (multi.clone(), src))
-        .map(|(multi, source)| async move {
+        .collect::<Vec<_>>();
+
+    let bar = progressbars.bar();
+    bar.set_message("Verifying sources");
+    bar.set_length(sources.len() as u64);
+
+    let results = sources.into_iter()
+        .map(|src| (bar.clone(), src))
+        .map(|(bar, source)| async move {
             trace!("Verifying: {}", source.path().display());
-            let bar = multi.add(progressbars.bar());
             if source.path().exists() {
                 trace!("Exists: {}", source.path().display());
                 source.verify_hash().await.with_context(|| {
@@ -108,37 +105,36 @@ where
                 })?;
 
                 trace!("Success verifying: {}", source.path().display());
-                let msg = format!("Ok: {}", source.path().display()).green();
-                bar.finish_with_message(&msg);
-                Ok(msg)
+                bar.inc(1);
+                Ok(())
             } else {
                 trace!("Failed verifying: {}", source.path().display());
-                bar.finish_with_message(&"Error".red());
+                bar.inc(1);
                 Err(anyhow!("Source missing: {}", source.path().display()))
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Vec<Result<_>>>();
+        .collect::<Vec<Result<_>>>()
+        .await;
 
-    let multibar_block = tokio::task::spawn_blocking(move || multi.join());
-    let (results, _) = tokio::join!(results, multibar_block);
     info!("Verification processes finished");
+
+    if results.iter().any(Result::is_err) {
+        bar.finish_with_message("Source verication failed");
+    } else {
+        bar.finish_with_message("Source verication successfull");
+    }
 
     let out = std::io::stdout();
     let mut any_error = false;
     for result in results {
-        match result {
-            Err(e) => {
-                let mut outlock = out.lock();
-                any_error = true;
-                for cause in e.chain() {
-                    let _ = writeln!(outlock, "Error: {}", cause.to_string().red());
-                }
-                let _ = writeln!(outlock);
+        if let Err(e) = result {
+            let mut outlock = out.lock();
+            any_error = true;
+            for cause in e.chain() {
+                let _ = writeln!(outlock, "Error: {}", cause.to_string().red());
             }
-            Ok(s) => {
-                let _ = writeln!(out.lock(), "{}", s.green());
-            }
+            let _ = writeln!(outlock);
         }
     }
 
