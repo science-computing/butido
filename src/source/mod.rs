@@ -47,14 +47,6 @@ pub struct SourceEntry {
 }
 
 impl SourceEntry {
-    fn source_file_path(&self) -> PathBuf {
-        self.source_file_directory().join(format!(
-            "{}-{}.source",
-            self.package_source_name,
-            self.package_source.hash().value()
-        ))
-    }
-
     fn source_file_directory(&self) -> PathBuf {
         self.cache_root
             .join(format!("{}-{}", self.package_name, self.package_version))
@@ -76,7 +68,11 @@ impl SourceEntry {
     }
 
     pub fn path(&self) -> PathBuf {
-        self.source_file_path()
+        self.source_file_directory().join(format!(
+            "{}-{}.source",
+            self.package_source_name,
+            self.package_source.hash().value()
+        ))
     }
 
     pub fn url(&self) -> &Url {
@@ -88,13 +84,13 @@ impl SourceEntry {
     }
 
     pub async fn remove_file(&self) -> Result<()> {
-        let p = self.source_file_path();
+        let p = self.path();
         tokio::fs::remove_file(&p).await?;
         Ok(())
     }
 
     pub async fn verify_hash(&self) -> Result<()> {
-        let p = self.source_file_path();
+        let p = self.path();
         trace!("Verifying : {}", p.display());
 
         let reader = tokio::fs::OpenOptions::new()
@@ -114,7 +110,7 @@ impl SourceEntry {
     }
 
     pub async fn create(&self) -> Result<tokio::fs::File> {
-        let p = self.source_file_path();
+        let p = self.path();
         trace!("Creating source file: {}", p.display());
 
         if !self.cache_root.is_dir() {
