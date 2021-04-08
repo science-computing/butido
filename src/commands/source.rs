@@ -42,6 +42,7 @@ pub async fn source(
         Some(("list-missing", matches)) => list_missing(matches, config, repo).await,
         Some(("url", matches)) => url(matches, repo).await,
         Some(("download", matches)) => download(matches, config, repo, progressbars).await,
+        Some(("of", matches)) => of(matches, config, repo).await,
         Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
         None => return Err(anyhow!("No subcommand")),
     }
@@ -305,4 +306,49 @@ pub async fn download(
     let multibar_block = tokio::task::spawn_blocking(move || multi.join());
     let (r, _) = tokio::join!(r, multibar_block);
     r
+}
+
+async fn of(
+    matches: &ArgMatches,
+    config: &Configuration,
+    repo: Repository,
+) -> Result<()> {
+    let cache = PathBuf::from(config.source_cache_root());
+    let sc = SourceCache::new(cache);
+    let pname = matches
+        .value_of("package_name")
+        .map(String::from)
+        .map(PackageName::from);
+    let pvers = matches
+        .value_of("package_version")
+        .map(PackageVersionConstraint::try_from)
+        .transpose()?;
+
+    repo.packages()
+        .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
+        .filter(|p| {
+            pvers
+                .as_ref()
+                .map(|v| v.matches(p.version()))
+                .unwrap_or(true)
+        })
+        .map(|p| {
+            let pathes = sc.sources_for(p)
+                .into_iter()
+                .map(|source| source.path())
+                .collect::<Vec<PathBuf>>();
+
+            (p, pathes)
+        })
+        .fold(Ok(std::io::stdout()), |out, (package, pathes)| {
+            out.and_then(|mut out| {
+                writeln!(out, "{} {}", package.name(), package.version())?;
+                for path in pathes {
+                    writeln!(out, "\t{}", path.display())?;
+                }
+
+                Ok(out)
+            })
+        })
+        .map(|_| ())
 }
