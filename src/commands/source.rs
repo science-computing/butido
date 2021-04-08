@@ -244,7 +244,8 @@ pub async fn download(
                 let bar = multi.add(progressbars.spinner());
                 bar.set_message(&format!("Downloading {}", source.url()));
                 async move {
-                    if !source.path().exists() && source.download_manually() {
+                    let source_path_exists = source.path().exists();
+                    if !source_path_exists && source.download_manually() {
                         return Err(anyhow!(
                             "Cannot download source that is marked for manual download"
                         ))
@@ -253,10 +254,10 @@ pub async fn download(
                         .map_err(Error::from);
                     }
 
-                    if source.path().exists() && !force {
+                    if source_path_exists && !force {
                         Err(anyhow!("Source exists: {}", source.path().display()))
                     } else {
-                        if source.path().exists() {
+                        if source_path_exists {
                             let _ = source.remove_file().await?;
                         }
 
