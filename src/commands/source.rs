@@ -154,7 +154,7 @@ pub async fn list_missing(_: &ArgMatches, config: &Configuration, repo: Reposito
 
     repo.packages().try_for_each(|p| {
         for source in sc.sources_for(p) {
-            if !source.exists() {
+            if !source.path().exists() {
                 writeln!(
                     outlock,
                     "{} {} -> {}",
@@ -244,7 +244,7 @@ pub async fn download(
                 let bar = multi.add(progressbars.spinner());
                 bar.set_message(&format!("Downloading {}", source.url()));
                 async move {
-                    if !source.exists() && source.download_manually() {
+                    if !source.path().exists() && source.download_manually() {
                         return Err(anyhow!(
                             "Cannot download source that is marked for manual download"
                         ))
@@ -253,10 +253,10 @@ pub async fn download(
                         .map_err(Error::from);
                     }
 
-                    if source.exists() && !force {
+                    if source.path().exists() && !force {
                         Err(anyhow!("Source exists: {}", source.path().display()))
                     } else {
-                        if source.exists() {
+                        if source.path().exists() {
                             let _ = source.remove_file().await?;
                         }
 

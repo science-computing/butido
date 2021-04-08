@@ -75,10 +75,6 @@ impl SourceEntry {
             .collect()
     }
 
-    pub fn exists(&self) -> bool {
-        self.source_file_path().exists()
-    }
-
     pub fn path(&self) -> PathBuf {
         self.source_file_path()
     }
