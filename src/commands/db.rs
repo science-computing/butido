@@ -323,7 +323,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     //
     // If we get a filter for environment on CLI, we fetch all job ids that are associated with the
     // passed environment variables and make `sel` filter for those.
-    let sel = if let Some((name, val)) = matches.value_of("filter_env").map(crate::util::env::parse_to_env).transpose()? {
+    let sel = if let Some((name, val)) = matches.value_of("env_filter").map(crate::util::env::parse_to_env).transpose()? {
         let jids = schema::envvars::table
             .filter({
                 use crate::diesel::BoolExpressionMethods;
