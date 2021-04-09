@@ -212,6 +212,16 @@ pub fn cli<'a>() -> App<'a> {
                     .value_name("KV")
                     .about("Filter for this \"key=value\" environment variable")
                 )
+
+                .arg(Arg::new("limit")
+                    .required(false)
+                    .multiple(false)
+                    .long("limit")
+                    .short('L')
+                    .takes_value(true)
+                    .value_name("LIMIT")
+                    .about("Only list newest <LIMIT> jobs instead of all")
+                )
             )
 
             .subcommand(App::new("job")

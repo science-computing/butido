@@ -11,6 +11,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
+use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -24,6 +25,7 @@ use diesel::JoinOnDsl;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
+use log::debug;
 use log::info;
 
 use crate::config::Configuration;
@@ -290,8 +292,6 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 }
 
 fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
-    use crate::schema::jobs::dsl;
-
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec![
         "id",
@@ -302,90 +302,59 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         "success",
         "package",
         "version",
-        "Env",
     ]);
     let conn = crate::db::establish_connection(conn_cfg)?;
-    let env_filter_tpl = matches
-        .value_of("filter_env")
-        .map(crate::util::env::parse_to_env)
-        .transpose()?;
 
-    let jobs = matches
+    let sel = schema::jobs::table
+        .inner_join(schema::submits::table)
+        .inner_join(schema::endpoints::table)
+        .inner_join(schema::packages::table)
+        .into_boxed();
+
+    let sel = if let Some(submit_uuid) = matches
         .value_of("submit_uuid")
         .map(uuid::Uuid::parse_str)
         .transpose()?
-        .map(|submit_uuid| {
-            let sel = schema::jobs::table
-                .inner_join(schema::submits::table)
-                .inner_join(schema::endpoints::table)
-                .inner_join(schema::packages::table)
-                .left_outer_join(schema::job_envs::table.inner_join(schema::envvars::table))
-                .filter(schema::submits::uuid.eq(&submit_uuid))
-                .into_boxed();
+    {
+        sel.filter(schema::submits::uuid.eq(submit_uuid))
+    } else {
+        sel
+    };
 
-            let sel = if let Some((name, val)) = env_filter_tpl.as_ref() {
+    // Filter for environment variables from the CLI
+    //
+    // If we get a filter for environment on CLI, we fetch all job ids that are associated with the
+    // passed environment variables and make `sel` filter for those.
+    let sel = if let Some((name, val)) = matches.value_of("env_filter").map(crate::util::env::parse_to_env).transpose()? {
+        debug!("Filtering for ENV: {} = {}", name, val);
+        let jids = schema::envvars::table
+            .filter({
                 use crate::diesel::BoolExpressionMethods;
+                schema::envvars::dsl::name.eq(name.as_ref())
+                    .and(schema::envvars::dsl::value.eq(val))
+            })
+            .inner_join(schema::job_envs::table)
+            .select(schema::job_envs::job_id)
+            .load::<i32>(&conn)?;
 
-                sel.filter({
-                    schema::envvars::dsl::name.eq(name.as_ref())
-                        .and(schema::envvars::dsl::value.eq(val))
-                })
-            } else {
-                sel
-            };
+        debug!("Filtering for these IDs (because of env filter): {:?}", jids);
+        sel.filter(schema::jobs::dsl::id.eq_any(jids))
+    } else {
+        sel
+    };
 
-            sel.load::<(
-                    models::Job,
-                    models::Submit,
-                    models::Endpoint,
-                    models::Package,
-                    Option<(models::JobEnv, models::EnvVar)>,
-                )>(&conn)
-                .map_err(Error::from)
-        })
-        .unwrap_or_else(|| {
-            let sel = dsl::jobs
-                .inner_join(crate::schema::submits::table)
-                .inner_join(crate::schema::endpoints::table)
-                .inner_join(crate::schema::packages::table)
-                .left_outer_join(schema::job_envs::table.inner_join(schema::envvars::table))
-                .into_boxed();
+    let sel = if let Some(limit) = matches.value_of("limit").map(i64::from_str).transpose()? {
+        sel.limit(limit)
+    } else {
+        sel
+    };
 
-            let sel = if let Some((name, val)) = env_filter_tpl.as_ref() {
-                use crate::diesel::BoolExpressionMethods;
-
-                sel.filter({
-                    schema::envvars::dsl::name.eq(name.as_ref())
-                        .and(schema::envvars::dsl::value.eq(val))
-                })
-            } else {
-                sel
-            };
-
-            sel.load::<(
-                    models::Job,
-                    models::Submit,
-                    models::Endpoint,
-                    models::Package,
-                    Option<(models::JobEnv, models::EnvVar)>,
-                )>(&conn)
-                .map_err(Error::from)
-        })?;
-
-    let data = jobs
-        .iter()
-        .group_by(|(job, submit, ep, package, _)| {
-            (job, submit, ep, package)
-        });
-
-    let data = data
+    let data = sel
+        .order_by(schema::jobs::id.desc()) // required for the --limit implementation
+        .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)?
         .into_iter()
-        .map(|((job, submit, ep, package), grouped)| {
-            let envs = grouped
-                .filter_map(|opt| opt.4.as_ref())
-                .map(|tpl| format!("{}={}", tpl.1.name, tpl.1.value))
-                .join(", ");
-
+        .rev() // required for the --limit implementation
+        .map(|(job, submit, ep, package)| {
             let success = crate::log::ParsedLog::build_from(&job.log_text)?
                 .is_successfull()
                 .map(|b| if b { "yes" } else { "no" })
@@ -397,11 +366,10 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 submit.uuid.to_string(),
                 job.uuid.to_string(),
                 submit.submit_time.to_string(),
-                ep.name.clone(),
+                ep.name,
                 success,
-                package.name.clone(),
-                package.version.clone(),
-                envs,
+                package.name,
+                package.version,
             ])
         })
         .collect::<Result<Vec<_>>>()?;
