@@ -306,7 +306,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     ]);
     let conn = crate::db::establish_connection(conn_cfg)?;
     let env_filter_tpl = matches
-        .value_of("filter_env")
+        .value_of("env_filter")
         .map(crate::util::env::parse_to_env)
         .transpose()?;
 
