@@ -24,6 +24,7 @@ use diesel::JoinOnDsl;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
+use log::debug;
 use log::info;
 
 use crate::config::Configuration;
@@ -324,6 +325,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     // If we get a filter for environment on CLI, we fetch all job ids that are associated with the
     // passed environment variables and make `sel` filter for those.
     let sel = if let Some((name, val)) = matches.value_of("env_filter").map(crate::util::env::parse_to_env).transpose()? {
+        debug!("Filtering for ENV: {} = {}", name, val);
         let jids = schema::envvars::table
             .filter({
                 use crate::diesel::BoolExpressionMethods;
@@ -334,6 +336,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
             .select(schema::job_envs::job_id)
             .load::<i32>(&conn)?;
 
+        debug!("Filtering for these IDs (because of env filter): {:?}", jids);
         sel.filter(schema::jobs::dsl::id.eq_any(jids))
     } else {
         sel
