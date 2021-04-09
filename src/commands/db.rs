@@ -300,19 +300,13 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         "success",
         "package",
         "version",
-        "Env",
     ]);
     let conn = crate::db::establish_connection(conn_cfg)?;
-    let env_filter_tpl = matches
-        .value_of("filter_env")
-        .map(crate::util::env::parse_to_env)
-        .transpose()?;
 
     let sel = schema::jobs::table
         .inner_join(schema::submits::table)
         .inner_join(schema::endpoints::table)
         .inner_join(schema::packages::table)
-        .left_outer_join(schema::job_envs::table.inner_join(schema::envvars::table))
         .into_boxed();
 
     let sel = if let Some(submit_uuid) = matches
@@ -325,39 +319,30 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         sel
     };
 
-    let sel = if let Some((name, val)) = env_filter_tpl.as_ref() {
-        use crate::diesel::BoolExpressionMethods;
+    // Filter for environment variables from the CLI
+    //
+    // If we get a filter for environment on CLI, we fetch all job ids that are associated with the
+    // passed environment variables and make `sel` filter for those.
+    let sel = if let Some((name, val)) = matches.value_of("filter_env").map(crate::util::env::parse_to_env).transpose()? {
+        let jids = schema::envvars::table
+            .filter({
+                use crate::diesel::BoolExpressionMethods;
+                schema::envvars::dsl::name.eq(name.as_ref())
+                    .and(schema::envvars::dsl::value.eq(val))
+            })
+            .inner_join(schema::job_envs::table)
+            .select(schema::job_envs::all_columns)
+            .load::<models::JobEnv>(&conn)
+            .map(|jobenvs| jobenvs.into_iter().map(|je| je.job_id).collect::<Vec<_>>())?;
 
-        sel.filter({
-            schema::envvars::dsl::name.eq(name.as_ref())
-                .and(schema::envvars::dsl::value.eq(val))
-        })
+        sel.filter(schema::jobs::dsl::id.eq_any(jids))
     } else {
         sel
     };
 
-    let jobs = sel.load::<(
-            models::Job,
-            models::Submit,
-            models::Endpoint,
-            models::Package,
-            Option<(models::JobEnv, models::EnvVar)>,
-        )>(&conn)?;
-
-    let data = jobs
-        .iter()
-        .group_by(|(job, submit, ep, package, _)| {
-            (job, submit, ep, package)
-        });
-
-    let data = data
+    let data = sel.load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)?
         .into_iter()
-        .map(|((job, submit, ep, package), grouped)| {
-            let envs = grouped
-                .filter_map(|opt| opt.4.as_ref())
-                .map(|tpl| format!("{}={}", tpl.1.name, tpl.1.value))
-                .join(", ");
-
+        .map(|(job, submit, ep, package)| {
             let success = crate::log::ParsedLog::build_from(&job.log_text)?
                 .is_successfull()
                 .map(|b| if b { "yes" } else { "no" })
@@ -369,11 +354,10 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                 submit.uuid.to_string(),
                 job.uuid.to_string(),
                 submit.submit_time.to_string(),
-                ep.name.clone(),
+                ep.name,
                 success,
-                package.name.clone(),
-                package.version.clone(),
-                envs,
+                package.name,
+                package.version,
             ])
         })
         .collect::<Result<Vec<_>>>()?;
