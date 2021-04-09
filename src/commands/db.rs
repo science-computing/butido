@@ -11,6 +11,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
+use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -342,8 +343,17 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         sel
     };
 
-    let data = sel.load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)?
+    let sel = if let Some(limit) = matches.value_of("limit").map(i64::from_str).transpose()? {
+        sel.limit(limit)
+    } else {
+        sel
+    };
+
+    let data = sel
+        .order_by(schema::jobs::id.desc()) // required for the --limit implementation
+        .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)?
         .into_iter()
+        .rev() // required for the --limit implementation
         .map(|(job, submit, ep, package)| {
             let success = crate::log::ParsedLog::build_from(&job.log_text)?
                 .is_successfull()
