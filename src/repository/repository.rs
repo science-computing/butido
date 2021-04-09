@@ -191,7 +191,7 @@ impl Repository {
                     vec.and_then(|mut v| {
                         trace!("Recursing into {}", dir.display());
                         let mut loaded = load_recursive(root, &dir, config.clone(), progress)
-                            .with_context(|| format!("Recursing for {}", pkg_file.display()))?;
+                            .with_context(|| format!("Reading package from {}", pkg_file.display()))?;
 
                         v.append(&mut loaded);
                         Ok(v)
