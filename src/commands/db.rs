@@ -290,8 +290,6 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 }
 
 fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
-    use crate::schema::jobs::dsl;
-
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec![
         "id",
@@ -310,67 +308,41 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .map(crate::util::env::parse_to_env)
         .transpose()?;
 
-    let jobs = matches
+    let sel = schema::jobs::table
+        .inner_join(schema::submits::table)
+        .inner_join(schema::endpoints::table)
+        .inner_join(schema::packages::table)
+        .left_outer_join(schema::job_envs::table.inner_join(schema::envvars::table))
+        .into_boxed();
+
+    let sel = if let Some(submit_uuid) = matches
         .value_of("submit_uuid")
         .map(uuid::Uuid::parse_str)
         .transpose()?
-        .map(|submit_uuid| {
-            let sel = schema::jobs::table
-                .inner_join(schema::submits::table)
-                .inner_join(schema::endpoints::table)
-                .inner_join(schema::packages::table)
-                .left_outer_join(schema::job_envs::table.inner_join(schema::envvars::table))
-                .filter(schema::submits::uuid.eq(&submit_uuid))
-                .into_boxed();
+    {
+        sel.filter(schema::submits::uuid.eq(submit_uuid))
+    } else {
+        sel
+    };
 
-            let sel = if let Some((name, val)) = env_filter_tpl.as_ref() {
-                use crate::diesel::BoolExpressionMethods;
+    let sel = if let Some((name, val)) = env_filter_tpl.as_ref() {
+        use crate::diesel::BoolExpressionMethods;
 
-                sel.filter({
-                    schema::envvars::dsl::name.eq(name.as_ref())
-                        .and(schema::envvars::dsl::value.eq(val))
-                })
-            } else {
-                sel
-            };
-
-            sel.load::<(
-                    models::Job,
-                    models::Submit,
-                    models::Endpoint,
-                    models::Package,
-                    Option<(models::JobEnv, models::EnvVar)>,
-                )>(&conn)
-                .map_err(Error::from)
+        sel.filter({
+            schema::envvars::dsl::name.eq(name.as_ref())
+                .and(schema::envvars::dsl::value.eq(val))
         })
-        .unwrap_or_else(|| {
-            let sel = dsl::jobs
-                .inner_join(crate::schema::submits::table)
-                .inner_join(crate::schema::endpoints::table)
-                .inner_join(crate::schema::packages::table)
-                .left_outer_join(schema::job_envs::table.inner_join(schema::envvars::table))
-                .into_boxed();
+    } else {
+        sel
+    };
 
-            let sel = if let Some((name, val)) = env_filter_tpl.as_ref() {
-                use crate::diesel::BoolExpressionMethods;
-
-                sel.filter({
-                    schema::envvars::dsl::name.eq(name.as_ref())
-                        .and(schema::envvars::dsl::value.eq(val))
-                })
-            } else {
-                sel
-            };
-
-            sel.load::<(
-                    models::Job,
-                    models::Submit,
-                    models::Endpoint,
-                    models::Package,
-                    Option<(models::JobEnv, models::EnvVar)>,
-                )>(&conn)
-                .map_err(Error::from)
-        })?;
+    let jobs = sel.load::<(
+            models::Job,
+            models::Submit,
+            models::Endpoint,
+            models::Package,
+            Option<(models::JobEnv, models::EnvVar)>,
+        )>(&conn)?;
 
     let data = jobs
         .iter()
