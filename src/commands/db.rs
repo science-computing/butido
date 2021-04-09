@@ -331,9 +331,8 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
                     .and(schema::envvars::dsl::value.eq(val))
             })
             .inner_join(schema::job_envs::table)
-            .select(schema::job_envs::all_columns)
-            .load::<models::JobEnv>(&conn)
-            .map(|jobenvs| jobenvs.into_iter().map(|je| je.job_id).collect::<Vec<_>>())?;
+            .select(schema::job_envs::job_id)
+            .load::<i32>(&conn)?;
 
         sel.filter(schema::jobs::dsl::id.eq_any(jids))
     } else {
