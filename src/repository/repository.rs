@@ -18,6 +18,7 @@ use anyhow::Error;
 use anyhow::Result;
 use log::trace;
 use resiter::AndThen;
+use resiter::FilterMap;
 use resiter::Map;
 
 use crate::package::Package;
@@ -107,7 +108,16 @@ impl Repository {
                 // This is either the patches array from the last recursion or the newly set one,
                 // that doesn't matter here.
                 let patches_before_merge = match config.get_array("patches") {
-                    Ok(v)                                 => v,
+                    Ok(v)  => {
+                        v.into_iter()
+                            .map(|p| {
+                                p.into_str()
+                                    .map(PathBuf::from)
+                                    .with_context(|| anyhow!("patches must be strings"))
+                                    .map_err(Error::from)
+                            })
+                            .collect::<Result<Vec<_>>>()?
+                    },
                     Err(config::ConfigError::NotFound(_)) => vec![],
                     Err(e)                                => return Err(e).map_err(Error::from),
                 };
@@ -145,22 +155,34 @@ impl Repository {
                 // Otherwise we have an error here, because we're refering to a non-existing file.
                 .and_then_ok(|patch| if patch.exists() {
                     trace!("Path to patch exists: {}", patch.display());
-                    Ok(config::Value::from(patch.display().to_string()))
+                    Ok(Some(patch))
+                } else if patches_before_merge.iter().any(|pb| pb.file_name() == patch.file_name()) {
+                    // We have a patch already in the array that is named equal to the patch
+                    // we have in the current recursion.
+                    // It seems like this patch was already in the list and we re-found it
+                    // because we loaded a deeper pkg.toml file.
+                    Ok(None)
                 } else {
                     trace!("Path to patch does not exist: {}", patch.display());
                     Err(anyhow!("Patch does not exist: {}", patch.display()))
                 })
+                .filter_map_ok(|o| o)
                 .collect::<Result<Vec<_>>>()?;
 
                 // If we found any patches, use them. Otherwise use the array from before the merge
                 // (which already has the correct pathes from the previous recursion).
-                let patches = if !patches.is_empty() {
+                let patches = if !patches.is_empty() && patches.iter().all(|p| p.exists()) {
                     patches
                 } else {
                     patches_before_merge
                 };
 
                 trace!("Patches after postprocessing merge: {:?}", patches);
+                let patches = patches
+                    .into_iter()
+                    .map(|p| p.display().to_string())
+                    .map(config::Value::from)
+                    .collect::<Vec<_>>();
                 config.set_once("patches", config::Value::from(patches))?;
             }
 
