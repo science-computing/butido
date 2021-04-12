@@ -88,11 +88,44 @@ impl StoreRoot {
             .and_then_ok(ArtifactPath::new)
     }
 
-    pub(in crate::filestore) fn unpack_archive_here<R>(&self, mut ar: tar::Archive<R>) -> Result<()>
+    /// Unpack a tar archive in this location
+    ///
+    /// This function unpacks the provided tar archive "butido-style" in the location pointed to by
+    /// `self` and returns the written pathes.
+    ///
+    /// The function filteres out the "/output" directory (that's what is meant by "butido-style").
+    pub(in crate::filestore) fn unpack_archive_here<R>(&self, mut ar: tar::Archive<R>) -> Result<Vec<PathBuf>>
     where
         R: std::io::Read,
     {
-        ar.unpack(&self.0).map_err(Error::from)
+        ar.entries()?
+            .into_iter()
+            .map_err(Error::from)
+            .filter_ok(|entry| entry.header().entry_type() == tar::EntryType::Regular)
+            .and_then_ok(|mut entry| -> Result<_> {
+                let path = entry
+                    .path()
+                    .context("Getting path from entry in Archive")?
+                    .components()
+                    .filter(|comp| {
+                        log::trace!("Filtering path component: '{:?}'", comp);
+                        let osstr = std::ffi::OsStr::new(crate::consts::OUTPUTS_DIR_NAME);
+                        match comp {
+                            std::path::Component::Normal(s) => *s != osstr,
+                            _ => true,
+                        }
+                    })
+                    .collect::<PathBuf>();
+
+                log::trace!("Path = '{:?}'", path);
+                let unpack_dest = self.0.join(&path);
+                log::trace!("Unpack to = '{:?}'", unpack_dest);
+
+                entry.unpack(unpack_dest)
+                    .map(|_| path)
+                    .map_err(Error::from)
+            })
+            .collect::<Result<Vec<_>>>()
     }
 }
 

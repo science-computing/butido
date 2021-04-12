@@ -52,27 +52,10 @@ impl StagingStore {
             .try_concat()
             .await
             .and_then(|bytes| {
-                let mut archive = tar::Archive::new(&bytes[..]);
-
-                let outputs = archive
-                    .entries()
-                    .context("Fetching entries from tar archive")?
-                    .map(|ent| {
-                        let p = ent?
-                            .path()
-                            .context("Getting path of TAR entry")?
-                            .into_owned();
-                        Ok(p)
-                    })
-                    .inspect(|p| trace!("Path in tar archive: {:?}", p))
-                    .collect::<Result<Vec<_>>>()
-                    .context("Collecting outputs of TAR archive")?;
-
                 trace!("Unpacking archive to {}", dest.display());
                 dest.unpack_archive_here(tar::Archive::new(&bytes[..]))
                     .context("Unpacking TAR")
                     .map_err(Error::from)
-                    .map(|_| outputs)
             })
             .context("Concatenating the output bytestream")?
             .into_iter()

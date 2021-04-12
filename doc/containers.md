@@ -15,7 +15,7 @@ on. Those are listed here.
 
 1. Dependencies are named `/inputs/<packagename>-<packageversion>.pkg` inside the container
 2. Sources are named `/inputs/src-<hashsum>.source`
-3. Outputs are expected to be named `/outputs/<packagename>-<packageversion>.pkg`
+3. Outputs are expected to be written to the `/outputs` directory
 
 The reason for the names lies in the artifact parsing mechanism.
 If the package is named differently, the artifact parsing mechanism is not able
