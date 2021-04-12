@@ -107,7 +107,7 @@ impl From<String> for PackageVersion {
 }
 
 impl PackageVersion {
-    pub fn parser<'a>() -> PomParser<'a, u8, Self> {
+    fn parser<'a>() -> PomParser<'a, u8, Self> {
         (numbers() + ((dash() | under() | dot() | letters() | numbers()).repeat(0..)))
             .collect()
             .convert(|b| String::from_utf8(b.to_vec()).map(Self::from))
