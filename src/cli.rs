@@ -691,7 +691,7 @@ pub fn cli<'a>() -> App<'a> {
                     .required(false)
                     .multiple(false)
                     .index(2)
-                    .value_name("VERSION")
+                    .value_name("VERSION_CONSTRAINT")
                     .about("Verify the sources of this package version (optional, if left out, all packages are checked)")
                 )
                 .arg(Arg::new("force")
