@@ -88,7 +88,13 @@ impl StoreRoot {
             .and_then_ok(ArtifactPath::new)
     }
 
-    pub(in crate::filestore) fn unpack_archive_here<R>(&self, mut ar: tar::Archive<R>) -> Result<()>
+    /// Unpack a tar archive in this location
+    ///
+    /// This function unpacks the provided tar archive "butido-style" in the location pointed to by
+    /// `self` and returns the written pathes.
+    ///
+    /// The function filteres out the "/output" directory (that's what is meant by "butido-style").
+    pub(in crate::filestore) fn unpack_archive_here<R>(&self, mut ar: tar::Archive<R>) -> Result<Vec<PathBuf>>
     where
         R: std::io::Read,
     {
@@ -112,15 +118,14 @@ impl StoreRoot {
                     .collect::<PathBuf>();
 
                 log::trace!("Path = '{:?}'", path);
-                let unpack_dest = self.0.join(path);
+                let unpack_dest = self.0.join(&path);
                 log::trace!("Unpack to = '{:?}'", unpack_dest);
 
                 entry.unpack(unpack_dest)
-                    .map(|_| ())
+                    .map(|_| path)
                     .map_err(Error::from)
             })
             .collect::<Result<Vec<_>>>()
-            .map(|_| ())
     }
 }
 

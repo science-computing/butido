@@ -17,9 +17,6 @@ use anyhow::anyhow;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
 use log::trace;
-use resiter::AndThen;
-use resiter::Filter;
-use resiter::Map;
 use result_inspect::ResultInspect;
 
 use crate::filestore::path::ArtifactPath;
@@ -55,37 +52,10 @@ impl StagingStore {
             .try_concat()
             .await
             .and_then(|bytes| {
-                let mut archive = tar::Archive::new(&bytes[..]);
-
-                let outputs = archive.entries()?
-                    .map_err(Error::from)
-                    .filter_ok(|entry| entry.header().entry_type() == tar::EntryType::Regular)
-                    .and_then_ok(|entry| {
-                        let entry = entry
-                            .path()
-                            .context("Getting path from entry in Archive")?
-                            .components()
-                            .filter(|comp| {
-                                log::trace!("Filtering path component: '{:?}'", comp);
-                                let osstr = std::ffi::OsStr::new(crate::consts::OUTPUTS_DIR_NAME);
-                                match comp {
-                                    std::path::Component::Normal(s) => *s != osstr,
-                                    _ => true,
-                                }
-                            })
-                            .collect::<std::path::PathBuf>();
-
-                        Ok(entry)
-                    })
-                    .inspect(|p| trace!("Path in tar archive: {:?}", p))
-                    .collect::<Result<Vec<_>>>()
-                    .context("Collecting outputs of TAR archive")?;
-
                 trace!("Unpacking archive to {}", dest.display());
                 dest.unpack_archive_here(tar::Archive::new(&bytes[..]))
                     .context("Unpacking TAR")
                     .map_err(Error::from)
-                    .map(|_| outputs)
             })
             .context("Concatenating the output bytestream")?
             .into_iter()
