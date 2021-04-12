@@ -92,7 +92,35 @@ impl StoreRoot {
     where
         R: std::io::Read,
     {
-        ar.unpack(&self.0).map_err(Error::from)
+        ar.entries()?
+            .into_iter()
+            .map_err(Error::from)
+            .filter_ok(|entry| entry.header().entry_type() == tar::EntryType::Regular)
+            .and_then_ok(|mut entry| -> Result<_> {
+                let path = entry
+                    .path()
+                    .context("Getting path from entry in Archive")?
+                    .components()
+                    .filter(|comp| {
+                        log::trace!("Filtering path component: '{:?}'", comp);
+                        let osstr = std::ffi::OsStr::new(crate::consts::OUTPUTS_DIR_NAME);
+                        match comp {
+                            std::path::Component::Normal(s) => *s != osstr,
+                            _ => true,
+                        }
+                    })
+                    .collect::<PathBuf>();
+
+                log::trace!("Path = '{:?}'", path);
+                let unpack_dest = self.0.join(path);
+                log::trace!("Unpack to = '{:?}'", unpack_dest);
+
+                entry.unpack(unpack_dest)
+                    .map(|_| ())
+                    .map_err(Error::from)
+            })
+            .collect::<Result<Vec<_>>>()
+            .map(|_| ())
     }
 }
 

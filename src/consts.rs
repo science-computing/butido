@@ -16,6 +16,7 @@ pub const INPUTS_DIR_PATH: &str  = "/inputs";
 /// The path to the directory inside the container where the outputs of a compile job must be
 /// located after the script was run
 pub const OUTPUTS_DIR_PATH: &str = "/outputs";
+pub const OUTPUTS_DIR_NAME: &str = "outputs";
 
 /// The path where the script that is executed inside the container is copied to.
 pub const SCRIPT_PATH: &str      = "/script";
