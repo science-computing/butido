@@ -163,7 +163,7 @@ async fn new_release(
                 }
 
                 // else !dest_path.exists()
-                tokio::fs::rename(art_path, dest_path)
+                tokio::fs::copy(art_path, dest_path)
                     .await
                     .map_err(Error::from)
                     .map(|_| art)
