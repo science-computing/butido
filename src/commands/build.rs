@@ -98,7 +98,7 @@ pub async fn build(
     trace!("Repository HEAD = {}", hash_str);
     let phases = config.available_phases();
 
-    let endpoint_configurations = config
+    let mut endpoint_configurations = config
         .docker()
         .endpoints()
         .iter()
@@ -111,7 +111,14 @@ pub async fn build(
                 .required_docker_api_versions(config.docker().docker_api_versions().clone())
                 .build()
         })
-        .collect();
+        .collect::<Vec<_>>();
+    {
+        // Because we're loading always sequencially, to have a bit more spread over the endpoints,
+        // shuffle the endpoints here. Not a perfect solution, but a working one.
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        rng.shuffle(&mut endpoint_configurations);
+    }
     info!("Endpoint config build");
 
     let pname = matches
