@@ -185,7 +185,7 @@ pub fn find_artifacts<'a>(
                                     .any(|(key, value)| k == key.as_ref() && v == value)
                             });
 
-                        trace!("Filder result = {}", filter_result);
+                        trace!("Filter result = {}", filter_result);
                         Ok((tpl.0, filter_result))
                     } else {
                         trace!("Not filtering environment...");
