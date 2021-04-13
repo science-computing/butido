@@ -84,8 +84,13 @@ impl Endpoint {
             Endpoint::check_api_version_compat(epc.required_docker_api_versions().as_ref(), &ep);
         let imgs_avail = Endpoint::check_images_available(epc.required_images().as_ref(), &ep);
 
-        let (versions_compat, api_versions_compat, imgs_avail) =
-            tokio::join!(versions_compat, api_versions_compat, imgs_avail);
+        let (versions_compat, api_versions_compat, imgs_avail) = {
+            let timeout = std::time::Duration::from_secs(epc.endpoint().timeout().unwrap_or(10));
+            let versions_compat = tokio::time::timeout(timeout, versions_compat);
+            let api_versions_compat = tokio::time::timeout(timeout, api_versions_compat);
+            let imgs_avail = tokio::time::timeout(timeout, imgs_avail);
+            tokio::join!(versions_compat, api_versions_compat, imgs_avail)
+        };
 
         let _ = versions_compat.with_context(|| {
             anyhow!(

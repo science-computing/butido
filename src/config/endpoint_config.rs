@@ -50,6 +50,10 @@ pub struct Endpoint {
 
     #[getset(get = "pub")]
     network_mode: Option<String>,
+
+    /// Duration length of timeout for connecting endpoint
+    #[getset(get = "pub")]
+    timeout: Option<u64>,
 }
 
 /// The type of an endpoint
