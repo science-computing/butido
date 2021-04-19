@@ -61,7 +61,7 @@ sha-1          = "0.9"
 sha2           = "0.9"
 shiplift       = "0.7"
 syntect        = "4.4"
-tar            = "0.4"
+tar            = "0.4.16"
 terminal_size  = "0.1"
 tokio          = { version = "1.0", features = ["macros", "fs", "process", "io-util", "time"] }
 tokio-stream   = "0.1"
