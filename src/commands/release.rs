@@ -163,21 +163,22 @@ async fn new_release(
                 }
 
                 // else !dest_path.exists()
-                tokio::fs::copy(art_path, dest_path)
+                tokio::fs::copy(art_path, &dest_path)
                     .await
                     .map_err(Error::from)
-                    .map(|_| art)
+                    .map(|_| (art, dest_path))
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Result<Vec<_>>>()
         .await?
         .into_iter()
-        .try_for_each(|art| {
+        .try_for_each(|(art, dest_path)| {
             debug!("Updating {:?} to set released = true", art);
             let rel = crate::db::models::Release::create(&conn, &art, &now, &release_store)?;
             debug!("Release object = {:?}", rel);
-            Ok(())
+
+            writeln!(std::io::stdout(), "{}", dest_path.display()).map_err(Error::from)
         })
 }
 
