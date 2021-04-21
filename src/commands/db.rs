@@ -355,8 +355,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .into_iter()
         .rev() // required for the --limit implementation
         .map(|(job, submit, ep, package)| {
-            let success = crate::log::ParsedLog::build_from(&job.log_text)?
-                .is_successfull()
+            let success = is_job_successful(&job)?
                 .map(|b| if b { "yes" } else { "no" })
                 .map(String::from)
                 .unwrap_or_else(|| String::from("unknown"));
@@ -600,5 +599,12 @@ fn releases(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgM
         .collect::<Vec<Vec<_>>>();
 
     crate::commands::util::display_data(header, data, csv)
+}
+
+/// Check if a job is successful
+///
+/// Returns Ok(None) if cannot be decided
+fn is_job_successful(job: &models::Job) -> Result<Option<bool>> {
+    crate::log::ParsedLog::build_from(&job.log_text).map(|pl| pl.is_successfull())
 }
 
