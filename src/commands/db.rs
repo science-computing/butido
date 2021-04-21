@@ -46,6 +46,7 @@ pub fn db(
         Some(("artifacts", matches)) => artifacts(db_connection_config, matches),
         Some(("envvars", matches)) => envvars(db_connection_config, matches),
         Some(("images", matches)) => images(db_connection_config, matches),
+        Some(("submit", matches)) => submit(db_connection_config, matches),
         Some(("submits", matches)) => submits(db_connection_config, matches),
         Some(("jobs", matches)) => jobs(db_connection_config, matches),
         Some(("job", matches)) => job(db_connection_config, config, matches),
@@ -227,6 +228,76 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn submit(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+    let conn = crate::db::establish_connection(conn_cfg)?;
+    let submit_id = matches.value_of("submit")
+        .map(uuid::Uuid::from_str)
+        .transpose()
+        .context("Parsing submit UUID")?
+        .unwrap(); // safe by clap
+
+    let submit = models::Submit::with_id(&conn, &submit_id)
+        .with_context(|| anyhow!("Loading submit '{}' from DB", submit_id))?;
+
+    let jobs = schema::submits::table
+        .inner_join(schema::jobs::table)
+        .filter(schema::submits::uuid.eq(&submit_id))
+        .select(schema::jobs::all_columns)
+        .load::<models::Job>(&conn)
+        .with_context(|| anyhow!("Loading jobs for submit = {}", submit_id))?;
+
+    let n_jobs = jobs.len();
+    let (jobs_success, jobs_err) = {
+        let s = jobs.iter().map(is_job_successful).fold(Ok(0), |acc, e| acc.and_then(|a| e.map(|_| a + 1)))?;
+        (s, n_jobs - s)
+    };
+
+    let out = std::io::stdout();
+    let mut outlock = out.lock();
+
+    indoc::writedoc!(outlock, r#"
+            Submit   {submit_id}
+            Date:    {submit_dt}
+            Jobs:    {n_jobs}
+            Success: {n_jobs_success}
+            Errored: {n_jobs_err}
+
+        "#,
+        submit_id = submit.uuid.to_string().cyan(),
+        submit_dt = submit.submit_time.to_string().cyan(),
+        n_jobs = n_jobs.to_string().cyan(),
+        n_jobs_success = jobs_success.to_string().green(),
+        n_jobs_err = jobs_err.to_string().red(),
+    )?;
+
+    let header = crate::commands::util::mk_header(["Job", "Success", "Package", "Version", "Endpoint", "Container", "Image"].to_vec());
+    let data = jobs.iter()
+        .map(|job| {
+            let image = models::Image::fetch_for_job(&conn, job)?
+                .ok_or_else(|| anyhow!("Image for job {} not found", job.uuid))?;
+            let package = models::Package::fetch_for_job(&conn, job)?
+                .ok_or_else(|| anyhow!("Package for job {} not found", job.uuid))?;
+            let endpoint = models::Endpoint::fetch_for_job(&conn, job)?
+                .ok_or_else(|| anyhow!("Endpoint for job {} not found", job.uuid))?;
+
+            Ok(vec![
+                job.uuid.to_string().cyan(),
+                match is_job_successful(job)? {
+                    Some(true) => "Success".green(),
+                    Some(false) => "Error".red(),
+                    None => "Unknown".yellow(),
+                },
+                package.name.cyan(),
+                package.version.cyan(),
+                job.container_hash.normal(),
+                endpoint.name.normal(),
+                image.name.normal(),
+            ])
+        })
+        .collect::<Result<Vec<Vec<colored::ColoredString>>>>()?;
+    crate::commands::util::display_data(header, data, false)
 }
 
 fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
