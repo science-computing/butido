@@ -43,6 +43,7 @@ async fn new_release(
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
+    let print_released_file_pathes = !matches.is_present("quiet");
     let release_store_name = matches.value_of("release_store_name").unwrap(); // safe by clap
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
         return Err(anyhow!(
@@ -178,7 +179,11 @@ async fn new_release(
             let rel = crate::db::models::Release::create(&conn, &art, &now, &release_store)?;
             debug!("Release object = {:?}", rel);
 
-            writeln!(std::io::stdout(), "{}", dest_path.display()).map_err(Error::from)
+            if print_released_file_pathes {
+                writeln!(std::io::stdout(), "{}", dest_path.display()).map_err(Error::from)
+            } else {
+                Ok(())
+            }
         })
 }
 

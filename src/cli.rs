@@ -820,6 +820,13 @@ pub fn cli<'a>() -> App<'a> {
                     .about("Dont be interactive (only with --update at the moment)")
                     .requires("package_do_update")
                 )
+                .arg(Arg::new("quiet")
+                    .required(false)
+                    .multiple(false)
+                    .long("quiet")
+                    .short('q')
+                    .about("Don't print pathes to released filesfiles  after releases are complete")
+                )
             )
 
         )
