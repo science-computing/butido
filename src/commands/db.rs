@@ -302,8 +302,49 @@ fn submit(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 
 fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
+    let limit = matches.value_of("limit").map(i64::from_str).transpose()?;
     let hdrs = crate::commands::util::mk_header(vec!["id", "time", "uuid"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
+
+    let query = schema::submits::table
+        .order_by(schema::submits::id.desc()); // required for the --limit implementation
+
+    let submits = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
+        // Get all submits which included the package, but were not necessarily made _for_ the package
+        let query = query
+            .inner_join(schema::jobs::table)
+            .inner_join(schema::packages::table.on(schema::jobs::package_id.eq(schema::packages::id)))
+            .filter(schema::packages::name.eq(&pkgname))
+            .into_boxed();
+
+        if let Some(limit) = limit {
+            query.limit(limit)
+        } else {
+            query
+        }
+        .select(schema::submits::all_columns)
+        .load::<models::Submit>(&conn)?
+    } else if let Some(pkgname) = matches.value_of("for_pkg") {
+        // Get all submits _for_ the package
+        let query = query
+            .inner_join({
+                schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
+            })
+            .filter(schema::packages::dsl::name.eq(&pkgname))
+            .into_boxed();
+
+        if let Some(limit) = limit {
+            query.limit(limit)
+        } else {
+            query
+        }
+        .select(schema::submits::all_columns)
+        .load::<models::Submit>(&conn)?
+    } else if let Some(limit) = limit {
+        query.limit(limit).load::<models::Submit>(&conn)?
+    } else {
+        query.load::<models::Submit>(&conn)?
+    };
 
     // Helper to map Submit -> Vec<String>
     let submit_to_vec = |submit: models::Submit| {
@@ -314,44 +355,7 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         ]
     };
 
-    // Helper to get all submits that were made _for_ a package
-    let submits_for = |pkgname: &str| {
-        schema::submits::table
-            .inner_join(schema::packages::table)
-            .filter(schema::packages::dsl::name.eq(&pkgname))
-            .select(schema::submits::all_columns)
-            .load::<models::Submit>(&conn)
-    };
-
-    let data = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
-        // Get all submits which included the package, but were not made _for_ the package
-        let submits_with_pkg = schema::packages::table
-            .filter(schema::packages::name.eq(&pkgname))
-            .inner_join(schema::jobs::table.inner_join(schema::submits::table))
-            .select(schema::submits::all_columns)
-            .load::<models::Submit>(&conn)?;
-
-        let submits_for_pkg = submits_for(&pkgname)?;
-
-        submits_with_pkg
-            .into_iter()
-            .chain(submits_for_pkg.into_iter())
-            .map(submit_to_vec)
-            .collect::<Vec<_>>()
-    } else if let Some(pkgname) = matches.value_of("for_pkg") {
-        // Get all submits _for_ the package
-        submits_for(pkgname)?
-            .into_iter()
-            .map(submit_to_vec)
-            .collect::<Vec<_>>()
-    } else {
-        // default: Get all submits
-        schema::submits::table
-            .load::<models::Submit>(&conn)?
-            .into_iter()
-            .map(submit_to_vec)
-            .collect::<Vec<_>>()
-    };
+    let data = submits.into_iter().rev().map(submit_to_vec).collect::<Vec<_>>();
 
     if data.is_empty() {
         info!("No submits in database");
