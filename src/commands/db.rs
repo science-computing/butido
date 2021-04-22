@@ -245,9 +245,10 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 
     let submits = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
         // Get all submits which included the package, but were not made _for_ the package
-        let submits_with_pkg = schema::packages::table
+        let submits_with_pkg = schema::submits::table
+            .inner_join(schema::jobs::table)
+            .inner_join(schema::packages::table)
             .filter(schema::packages::name.eq(&pkgname))
-            .inner_join(schema::jobs::table.inner_join(schema::submits::table))
             .select(schema::submits::all_columns)
             .load::<models::Submit>(&conn)?;
 
