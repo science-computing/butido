@@ -43,4 +43,16 @@ impl Endpoint {
             .first::<Endpoint>(database_connection)
             .map_err(Error::from)
     }
+
+    pub fn fetch_for_job(database_connection: &PgConnection, j: &crate::db::models::Job) -> Result<Option<Endpoint>> {
+        Self::fetch_by_id(database_connection, j.endpoint_id)
+    }
+
+    pub fn fetch_by_id(database_connection: &PgConnection, eid: i32) -> Result<Option<Endpoint>> {
+        match dsl::endpoints.filter(id.eq(eid)).first::<Endpoint>(database_connection) {
+            Err(diesel::result::Error::NotFound) => Ok(None),
+            Err(e) => Err(Error::from(e)),
+            Ok(e) => Ok(Some(e)),
+        }
+    }
 }
