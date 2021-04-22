@@ -231,30 +231,47 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
 
 fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
+    let limit = matches.value_of("limit").map(i64::from_str).transpose()?;
     let hdrs = crate::commands::util::mk_header(vec!["id", "time", "uuid"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
 
-    let query = schema::submits::table.into_boxed();
+    let query = schema::submits::table
+        .order_by(schema::submits::id.desc()); // required for the --limit implementation
 
     let submits = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
         // Get all submits which included the package, but were not necessarily made _for_ the package
-        query
+        let query = query
             .inner_join(schema::jobs::table)
             .inner_join(schema::packages::table.on(schema::jobs::package_id.eq(schema::packages::id)))
             .filter(schema::packages::name.eq(&pkgname))
-            .select(schema::submits::all_columns)
-            .load::<models::Submit>(&conn)?
+            .into_boxed();
+
+        if let Some(limit) = limit {
+            query.limit(limit)
+        } else {
+            query
+        }
+        .select(schema::submits::all_columns)
+        .load::<models::Submit>(&conn)?
     } else if let Some(pkgname) = matches.value_of("for_pkg") {
         // Get all submits _for_ the package
-        query
+        let query = query
             .inner_join({
                 schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
             })
             .filter(schema::packages::dsl::name.eq(&pkgname))
-            .select(schema::submits::all_columns)
-            .load::<models::Submit>(&conn)?
+            .into_boxed();
+
+        if let Some(limit) = limit {
+            query.limit(limit)
+        } else {
+            query
+        }
+        .select(schema::submits::all_columns)
+        .load::<models::Submit>(&conn)?
+    } else if let Some(limit) = limit {
+        query.limit(limit).load::<models::Submit>(&conn)?
     } else {
-        // default: Get all submits
         query.load::<models::Submit>(&conn)?
     };
 
@@ -267,7 +284,7 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         ]
     };
 
-    let data = submits.into_iter().map(submit_to_vec).collect::<Vec<_>>();
+    let data = submits.into_iter().rev().map(submit_to_vec).collect::<Vec<_>>();
 
     if data.is_empty() {
         info!("No submits in database");
