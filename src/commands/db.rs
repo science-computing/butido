@@ -234,37 +234,28 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     let hdrs = crate::commands::util::mk_header(vec!["id", "time", "uuid"]);
     let conn = crate::db::establish_connection(conn_cfg)?;
 
-    // Helper to get all submits that were made _for_ a package
-    let submits_for = |pkgname: &str| {
-        schema::submits::table
-            .inner_join(schema::packages::table)
-            .filter(schema::packages::dsl::name.eq(&pkgname))
-            .select(schema::submits::all_columns)
-            .load::<models::Submit>(&conn)
-    };
+    let query = schema::submits::table.into_boxed();
 
     let submits = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
-        // Get all submits which included the package, but were not made _for_ the package
-        let submits_with_pkg = schema::submits::table
+        // Get all submits which included the package, but were not necessarily made _for_ the package
+        query
             .inner_join(schema::jobs::table)
-            .inner_join(schema::packages::table)
+            .inner_join(schema::packages::table.on(schema::jobs::package_id.eq(schema::packages::id)))
             .filter(schema::packages::name.eq(&pkgname))
             .select(schema::submits::all_columns)
-            .load::<models::Submit>(&conn)?;
-
-        let submits_for_pkg = submits_for(&pkgname)?;
-
-        submits_with_pkg
-            .into_iter()
-            .chain(submits_for_pkg.into_iter())
-            .collect()
+            .load::<models::Submit>(&conn)?
     } else if let Some(pkgname) = matches.value_of("for_pkg") {
         // Get all submits _for_ the package
-        submits_for(pkgname)?
+        query
+            .inner_join({
+                schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
+            })
+            .filter(schema::packages::dsl::name.eq(&pkgname))
+            .select(schema::submits::all_columns)
+            .load::<models::Submit>(&conn)?
     } else {
         // default: Get all submits
-        schema::submits::table
-            .load::<models::Submit>(&conn)?
+        query.load::<models::Submit>(&conn)?
     };
 
     // Helper to map Submit -> Vec<String>
