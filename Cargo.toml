@@ -1,6 +1,6 @@
 [package]
 name = "butido"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Matthias Beyer <mail@beyermatthias.de>",
            "Matthias Beyer <matthias.beyer@atos.net>",
            "Christoph Prokop <christoph.prokop@atos.net>",
