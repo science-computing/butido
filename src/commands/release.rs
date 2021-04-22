@@ -43,6 +43,7 @@ async fn new_release(
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
+    let print_released_file_pathes = !matches.is_present("quiet");
     let release_store_name = matches.value_of("release_store_name").unwrap(); // safe by clap
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
         return Err(anyhow!(
@@ -163,21 +164,26 @@ async fn new_release(
                 }
 
                 // else !dest_path.exists()
-                tokio::fs::copy(art_path, dest_path)
+                tokio::fs::copy(art_path, &dest_path)
                     .await
                     .map_err(Error::from)
-                    .map(|_| art)
+                    .map(|_| (art, dest_path))
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Result<Vec<_>>>()
         .await?
         .into_iter()
-        .try_for_each(|art| {
+        .try_for_each(|(art, dest_path)| {
             debug!("Updating {:?} to set released = true", art);
             let rel = crate::db::models::Release::create(&conn, &art, &now, &release_store)?;
             debug!("Release object = {:?}", rel);
-            Ok(())
+
+            if print_released_file_pathes {
+                writeln!(std::io::stdout(), "{}", dest_path.display()).map_err(Error::from)
+            } else {
+                Ok(())
+            }
         })
 }
 
