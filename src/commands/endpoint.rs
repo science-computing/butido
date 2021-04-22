@@ -247,7 +247,9 @@ async fn containers_prune(endpoint_names: Vec<EndpointName>,
         .await?;
 
     let prompt = format!("Really delete {} Containers?", stats.iter().flatten().count());
-    dialoguer::Confirm::new().with_prompt(prompt).interact()?;
+    if !dialoguer::Confirm::new().with_prompt(prompt).interact()? {
+        return Ok(())
+    }
 
     stats.into_iter()
         .map(Vec::into_iter)
