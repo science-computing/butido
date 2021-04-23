@@ -127,6 +127,10 @@ database_user     = "pgdev"
 database_password = "password"
 database_name     = "butido"
 
+# Set a database connection timeout
+# If not set, this defaults to 30
+#database_connection_timeout = 30
+
 
 # Phases which can be configured in the packages
 

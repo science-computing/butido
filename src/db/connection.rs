@@ -34,17 +34,21 @@ pub struct DbConnectionConfig {
 
     #[getset(get = "pub")]
     database_name: String,
+
+    #[getset(get = "pub")]
+    database_connection_timeout: String,
 }
 
 impl Into<String> for DbConnectionConfig {
     fn into(self) -> String {
         format!(
-            "postgres://{user}:{password}@{host}:{port}/{name}",
+            "postgres://{user}:{password}@{host}:{port}/{name}?connect_timeout={timeout}",
             host = self.database_host,
             port = self.database_port,
             user = self.database_user,
             password = self.database_password,
-            name = self.database_name
+            name = self.database_name,
+            timeout = self.database_connection_timeout,
         )
     }
 }
@@ -66,6 +70,11 @@ pub fn parse_db_connection_config(config: &Configuration, cli: &ArgMatches) -> D
         config.database_password().to_string()
     });
     let database_name = find_value(cli, "database_name", || config.database_name().to_string());
+    let database_connection_timeout = find_value(cli, "database_connection_timeout",
+        || {
+            // hardcoded default of 30 seconds database timeout
+            config.database_connection_timeout().unwrap_or(30).to_string()
+        });
 
     DbConnectionConfig {
         database_host,
@@ -73,6 +82,7 @@ pub fn parse_db_connection_config(config: &Configuration, cli: &ArgMatches) -> D
         database_user,
         database_password,
         database_name,
+        database_connection_timeout,
     }
 }
 

@@ -69,6 +69,13 @@ pub fn cli<'a>() -> App<'a> {
             .value_name("NAME")
             .about("Overwrite the database name set via configuration. Can also be overriden via environment, but this setting has presendence.")
         )
+        .arg(Arg::new("database_connection_timeout")
+            .required(false)
+            .multiple(false)
+            .long("db-timeout")
+            .value_name("TIMEOUT")
+            .about("Overwrite the database connection timeout set via configuration. Can also be overriden via environment, but this setting has presendence.")
+        )
 
         .subcommand(App::new("generate-completions")
             .version(crate_version!())

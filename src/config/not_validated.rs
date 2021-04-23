@@ -97,6 +97,10 @@ pub struct NotValidatedConfiguration {
     database_name: String,
 
     #[getset(get = "pub")]
+    #[serde(rename = "database_connection_timeout")]
+    database_connection_timeout: Option<u16>,
+
+    #[getset(get = "pub")]
     docker: DockerConfig,
 
     #[getset(get = "pub")]
