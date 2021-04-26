@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'source' subcommand
+
 use std::io::Write;
 use std::path::PathBuf;
 use std::convert::TryFrom;

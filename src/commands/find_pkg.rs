@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'find-pkg' subcommand
+
 use std::convert::TryFrom;
 
 use anyhow::Context;

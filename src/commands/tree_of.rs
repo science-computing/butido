@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'tree-of' subcommand
+
 use std::convert::TryFrom;
 
 use anyhow::Error;

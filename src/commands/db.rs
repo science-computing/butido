@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'db' subcommand
+
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;

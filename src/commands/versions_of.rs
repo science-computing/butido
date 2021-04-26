@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'versions_of' subcommand
+
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;

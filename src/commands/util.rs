@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Utility module for subcommand implementation helpers
+
 use std::io::Write;
 use std::fmt::Display;
 use std::path::Path;

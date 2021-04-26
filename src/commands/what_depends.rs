@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'what_depends' subcommand
+
 use anyhow::Result;
 use clap::ArgMatches;
 use log::trace;
