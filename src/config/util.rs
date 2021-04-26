@@ -11,14 +11,17 @@
 //! This module contains default functions that are called by serde when deserializing the
 //! configuration and having to use default values.
 
+/// The default progress bar format
 pub fn default_progress_format() -> String {
     String::from("[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}")
 }
 
+/// The default spinner format
 pub fn default_spinner_format() -> String {
     String::from("[{elapsed_precise}] {spinner} | {msg}")
 }
 
+/// The default format that is used to print one package
 pub fn default_package_print_format() -> String {
     String::from(indoc::indoc!(
         r#"
@@ -83,14 +86,17 @@ pub fn default_package_print_format() -> String {
     ))
 }
 
+/// The default value for whether strict script interpolation should be used
 pub fn default_strict_script_interpolation() -> bool {
     true
 }
 
+/// The default value for the shebang
 pub fn default_script_shebang() -> String {
     String::from("#!/bin/bash")
 }
 
+/// The default value for the number of log lines that should be printed if a build fails
 pub fn default_build_error_lines() -> usize {
     10
 }
