@@ -58,6 +58,7 @@ pub fn db(
     }
 }
 
+/// Implementation of the "db cli" subcommand
 fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     trait PgCliCommand {
         fn run_for_uri(&self, dbcc: DbConnectionConfig<'_>) -> Result<()>;
@@ -141,6 +142,7 @@ fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Re
         .run_for_uri(db_connection_config)
 }
 
+/// Implementation of the "db artifacts" subcommand
 fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     use crate::schema::artifacts::dsl;
 
@@ -190,6 +192,7 @@ fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<(
     Ok(())
 }
 
+/// Implementation of the "db envvars" subcommand
 fn envvars(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     use crate::schema::envvars::dsl;
 
@@ -211,6 +214,7 @@ fn envvars(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
     Ok(())
 }
 
+/// Implementation of the "db images" subcommand
 fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     use crate::schema::images::dsl;
 
@@ -232,6 +236,7 @@ fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
     Ok(())
 }
 
+/// Implementation of the "db submit" subcommand
 fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let conn = conn_cfg.establish_connection()?;
     let submit_id = matches.value_of("submit")
@@ -302,6 +307,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
     crate::commands::util::display_data(header, data, false)
 }
 
+/// Implementation of the "db submits" subcommand
 fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
     let limit = matches.value_of("limit").map(i64::from_str).transpose()?;
@@ -368,6 +374,7 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
     Ok(())
 }
 
+/// Implementation of the "db jobs" subcommand
 fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec![
@@ -459,6 +466,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
+/// Implementation of the "db job" subcommand
 fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     let script_highlight = !matches.is_present("no_script_highlight");
     let script_line_numbers = !matches.is_present("no_script_line_numbers");
@@ -652,6 +660,7 @@ fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
         .map(|_| ())
 }
 
+/// Implementation of the "db releases" subcommand
 fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     let csv    = matches.is_present("csv");
     let conn   = conn_cfg.establish_connection()?;
