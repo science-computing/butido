@@ -994,6 +994,42 @@ pub fn cli<'a>() -> App<'a> {
                         .conflicts_with("older_than")
                     )
                 )
+                .subcommand(App::new("stop")
+                    .version(crate_version!())
+                    .about("Stop running containers")
+                    .arg(Arg::new("older_than")
+                        .required(false)
+                        .multiple(false)
+                        .long("older-than")
+                        .takes_value(true)
+                        .value_name("DATE")
+                        .about("Stop only containers that are older than DATE")
+                        .validator(parse_date_from_string)
+                        .conflicts_with("newer_than")
+                    )
+
+                    .arg(Arg::new("newer_than")
+                        .required(false)
+                        .multiple(false)
+                        .long("newer-than")
+                        .takes_value(true)
+                        .value_name("DATE")
+                        .about("Stop only containers that are newer than DATE")
+                        .validator(parse_date_from_string)
+                        .conflicts_with("older_than")
+                    )
+
+                    .arg(Arg::new("timeout")
+                        .required(false)
+                        .multiple(false)
+                        .long("timeout")
+                        .short('t')
+                        .takes_value(true)
+                        .value_name("TIMEOUT")
+                        .about("Timeout in seconds")
+                        .validator(parse_u64)
+                    )
+                )
                 .subcommand(App::new("list")
                     .version(crate_version!())
                     .about("List the containers and stats about them")
@@ -1228,6 +1264,10 @@ fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
 
 fn parse_usize(s: &str) -> std::result::Result<(), String> {
     usize::from_str(s) .map_err(|e| e.to_string()).map(|_| ())
+}
+
+fn parse_u64(s: &str) -> std::result::Result<(), String> {
+    u64::from_str(s).map_err(|e| e.to_string()).map(|_| ())
 }
 
 #[cfg(test)]
