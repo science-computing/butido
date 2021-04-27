@@ -25,7 +25,7 @@ use crate::db::DbConnectionConfig;
 
 /// Implementation of the "release" subcommand
 pub async fn release(
-    db_connection_config: DbConnectionConfig,
+    db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
@@ -39,7 +39,7 @@ pub async fn release(
 
 
 async fn new_release(
-    db_connection_config: DbConnectionConfig,
+    db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
@@ -188,7 +188,7 @@ async fn new_release(
 }
 
 pub async fn rm_release(
-    db_connection_config: DbConnectionConfig,
+    db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {

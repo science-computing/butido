@@ -36,7 +36,7 @@ use crate::schema;
 
 /// Implementation of the "db" subcommand
 pub fn db(
-    db_connection_config: DbConnectionConfig,
+    db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
@@ -56,14 +56,14 @@ pub fn db(
     }
 }
 
-fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     trait PgCliCommand {
-        fn run_for_uri(&self, dbcc: DbConnectionConfig) -> Result<()>;
+        fn run_for_uri(&self, dbcc: DbConnectionConfig<'_>) -> Result<()>;
     }
 
     struct Psql(PathBuf);
     impl PgCliCommand for Psql {
-        fn run_for_uri(&self, dbcc: DbConnectionConfig) -> Result<()> {
+        fn run_for_uri(&self, dbcc: DbConnectionConfig<'_>) -> Result<()> {
             Command::new(&self.0)
                 .arg(format!("--dbname={}", dbcc.database_name()))
                 .arg(format!("--host={}", dbcc.database_host()))
@@ -92,12 +92,12 @@ fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result
 
     struct PgCli(PathBuf);
     impl PgCliCommand for PgCli {
-        fn run_for_uri(&self, dbcc: DbConnectionConfig) -> Result<()> {
+        fn run_for_uri(&self, dbcc: DbConnectionConfig<'_>) -> Result<()> {
             Command::new(&self.0)
                 .arg("--host")
                 .arg(dbcc.database_host())
                 .arg("--port")
-                .arg(dbcc.database_port())
+                .arg(dbcc.database_port().to_string())
                 .arg("--username")
                 .arg(dbcc.database_user())
                 .arg(dbcc.database_name())
@@ -139,7 +139,7 @@ fn cli(db_connection_config: DbConnectionConfig, matches: &ArgMatches) -> Result
         .run_for_uri(db_connection_config)
 }
 
-fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     use crate::schema::artifacts::dsl;
 
     let csv = matches.is_present("csv");
@@ -188,7 +188,7 @@ fn artifacts(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+fn envvars(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     use crate::schema::envvars::dsl;
 
     let csv = matches.is_present("csv");
@@ -209,7 +209,7 @@ fn envvars(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     use crate::schema::images::dsl;
 
     let csv = matches.is_present("csv");
@@ -230,7 +230,7 @@ fn images(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn submit(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let conn = crate::db::establish_connection(conn_cfg)?;
     let submit_id = matches.value_of("submit")
         .map(uuid::Uuid::from_str)
@@ -300,7 +300,7 @@ fn submit(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     crate::commands::util::display_data(header, data, false)
 }
 
-fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
     let limit = matches.value_of("limit").map(i64::from_str).transpose()?;
     let hdrs = crate::commands::util::mk_header(vec!["id", "time", "uuid"]);
@@ -366,7 +366,7 @@ fn submits(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec![
         "id",
@@ -457,7 +457,7 @@ fn jobs(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
+fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     let script_highlight = !matches.is_present("no_script_highlight");
     let script_line_numbers = !matches.is_present("no_script_line_numbers");
     let configured_theme = config.script_highlight_theme();
@@ -628,7 +628,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
 }
 
 /// Implementation of the subcommand "db log-of"
-fn log_of(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let conn   = crate::db::establish_connection(conn_cfg)?;
     let job_uuid = matches
         .value_of("job_uuid")
@@ -650,7 +650,7 @@ fn log_of(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .map(|_| ())
 }
 
-fn releases(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
+fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     let csv    = matches.is_present("csv");
     let conn   = crate::db::establish_connection(conn_cfg)?;
     let header = crate::commands::util::mk_header(["Package", "Version", "Date", "Path"].to_vec());
@@ -674,7 +674,7 @@ fn releases(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgM
         .load::<(models::Artifact, models::Package, models::Release, models::ReleaseStore)>(&conn)?
         .into_iter()
         .filter_map(|(art, pack, rel, rstore)| {
-            let p = config.releases_directory().join(rstore.store_name).join(&art.path);
+        let p = config.releases_directory().join(rstore.store_name).join(&art.path);
 
             if p.is_file() {
                 Some(vec![

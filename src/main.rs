@@ -146,7 +146,7 @@ async fn main() -> Result<()> {
         Ok(repo)
     };
 
-    let db_connection_config = crate::db::parse_db_connection_config(&config, &cli);
+    let db_connection_config = crate::db::parse_db_connection_config(&config, &cli)?;
     match cli.subcommand() {
         Some(("generate-completions", matches)) => generate_completions(matches),
         Some(("db", matches)) => {

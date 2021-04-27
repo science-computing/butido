@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::str::FromStr;
+
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
@@ -19,27 +21,27 @@ use log::debug;
 use crate::config::Configuration;
 
 #[derive(Debug, Getters)]
-pub struct DbConnectionConfig {
+pub struct DbConnectionConfig<'a> {
     #[getset(get = "pub")]
-    database_host: String,
+    database_host: &'a str,
 
     #[getset(get = "pub")]
-    database_port: String,
+    database_port: u16,
 
     #[getset(get = "pub")]
-    database_user: String,
+    database_user: &'a str,
 
     #[getset(get = "pub")]
-    database_password: String,
+    database_password: &'a str,
 
     #[getset(get = "pub")]
-    database_name: String,
+    database_name: &'a str,
 
     #[getset(get = "pub")]
-    database_connection_timeout: String,
+    database_connection_timeout: u16,
 }
 
-impl Into<String> for DbConnectionConfig {
+impl<'a> Into<String> for DbConnectionConfig<'a> {
     fn into(self) -> String {
         format!(
             "postgres://{user}:{password}@{host}:{port}/{name}?connect_timeout={timeout}",
@@ -53,40 +55,43 @@ impl Into<String> for DbConnectionConfig {
     }
 }
 
-pub fn parse_db_connection_config(config: &Configuration, cli: &ArgMatches) -> DbConnectionConfig {
-    fn find_value<F>(cli: &ArgMatches, key: &str, alternative: F) -> String
-    where
-        F: FnOnce() -> String,
-    {
-        cli.value_of(key)
-            .map(String::from)
-            .unwrap_or_else(alternative)
-    }
-
-    let database_host = find_value(cli, "database_host", || config.database_host().to_string());
-    let database_port = find_value(cli, "database_port", || config.database_port().to_string());
-    let database_user = find_value(cli, "database_user", || config.database_user().to_string());
-    let database_password = find_value(cli, "database_password", || {
-        config.database_password().to_string()
-    });
-    let database_name = find_value(cli, "database_name", || config.database_name().to_string());
-    let database_connection_timeout = find_value(cli, "database_connection_timeout",
-        || {
-            // hardcoded default of 30 seconds database timeout
-            config.database_connection_timeout().unwrap_or(30).to_string()
-        });
-
-    DbConnectionConfig {
-        database_host,
-        database_port,
-        database_user,
-        database_password,
-        database_name,
-        database_connection_timeout,
-    }
+pub fn parse_db_connection_config<'a>(config: &'a Configuration, cli: &'a ArgMatches) -> Result<DbConnectionConfig<'a>> {
+    Ok(DbConnectionConfig {
+        database_host: {
+            cli.value_of("database_host")
+                .unwrap_or_else(|| config.database_host())
+        },
+        database_port: {
+            cli.value_of("database_port")
+                .map(u16::from_str)
+                .transpose()?
+                .unwrap_or_else(|| *config.database_port())
+        },
+        database_user: {
+            cli.value_of("database_user")
+                .unwrap_or_else(|| config.database_user())
+        },
+        database_password: {
+            cli.value_of("database_password")
+                .unwrap_or_else(|| config.database_password())
+        },
+        database_name: {
+            cli.value_of("database_name")
+                .unwrap_or_else(|| config.database_name())
+        },
+        database_connection_timeout: {
+            cli.value_of("database_connection_timeout")
+                .map(u16::from_str)
+                .transpose()?
+                .unwrap_or_else( || {
+                    // hardcoded default of 30 seconds database timeout
+                    config.database_connection_timeout().unwrap_or(30)
+                })
+        },
+    })
 }
 
-pub fn establish_connection(conn_config: DbConnectionConfig) -> Result<PgConnection> {
+pub fn establish_connection<'a>(conn_config: DbConnectionConfig<'a>) -> Result<PgConnection> {
     let database_uri: String = conn_config.into();
     debug!("Trying to connect to database: {}", database_uri);
     PgConnection::establish(&database_uri).map_err(Error::from)

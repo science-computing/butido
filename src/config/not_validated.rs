@@ -82,7 +82,7 @@ pub struct NotValidatedConfiguration {
 
     #[getset(get = "pub")]
     #[serde(rename = "database_port")]
-    database_port: String,
+    database_port: u16,
 
     #[getset(get = "pub")]
     #[serde(rename = "database_user")]
