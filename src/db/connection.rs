@@ -41,20 +41,6 @@ pub struct DbConnectionConfig<'a> {
     database_connection_timeout: u16,
 }
 
-impl<'a> Into<String> for DbConnectionConfig<'a> {
-    fn into(self) -> String {
-        format!(
-            "postgres://{user}:{password}@{host}:{port}/{name}?connect_timeout={timeout}",
-            host = self.database_host,
-            port = self.database_port,
-            user = self.database_user,
-            password = self.database_password,
-            name = self.database_name,
-            timeout = self.database_connection_timeout,
-        )
-    }
-}
-
 pub fn parse_db_connection_config<'a>(config: &'a Configuration, cli: &'a ArgMatches) -> Result<DbConnectionConfig<'a>> {
     Ok(DbConnectionConfig {
         database_host: {
@@ -92,7 +78,15 @@ pub fn parse_db_connection_config<'a>(config: &'a Configuration, cli: &'a ArgMat
 }
 
 pub fn establish_connection<'a>(conn_config: DbConnectionConfig<'a>) -> Result<PgConnection> {
-    let database_uri: String = conn_config.into();
+    let database_uri: String = format!(
+        "postgres://{user}:{password}@{host}:{port}/{name}?connect_timeout={timeout}",
+        host = conn_config.database_host,
+        port = conn_config.database_port,
+        user = conn_config.database_user,
+        password = conn_config.database_password,
+        name = conn_config.database_name,
+        timeout = conn_config.database_connection_timeout,
+    );
     debug!("Trying to connect to database: {}", database_uri);
     PgConnection::establish(&database_uri).map_err(Error::from)
 }
