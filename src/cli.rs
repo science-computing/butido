@@ -1208,6 +1208,25 @@ fn arg_older_than_date<'a>() -> Arg<'a> {
         .takes_value(true)
         .value_name("DATE")
         .about("List only containers that are older than DATE")
+        .long_about(r#"
+            List only containers that are older than DATE
+
+            DATE can be a freeform date, for example '2h'
+
+            Supported suffixes:
+
+                nsec, ns -- nanoseconds
+                usec, us -- microseconds
+                msec, ms -- milliseconds
+                seconds, second, sec, s
+                minutes, minute, min, m
+                hours, hour, hr, h
+                days, day, d
+                weeks, week, w
+                months, month, M -- defined as 30.44 days
+                years, year, y -- defined as 365.25 days
+
+        "#)
         .validator(parse_date_from_string)
         .conflicts_with("newer_than")
 }
@@ -1220,12 +1239,31 @@ fn arg_newer_than_date<'a>() -> Arg<'a> {
         .takes_value(true)
         .value_name("DATE")
         .about("List only containers that are newer than DATE")
+        .long_about(r#"
+            List only containers that are newer than DATE
+
+            DATE can be a freeform date, for example '2h'
+
+            Supported suffixes:
+
+                nsec, ns -- nanoseconds
+                usec, us -- microseconds
+                msec, ms -- milliseconds
+                seconds, second, sec, s
+                minutes, minute, min, m
+                hours, hour, hr, h
+                days, day, d
+                weeks, week, w
+                months, month, M -- defined as 30.44 days
+                years, year, y -- defined as 365.25 days
+
+        "#)
         .validator(parse_date_from_string)
         .conflicts_with("older_than")
 }
 
 fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
-    humantime::parse_rfc3339_weak(s).map_err(|e| e.to_string()).map(|_| ())
+    humantime::parse_duration(s).map_err(|e| e.to_string()).map(|_| ())
 }
 
 fn parse_usize(s: &str) -> std::result::Result<(), String> {
