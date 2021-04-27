@@ -144,7 +144,7 @@ fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<(
 
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec!["id", "path", "released", "job id"]);
-    let conn = crate::db::establish_connection(conn_cfg)?;
+    let conn = conn_cfg.establish_connection()?;
     let data = matches
         .value_of("job_uuid")
         .map(uuid::Uuid::parse_str)
@@ -193,7 +193,7 @@ fn envvars(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
 
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec!["id", "name", "value"]);
-    let conn = crate::db::establish_connection(conn_cfg)?;
+    let conn = conn_cfg.establish_connection()?;
     let data = dsl::envvars
         .load::<models::EnvVar>(&conn)?
         .into_iter()
@@ -214,7 +214,7 @@ fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec!["id", "name"]);
-    let conn = crate::db::establish_connection(conn_cfg)?;
+    let conn = conn_cfg.establish_connection()?;
     let data = dsl::images
         .load::<models::Image>(&conn)?
         .into_iter()
@@ -231,7 +231,7 @@ fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 }
 
 fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
-    let conn = crate::db::establish_connection(conn_cfg)?;
+    let conn = conn_cfg.establish_connection()?;
     let submit_id = matches.value_of("submit")
         .map(uuid::Uuid::from_str)
         .transpose()
@@ -304,7 +304,7 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
     let csv = matches.is_present("csv");
     let limit = matches.value_of("limit").map(i64::from_str).transpose()?;
     let hdrs = crate::commands::util::mk_header(vec!["id", "time", "uuid"]);
-    let conn = crate::db::establish_connection(conn_cfg)?;
+    let conn = conn_cfg.establish_connection()?;
 
     let query = schema::submits::table
         .order_by(schema::submits::id.desc()); // required for the --limit implementation
@@ -378,7 +378,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
         "package",
         "version",
     ]);
-    let conn = crate::db::establish_connection(conn_cfg)?;
+    let conn = conn_cfg.establish_connection()?;
 
     let sel = schema::jobs::table
         .inner_join(schema::submits::table)
@@ -464,7 +464,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
     let show_log = matches.is_present("show_log");
     let show_script = matches.is_present("show_script");
     let csv = matches.is_present("csv");
-    let conn = crate::db::establish_connection(conn_cfg)?;
+    let conn = conn_cfg.establish_connection()?;
     let job_uuid = matches
         .value_of("job_uuid")
         .map(uuid::Uuid::parse_str)
@@ -629,7 +629,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
 
 /// Implementation of the subcommand "db log-of"
 fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
-    let conn   = crate::db::establish_connection(conn_cfg)?;
+    let conn   = conn_cfg.establish_connection()?;
     let job_uuid = matches
         .value_of("job_uuid")
         .map(uuid::Uuid::parse_str)
@@ -652,7 +652,7 @@ fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 
 fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     let csv    = matches.is_present("csv");
-    let conn   = crate::db::establish_connection(conn_cfg)?;
+    let conn   = conn_cfg.establish_connection()?;
     let header = crate::commands::util::mk_header(["Package", "Version", "Date", "Path"].to_vec());
     let data   = schema::jobs::table
         .inner_join(schema::packages::table)

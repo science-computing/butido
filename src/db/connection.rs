@@ -41,52 +41,44 @@ pub struct DbConnectionConfig<'a> {
     database_connection_timeout: u16,
 }
 
-pub fn parse_db_connection_config<'a>(config: &'a Configuration, cli: &'a ArgMatches) -> Result<DbConnectionConfig<'a>> {
-    Ok(DbConnectionConfig {
-        database_host: {
-            cli.value_of("database_host")
-                .unwrap_or_else(|| config.database_host())
-        },
-        database_port: {
-            cli.value_of("database_port")
-                .map(u16::from_str)
-                .transpose()?
-                .unwrap_or_else(|| *config.database_port())
-        },
-        database_user: {
-            cli.value_of("database_user")
-                .unwrap_or_else(|| config.database_user())
-        },
-        database_password: {
-            cli.value_of("database_password")
-                .unwrap_or_else(|| config.database_password())
-        },
-        database_name: {
-            cli.value_of("database_name")
-                .unwrap_or_else(|| config.database_name())
-        },
-        database_connection_timeout: {
-            cli.value_of("database_connection_timeout")
-                .map(u16::from_str)
-                .transpose()?
-                .unwrap_or_else( || {
-                    // hardcoded default of 30 seconds database timeout
-                    config.database_connection_timeout().unwrap_or(30)
-                })
-        },
-    })
+impl<'a> DbConnectionConfig<'a> {
+    pub fn parse(config: &'a Configuration, cli: &'a ArgMatches) -> Result<DbConnectionConfig<'a>> {
+        Ok(DbConnectionConfig {
+            database_host: cli.value_of("database_host").unwrap_or_else(|| config.database_host()),
+            database_port: {
+                cli.value_of("database_port")
+                    .map(u16::from_str)
+                    .transpose()?
+                    .unwrap_or_else(|| *config.database_port())
+            },
+            database_user: cli.value_of("database_user").unwrap_or_else(|| config.database_user()),
+            database_password: cli.value_of("database_password").unwrap_or_else(|| config.database_password()),
+            database_name: cli.value_of("database_name").unwrap_or_else(|| config.database_name()),
+            database_connection_timeout: {
+                cli.value_of("database_connection_timeout")
+                    .map(u16::from_str)
+                    .transpose()?
+                    .unwrap_or_else( || {
+                        // hardcoded default of 30 seconds database timeout
+                        config.database_connection_timeout().unwrap_or(30)
+                    })
+            },
+        })
+    }
+
+    pub fn establish_connection(self) -> Result<PgConnection> {
+        let database_uri: String = format!(
+            "postgres://{user}:{password}@{host}:{port}/{name}?connect_timeout={timeout}",
+            host = self.database_host,
+            port = self.database_port,
+            user = self.database_user,
+            password = self.database_password,
+            name = self.database_name,
+            timeout = self.database_connection_timeout,
+        );
+        debug!("Trying to connect to database: {}", database_uri);
+        PgConnection::establish(&database_uri).map_err(Error::from)
+    }
+
 }
 
-pub fn establish_connection<'a>(conn_config: DbConnectionConfig<'a>) -> Result<PgConnection> {
-    let database_uri: String = format!(
-        "postgres://{user}:{password}@{host}:{port}/{name}?connect_timeout={timeout}",
-        host = conn_config.database_host,
-        port = conn_config.database_port,
-        user = conn_config.database_user,
-        password = conn_config.database_password,
-        name = conn_config.database_name,
-        timeout = conn_config.database_connection_timeout,
-    );
-    debug!("Trying to connect to database: {}", database_uri);
-    PgConnection::establish(&database_uri).map_err(Error::from)
-}
