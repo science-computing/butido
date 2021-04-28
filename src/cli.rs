@@ -9,6 +9,7 @@
 //
 
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use clap::crate_authors;
 use clap::crate_version;
@@ -1043,6 +1044,26 @@ pub fn cli<'a>() -> App<'a> {
                         .conflicts_with("older_than")
                     )
                 )
+                .subcommand(App::new("top")
+                    .version(crate_version!())
+                    .about("List the processes of all containers")
+                    .arg(Arg::new("csv")
+                        .required(false)
+                        .multiple(false)
+                        .long("csv")
+                        .takes_value(false)
+                        .about("List top output as CSV")
+                    )
+                    .arg(Arg::new("limit")
+                        .required(false)
+                        .multiple(false)
+                        .long("limit")
+                        .takes_value(true)
+                        .value_name("LIMIT")
+                        .about("Only list LIMIT processes for each container")
+                        .validator(parse_usize)
+                    )
+                )
             )
             .subcommand(App::new("container")
                 .version(crate_version!())
@@ -1203,6 +1224,10 @@ fn dir_exists_validator(s: &str) -> Result<(), String> {
 
 fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
     humantime::parse_rfc3339_weak(s).map_err(|e| e.to_string()).map(|_| ())
+}
+
+fn parse_usize(s: &str) -> std::result::Result<(), String> {
+    usize::from_str(s) .map_err(|e| e.to_string()).map(|_| ())
 }
 
 #[cfg(test)]
