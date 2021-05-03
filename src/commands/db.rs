@@ -274,7 +274,7 @@ fn submit(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         n_jobs_err = jobs_err.to_string().red(),
     )?;
 
-    let header = crate::commands::util::mk_header(["Job", "Success", "Package", "Version", "Endpoint", "Container", "Image"].to_vec());
+    let header = crate::commands::util::mk_header(["Job", "Success", "Package", "Version", "Container", "Endpoint", "Image"].to_vec());
     let data = jobs.iter()
         .map(|job| {
             let image = models::Image::fetch_for_job(&conn, job)?
