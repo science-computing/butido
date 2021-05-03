@@ -159,6 +159,8 @@ impl JobHandle {
             .execute_script(log_sender);
 
         let logres = LogReceiver {
+            endpoint_name: endpoint_name.as_ref(),
+            container_id_chrs: container_id.chars().take(7).collect(),
             package_name: &package.name,
             package_version: &package.version,
             log_dir: self.log_dir.as_ref(),
@@ -317,6 +319,8 @@ impl JobHandle {
 }
 
 struct LogReceiver<'a> {
+    endpoint_name: &'a str,
+    container_id_chrs: String,
     package_name: &'a str,
     package_version: &'a str,
     log_dir: Option<&'a PathBuf>,
@@ -371,23 +375,23 @@ impl<'a> LogReceiver<'a> {
                 LogItem::CurrentPhase(ref phasename) => {
                     trace!("Setting bar phase to {}", phasename);
                     self.bar.set_message(format!(
-                        "[{} {} {}]: Phase: {}",
-                        self.job_id, self.package_name, self.package_version, phasename
+                        "[{}/{} {} {} {}]: Phase: {}",
+                        self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version, phasename
                     ));
                 }
                 LogItem::State(Ok(())) => {
                     trace!("Setting bar state to Ok");
                     self.bar.set_message(format!(
-                        "[{} {} {}]: State Ok",
-                        self.job_id, self.package_name, self.package_version
+                        "[{}/{} {} {} {}]: State Ok",
+                        self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version
                     ));
                     success = Some(true);
                 }
                 LogItem::State(Err(ref e)) => {
                     trace!("Setting bar state to Err: {}", e);
                     self.bar.set_message(format!(
-                        "[{} {} {}]: State Err: {}",
-                        self.job_id, self.package_name, self.package_version, e
+                        "[{}/{} {} {} {}]: State Err: {}",
+                        self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version, e
                     ));
                     success = Some(false);
                 }
@@ -398,16 +402,16 @@ impl<'a> LogReceiver<'a> {
         trace!("Finishing bar = {:?}", success);
         let finish_msg = match success {
             Some(true) => format!(
-                "[{} {} {}]: finished successfully",
-                self.job_id, self.package_name, self.package_version
+                "[{}/{} {} {} {}]: finished successfully",
+                self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version
             ),
             Some(false) => format!(
-                "[{} {} {}]: finished with error",
-                self.job_id, self.package_name, self.package_version
+                "[{}/{} {} {} {}]: finished with error",
+                self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version
             ),
             None => format!(
-                "[{} {} {}]: finished",
-                self.job_id, self.package_name, self.package_version
+                "[{}/{} {} {} {}]: finished",
+                self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version
             ),
         };
         self.bar.finish_with_message(finish_msg);
