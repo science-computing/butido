@@ -412,20 +412,19 @@ pub async fn build(
         let mut error_catched = false;
         let lines = crate::log::ParsedLog::from_str(&data.0.log_text)?
             .into_iter()
-            .map(|line_item| match line_item {
-                LogItem::Line(s) => Ok(String::from_utf8(s.to_vec())?.normal()),
-                LogItem::Progress(u) => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
-                LogItem::CurrentPhase(p) => {
+            .map(|line_item| {
+                if let LogItem::CurrentPhase(ref p) = line_item {
                     if !error_catched {
                         last_phase = Some(p.clone());
                     }
-                    Ok(format!("#BUTIDO:PHASE:{}", p).bright_black())
                 }
-                LogItem::State(Ok(())) => Ok("#BUTIDO:STATE:OK".to_string().green()),
-                LogItem::State(Err(s)) => {
+
+                if let LogItem::State(_) = line_item {
                     error_catched = true;
-                    Ok(format!("#BUTIDO:STATE:ERR:{}", s).red())
                 }
+
+
+                line_item.display().map(|d| d.to_string())
             })
             .collect::<Result<Vec<_>>>()?;
 
