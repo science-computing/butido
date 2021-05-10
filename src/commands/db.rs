@@ -485,7 +485,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
             models::Image,
         )>(&conn)?;
 
-    let parsed_log = crate::log::ParsedLog::build_from(&data.0.log_text)?;
+    let parsed_log = crate::log::ParsedLog::from_str(&data.0.log_text)?;
     let success = parsed_log.is_successfull();
 
     if csv {
@@ -643,7 +643,7 @@ fn log_of(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .select(schema::jobs::dsl::log_text)
         .first::<String>(&conn)
         .map_err(Error::from)
-        .and_then(crate::log::ParsedLog::build_from)?
+        .and_then(|s| crate::log::ParsedLog::from_str(&s))?
         .iter()
         .map(|line| line.display().and_then(|d| writeln!(lock, "{}", d).map_err(Error::from)))
         .collect::<Result<Vec<()>>>()
@@ -697,6 +697,6 @@ fn releases(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgM
 ///
 /// Returns Ok(None) if cannot be decided
 fn is_job_successful(job: &models::Job) -> Result<Option<bool>> {
-    crate::log::ParsedLog::build_from(&job.log_text).map(|pl| pl.is_successfull())
+    crate::log::ParsedLog::from_str(&job.log_text).map(|pl| pl.is_successfull())
 }
 

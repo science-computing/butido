@@ -11,6 +11,7 @@
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -407,7 +408,7 @@ pub async fn build(
             data.1.version.to_string().red()
         )?;
 
-        let parsed_log = crate::log::ParsedLog::build_from(&data.0.log_text)?;
+        let parsed_log = crate::log::ParsedLog::from_str(&data.0.log_text)?;
         let mut last_phase = None;
         let mut error_catched = false;
         let lines = parsed_log
