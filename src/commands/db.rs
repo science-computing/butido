@@ -27,12 +27,10 @@ use diesel::RunQueryDsl;
 use itertools::Itertools;
 use log::debug;
 use log::info;
-use resiter::AndThen;
 
 use crate::config::Configuration;
 use crate::db::models;
 use crate::db::DbConnectionConfig;
-use crate::log::LogItem;
 use crate::package::Script;
 use crate::schema;
 
@@ -608,13 +606,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
         if show_log {
             let log = parsed_log
                 .iter()
-                .map(|line_item| match line_item {
-                    LogItem::Line(s) => Ok(String::from_utf8(s.to_vec())?.normal()),
-                    LogItem::Progress(u) => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
-                    LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
-                    LogItem::State(Ok(())) => Ok("#BUTIDO:STATE:OK".to_string().green()),
-                    LogItem::State(Err(s)) => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
-                })
+                .map(|line_item| line_item.display().map(|d| d.to_string()))
                 .collect::<Result<Vec<_>>>()?
                 .into_iter() // ugly, but hey... not important right now.
                 .join("\n");
@@ -653,14 +645,7 @@ fn log_of(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .map_err(Error::from)
         .and_then(crate::log::ParsedLog::build_from)?
         .iter()
-        .map(|line_item| match line_item {
-            LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
-            LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
-            LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
-            LogItem::State(Ok(()))   => Ok("#BUTIDO:STATE:OK".to_string().green()),
-            LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
-        })
-        .and_then_ok(|line| writeln!(lock, "{}", line).map_err(Error::from))
+        .map(|line| line.display().and_then(|d| writeln!(lock, "{}", d).map_err(Error::from)))
         .collect::<Result<Vec<()>>>()
         .map(|_| ())
 }
