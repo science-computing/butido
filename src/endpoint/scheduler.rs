@@ -370,14 +370,14 @@ impl<'a> LogReceiver<'a> {
                 }
                 LogItem::CurrentPhase(ref phasename) => {
                     trace!("Setting bar phase to {}", phasename);
-                    self.bar.set_message(&format!(
+                    self.bar.set_message(format!(
                         "[{} {} {}]: Phase: {}",
                         self.job_id, self.package_name, self.package_version, phasename
                     ));
                 }
                 LogItem::State(Ok(())) => {
                     trace!("Setting bar state to Ok");
-                    self.bar.set_message(&format!(
+                    self.bar.set_message(format!(
                         "[{} {} {}]: State Ok",
                         self.job_id, self.package_name, self.package_version
                     ));
@@ -385,7 +385,7 @@ impl<'a> LogReceiver<'a> {
                 }
                 LogItem::State(Err(ref e)) => {
                     trace!("Setting bar state to Err: {}", e);
-                    self.bar.set_message(&format!(
+                    self.bar.set_message(format!(
                         "[{} {} {}]: State Err: {}",
                         self.job_id, self.package_name, self.package_version, e
                     ));
@@ -410,7 +410,7 @@ impl<'a> LogReceiver<'a> {
                 self.job_id, self.package_name, self.package_version
             ),
         };
-        self.bar.finish_with_message(&finish_msg);
+        self.bar.finish_with_message(finish_msg);
 
         if let Some(mut lf) = logfile {
             let _ = lf.flush().await?;

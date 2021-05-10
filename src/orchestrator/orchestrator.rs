@@ -459,7 +459,7 @@ struct JobTask<'a> {
 impl<'a> Drop for JobTask<'a> {
     fn drop(&mut self) {
         if !self.bar.is_finished() {
-            self.bar.finish_with_message(&format!("[{} {} {}] Stopped, error on other task",
+            self.bar.finish_with_message(format!("[{} {} {}] Stopped, error on other task",
                 self.jobdef.job.uuid(),
                 self.jobdef.job.package().name(),
                 self.jobdef.job.package().version()));
@@ -470,7 +470,7 @@ impl<'a> Drop for JobTask<'a> {
 impl<'a> JobTask<'a> {
     fn new(receiver: Receiver<JobResult>, prep: TaskPreparation<'a>, sender: Vec<Sender<JobResult>>) -> Self {
         let bar = prep.bar.clone();
-        bar.set_message(&format!("[{} {} {}]: Booting",
+        bar.set_message(format!("[{} {} {}]: Booting",
             prep.jobdef.job.uuid(),
             prep.jobdef.job.package().name(),
             prep.jobdef.job.package().version()
@@ -522,7 +522,7 @@ impl<'a> JobTask<'a> {
         while !all_dependencies_are_in(&self.jobdef.dependencies, &received_dependencies) {
             // Update the status bar message
             self.bar.set_message({
-                &format!("[{} {} {}]: Waiting ({}/{})...",
+                format!("[{} {} {}]: Waiting ({}/{})...",
                     self.jobdef.job.uuid(),
                     self.jobdef.job.package().name(),
                     self.jobdef.job.package().version(),
@@ -548,7 +548,7 @@ impl<'a> JobTask<'a> {
                 self.sender[0].send(Err(received_errors)).await;
 
                 // ... and stop operation, because the whole tree will fail anyways.
-                self.bar.finish_with_message(&format!("[{} {} {}] Stopping, errors from child received",
+                self.bar.finish_with_message(format!("[{} {} {}] Stopping, errors from child received",
                     self.jobdef.job.uuid(),
                     self.jobdef.job.package().name(),
                     self.jobdef.job.package().version()));
@@ -644,7 +644,7 @@ impl<'a> JobTask<'a> {
                                 self.jobdef.job.package().version())
                         })?;
                 }
-                self.bar.finish_with_message(&format!("[{} {} {}] Reusing artifact",
+                self.bar.finish_with_message(format!("[{} {} {}] Reusing artifact",
                     self.jobdef.job.uuid(),
                     self.jobdef.job.package().name(),
                     self.jobdef.job.package().version()));
@@ -663,7 +663,7 @@ impl<'a> JobTask<'a> {
             .cloned()
             .collect::<Vec<ArtifactPath>>();
         trace!("[{}]: Dependency artifacts = {:?}", self.jobdef.job.uuid(), dependency_artifacts);
-        self.bar.set_message(&format!("[{} {} {}]: Preparing...",
+        self.bar.set_message(format!("[{} {} {}]: Preparing...",
             self.jobdef.job.uuid(),
             self.jobdef.job.package().name(),
             self.jobdef.job.package().version()
@@ -678,7 +678,7 @@ impl<'a> JobTask<'a> {
             self.git_commit_env,
             dependency_artifacts)?;
 
-        self.bar.set_message(&format!("[{} {} {}]: Scheduling...",
+        self.bar.set_message(format!("[{} {} {}]: Scheduling...",
             self.jobdef.job.uuid(),
             self.jobdef.job.package().name(),
             self.jobdef.job.package().version()

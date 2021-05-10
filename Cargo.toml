@@ -42,7 +42,7 @@ getset         = "0.1"
 git2           = "0.13"
 handlebars     = { version = "3", features = ["no_logging"] }
 humantime      = "2.1"
-indicatif      = "0.15"
+indicatif      = "0.16"
 indoc          = "1"
 itertools      = "0.10"
 lazy_static    = "1.4"

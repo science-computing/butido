@@ -243,7 +243,7 @@ pub async fn download(
         .map(|p| {
             sc.sources_for(p).into_iter().map(|source| {
                 let bar = multi.add(progressbars.spinner());
-                bar.set_message(&format!("Downloading {}", source.url()));
+                bar.set_message(format!("Downloading {}", source.url()));
                 async move {
                     let source_path_exists = source.path().exists();
                     if !source_path_exists && source.download_manually() {
@@ -287,9 +287,9 @@ pub async fn download(
 
                             bar.inc(bytes.len() as u64);
                             if let Some(len) = response.content_length() {
-                                bar.set_message(&format!("Downloading {} ({}/{} bytes)", source.url(), bytes_written, len));
+                                bar.set_message(format!("Downloading {} ({}/{} bytes)", source.url(), bytes_written, len));
                             } else {
-                                bar.set_message(&format!("Downloading {} ({} bytes)", source.url(), bytes_written));
+                                bar.set_message(format!("Downloading {} ({} bytes)", source.url(), bytes_written));
                             }
                         }
 
