@@ -27,6 +27,7 @@ use diesel::RunQueryDsl;
 use itertools::Itertools;
 use log::debug;
 use log::info;
+use resiter::AndThen;
 
 use crate::config::Configuration;
 use crate::db::models;
@@ -50,6 +51,7 @@ pub fn db(
         Some(("submits", matches)) => submits(db_connection_config, matches),
         Some(("jobs", matches)) => jobs(db_connection_config, matches),
         Some(("job", matches)) => job(db_connection_config, config, matches),
+        Some(("log-of", matches)) => log_of(db_connection_config, matches),
         Some(("releases", matches)) => releases(db_connection_config, config, matches),
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
@@ -631,6 +633,36 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
 
         Ok(())
     }
+}
+
+/// Implementation of the subcommand "db log-of"
+fn log_of(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
+    let conn   = crate::db::establish_connection(conn_cfg)?;
+    let job_uuid = matches
+        .value_of("job_uuid")
+        .map(uuid::Uuid::parse_str)
+        .transpose()?
+        .unwrap();
+    let out = std::io::stdout();
+    let mut lock = out.lock();
+
+    schema::jobs::table
+        .filter(schema::jobs::dsl::uuid.eq(job_uuid))
+        .select(schema::jobs::dsl::log_text)
+        .first::<String>(&conn)
+        .map_err(Error::from)
+        .and_then(crate::log::ParsedLog::build_from)?
+        .iter()
+        .map(|line_item| match line_item {
+            LogItem::Line(s)         => Ok(String::from_utf8(s.to_vec())?.normal()),
+            LogItem::Progress(u)     => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
+            LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p).bright_black()),
+            LogItem::State(Ok(()))   => Ok("#BUTIDO:STATE:OK".to_string().green()),
+            LogItem::State(Err(s))   => Ok(format!("#BUTIDO:STATE:ERR:{}", s).red()),
+        })
+        .and_then_ok(|line| writeln!(lock, "{}", line).map_err(Error::from))
+        .collect::<Result<Vec<()>>>()
+        .map(|_| ())
 }
 
 fn releases(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatches) -> Result<()> {
