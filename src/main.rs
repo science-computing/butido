@@ -142,7 +142,10 @@ async fn main() -> Result<()> {
     let db_connection_config = crate::db::parse_db_connection_config(&config, &cli);
     match cli.subcommand() {
         Some(("generate-completions", matches)) => generate_completions(matches),
-        Some(("db", matches)) => crate::commands::db(db_connection_config, &config, matches)?,
+        Some(("db", matches)) => {
+            setup_pager();
+            crate::commands::db(db_connection_config, &config, matches)?
+        },
         Some(("build", matches)) => {
             let conn = crate::db::establish_connection(db_connection_config)?;
 
@@ -162,6 +165,7 @@ async fn main() -> Result<()> {
         }
         Some(("what-depends", matches)) => {
             let repo = load_repo()?;
+            setup_pager();
             crate::commands::what_depends(matches, &config, repo)
                 .await
                 .context("what-depends command failed")?
@@ -169,6 +173,7 @@ async fn main() -> Result<()> {
 
         Some(("dependencies-of", matches)) => {
             let repo = load_repo()?;
+            setup_pager();
             crate::commands::dependencies_of(matches, &config, repo)
                 .await
                 .context("dependencies-of command failed")?
@@ -176,6 +181,7 @@ async fn main() -> Result<()> {
 
         Some(("versions-of", matches)) => {
             let repo = load_repo()?;
+            setup_pager();
             crate::commands::versions_of(matches, repo)
                 .await
                 .context("versions-of command failed")?
@@ -183,6 +189,7 @@ async fn main() -> Result<()> {
 
         Some(("env-of", matches)) => {
             let repo = load_repo()?;
+            setup_pager();
             crate::commands::env_of(matches, repo)
                 .await
                 .context("env-of command failed")?
@@ -190,6 +197,7 @@ async fn main() -> Result<()> {
 
         Some(("find-artifact", matches)) => {
             let repo = load_repo()?;
+            setup_pager();
             let conn = crate::db::establish_connection(db_connection_config)?;
             crate::commands::find_artifact(matches, &config, progressbars, repo, conn)
                 .await
@@ -198,6 +206,7 @@ async fn main() -> Result<()> {
 
         Some(("find-pkg", matches)) => {
             let repo = load_repo()?;
+            setup_pager();
             crate::commands::find_pkg(matches, &config, repo)
                 .await
                 .context("find-pkg command failed")?
@@ -205,6 +214,7 @@ async fn main() -> Result<()> {
 
         Some(("source", matches)) => {
             let repo = load_repo()?;
+            setup_pager();
             crate::commands::source(matches, &config, repo, progressbars)
                 .await
                 .context("source command failed")?
@@ -218,6 +228,7 @@ async fn main() -> Result<()> {
 
         Some(("lint", matches)) => {
             let repo = load_repo()?;
+            setup_pager();
             crate::commands::lint(&repo_path, matches, progressbars, &config, repo)
                 .await
                 .context("lint command failed")?
@@ -225,6 +236,7 @@ async fn main() -> Result<()> {
 
         Some(("tree-of", matches)) => {
             let repo = load_repo()?;
+            setup_pager();
             crate::commands::tree_of(matches, repo, progressbars)
                 .await
                 .context("tree-of command failed")?
@@ -232,6 +244,7 @@ async fn main() -> Result<()> {
 
         Some(("metrics", _)) => {
             let repo = load_repo()?;
+            setup_pager();
             let conn = crate::db::establish_connection(db_connection_config)?;
             crate::commands::metrics(&repo_path, &config, repo, conn)
                 .await
@@ -239,6 +252,7 @@ async fn main() -> Result<()> {
         }
 
         Some(("endpoint", matches)) => {
+            setup_pager();
             crate::commands::endpoint(matches, &config, progressbars)
                 .await
                 .context("endpoint command failed")?
@@ -280,3 +294,9 @@ fn generate_completions(matches: &ArgMatches) {
         _ => unreachable!(),
     }
 }
+
+#[inline]
+fn setup_pager() {
+    pager::Pager::new().setup();
+}
+
