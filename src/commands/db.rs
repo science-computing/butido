@@ -605,7 +605,7 @@ fn job(conn_cfg: DbConnectionConfig, config: &Configuration, matches: &ArgMatche
 
         if show_log {
             let log = parsed_log
-                .iter()
+                .into_iter()
                 .map(|line_item| line_item.display().map(|d| d.to_string()))
                 .collect::<Result<Vec<_>>>()?
                 .into_iter() // ugly, but hey... not important right now.
@@ -644,7 +644,7 @@ fn log_of(conn_cfg: DbConnectionConfig, matches: &ArgMatches) -> Result<()> {
         .first::<String>(&conn)
         .map_err(Error::from)
         .and_then(|s| crate::log::ParsedLog::from_str(&s))?
-        .iter()
+        .into_iter()
         .map(|line| line.display().and_then(|d| writeln!(lock, "{}", d).map_err(Error::from)))
         .collect::<Result<Vec<()>>>()
         .map(|_| ())

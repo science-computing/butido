@@ -63,8 +63,8 @@ impl ParsedLog {
             .next()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &LogItem> {
-        self.0.iter()
+    pub fn into_iter(self) -> impl Iterator<Item = LogItem> {
+        self.0.into_iter()
     }
 }
 

@@ -408,11 +408,10 @@ pub async fn build(
             data.1.version.to_string().red()
         )?;
 
-        let parsed_log = crate::log::ParsedLog::from_str(&data.0.log_text)?;
         let mut last_phase = None;
         let mut error_catched = false;
-        let lines = parsed_log
-            .iter()
+        let lines = crate::log::ParsedLog::from_str(&data.0.log_text)?
+            .into_iter()
             .map(|line_item| match line_item {
                 LogItem::Line(s) => Ok(String::from_utf8(s.to_vec())?.normal()),
                 LogItem::Progress(u) => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
