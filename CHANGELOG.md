@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.1.2
+
+Bugfix release. Fixes:
+
+* Argument processing bug was fixed, where a CLI parameter was unintentionally
+  ignored
+    * 78c65311313876728ccead6aaa76fdc23e2b22ed
+
+* Release artifacts are copied instead of renamed
+    * 7abfe3e095e41a0742f7a7f30ce8d058edfcd94f
+
+* Typo in trace output
+    * 8cf287dd93f95775787b3a83500fee23cd8f07db
+
+* If the build fails, parent jobs should not fail anymore because of missing
+  dependencies, but simply propagate the error
+    * 7f3eeeb39c34903f2bd709a78287bc2b655b062c
+
+
 ## v0.1.1
 
 Bugfix release. Fixes:
