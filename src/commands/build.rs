@@ -11,6 +11,7 @@
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -407,25 +408,23 @@ pub async fn build(
             data.1.version.to_string().red()
         )?;
 
-        let parsed_log = crate::log::ParsedLog::build_from(&data.0.log_text)?;
         let mut last_phase = None;
         let mut error_catched = false;
-        let lines = parsed_log
-            .iter()
-            .map(|line_item| match line_item {
-                LogItem::Line(s) => Ok(String::from_utf8(s.to_vec())?.normal()),
-                LogItem::Progress(u) => Ok(format!("#BUTIDO:PROGRESS:{}", u).bright_black()),
-                LogItem::CurrentPhase(p) => {
+        let lines = crate::log::ParsedLog::from_str(&data.0.log_text)?
+            .into_iter()
+            .map(|line_item| {
+                if let LogItem::CurrentPhase(ref p) = line_item {
                     if !error_catched {
                         last_phase = Some(p.clone());
                     }
-                    Ok(format!("#BUTIDO:PHASE:{}", p).bright_black())
                 }
-                LogItem::State(Ok(())) => Ok("#BUTIDO:STATE:OK".to_string().green()),
-                LogItem::State(Err(s)) => {
+
+                if let LogItem::State(_) = line_item {
                     error_catched = true;
-                    Ok(format!("#BUTIDO:STATE:ERR:{}", s).red())
                 }
+
+
+                line_item.display().map(|d| d.to_string())
             })
             .collect::<Result<Vec<_>>>()?;
 

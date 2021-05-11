@@ -9,6 +9,7 @@
 //
 
 use anyhow::Result;
+use colored::Colorize;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum LogItem {
@@ -29,15 +30,15 @@ pub enum LogItem {
 impl LogItem {
     pub fn display(&self) -> Result<Display> {
         match self {
-            LogItem::Line(s) => Ok(Display(String::from_utf8(s.to_vec())?)),
-            LogItem::Progress(u) => Ok(Display(format!("#BUTIDO:PROGRESS:{}", u))),
-            LogItem::CurrentPhase(p) => Ok(Display(format!("#BUTIDO:PHASE:{}", p))),
-            LogItem::State(Ok(())) => Ok(Display("#BUTIDO:STATE:OK".to_string())),
-            LogItem::State(Err(s)) => Ok(Display(format!("#BUTIDO:STATE:ERR:{}", s))),
+            LogItem::Line(s) => Ok(Display(String::from_utf8(s.to_vec())?.normal())),
+            LogItem::Progress(u) => Ok(Display(format!("#BUTIDO:PROGRESS:{}", u).cyan())),
+            LogItem::CurrentPhase(p) => Ok(Display(format!("#BUTIDO:PHASE:{}", p).cyan())),
+            LogItem::State(Ok(())) => Ok(Display("#BUTIDO:STATE:OK".to_string().green())),
+            LogItem::State(Err(s)) => Ok(Display(format!("#BUTIDO:STATE:ERR:{}", s).red())),
         }
     }
 }
 
 #[derive(parse_display::Display)]
 #[display("{0}")]
-pub struct Display(String);
+pub struct Display(colored::ColoredString);

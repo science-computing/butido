@@ -38,16 +38,19 @@ where
 
 pub struct ParsedLog(Vec<LogItem>);
 
-impl ParsedLog {
-    pub fn build_from<S: AsRef<str>>(s: S) -> Result<Self> {
+impl FromStr for ParsedLog {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
         let p = parser();
-        s.as_ref()
-            .lines()
+        s.lines()
             .map(|line| p.parse(line.as_bytes()).map_err(Error::from))
             .collect::<Result<Vec<_>>>()
             .map(ParsedLog)
     }
+}
 
+impl ParsedLog {
     pub fn is_successfull(&self) -> Option<bool> {
         self.0
             .iter()
@@ -60,8 +63,8 @@ impl ParsedLog {
             .next()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &LogItem> {
-        self.0.iter()
+    pub fn into_iter(self) -> impl Iterator<Item = LogItem> {
+        self.0.into_iter()
     }
 }
 
