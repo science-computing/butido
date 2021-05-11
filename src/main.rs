@@ -84,6 +84,13 @@ use crate::util::progress::ProgressBars;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    human_panic::setup_panic!(Metadata {
+        name: env!("CARGO_PKG_NAME").into(),
+        version: env!("CARGO_PKG_VERSION").into(),
+        authors: "Matthias Beyer <matthias.beyer@atos.net>".into(),
+        homepage: "atos.net/de/deutschland/sc".into(),
+    });
+
     let _ = env_logger::try_init()?;
     debug!("Debugging enabled");
 
