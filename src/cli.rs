@@ -26,6 +26,14 @@ pub fn cli<'a>() -> App<'a> {
         .version(crate_version!())
         .about("Generic Build Orchestration System for building linux packages with docker")
 
+        .after_help(r#"
+            The folowing environment variables can be passed to butido:
+
+                RUST_LOG - to enable logging, for exact usage see the rust cookbook
+                PAGER    - to change the pager
+                NOPAGER  - to disable automatic use of the PAGER
+        "#)
+
         .arg(Arg::new("hide_bars")
             .required(false)
             .multiple(false)
