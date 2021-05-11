@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'build' subcommand
+
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;

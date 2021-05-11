@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'metrics' subcommand
+
 use std::path::Path;
 use std::io::Write;
 

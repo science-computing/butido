@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'endpoint container' subcommand
+
 use std::str::FromStr;
 
 use anyhow::Error;

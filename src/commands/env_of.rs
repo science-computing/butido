@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'env-of' subcommand
+
 use std::convert::TryFrom;
 
 use anyhow::Result;

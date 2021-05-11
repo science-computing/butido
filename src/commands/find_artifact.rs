@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'find-artifact' subcommand
+
 use std::path::PathBuf;
 use std::io::Write;
 use std::sync::Arc;

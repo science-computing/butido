@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'lint' subcommand
+
 use std::convert::TryFrom;
 use std::path::Path;
 

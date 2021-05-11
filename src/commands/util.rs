@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Utility module for subcommand implementation helpers
+
 use std::io::Write;
 use std::fmt::Display;
 use std::path::Path;
@@ -109,6 +111,8 @@ where
     }
 }
 
+/// Check whether all phases are available in the package,
+/// generate a nice error message if one is not.
 fn all_phases_available(pkg: &Package, available_phases: &[PhaseName]) -> Result<()> {
     let package_phasenames = pkg.phases().keys().collect::<Vec<_>>();
 
@@ -139,6 +143,7 @@ fn all_phases_available(pkg: &Package, available_phases: &[PhaseName]) -> Result
     Ok(())
 }
 
+/// Helper function to make a package name regex out of a String
 pub fn mk_package_name_regex(regex: &str) -> Result<Regex> {
     let mut builder = regex::RegexBuilder::new(regex);
 
@@ -151,7 +156,7 @@ pub fn mk_package_name_regex(regex: &str) -> Result<Regex> {
         .map_err(Error::from)
 }
 
-
+/// Make a header column for the ascii_table crate
 pub fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
     vec.into_iter()
         .map(|name| ascii_table::Column {
@@ -164,6 +169,8 @@ pub fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
 
 /// Display the passed data as nice ascii table,
 /// or, if stdout is a pipe, print it nicely parseable
+///
+/// If `csv` is `true`, convert the data to CSV and print that instead.
 pub fn display_data<D: Display>(
     headers: Vec<ascii_table::Column>,
     data: Vec<Vec<D>>,

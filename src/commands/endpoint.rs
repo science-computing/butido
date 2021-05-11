@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+//! Implementation of the 'endpoint' subcommand
+
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::str::FromStr;
