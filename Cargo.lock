@@ -161,7 +161,7 @@ checksum = "63396b8a4b9de3f4fdfb320ab6080762242f66a8ef174c49d8e19b674db4cdbe"
 
 [[package]]
 name = "butido"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "aquamarine",
