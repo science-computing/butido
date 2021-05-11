@@ -25,7 +25,7 @@ use crate::db::DbConnectionConfig;
 
 /// Implementation of the "release" subcommand
 pub async fn release(
-    db_connection_config: DbConnectionConfig,
+    db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
@@ -39,7 +39,7 @@ pub async fn release(
 
 
 async fn new_release(
-    db_connection_config: DbConnectionConfig,
+    db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
@@ -58,7 +58,7 @@ async fn new_release(
 
     debug!("Release called for: {:?} {:?}", pname, pvers);
 
-    let conn = crate::db::establish_connection(db_connection_config)?;
+    let conn = db_connection_config.establish_connection()?;
     let submit_uuid = matches
         .value_of("submit_uuid")
         .map(uuid::Uuid::parse_str)
@@ -188,7 +188,7 @@ async fn new_release(
 }
 
 pub async fn rm_release(
-    db_connection_config: DbConnectionConfig,
+    db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
@@ -207,7 +207,7 @@ pub async fn rm_release(
     let pvers = matches.value_of("package_version").map(String::from).unwrap(); // safe by clap
     debug!("Remove Release called for: {:?} {:?}", pname, pvers);
 
-    let conn = crate::db::establish_connection(db_connection_config)?;
+    let conn = db_connection_config.establish_connection()?;
 
     let (release, artifact) = crate::schema::jobs::table
         .inner_join(crate::schema::packages::table)
