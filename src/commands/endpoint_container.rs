@@ -10,6 +10,7 @@
 
 //! Implementation of the 'endpoint container' subcommand
 
+use std::borrow::Cow;
 use std::str::FromStr;
 
 use anyhow::Error;
@@ -183,16 +184,27 @@ async fn inspect(container: Container<'_>) -> Result<()> {
 
     let d = container.inspect().await?;
 
-    fn option_vec(ov: Option<&Vec<String>>) -> String {
-        ov.map(|v| format!("Some({})", v.iter().join(", "))).unwrap_or_else(|| String::from("None"))
+    fn option_vec<'a>(ov: Option<&Vec<String>>) -> Cow<'a, str> {
+        ov.map(|v| format!("Some({})", v.iter().join(", ")))
+            .map(Cow::from)
+            .unwrap_or_else(|| Cow::from("None"))
     }
 
-    fn option_vec_nl(ov: Option<&Vec<String>>, ind: usize) -> String {
-        ov.map(|v| v.iter().map(|s| format!("{:ind$}{s}", "", ind = ind, s = s)).join("\n")).map(|s| format!("\n{}", s)).unwrap_or_else(|| String::from("None"))
+    fn option_vec_nl<'a>(ov: Option<&Vec<String>>, ind: usize) -> Cow<'a, str> {
+        ov.map(|v| {
+            v.iter()
+                .map(|s| format!("{:ind$}{s}", "", ind = ind, s = s))
+                .join("\n")
+        })
+        .map(|s| format!("\n{}", s))
+        .map(Cow::from)
+        .unwrap_or_else(|| Cow::from("None"))
     }
 
-    fn option_tostr<T: ToString>(ots: Option<T>) -> String {
-        ots.map(|s| format!("Some({})", s.to_string())).unwrap_or_else(|| String::from("None"))
+    fn option_tostr<'a, T: ToString + 'a>(ots: Option<T>) -> Cow<'a, str> {
+        ots.map(|s| format!("Some({})", s.to_string()))
+            .map(Cow::from)
+            .unwrap_or_else(|| Cow::from("None"))
     }
 
     writeln!(std::io::stdout(), "{}", indoc::formatdoc!(r#"
