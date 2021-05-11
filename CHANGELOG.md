@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.1.4
+
+Bugfix release. Fixes:
+
+* A typo was fixed
+    * aef74e56afe695f39e6ce38588a4ddbed9cf1817
+
+* A bug was fixed where not-found dependencies were ignored
+    * e8063c060cddef9a6f1d8757eaf17c23d6c387a3
+    * 9b47e557a40dab7bd13e92790c4515d05f073157
+
+* A bug was fixed where colorized strings were put into the database,
+  unintentionally, causing log parsing to fail silently
+    * 8e0ba26b15ffb78fa05f1e631bfd12722ddcd31e
+
+* sourcehut builds were removed
+    * e733ead7f7849030bc87e1b9da4d8b9046b71904
+
+
 ## v0.1.3
 
 Bugfix release. Fixes:
