@@ -39,9 +39,10 @@ where
 pub struct ParsedLog(Vec<LogItem>);
 
 impl ParsedLog {
-    pub fn build_from(s: &str) -> Result<Self> {
+    pub fn build_from<S: AsRef<str>>(s: S) -> Result<Self> {
         let p = parser();
-        s.lines()
+        s.as_ref()
+            .lines()
             .map(|line| p.parse(line.as_bytes()).map_err(Error::from))
             .collect::<Result<Vec<_>>>()
             .map(ParsedLog)
