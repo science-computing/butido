@@ -168,6 +168,7 @@ async fn containers(endpoint_names: Vec<EndpointName>,
         Some(("list", matches)) => containers_list(endpoint_names, matches, config).await,
         Some(("prune", matches)) => containers_prune(endpoint_names, matches, config).await,
         Some(("top", matches)) => containers_top(endpoint_names, matches, config).await,
+        Some(("stop", matches)) => containers_stop(endpoint_names, matches, config).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -364,6 +365,58 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
         .collect::<Vec<Vec<String>>>();
 
     crate::commands::util::display_data(hdr, data, csv)
+}
+
+
+async fn containers_stop(endpoint_names: Vec<EndpointName>,
+    matches: &ArgMatches,
+    config: &Configuration,
+) -> Result<()> {
+    let older_than_filter = get_date_filter("older_than", matches)?;
+    let newer_than_filter = get_date_filter("newer_than", matches)?;
+
+    let stop_timeout = matches.value_of("timeout")
+        .map(u64::from_str)
+        .transpose()?
+        .map(std::time::Duration::from_secs);
+
+    let stats = connect_to_endpoints(config, &endpoint_names)
+        .await?
+        .into_iter()
+        .map(move |ep| async move {
+            let stats = ep.container_stats()
+                .await?
+                .into_iter()
+                .filter(|stat| stat.state == "exited")
+                .filter(|stat| older_than_filter.as_ref().map(|time| time > &stat.created).unwrap_or(true))
+                .filter(|stat| newer_than_filter.as_ref().map(|time| time < &stat.created).unwrap_or(true))
+                .map(|stat| (ep.clone(), stat))
+                .collect::<Vec<(_, _)>>();
+            Ok(stats)
+        })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<Result<Vec<_>>>()
+        .await?;
+
+    let prompt = format!("Really stop {} Containers?", stats.iter().flatten().count());
+    if !dialoguer::Confirm::new().with_prompt(prompt).interact()? {
+        return Ok(())
+    }
+
+    stats.into_iter()
+        .map(Vec::into_iter)
+        .flatten()
+        .map(|(ep, stat)| async move {
+            ep.get_container_by_id(&stat.id)
+                .await?
+                .ok_or_else(|| anyhow!("Failed to find existing container {}", stat.id))?
+                .stop(stop_timeout)
+                .await
+                .map_err(Error::from)
+        })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<Result<()>>()
+        .await
 }
 
 
