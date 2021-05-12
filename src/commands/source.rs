@@ -296,7 +296,7 @@ pub async fn download(
                         }
 
                         file.flush().await?;
-                        bar.finish_with_message("Finished download");
+                        bar.finish_with_message(format!("Finished: {}", source.url()));
                         Ok(())
                     }
                 }
