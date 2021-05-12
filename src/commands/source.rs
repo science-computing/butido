@@ -304,11 +304,11 @@ pub async fn download(
         })
         .flatten()
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Result<()>>();
+        .collect::<Vec<Result<()>>>();
 
     let multibar_block = tokio::task::spawn_blocking(move || multi.join());
     let (r, _) = tokio::join!(r, multibar_block);
-    r
+    r.into_iter().collect()
 }
 
 async fn of(
