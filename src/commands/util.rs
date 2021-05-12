@@ -47,6 +47,11 @@ where
     I: Iterator<Item = &'a Package> + 'a,
 {
     let shebang = Shebang::from(config.shebang().clone());
+    bar.set_length({
+        let (lower, upper) = iter.size_hint();
+        upper.unwrap_or(lower) as u64
+    });
+
     let lint_results = iter
         .map(|pkg| {
             let shebang = shebang.clone();
