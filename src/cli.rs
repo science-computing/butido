@@ -28,7 +28,7 @@ pub fn cli<'a>() -> App<'a> {
         .about("Generic Build Orchestration System for building linux packages with docker")
 
         .after_help(r#"
-            The folowing environment variables can be passed to butido:
+            The following environment variables can be passed to butido:
 
                 RUST_LOG - to enable logging, for exact usage see the rust cookbook
                 PAGER    - to change the pager
