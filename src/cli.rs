@@ -121,6 +121,14 @@ pub fn cli<'a>() -> App<'a> {
                 )
             )
 
+            .subcommand(App::new("setup")
+                .version(crate_version!())
+                .about("Run the database setup")
+                .long_about(indoc::indoc!(r#"
+                    Run the database setup migrations
+                "#))
+            )
+
             .subcommand(App::new("artifacts")
                 .version(crate_version!())
                 .about("List artifacts from the DB")
