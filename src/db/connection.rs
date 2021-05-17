@@ -20,7 +20,7 @@ use log::debug;
 
 use crate::config::Configuration;
 
-#[derive(Debug, Getters)]
+#[derive(Getters)]
 pub struct DbConnectionConfig<'a> {
     #[getset(get = "pub")]
     database_host: &'a str,
@@ -39,6 +39,18 @@ pub struct DbConnectionConfig<'a> {
 
     #[getset(get = "pub")]
     database_connection_timeout: u16,
+}
+
+impl<'a> std::fmt::Debug for DbConnectionConfig<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "postgres://{user}:PASSWORD@{host}:{port}/{name}?connect_timeout={timeout}",
+            host = self.database_host,
+            port = self.database_port,
+            user = self.database_user,
+            name = self.database_name,
+            timeout = self.database_connection_timeout
+        )
+    }
 }
 
 impl<'a> DbConnectionConfig<'a> {
@@ -67,6 +79,7 @@ impl<'a> DbConnectionConfig<'a> {
     }
 
     pub fn establish_connection(self) -> Result<PgConnection> {
+        debug!("Trying to connect to database: {:?}", self);
         let database_uri: String = format!(
             "postgres://{user}:{password}@{host}:{port}/{name}?connect_timeout={timeout}",
             host = self.database_host,
@@ -76,7 +89,6 @@ impl<'a> DbConnectionConfig<'a> {
             name = self.database_name,
             timeout = self.database_connection_timeout,
         );
-        debug!("Trying to connect to database: {}", database_uri);
         PgConnection::establish(&database_uri).map_err(Error::from)
     }
 
