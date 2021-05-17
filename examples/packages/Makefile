@@ -17,7 +17,7 @@ copysrc: ${BUTIDO_SOURCE_CACHE}
 	cp -rv ./sources/* ${BUTIDO_SOURCE_CACHE}/
 
 ${BUTIDO_RELEASES}:
-	mkdir -p "${BUTIDO_RELEASES}"
+	mkdir -p "${BUTIDO_RELEASES}/default"
 
 ${BUTIDO_STAGING}:
 	mkdir -p "${BUTIDO_STAGING}"
