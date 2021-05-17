@@ -2,10 +2,11 @@
 compatibility = "0.1.0"
 script_highlight_theme = "Solarized (dark)"
 
-releases     = "/tmp/butido-test-releases"
-staging      = "/tmp/butido-test-staging"
-source_cache = "/tmp/butido-test-sources"
-log_dir      = "/tmp/butido-test-logs"
+releases_root  = "/tmp/butido-test-releases"
+release_stores = [ "default" ]
+staging        = "/tmp/butido-test-staging"
+source_cache   = "/tmp/butido-test-sources"
+log_dir        = "/tmp/butido-test-logs"
 
 
 strict_script_interpolation = true
