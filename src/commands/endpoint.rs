@@ -75,7 +75,7 @@ async fn ping(endpoint_names: Vec<EndpointName>,
         .map(|endpoint| {
             let bar = multibar.add(progress_generator.bar());
             bar.set_length(n_pings);
-            bar.set_message(format!("Pinging {}", endpoint.name()));
+            bar.set_message(&format!("Pinging {}", endpoint.name()));
 
             async move {
                 for i in 1..(n_pings + 1) {
@@ -83,14 +83,14 @@ async fn ping(endpoint_names: Vec<EndpointName>,
                     let r = endpoint.ping().await;
                     bar.inc(1);
                     if let Err(e) = r {
-                        bar.finish_with_message(format!("Pinging {} failed", endpoint.name()));
+                        bar.finish_with_message(&format!("Pinging {} failed", endpoint.name()));
                         return Err(e)
                     }
 
                     tokio::time::sleep(tokio::time::Duration::from_secs(sleep)).await;
                 }
 
-                bar.finish_with_message(format!("Pinging {} successful", endpoint.name()));
+                bar.finish_with_message(&format!("Pinging {} successful", endpoint.name()));
                 Ok(())
             }
         })
