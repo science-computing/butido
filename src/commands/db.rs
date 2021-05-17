@@ -36,6 +36,8 @@ use crate::db::DbConnectionConfig;
 use crate::package::Script;
 use crate::schema;
 
+diesel_migrations::embed_migrations!("migrations");
+
 /// Implementation of the "db" subcommand
 pub fn db(
     db_connection_config: DbConnectionConfig<'_>,
@@ -44,6 +46,7 @@ pub fn db(
 ) -> Result<()> {
     match matches.subcommand() {
         Some(("cli", matches)) => cli(db_connection_config, matches),
+        Some(("setup", _matches)) => setup(db_connection_config),
         Some(("artifacts", matches)) => artifacts(db_connection_config, matches),
         Some(("envvars", matches)) => envvars(db_connection_config, matches),
         Some(("images", matches)) => images(db_connection_config, matches),
@@ -140,6 +143,11 @@ fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Re
         .transpose()?
         .ok_or_else(|| anyhow!("No Program found"))?
         .run_for_uri(db_connection_config)
+}
+
+fn setup(conn_cfg: DbConnectionConfig<'_>) -> Result<()> {
+    let conn = conn_cfg.establish_connection()?;
+    embedded_migrations::run_with_output(&conn, &mut std::io::stdout()).map_err(Error::from)
 }
 
 /// Implementation of the "db artifacts" subcommand
