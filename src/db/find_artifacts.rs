@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -174,23 +175,9 @@ pub fn find_artifacts<'a>(
                         .collect();
 
                     trace!("The job we found had env: {:?}", job_env);
-                    if let Some(pkg_env) = package_environment.as_ref() {
-                        trace!("Filtering environment...");
-                        let filter_result = job_env.iter()
-                            .all(|(k, v)| {
-                                pkg_env
-                                    .iter()
-                                    .chain(additional_env.iter().map(|tpl| (&tpl.0, &tpl.1)))
-                                    .inspect(|(key, value)| trace!("{k} == {key} && {v} == {value}", k = k, key = key, v = v, value = value))
-                                    .any(|(key, value)| k == key.as_ref() && v == value)
-                            });
-
-                        trace!("Filter result = {}", filter_result);
-                        Ok((tpl.0, filter_result))
-                    } else {
-                        trace!("Not filtering environment...");
-                        Ok((tpl.0, true))
-                    }
+                    let envs_equal = environments_equal(&job_env, package_environment.as_ref(), additional_env);
+                    trace!("environments where equal = {}", envs_equal);
+                    Ok((tpl.0, envs_equal))
                 })
                 .filter(|r| match r { // the actual filtering from above
                     Err(_)         => true,
@@ -234,3 +221,46 @@ pub fn find_artifacts<'a>(
                 .collect::<Result<Vec<(FullArtifactPath<'a>, Option<NaiveDateTime>)>>>()
         })
 }
+
+fn environments_equal(job_env: &[(String, String)], pkg_env: Option<&HashMap<EnvironmentVariableName, String>>, add_env: &[(EnvironmentVariableName, String)]) -> bool {
+    use std::ops::Deref;
+
+    let job_envs_all_found = || job_env.iter()
+        .map(|(key, value)| (EnvironmentVariableName::from(key.deref()), value))
+        .all(|(key, value)| {
+
+            // check whether pair is in pkg_env
+            let is_in_pkg_env = || pkg_env.as_ref()
+                .map(|hm| {
+                    if let Some(val) = hm.get(&key) {
+                        value == val
+                    } else {
+                        false
+                    }
+                })
+                .unwrap_or(false);
+
+            // check whether pair is in add_env
+            let is_in_add_env = || add_env.iter().any(|(k, v)| *k == key && v == value);
+
+            let r = is_in_pkg_env() || is_in_add_env();
+            trace!("Job Env ({}, {}) found: {}", key, value, r);
+            r
+        });
+
+    let pkg_envs_all_found = || pkg_env.map(|hm| {
+        hm.iter()
+            .all(|(k, v)| {
+            job_env.contains(&(k.as_ref().to_string(), v.to_string())) // TODO: do not allocate
+            })
+    })
+    .unwrap_or(true);
+
+    let add_envs_all_found = || add_env.iter()
+        .all(|(k, v)| {
+            job_env.contains(&(k.as_ref().to_string(), v.to_string())) // TODO: do not allocate
+        });
+
+    job_envs_all_found() && pkg_envs_all_found() && add_envs_all_found()
+}
+
