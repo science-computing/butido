@@ -18,7 +18,7 @@ use log::debug;
 
 use crate::config::Configuration;
 
-#[derive(Debug, Getters)]
+#[derive(Getters)]
 pub struct DbConnectionConfig {
     #[getset(get = "pub")]
     database_host: String,
@@ -45,6 +45,17 @@ impl Into<String> for DbConnectionConfig {
             user = self.database_user,
             password = self.database_password,
             name = self.database_name
+        )
+    }
+}
+
+impl std::fmt::Debug for DbConnectionConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "postgres://{user}:PASSWORD@{host}:{port}/{name}",
+            host = self.database_host,
+            port = self.database_port,
+            user = self.database_user,
+            name = self.database_name,
         )
     }
 }
@@ -77,7 +88,7 @@ pub fn parse_db_connection_config(config: &Configuration, cli: &ArgMatches) -> D
 }
 
 pub fn establish_connection(conn_config: DbConnectionConfig) -> Result<PgConnection> {
+    debug!("Trying to connect to database: {:?}", conn_config);
     let database_uri: String = conn_config.into();
-    debug!("Trying to connect to database: {}", database_uri);
     PgConnection::establish(&database_uri).map_err(Error::from)
 }
