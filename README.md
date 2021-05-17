@@ -42,22 +42,37 @@ Building butido is easy, assuming you have a Rust installation:
 cargo build --release # (remove --release for a debug build)
 ```
 
-Running is not so easy:
-
-* Create a git repository
-* Put a `config.toml` file into the repository root, adapt parameters to your
-  needs
-* Write `pkg.toml` files for your packages
-* Run a postgres instance somewhere
-    * configure it to be accessible for butido with user and password
-    * Setup tables (butido cannot do this yet)
-* Run docker instances somewhere, accessible via HTTP or socket
-
-Now you should be ready to try butido. butido takes `--help` in every subcommand
-to explain what it does.
-
-
 Butido is built and tested with Rust 1.50.0 as MSRV.
+
+
+### (Development) Setup
+
+To set up a development infrastructure or a production infrastructure (using the
+examples from the `./examples/packages` directory):
+
+```bash
+# pull down necessary docker images
+docker pull debian:bullseye
+docker pull postgres:12
+
+# setup the database in a postgres container
+PG_USER=pgdev   \
+PG_PW=password  \
+PG_DB=butido    \
+PG_CONTAINER_NAME=butido-db \
+bash scripts/dev-pg-container.sh
+
+# copy the examples to /tmp
+cd examples/packages
+make
+
+# Finish the database setup
+cd /tmp/butido-test-repo
+/path/to/butido db setup
+
+# Start building
+/path/to/butido build a --image debian:bullseye
+```
 
 
 ### Glossary
