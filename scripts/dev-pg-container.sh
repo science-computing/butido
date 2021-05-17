@@ -21,3 +21,7 @@ docker run            \
 
 sleep 2
 docker exec -it ${PG_CONTAINER_NAME} psql -U postgres -c "CREATE USER ${PG_USER} PASSWORD '${PG_PW}' SUPERUSER CREATEDB INHERIT LOGIN"
+sleep 2
+docker exec -it ${PG_CONTAINER_NAME} createdb -U postgres butido
+
+echo "DONE"
