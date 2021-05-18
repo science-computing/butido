@@ -388,14 +388,20 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .takes_value(false)
                 .long("no-verify")
-                .about("Do not perform a hash sum check on all packages in the dependency tree before starting the build")
+                .about("Skip hashsum check")
+                .long_about(indoc::indoc!(r#"
+                    Do not perform a hash sum check on all packages in the dependency tree before starting the build.
+                "#))
             )
             .arg(Arg::new("no_lint")
                 .required(false)
                 .multiple(false)
                 .takes_value(false)
                 .long("no-lint")
-                .about("Do not perform script linting before starting the build")
+                .about("Skip linting")
+                .long_about(indoc::indoc!(r#"
+                    Do not perform script linting before starting the build.
+                "#))
             )
 
             .arg(Arg::new("staging_dir")
@@ -423,7 +429,11 @@ pub fn cli<'a>() -> App<'a> {
                 .short('E')
                 .long("env")
                 .validator(env_pass_validator)
-                .about("Pass these variables to each build job (expects \"key=value\" or name of variable available in ENV)")
+                .about("Pass environment variable to all build jobs")
+                .long_about(indoc::indoc!(r#"
+                    Pass these variables to each build job.
+                    This argument expects \"key=value\" or name of variable available in ENV
+                "#))
             )
 
             .arg(Arg::new("image")
@@ -441,7 +451,13 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .long("write-log")
                 .short('L')
-                .about("Write the log not only to database, but also in a plain-text-file")
+                .about("Write log to disk as well")
+                .long_about(indoc::indoc!(r#"
+                    With this flag set, butido does not only write the build logs to database, but also to the configured
+                    log directory.
+
+                    The log of a build is written to `<log_dir>/<build id>.log`.
+                "#))
             )
         )
 
