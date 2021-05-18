@@ -127,8 +127,8 @@ pub fn cli<'a>() -> App<'a> {
                 .version(crate_version!())
                 .about("Start a database CLI, if installed on the current host")
                 .long_about(indoc::indoc!(r#"
-                    Starts a database shell on the configured database using one of the following
-                    programs:
+                    Starts a database shell on the configured database using one of the following programs:
+
                         - psql
                         - pgcli
 
