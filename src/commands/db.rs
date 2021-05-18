@@ -264,9 +264,20 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
         .with_context(|| anyhow!("Loading jobs for submit = {}", submit_id))?;
 
     let n_jobs = jobs.len();
-    let (jobs_success, jobs_err) = {
-        let s = jobs.iter().map(is_job_successful).fold(Ok(0), |acc, e| acc.and_then(|a| e.map(|_| a + 1)))?;
-        (s, n_jobs - s)
+    let (jobs_unknown, jobs_success, jobs_err) = {
+        let mut unkn = 0;
+        let mut succ = 0;
+        let mut err = 0;
+
+        for j in jobs.iter() {
+            match crate::log::ParsedLog::from_str(&j.log_text)?.is_successfull() {
+                None => unkn += 1,
+                Some(true) => succ += 1,
+                Some(false) => err += 1,
+            }
+        }
+
+        (unkn, succ, err)
     };
 
     let out = std::io::stdout();
@@ -277,6 +288,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
             Date:    {submit_dt}
             Jobs:    {n_jobs}
             Success: {n_jobs_success}
+            Unknown: {n_jobs_unknown}
             Errored: {n_jobs_err}
 
         "#,
@@ -284,6 +296,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
         submit_dt = submit.submit_time.to_string().cyan(),
         n_jobs = n_jobs.to_string().cyan(),
         n_jobs_success = jobs_success.to_string().green(),
+        n_jobs_unknown = jobs_unknown.to_string().red(),
         n_jobs_err = jobs_err.to_string().red(),
     )?;
 
