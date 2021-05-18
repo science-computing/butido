@@ -45,21 +45,33 @@ pub fn cli<'a>() -> App<'a> {
             .multiple(false)
             .long("db-url")
             .value_name("HOST")
-            .about("Overwrite the database host set via configuration. Can also be overriden via environment, but this setting has precedence.")
+            .about("Override the database host")
+            .long_about(indoc::indoc!(r#"
+                Override the database host set via configuration.
+                Can also be overriden via environment variable 'BUTIDO_DATABASE_HOST', but this setting has precedence.
+            "#))
         )
         .arg(Arg::new("database_port")
             .required(false)
             .multiple(false)
             .long("db-port")
             .value_name("PORT")
-            .about("Overwrite the database port set via configuration. Can also be overriden via environment, but this setting has precedence.")
+            .about("Override the database port")
+            .long_about(indoc::indoc!(r#"
+                Override the database port set via configuration.
+                Can also be overriden via environment 'BUTIDO_DATABASE_PORT', but this setting has precedence.
+            "#))
         )
         .arg(Arg::new("database_user")
             .required(false)
             .multiple(false)
             .long("db-user")
             .value_name("USER")
-            .about("Overwrite the database user set via configuration. Can also be overriden via environment, but this setting has precedence.")
+            .about("Override the database user")
+            .long_about(indoc::indoc!(r#"
+                Override the database user set via configuration.
+                Can also be overriden via environment 'BUTIDO_DATABASE_USER', but this setting has precedence.
+            "#))
         )
         .arg(Arg::new("database_password")
             .required(false)
@@ -67,21 +79,33 @@ pub fn cli<'a>() -> App<'a> {
             .long("db-password")
             .alias("db-pw")
             .value_name("PASSWORD")
-            .about("Overwrite the database password set via configuration. Can also be overriden via environment, but this setting has precedence.")
+            .about("Override the database password")
+            .long_about(indoc::indoc!(r#"
+                Override the database password set via configuration.
+                Can also be overriden via environment 'BUTIDO_DATABASE_PASSWORD', but this setting has precedence.
+            "#))
         )
         .arg(Arg::new("database_name")
             .required(false)
             .multiple(false)
             .long("db-name")
             .value_name("NAME")
-            .about("Overwrite the database name set via configuration. Can also be overriden via environment, but this setting has precedence.")
+            .about("Override the database name")
+            .long_about(indoc::indoc!(r#"
+                Override the database name set via configuration.
+                Can also be overriden via environment 'BUTIDO_DATABASE_NAME', but this setting has precedence.
+            "#))
         )
         .arg(Arg::new("database_connection_timeout")
             .required(false)
             .multiple(false)
             .long("db-timeout")
             .value_name("TIMEOUT")
-            .about("Overwrite the database connection timeout set via configuration. Can also be overriden via environment, but this setting has precedence.")
+            .about("Override the database connection timeout")
+            .long_about(indoc::indoc!(r#"
+                Override the database connection timeout set via configuration.
+                Can also be overriden via environment 'BUTIDO_DATABASE_CONNECTION_TIMEOUT', but this setting has precedence.
+            "#))
         )
 
         .subcommand(App::new("generate-completions")
