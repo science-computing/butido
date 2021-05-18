@@ -287,7 +287,7 @@ pub fn cli<'a>() -> App<'a> {
                     .short('L')
                     .takes_value(true)
                     .value_name("LIMIT")
-                    .about("Only list newest <LIMIT> jobs instead of all")
+                    .about("Only list newest LIMIT jobs instead of all")
                 )
             )
 
