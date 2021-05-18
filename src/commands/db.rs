@@ -312,7 +312,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 
             Ok(vec![
                 job.uuid.to_string().cyan(),
-                match is_job_successful(job)? {
+                match is_job_successfull(job)? {
                     Some(true) => "Success".green(),
                     Some(false) => "Error".red(),
                     None => "Unknown".yellow(),
@@ -460,7 +460,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
         .into_iter()
         .rev() // required for the --limit implementation
         .map(|(job, submit, ep, package)| {
-            let success = is_job_successful(&job)?
+            let success = is_job_successfull(&job)?
                 .map(|b| if b { "yes" } else { "no" })
                 .map(String::from)
                 .unwrap_or_else(|| String::from("unknown"));
@@ -728,7 +728,7 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
 /// Check if a job is successful
 ///
 /// Returns Ok(None) if cannot be decided
-fn is_job_successful(job: &models::Job) -> Result<Option<bool>> {
+fn is_job_successfull(job: &models::Job) -> Result<Option<bool>> {
     crate::log::ParsedLog::from_str(&job.log_text).map(|pl| pl.is_successfull())
 }
 
