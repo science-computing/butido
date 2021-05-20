@@ -345,4 +345,74 @@ mod tests {
             assert!(i.next().is_none());
         }
     }
+
+    #[test]
+    fn test_is_successfull_1() {
+        let buffer: &'static str = indoc::indoc! {"
+            foo bar
+        "};
+
+        let log = ParsedLog::from_str(buffer).unwrap();
+        assert_eq!(log.is_successfull(), None);
+    }
+
+    #[test]
+    fn test_is_successfull_2() {
+        let buffer: &'static str = indoc::indoc! {"
+            #BUTIDO:PROGRESS:1
+        "};
+
+        let log = ParsedLog::from_str(buffer).unwrap();
+        assert_eq!(log.is_successfull(), None);
+    }
+
+    #[test]
+    fn test_is_successfull_3() {
+        let buffer: &'static str = indoc::indoc! {"
+            #BUTIDO:PHASE:a
+        "};
+
+        let log = ParsedLog::from_str(buffer).unwrap();
+        assert_eq!(log.is_successfull(), None);
+    }
+
+    #[test]
+    fn test_successfull_4() {
+        let buffer: &'static str = indoc::indoc! {"
+            #BUTIDO:STATE:OK
+        "};
+
+        let log = ParsedLog::from_str(buffer).unwrap();
+        assert_eq!(log.is_successfull(), Some(true));
+    }
+
+    #[test]
+    fn test_successfull_5() {
+        let buffer: &'static str = indoc::indoc! {"
+            #BUTIDO:STATE:ERR:FOO
+        "};
+
+        let log = ParsedLog::from_str(buffer).unwrap();
+        assert_eq!(log.is_successfull(), Some(false));
+    }
+
+    #[test]
+    fn test_successfull_6() {
+        let buffer: &'static str = indoc::indoc! {"
+            #BUTIDO:PROGRESS:0
+            Some log line
+            #BUTIDO:PHASE:configure
+            Some log line
+            Some log line
+            Some log line
+            #BUTIDO:PHASE:Build
+            Some other log line
+            Some other log line
+            Some other log line
+            #BUTIDO:STATE:OK
+        "};
+
+        let log = ParsedLog::from_str(buffer).unwrap();
+        assert_eq!(log.is_successfull(), Some(true));
+    }
 }
