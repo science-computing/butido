@@ -108,7 +108,7 @@ where
         bar.finish_with_message("Linting errored");
         return Err(anyhow!("Linting was not successful"));
     } else {
-        bar.finish_with_message(&format!(
+        bar.finish_with_message(format!(
             "Finished linting {} package scripts",
             lint_results.len()
         ));
