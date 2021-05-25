@@ -53,6 +53,9 @@ impl Dag {
                 .and_then_ok(|(name, constr)| {
                     trace!("Dependency for {} {} found: {:?}", p.name(), p.version(), name);
                     let packs = repo.find_with_version(&name, &constr);
+                    if packs.is_empty() {
+                        return Err(anyhow!("Dependency of {} {} not found: {} {}", p.name(), p.version(), name, constr))
+                    }
                     trace!("Found in repo: {:?}", packs);
 
                     // If we didn't check that dependency already
