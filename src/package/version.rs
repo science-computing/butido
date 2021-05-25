@@ -53,6 +53,12 @@ impl PackageVersionConstraint {
     }
 }
 
+impl std::fmt::Display for PackageVersionConstraint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.constraint, self.version)
+    }
+}
+
 #[derive(
     parse_display::Display,
     Serialize,
