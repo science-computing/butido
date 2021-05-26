@@ -52,10 +52,6 @@ pub struct Package {
 
     #[getset(get = "pub")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    flags: Option<PackageFlags>,
-
-    #[getset(get = "pub")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     allowed_images: Option<Vec<ImageName>>,
 
     #[getset(get = "pub")]
@@ -99,7 +95,6 @@ impl Package {
             dependencies,
             patches: vec![],
             environment: None,
-            flags: None,
             allowed_images: None,
             denied_images: None,
             phases: HashMap::new(),
@@ -169,11 +164,6 @@ impl Ord for Package {
 }
 
 impl Eq for Package {}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PackageFlags {
-    build_parallel: bool,
-}
 
 #[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Dependencies {
