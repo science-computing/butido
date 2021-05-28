@@ -123,9 +123,9 @@ where
     info!("Verification processes finished");
 
     if results.iter().any(Result::is_err) {
-        bar.finish_with_message("Source verication failed");
+        bar.finish_with_message("Source verification failed");
     } else {
-        bar.finish_with_message("Source verication successfull");
+        bar.finish_with_message("Source verification successfull");
     }
 
     let out = std::io::stdout();
