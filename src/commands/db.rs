@@ -29,6 +29,7 @@ use diesel::RunQueryDsl;
 use itertools::Itertools;
 use log::debug;
 use log::info;
+use log::trace;
 
 use crate::config::Configuration;
 use crate::db::models;
@@ -517,8 +518,11 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
             models::Image,
         )>(&conn)?;
 
+    trace!("Parsing log");
     let parsed_log = crate::log::ParsedLog::from_str(&data.0.log_text)?;
+    trace!("Parsed log = {:?}", parsed_log);
     let success = parsed_log.is_successfull();
+    trace!("log successfull = {:?}", success);
 
     if csv {
         let hdrs = crate::commands::util::mk_header(vec![
