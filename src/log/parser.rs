@@ -433,4 +433,15 @@ mod tests {
         let log = ParsedLog::from_str(buffer).unwrap();
         assert_eq!(log.is_successfull(), JobResult::Success);
     }
+
+    #[test]
+    fn test_successfull_7() {
+        let buffer: &'static str = indoc::indoc! {"
+            make: *** No targets specified and no makefile found.  Stop.
+            #BUTIDO:STATE:ERR:make failed
+        "};
+
+        let log = ParsedLog::from_str(buffer).unwrap();
+        assert_eq!(log.is_successfull(), JobResult::Errored);
+    }
 }
