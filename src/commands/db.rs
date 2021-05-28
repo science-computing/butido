@@ -33,6 +33,7 @@ use log::info;
 use crate::config::Configuration;
 use crate::db::models;
 use crate::db::DbConnectionConfig;
+use crate::log::JobResult;
 use crate::package::Script;
 use crate::schema;
 
@@ -271,9 +272,9 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 
         for j in jobs.iter() {
             match crate::log::ParsedLog::from_str(&j.log_text)?.is_successfull() {
-                None => unkn += 1,
-                Some(true) => succ += 1,
-                Some(false) => err += 1,
+                JobResult::Unknown => unkn += 1,
+                JobResult::Success => succ += 1,
+                JobResult::Errored => err += 1,
             }
         }
 
@@ -533,9 +534,9 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
         let data = vec![vec![
             data.0.uuid.to_string(),
             String::from(match success {
-                Some(true) => "yes",
-                Some(false) => "no",
-                None => "unknown",
+                JobResult::Success => "yes",
+                JobResult::Errored => "no",
+                JobResult::Unknown => "unknown",
             }),
             data.3.name.to_string(),
             data.3.version.to_string(),
@@ -577,15 +578,15 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
 
             "#,
             job_uuid = match success {
-                Some(true) => data.0.uuid.to_string().green(),
-                Some(false) => data.0.uuid.to_string().red(),
-                None => data.0.uuid.to_string().cyan(),
+                JobResult::Success => data.0.uuid.to_string().green(),
+                JobResult::Errored => data.0.uuid.to_string().red(),
+                JobResult::Unknown => data.0.uuid.to_string().cyan(),
             },
             submit_uuid = data.1.uuid.to_string().cyan(),
             succeeded = match success {
-                Some(true) => String::from("yes").green(),
-                Some(false) => String::from("no").red(),
-                None => String::from("unknown").cyan(),
+                JobResult::Success => String::from("yes").green(),
+                JobResult::Errored => String::from("no").red(),
+                JobResult::Unknown => String::from("unknown").cyan(),
             },
             package_name = data.3.name.cyan(),
             package_version = data.3.version.cyan(),
@@ -729,6 +730,6 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
 ///
 /// Returns Ok(None) if cannot be decided
 fn is_job_successfull(job: &models::Job) -> Result<Option<bool>> {
-    crate::log::ParsedLog::from_str(&job.log_text).map(|pl| pl.is_successfull())
+    crate::log::ParsedLog::from_str(&job.log_text).map(|pl| pl.is_successfull().to_bool())
 }
 

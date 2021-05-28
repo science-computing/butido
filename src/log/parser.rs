@@ -50,17 +50,35 @@ impl FromStr for ParsedLog {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum JobResult {
+    Success,
+    Errored,
+    Unknown
+}
+
+impl JobResult {
+    pub fn to_bool(&self) -> Option<bool> {
+        match self {
+            JobResult::Success => Some(true),
+            JobResult::Errored => Some(false),
+            JobResult::Unknown => None,
+        }
+    }
+}
+
 impl ParsedLog {
-    pub fn is_successfull(&self) -> Option<bool> {
+    pub fn is_successfull(&self) -> JobResult {
         self.0
             .iter()
             .rev()
             .filter_map(|line| match line {
-                LogItem::State(Ok(_)) => Some(true),
-                LogItem::State(Err(_)) => Some(false),
+                LogItem::State(Ok(_))  => Some(JobResult::Success),
+                LogItem::State(Err(_)) => Some(JobResult::Errored),
                 _ => None,
             })
             .next()
+            .unwrap_or(JobResult::Unknown)
     }
 
     pub fn into_iter(self) -> impl Iterator<Item = LogItem> {
@@ -353,7 +371,7 @@ mod tests {
         "};
 
         let log = ParsedLog::from_str(buffer).unwrap();
-        assert_eq!(log.is_successfull(), None);
+        assert_eq!(log.is_successfull(), JobResult::Unknown);
     }
 
     #[test]
@@ -363,7 +381,7 @@ mod tests {
         "};
 
         let log = ParsedLog::from_str(buffer).unwrap();
-        assert_eq!(log.is_successfull(), None);
+        assert_eq!(log.is_successfull(), JobResult::Unknown);
     }
 
     #[test]
@@ -373,7 +391,7 @@ mod tests {
         "};
 
         let log = ParsedLog::from_str(buffer).unwrap();
-        assert_eq!(log.is_successfull(), None);
+        assert_eq!(log.is_successfull(), JobResult::Unknown);
     }
 
     #[test]
@@ -383,7 +401,7 @@ mod tests {
         "};
 
         let log = ParsedLog::from_str(buffer).unwrap();
-        assert_eq!(log.is_successfull(), Some(true));
+        assert_eq!(log.is_successfull(), JobResult::Success);
     }
 
     #[test]
@@ -393,7 +411,7 @@ mod tests {
         "};
 
         let log = ParsedLog::from_str(buffer).unwrap();
-        assert_eq!(log.is_successfull(), Some(false));
+        assert_eq!(log.is_successfull(), JobResult::Errored);
     }
 
     #[test]
@@ -413,6 +431,6 @@ mod tests {
         "};
 
         let log = ParsedLog::from_str(buffer).unwrap();
-        assert_eq!(log.is_successfull(), Some(true));
+        assert_eq!(log.is_successfull(), JobResult::Success);
     }
 }
