@@ -38,6 +38,26 @@ where
 
 pub struct ParsedLog(Vec<LogItem>);
 
+impl std::fmt::Debug for ParsedLog {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "ParsedLog [")?;
+        for (i, line) in self.0.iter().enumerate() {
+            match line {
+                LogItem::Line(l)         => {
+                    let s = std::str::from_utf8(l).unwrap_or("ERROR UTF8 ENCODING");
+                    writeln!(f, "[{}] Line('{}')", i, s)?
+                },
+                LogItem::Progress(u)     => writeln!(f, "[{}] Progress({})", i, u)?,
+                LogItem::CurrentPhase(s) => writeln!(f, "[{}] Phase({})", i, s)?,
+                LogItem::State(Ok(_))    => writeln!(f, "[{}] State::OK", i)?,
+                LogItem::State(Err(_))   => writeln!(f, "[{}] State::Err", i)?,
+            }
+        }
+
+        writeln!(f, "]")
+    }
+}
+
 impl FromStr for ParsedLog {
     type Err = anyhow::Error;
 
