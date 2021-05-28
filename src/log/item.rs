@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use anyhow::Error;
 use anyhow::Result;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -34,6 +35,16 @@ impl LogItem {
             LogItem::CurrentPhase(p) => Ok(Display(format!("#BUTIDO:PHASE:{}", p))),
             LogItem::State(Ok(())) => Ok(Display("#BUTIDO:STATE:OK".to_string())),
             LogItem::State(Err(s)) => Ok(Display(format!("#BUTIDO:STATE:ERR:{}", s))),
+        }
+    }
+
+    pub fn raw(&self) -> Result<String> {
+        match self {
+            LogItem::Line(s) => String::from_utf8(s.to_vec()).map_err(Error::from),
+            LogItem::Progress(u) => Ok(format!("#BUTIDO:PROGRESS:{}", u)),
+            LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p)),
+            LogItem::State(Ok(())) => Ok("#BUTIDO:STATE:OK".to_string()),
+            LogItem::State(Err(s)) => Ok(format!("#BUTIDO:STATE:ERR:{}", s)),
         }
     }
 }
