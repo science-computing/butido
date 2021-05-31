@@ -571,6 +571,8 @@ impl<'a> JobTask<'a> {
                 .iter()
                 .filter_map(crate::job::JobResource::env)
                 .map(|(k, v)| (k.clone(), v.clone()))
+                .chain(self.git_author_env.cloned().into_iter())
+                .chain(self.git_commit_env.cloned().into_iter())
                 .collect::<Vec<_>>();
 
             let replacement_artifacts = crate::db::find_artifacts(
