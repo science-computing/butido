@@ -1260,6 +1260,7 @@ fn arg_older_than_date(about: &str) -> Arg<'_> {
         .long_about(r#"
             DATE can be a freeform date, for example '2h'
             It can also be a exact date: '2020-01-01 00:12:45'
+            If the hour-minute-second part is omitted, " 00:00:00" is appended automatically.
 
             Supported suffixes:
 
@@ -1290,6 +1291,7 @@ fn arg_newer_than_date(about: &str) -> Arg<'_> {
         .long_about(r#"
             DATE can be a freeform date, for example '2h'
             It can also be a exact date: '2020-01-01 00:12:45'
+            If the hour-minute-second part is omitted, " 00:00:00" is appended automatically.
 
             Supported suffixes:
 
@@ -1315,6 +1317,12 @@ fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
         .map(|_| ())
         .or_else(|_| {
             humantime::parse_rfc3339_weak(s)
+                .map_err(|e| e.to_string())
+                .map(|_| ())
+        })
+        .or_else(|_| {
+            let s = format!("{} 00:00:00", s);
+            humantime::parse_rfc3339_weak(&s)
                 .map_err(|e| e.to_string())
                 .map(|_| ())
         })

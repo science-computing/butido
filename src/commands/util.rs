@@ -237,6 +237,13 @@ pub fn get_date_filter(name: &str, matches: &ArgMatches) -> Result<Option<chrono
                         .map_err(Error::from)
                         .and_then(|d| d.elapsed().map_err(Error::from))
                 })
+                .or_else(|_| {
+                    let s = format!("{} 00:00:00", s);
+                    trace!("Parsing time: '{}'", s);
+                    humantime::parse_rfc3339_weak(&s)
+                        .map_err(Error::from)
+                        .and_then(|d| d.elapsed().map_err(Error::from))
+                })
         })
         .transpose()?
         .map(chrono::Duration::from_std)
