@@ -225,3 +225,19 @@ pub fn display_data<D: Display>(
     }
 }
 
+pub fn get_date_filter(name: &str, matches: &ArgMatches) -> Result<Option<chrono::DateTime::<chrono::Local>>> {
+    matches.value_of(name)
+        .map(humantime::parse_duration)
+        .transpose()?
+        .map(chrono::Duration::from_std)
+        .transpose()?
+        .map(|dur| {
+            chrono::offset::Local::now()
+                .checked_sub_signed(dur)
+                .ok_or_else(|| anyhow!("Time calculation would overflow"))
+                .with_context(|| anyhow!("Cannot subtract {} from 'now'", dur))
+                .map_err(Error::from)
+        })
+        .transpose()
+}
+

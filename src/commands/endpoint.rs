@@ -182,8 +182,8 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
 ) -> Result<()> {
     let list_stopped = matches.is_present("list_stopped");
     let filter_image = matches.value_of("filter_image");
-    let older_than_filter = get_date_filter("older_than", matches)?;
-    let newer_than_filter = get_date_filter("newer_than", matches)?;
+    let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
+    let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.is_present("csv");
     let hdr = crate::commands::util::mk_header([
         "Endpoint",
@@ -232,8 +232,8 @@ async fn containers_prune(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let older_than_filter = get_date_filter("older_than", matches)?;
-    let newer_than_filter = get_date_filter("newer_than", matches)?;
+    let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
+    let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
 
     let stats = connect_to_endpoints(config, &endpoint_names)
         .await?
@@ -279,8 +279,8 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
     config: &Configuration,
 ) -> Result<()> {
     let limit = matches.value_of("limit").map(usize::from_str).transpose()?;
-    let older_than_filter = get_date_filter("older_than", matches)?;
-    let newer_than_filter = get_date_filter("newer_than", matches)?;
+    let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
+    let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.is_present("csv");
 
     let data = connect_to_endpoints(config, &endpoint_names)
@@ -374,8 +374,8 @@ async fn containers_stop(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let older_than_filter = get_date_filter("older_than", matches)?;
-    let newer_than_filter = get_date_filter("newer_than", matches)?;
+    let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
+    let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
 
     let stop_timeout = matches.value_of("timeout")
         .map(u64::from_str)
@@ -421,22 +421,6 @@ async fn containers_stop(endpoint_names: Vec<EndpointName>,
         .await
 }
 
-
-fn get_date_filter(name: &str, matches: &ArgMatches) -> Result<Option<chrono::DateTime::<chrono::Local>>> {
-    matches.value_of(name)
-        .map(humantime::parse_duration)
-        .transpose()?
-        .map(chrono::Duration::from_std)
-        .transpose()?
-        .map(|dur| {
-            chrono::offset::Local::now()
-                .checked_sub_signed(dur)
-                .ok_or_else(|| anyhow!("Time calculation would overflow"))
-                .with_context(|| anyhow!("Cannot subtract {} from 'now'", dur))
-                .map_err(Error::from)
-        })
-        .transpose()
-}
 
 /// Helper function to connect to all endpoints from the configuration, that appear (by name) in
 /// the `endpoint_names` list
