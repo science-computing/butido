@@ -1277,7 +1277,6 @@ fn arg_older_than_date(about: &str) -> Arg<'_> {
 
         "#)
         .validator(parse_date_from_string)
-        .conflicts_with("newer_than")
 }
 
 fn arg_newer_than_date(about: &str) -> Arg<'_> {
@@ -1308,7 +1307,6 @@ fn arg_newer_than_date(about: &str) -> Arg<'_> {
 
         "#)
         .validator(parse_date_from_string)
-        .conflicts_with("older_than")
 }
 
 fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
