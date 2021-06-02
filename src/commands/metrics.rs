@@ -76,7 +76,7 @@ pub async fn metrics(
         {configured_release_stores} Configured release stores
         {configured_phases} Configures phases
 
-        {nfiles} packages in repository
+        {nfiles} files in repository
         {repo_packages} packages in repository
 
         {n_artifacts} artifacts in database
