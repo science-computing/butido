@@ -362,6 +362,9 @@ pub fn cli<'a>() -> App<'a> {
                     .takes_value(false)
                     .about("Format output as CSV")
                 )
+
+                .arg(arg_older_than_date("List only releases older than DATE"))
+                .arg(arg_newer_than_date("List only releases newer than DATE"))
             )
         )
 

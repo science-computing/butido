@@ -691,7 +691,7 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
     let csv    = matches.is_present("csv");
     let conn   = conn_cfg.establish_connection()?;
     let header = crate::commands::util::mk_header(["Package", "Version", "Date", "Path"].to_vec());
-    let data   = schema::jobs::table
+    let mut query = schema::jobs::table
         .inner_join(schema::packages::table)
         .inner_join(schema::artifacts::table)
         .inner_join(schema::releases::table
@@ -701,6 +701,17 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
         .order_by(schema::packages::dsl::name.asc())
         .then_order_by(schema::packages::dsl::version.asc())
         .then_order_by(schema::releases::release_date.asc())
+        .into_boxed();
+
+    if let Some(date) = crate::commands::util::get_date_filter("older_than", matches)? {
+        query = query.filter(schema::releases::release_date.lt(date));
+    }
+
+    if let Some(date) = crate::commands::util::get_date_filter("newer_than", matches)? {
+        query = query.filter(schema::releases::release_date.gt(date));
+    }
+
+    let data = query
         .select({
             let art = schema::artifacts::all_columns;
             let pac = schema::packages::all_columns;
