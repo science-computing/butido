@@ -1018,14 +1018,14 @@ pub fn cli<'a>() -> App<'a> {
                 .subcommand(App::new("prune")
                     .version(crate_version!())
                     .about("Remove exited containers")
-                    .arg(arg_older_than_date())
-                    .arg(arg_newer_than_date())
+                    .arg(arg_older_than_date("Prune only containers older than DATE"))
+                    .arg(arg_newer_than_date("Prune only containers newer than DATE"))
                 )
                 .subcommand(App::new("stop")
                     .version(crate_version!())
                     .about("Stop running containers")
-                    .arg(arg_older_than_date())
-                    .arg(arg_newer_than_date())
+                    .arg(arg_older_than_date("Stop only containers older than DATE"))
+                    .arg(arg_newer_than_date("Stop only containers newer than DATE"))
                     .arg(Arg::new("timeout")
                         .required(false)
                         .multiple(false)
@@ -1065,8 +1065,8 @@ pub fn cli<'a>() -> App<'a> {
                         .about("List only containers of IMAGE")
                     )
 
-                    .arg(arg_older_than_date())
-                    .arg(arg_newer_than_date())
+                    .arg(arg_older_than_date("List only containers older than DATE"))
+                    .arg(arg_newer_than_date("List only containers newer than DATE"))
                 )
                 .subcommand(App::new("top")
                     .version(crate_version!())
@@ -1246,17 +1246,15 @@ fn dir_exists_validator(s: &str) -> Result<(), String> {
     }
 }
 
-fn arg_older_than_date<'a>() -> Arg<'a> {
+fn arg_older_than_date(about: &str) -> Arg<'_> {
     Arg::new("older_than")
         .required(false)
         .multiple(false)
         .long("older-than")
         .takes_value(true)
         .value_name("DATE")
-        .about("List only containers that are older than DATE")
+        .about(about)
         .long_about(r#"
-            List only containers that are older than DATE
-
             DATE can be a freeform date, for example '2h'
 
             Supported suffixes:
@@ -1277,17 +1275,15 @@ fn arg_older_than_date<'a>() -> Arg<'a> {
         .conflicts_with("newer_than")
 }
 
-fn arg_newer_than_date<'a>() -> Arg<'a> {
+fn arg_newer_than_date(about: &str) -> Arg<'_> {
     Arg::new("newer_than")
         .required(false)
         .multiple(false)
         .long("newer-than")
         .takes_value(true)
         .value_name("DATE")
-        .about("List only containers that are newer than DATE")
+        .about(about)
         .long_about(r#"
-            List only containers that are newer than DATE
-
             DATE can be a freeform date, for example '2h'
 
             Supported suffixes:
