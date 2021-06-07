@@ -362,6 +362,28 @@ pub fn cli<'a>() -> App<'a> {
                     .takes_value(false)
                     .about("Format output as CSV")
                 )
+
+                .arg(arg_older_than_date("List only releases older than DATE"))
+                .arg(arg_newer_than_date("List only releases newer than DATE"))
+
+                .arg(Arg::new("package_name_regex")
+                    .required(false)
+                    .multiple(false)
+                    .long("pkg")
+                    .short('p')
+                    .takes_value(true)
+                    .value_name("REGEX")
+                    .about("Limit search with package name matching REGEX")
+                )
+                .arg(Arg::new("package_version_constraint")
+                    .required(false)
+                    .multiple(false)
+                    .long("version")
+                    .short('v')
+                    .takes_value(true)
+                    .value_name("VERSION_CONSTRAINT")
+                    .about("Limit search for package in version VERSION")
+                )
             )
         )
 
@@ -1018,14 +1040,14 @@ pub fn cli<'a>() -> App<'a> {
                 .subcommand(App::new("prune")
                     .version(crate_version!())
                     .about("Remove exited containers")
-                    .arg(arg_older_than_date())
-                    .arg(arg_newer_than_date())
+                    .arg(arg_older_than_date("Prune only containers older than DATE"))
+                    .arg(arg_newer_than_date("Prune only containers newer than DATE"))
                 )
                 .subcommand(App::new("stop")
                     .version(crate_version!())
                     .about("Stop running containers")
-                    .arg(arg_older_than_date())
-                    .arg(arg_newer_than_date())
+                    .arg(arg_older_than_date("Stop only containers older than DATE"))
+                    .arg(arg_newer_than_date("Stop only containers newer than DATE"))
                     .arg(Arg::new("timeout")
                         .required(false)
                         .multiple(false)
@@ -1065,8 +1087,8 @@ pub fn cli<'a>() -> App<'a> {
                         .about("List only containers of IMAGE")
                     )
 
-                    .arg(arg_older_than_date())
-                    .arg(arg_newer_than_date())
+                    .arg(arg_older_than_date("List only containers older than DATE"))
+                    .arg(arg_newer_than_date("List only containers newer than DATE"))
                 )
                 .subcommand(App::new("top")
                     .version(crate_version!())
@@ -1246,18 +1268,18 @@ fn dir_exists_validator(s: &str) -> Result<(), String> {
     }
 }
 
-fn arg_older_than_date<'a>() -> Arg<'a> {
+fn arg_older_than_date(about: &str) -> Arg<'_> {
     Arg::new("older_than")
         .required(false)
         .multiple(false)
         .long("older-than")
         .takes_value(true)
         .value_name("DATE")
-        .about("List only containers that are older than DATE")
+        .about(about)
         .long_about(r#"
-            List only containers that are older than DATE
-
             DATE can be a freeform date, for example '2h'
+            It can also be a exact date: '2020-01-01 00:12:45'
+            If the hour-minute-second part is omitted, " 00:00:00" is appended automatically.
 
             Supported suffixes:
 
@@ -1274,21 +1296,20 @@ fn arg_older_than_date<'a>() -> Arg<'a> {
 
         "#)
         .validator(parse_date_from_string)
-        .conflicts_with("newer_than")
 }
 
-fn arg_newer_than_date<'a>() -> Arg<'a> {
+fn arg_newer_than_date(about: &str) -> Arg<'_> {
     Arg::new("newer_than")
         .required(false)
         .multiple(false)
         .long("newer-than")
         .takes_value(true)
         .value_name("DATE")
-        .about("List only containers that are newer than DATE")
+        .about(about)
         .long_about(r#"
-            List only containers that are newer than DATE
-
             DATE can be a freeform date, for example '2h'
+            It can also be a exact date: '2020-01-01 00:12:45'
+            If the hour-minute-second part is omitted, " 00:00:00" is appended automatically.
 
             Supported suffixes:
 
@@ -1305,11 +1326,23 @@ fn arg_newer_than_date<'a>() -> Arg<'a> {
 
         "#)
         .validator(parse_date_from_string)
-        .conflicts_with("older_than")
 }
 
 fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
-    humantime::parse_duration(s).map_err(|e| e.to_string()).map(|_| ())
+    humantime::parse_duration(s)
+        .map_err(|e| e.to_string())
+        .map(|_| ())
+        .or_else(|_| {
+            humantime::parse_rfc3339_weak(s)
+                .map_err(|e| e.to_string())
+                .map(|_| ())
+        })
+        .or_else(|_| {
+            let s = format!("{} 00:00:00", s);
+            humantime::parse_rfc3339_weak(&s)
+                .map_err(|e| e.to_string())
+                .map(|_| ())
+        })
 }
 
 fn parse_usize(s: &str) -> std::result::Result<(), String> {
