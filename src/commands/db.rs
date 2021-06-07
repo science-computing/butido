@@ -730,6 +730,10 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
         .context("Parsing package version constraint")
         .context("A valid package version constraint looks like this: '=1.0.0'")?;
 
+    if let Some(store) = matches.value_of("store") {
+        query = query.filter(schema::release_stores::dsl::store_name.eq(store));
+    }
+
     let data = query
         .select({
             let art = schema::artifacts::all_columns;

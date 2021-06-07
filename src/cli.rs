@@ -408,6 +408,15 @@ pub fn cli<'a>() -> App<'a> {
                     .value_name("VERSION_CONSTRAINT")
                     .about("Limit search for package in version VERSION")
                 )
+
+                .arg(Arg::new("store")
+                    .required(false)
+                    .multiple(false)
+                    .long("to")
+                    .takes_value(true)
+                    .value_name("STORE")
+                    .about("List only releases to STORE")
+                )
             )
         )
 
