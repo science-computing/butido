@@ -720,6 +720,10 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
         query = query.filter(schema::release_stores::dsl::store_name.eq(store));
     }
 
+    if let Some(pkg) = matches.value_of("package") {
+        query = query.filter(schema::packages::dsl::name.eq(pkg));
+    }
+
     let data = query
         .select({
             let art = schema::artifacts::all_columns;

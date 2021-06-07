@@ -398,6 +398,16 @@ pub fn cli<'a>() -> App<'a> {
                     .value_name("STORE")
                     .about("List only releases to STORE")
                 )
+
+                .arg(Arg::new("package")
+                    .required(false)
+                    .multiple(false)
+                    .long("package")
+                    .short('p')
+                    .takes_value(true)
+                    .value_name("PKG")
+                    .about("Only list releases for package PKG")
+                )
             )
         )
 
