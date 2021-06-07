@@ -289,6 +289,9 @@ pub fn cli<'a>() -> App<'a> {
                     .value_name("LIMIT")
                     .about("Only list newest LIMIT jobs instead of all")
                 )
+
+                .arg(arg_older_than_date("List only jobs older than DATE"))
+                .arg(arg_newer_than_date("List only jobs newer than DATE"))
             )
 
             .subcommand(App::new("job")

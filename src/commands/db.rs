@@ -32,6 +32,7 @@ use log::debug;
 use log::info;
 use log::trace;
 
+use crate::commands::util::get_date_filter;
 use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
 use crate::db::models;
@@ -411,6 +412,8 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
         "Version",
     ]);
     let conn = conn_cfg.establish_connection()?;
+    let older_than_filter = get_date_filter("older_than", matches)?;
+    let newer_than_filter = get_date_filter("newer_than", matches)?;
 
     let mut sel = schema::jobs::table
         .inner_join(schema::submits::table)
@@ -440,6 +443,14 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
 
         debug!("Filtering for these IDs (because of env filter): {:?}", jids);
         sel = sel.filter(schema::jobs::dsl::id.eq_any(jids));
+    }
+
+    if let Some(datetime) = older_than_filter.as_ref() {
+        sel = sel.filter(schema::submits::dsl::submit_time.lt(datetime))
+    }
+
+    if let Some(datetime) = newer_than_filter.as_ref() {
+        sel = sel.filter(schema::submits::dsl::submit_time.gt(datetime))
     }
 
     if let Some(limit) = matches.value_of("limit").map(i64::from_str).transpose()? {
