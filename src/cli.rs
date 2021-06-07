@@ -289,6 +289,30 @@ pub fn cli<'a>() -> App<'a> {
                     .value_name("LIMIT")
                     .about("Only list newest LIMIT jobs instead of all")
                 )
+
+                .arg(arg_older_than_date("List only jobs older than DATE"))
+                .arg(arg_newer_than_date("List only jobs newer than DATE"))
+
+                .arg(Arg::new("endpoint")
+                    .required(false)
+                    .multiple(false)
+                    .long("endpoint")
+                    .short('e')
+                    .takes_value(true)
+                    .value_name("ENDPOINT")
+                    .about("Only show jobs from ENDPOINT")
+                )
+
+                .arg(Arg::new("package")
+                    .required(false)
+                    .multiple(false)
+                    .long("package")
+                    .short('p')
+                    .takes_value(true)
+                    .value_name("PKG")
+                    .about("Only show jobs for PKG")
+                )
+
             )
 
             .subcommand(App::new("job")

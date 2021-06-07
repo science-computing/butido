@@ -32,6 +32,7 @@ use log::debug;
 use log::info;
 use log::trace;
 
+use crate::commands::util::get_date_filter;
 use crate::config::Configuration;
 use crate::db::DbConnectionConfig;
 use crate::db::models;
@@ -411,28 +412,24 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
         "Version",
     ]);
     let conn = conn_cfg.establish_connection()?;
+    let older_than_filter = get_date_filter("older_than", matches)?;
+    let newer_than_filter = get_date_filter("newer_than", matches)?;
 
-    let sel = schema::jobs::table
+    let mut sel = schema::jobs::table
         .inner_join(schema::submits::table)
         .inner_join(schema::endpoints::table)
         .inner_join(schema::packages::table)
         .into_boxed();
 
-    let sel = if let Some(submit_uuid) = matches
-        .value_of("submit_uuid")
-        .map(uuid::Uuid::parse_str)
-        .transpose()?
-    {
-        sel.filter(schema::submits::uuid.eq(submit_uuid))
-    } else {
-        sel
-    };
+    if let Some(submit_uuid) = matches.value_of("submit_uuid").map(uuid::Uuid::parse_str).transpose()? {
+        sel = sel.filter(schema::submits::uuid.eq(submit_uuid))
+    }
 
     // Filter for environment variables from the CLI
     //
     // If we get a filter for environment on CLI, we fetch all job ids that are associated with the
     // passed environment variables and make `sel` filter for those.
-    let sel = if let Some((name, val)) = matches.value_of("env_filter").map(crate::util::env::parse_to_env).transpose()? {
+    if let Some((name, val)) = matches.value_of("env_filter").map(crate::util::env::parse_to_env).transpose()? {
         debug!("Filtering for ENV: {} = {}", name, val);
         let jids = schema::envvars::table
             .filter({
@@ -445,16 +442,28 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
             .load::<i32>(&conn)?;
 
         debug!("Filtering for these IDs (because of env filter): {:?}", jids);
-        sel.filter(schema::jobs::dsl::id.eq_any(jids))
-    } else {
-        sel
-    };
+        sel = sel.filter(schema::jobs::dsl::id.eq_any(jids));
+    }
 
-    let sel = if let Some(limit) = matches.value_of("limit").map(i64::from_str).transpose()? {
-        sel.limit(limit)
-    } else {
-        sel
-    };
+    if let Some(datetime) = older_than_filter.as_ref() {
+        sel = sel.filter(schema::submits::dsl::submit_time.lt(datetime))
+    }
+
+    if let Some(datetime) = newer_than_filter.as_ref() {
+        sel = sel.filter(schema::submits::dsl::submit_time.gt(datetime))
+    }
+
+    if let Some(limit) = matches.value_of("limit").map(i64::from_str).transpose()? {
+        sel = sel.limit(limit)
+    }
+
+    if let Some(ep_name) = matches.value_of("endpoint") {
+        sel = sel.filter(schema::endpoints::name.eq(ep_name))
+    }
+
+    if let Some(pkg_name) = matches.value_of("package") {
+        sel = sel.filter(schema::packages::name.eq(pkg_name))
+    }
 
     let data = sel
         .order_by(schema::jobs::id.desc()) // required for the --limit implementation
