@@ -292,6 +292,17 @@ pub fn cli<'a>() -> App<'a> {
 
                 .arg(arg_older_than_date("List only jobs older than DATE"))
                 .arg(arg_newer_than_date("List only jobs newer than DATE"))
+
+                .arg(Arg::new("endpoint")
+                    .required(false)
+                    .multiple(false)
+                    .long("endpoint")
+                    .short('e')
+                    .takes_value(true)
+                    .value_name("ENDPOINT")
+                    .about("Only show jobs from ENDPOINT")
+                )
+
             )
 
             .subcommand(App::new("job")
