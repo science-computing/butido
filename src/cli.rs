@@ -303,6 +303,16 @@ pub fn cli<'a>() -> App<'a> {
                     .about("Only show jobs from ENDPOINT")
                 )
 
+                .arg(Arg::new("package")
+                    .required(false)
+                    .multiple(false)
+                    .long("package")
+                    .short('p')
+                    .takes_value(true)
+                    .value_name("PKG")
+                    .about("Only show jobs for PKG")
+                )
+
             )
 
             .subcommand(App::new("job")

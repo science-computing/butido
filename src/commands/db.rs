@@ -461,6 +461,10 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
         sel = sel.filter(schema::endpoints::name.eq(ep_name))
     }
 
+    if let Some(pkg_name) = matches.value_of("package") {
+        sel = sel.filter(schema::packages::name.eq(pkg_name))
+    }
+
     let data = sel
         .order_by(schema::jobs::id.desc()) // required for the --limit implementation
         .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)?
