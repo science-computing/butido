@@ -14,7 +14,6 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
-use std::convert::TryFrom;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -34,11 +33,9 @@ use log::trace;
 
 use crate::commands::util::get_date_filter;
 use crate::config::Configuration;
-use crate::db::DbConnectionConfig;
 use crate::db::models;
+use crate::db::DbConnectionConfig;
 use crate::log::JobResult;
-use crate::package::PackageVersion;
-use crate::package::PackageVersionConstraint;
 use crate::package::Script;
 use crate::schema;
 
@@ -719,16 +716,13 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
         query = query.filter(schema::releases::release_date.gt(date));
     }
 
-    let package_name_regex_filter = matches.value_of("package_name_regex")
-        .map(crate::commands::util::mk_package_name_regex)
-        .transpose()
-        .context("Constructing package name regex")?;
+    if let Some(store) = matches.value_of("store") {
+        query = query.filter(schema::release_stores::dsl::store_name.eq(store));
+    }
 
-    let package_version_filter = matches.value_of("package_version_constraint")
-        .map(PackageVersionConstraint::try_from)
-        .transpose()
-        .context("Parsing package version constraint")
-        .context("A valid package version constraint looks like this: '=1.0.0'")?;
+    if let Some(pkg) = matches.value_of("package") {
+        query = query.filter(schema::packages::dsl::name.eq(pkg));
+    }
 
     let data = query
         .select({
@@ -740,16 +734,6 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
         })
         .load::<(models::Artifact, models::Package, models::Release, models::ReleaseStore)>(&conn)?
         .into_iter()
-        .filter(|(_, package, _, _)| {
-            package_name_regex_filter.as_ref()
-                .map(|regex| regex.captures(&package.name).is_some())
-                .unwrap_or(true)
-        })
-        .filter(|(_, package, _, _)| {
-            package_version_filter.as_ref()
-                .map(|verf| verf.matches(&PackageVersion::from(package.version.clone())))
-                .unwrap_or(true)
-        })
         .filter_map(|(art, pack, rel, rstore)| {
             let p = config.releases_directory().join(rstore.store_name).join(&art.path);
 
