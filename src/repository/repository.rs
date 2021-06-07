@@ -150,6 +150,9 @@ impl Repository {
                 .map_ok(|patch| path_relative_to_root.join(patch))
                 .inspect(|patch| trace!("Patch relative to root: {:?}", patch.as_ref().map(|p| p.display())))
 
+                .map_ok(|patch| root.join(patch))
+                .inspect(|patch| trace!("Patch absolute: {:?}", patch.as_ref().map(|p| p.display())))
+
                 // if the patch file exists, use it (as config::Value).
                 //
                 // Otherwise we have an error here, because we're refering to a non-existing file.
