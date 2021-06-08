@@ -61,16 +61,18 @@ impl Submit {
             repo_hash_id: repo_hash.id,
         };
 
-        diesel::insert_into(submits::table)
-            .values(&new_submit)
+        database_connection.transaction::<_, Error, _>(|| {
+            diesel::insert_into(submits::table)
+                .values(&new_submit)
 
-            // required because if we re-use the staging store, we do not create a new UUID but re-use the old one
-            .on_conflict_do_nothing()
+                // required because if we re-use the staging store, we do not create a new UUID but re-use the old one
+                .on_conflict_do_nothing()
 
-            .execute(database_connection)
-            .context("Inserting new submit into submits table")?;
+                .execute(database_connection)
+                .context("Inserting new submit into submits table")?;
 
-        Self::with_id(database_connection, submit_id)
+            Self::with_id(database_connection, submit_id)
+        })
     }
 
     pub fn with_id(database_connection: &PgConnection, submit_id: &::uuid::Uuid) -> Result<Submit> {

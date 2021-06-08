@@ -10,6 +10,7 @@
 
 use anyhow::Error;
 use anyhow::Result;
+use diesel::Connection;
 use diesel::ExpressionMethods;
 use diesel::PgConnection;
 use diesel::QueryDsl;
@@ -32,23 +33,22 @@ struct NewReleaseStore<'a> {
 }
 
 impl ReleaseStore {
-    pub fn create(
-        database_connection: &PgConnection,
-        name: &str,
-    ) -> Result<ReleaseStore> {
+    pub fn create(database_connection: &PgConnection, name: &str) -> Result<ReleaseStore> {
         let new_relstore = NewReleaseStore {
             store_name: name,
         };
 
-        diesel::insert_into(schema::release_stores::table)
-            .values(&new_relstore)
-            .on_conflict_do_nothing()
-            .execute(database_connection)?;
+        database_connection.transaction::<_, Error, _>(|| {
+            diesel::insert_into(schema::release_stores::table)
+                .values(&new_relstore)
+                .on_conflict_do_nothing()
+                .execute(database_connection)?;
 
-        schema::release_stores::table
-            .filter(schema::release_stores::store_name.eq(name))
-            .first::<ReleaseStore>(database_connection)
-            .map_err(Error::from)
+            schema::release_stores::table
+                .filter(schema::release_stores::store_name.eq(name))
+                .first::<ReleaseStore>(database_connection)
+                .map_err(Error::from)
+        })
     }
 }
 

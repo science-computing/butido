@@ -33,15 +33,17 @@ impl Endpoint {
     pub fn create_or_fetch(database_connection: &PgConnection, ep_name: &EndpointName) -> Result<Endpoint> {
         let new_ep = NewEndpoint { name: ep_name.as_ref() };
 
-        diesel::insert_into(endpoints::table)
-            .values(&new_ep)
-            .on_conflict_do_nothing()
-            .execute(database_connection)?;
+        database_connection.transaction::<_, Error, _>(|| {
+            diesel::insert_into(endpoints::table)
+                .values(&new_ep)
+                .on_conflict_do_nothing()
+                .execute(database_connection)?;
 
-        dsl::endpoints
-            .filter(name.eq(ep_name.as_ref()))
-            .first::<Endpoint>(database_connection)
-            .map_err(Error::from)
+            dsl::endpoints
+                .filter(name.eq(ep_name.as_ref()))
+                .first::<Endpoint>(database_connection)
+                .map_err(Error::from)
+        })
     }
 
     pub fn fetch_for_job(database_connection: &PgConnection, j: &crate::db::models::Job) -> Result<Option<Endpoint>> {

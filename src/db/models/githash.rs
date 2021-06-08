@@ -32,14 +32,16 @@ impl GitHash {
     pub fn create_or_fetch(database_connection: &PgConnection, githash: &str) -> Result<GitHash> {
         let new_hash = NewGitHash { hash: githash };
 
-        diesel::insert_into(githashes::table)
-            .values(&new_hash)
-            .on_conflict_do_nothing()
-            .execute(database_connection)?;
+        database_connection.transaction::<_, Error, _>(|| {
+            diesel::insert_into(githashes::table)
+                .values(&new_hash)
+                .on_conflict_do_nothing()
+                .execute(database_connection)?;
 
-        dsl::githashes
-            .filter(hash.eq(githash))
-            .first::<GitHash>(database_connection)
-            .map_err(Error::from)
+            dsl::githashes
+                .filter(hash.eq(githash))
+                .first::<GitHash>(database_connection)
+                .map_err(Error::from)
+        })
     }
 }

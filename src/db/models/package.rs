@@ -42,20 +42,22 @@ impl Package {
             version: p.version().deref(),
         };
 
-        diesel::insert_into(packages::table)
-            .values(&new_package)
-            .on_conflict_do_nothing()
-            .execute(database_connection)?;
+        database_connection.transaction::<_, Error, _>(|| {
+            diesel::insert_into(packages::table)
+                .values(&new_package)
+                .on_conflict_do_nothing()
+                .execute(database_connection)?;
 
-        dsl::packages
-            .filter({
-                let p_name = p.name().deref();
-                let p_vers = p.version().deref();
+            dsl::packages
+                .filter({
+                    let p_name = p.name().deref();
+                    let p_vers = p.version().deref();
 
-                name.eq(p_name).and(version.eq(p_vers))
-            })
-            .first::<Package>(database_connection)
-            .map_err(Error::from)
+                    name.eq(p_name).and(version.eq(p_vers))
+                })
+                .first::<Package>(database_connection)
+                .map_err(Error::from)
+        })
     }
 
     pub fn fetch_for_job(database_connection: &PgConnection, j: &crate::db::models::Job) -> Result<Option<Package>> {

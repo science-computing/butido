@@ -50,13 +50,15 @@ impl Release {
             release_store_id: store.id,
         };
 
-        diesel::insert_into(releases::table)
-            .values(&new_rel)
-            .execute(database_connection)?;
+        database_connection.transaction::<_, Error, _>(|| {
+            diesel::insert_into(releases::table)
+                .values(&new_rel)
+                .execute(database_connection)?;
 
-        dsl::releases
-            .filter(artifact_id.eq(art.id).and(release_date.eq(date)))
-            .first::<Release>(database_connection)
-            .map_err(Error::from)
+            dsl::releases
+                .filter(artifact_id.eq(art.id).and(release_date.eq(date)))
+                .first::<Release>(database_connection)
+                .map_err(Error::from)
+        })
     }
 }

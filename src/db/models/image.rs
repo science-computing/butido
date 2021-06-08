@@ -38,15 +38,17 @@ impl Image {
             name: image_name.as_ref(),
         };
 
-        diesel::insert_into(images::table)
-            .values(&new_image)
-            .on_conflict_do_nothing()
-            .execute(database_connection)?;
+        database_connection.transaction::<_, Error, _>(|| {
+            diesel::insert_into(images::table)
+                .values(&new_image)
+                .on_conflict_do_nothing()
+                .execute(database_connection)?;
 
-        dsl::images
-            .filter(name.eq(image_name.as_ref()))
-            .first::<Image>(database_connection)
-            .map_err(Error::from)
+            dsl::images
+                .filter(name.eq(image_name.as_ref()))
+                .first::<Image>(database_connection)
+                .map_err(Error::from)
+        })
     }
 
     pub fn fetch_for_job(database_connection: &PgConnection, j: &crate::db::models::Job) -> Result<Option<Image>> {

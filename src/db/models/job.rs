@@ -83,15 +83,17 @@ impl Job {
 
         log::trace!("Query = {}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
 
-        query
-            .execute(database_connection)
-            .context("Creating job in database")?;
+        database_connection.transaction::<_, Error, _>(|| {
+            query
+                .execute(database_connection)
+                .context("Creating job in database")?;
 
-        dsl::jobs
-            .filter(uuid.eq(job_uuid))
-            .first::<Job>(database_connection)
-            .with_context(|| format!("Finding created job in database: {}", job_uuid))
-            .map_err(Error::from)
+            dsl::jobs
+                .filter(uuid.eq(job_uuid))
+                .first::<Job>(database_connection)
+                .with_context(|| format!("Finding created job in database: {}", job_uuid))
+                .map_err(Error::from)
+        })
     }
 
     pub fn env(&self, database_connection: &PgConnection) -> Result<Vec<crate::db::models::EnvVar>> {

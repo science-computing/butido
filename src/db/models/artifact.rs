@@ -80,13 +80,15 @@ impl Artifact {
             job_id: job.id,
         };
 
-        diesel::insert_into(artifacts::table)
-            .values(&new_art)
-            .execute(database_connection)?;
+        database_connection.transaction::<_, Error, _>(|| {
+            diesel::insert_into(artifacts::table)
+                .values(&new_art)
+                .execute(database_connection)?;
 
-        dsl::artifacts
-            .filter(path.eq(path_str).and(job_id.eq(job.id)))
-            .first::<Artifact>(database_connection)
-            .map_err(Error::from)
+            dsl::artifacts
+                .filter(path.eq(path_str).and(job_id.eq(job.id)))
+                .first::<Artifact>(database_connection)
+                .map_err(Error::from)
+        })
     }
 }
