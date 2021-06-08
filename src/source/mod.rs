@@ -125,7 +125,7 @@ impl SourceEntry {
             let dir = self.source_file_directory();
             if !dir.is_dir() {
                 trace!("Creating directory: {}", dir.display());
-                tokio::fs::create_dir(&dir).await.with_context(|| {
+                tokio::fs::create_dir_all(&dir).await.with_context(|| {
                     anyhow!(
                         "Creating source cache directory for package {} {}: {}",
                         self.package_source_name,
