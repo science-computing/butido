@@ -16,6 +16,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use handlebars::Handlebars;
@@ -114,7 +115,7 @@ fn print_package(
         package,
         config.available_phases(),
         *config.strict_script_interpolation(),
-    )?;
+    ).context("Rendering script for printing it failed")?;
 
     let script = crate::ui::script_to_printable(
         &script,
