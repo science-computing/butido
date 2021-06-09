@@ -543,8 +543,8 @@ impl<'a> PreparedContainer<'a> {
             .patches()
             .iter()
             .map(|patch| async move {
-                let destination = PathBuf::from("/patches").join(patch);
-                trace!("Copying patch {} to container at /patches/{}", patch.display(), destination.display());
+                let destination = PathBuf::from(crate::consts::PATCH_DIR_PATH).join(patch);
+                trace!("Copying patch {} to container at {}/{}", crate::consts::PATCH_DIR_PATH, patch.display(), destination.display());
 
                 let mut buf = vec![];
                 tokio::fs::OpenOptions::new()

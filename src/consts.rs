@@ -18,6 +18,8 @@ pub const INPUTS_DIR_PATH: &str  = "/inputs";
 pub const OUTPUTS_DIR_PATH: &str = "/outputs";
 pub const OUTPUTS_DIR_NAME: &str = "outputs";
 
+pub const PATCH_DIR_PATH: &str = "/patches";
+
 /// The path where the script that is executed inside the container is copied to.
 pub const SCRIPT_PATH: &str      = "/script";
 
