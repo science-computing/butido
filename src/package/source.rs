@@ -105,18 +105,15 @@ impl HashType {
                 trace!("SHA1 hashing buffer");
                 let mut m = sha1::Sha1::new();
                 loop {
-                    trace!("Reading");
                     let count = reader.read(&mut buffer)
                         .await
                         .context("Reading buffer failed")?;
-                    trace!("Read {} bytes", count);
 
                     if count == 0 {
                         trace!("ready");
                         break;
                     }
 
-                    trace!("Updating buffer");
                     m.update(&buffer[..count]);
                 }
                 Ok(HashValue(format!("{:x}", m.finalize())))
@@ -127,18 +124,15 @@ impl HashType {
                 trace!("SHA256 hashing buffer");
                 let mut m = sha2::Sha256::new();
                 loop {
-                    trace!("Reading");
                     let count = reader.read(&mut buffer)
                         .await
                         .context("Reading buffer failed")?;
-                    trace!("Read {} bytes", count);
 
                     if count == 0 {
                         trace!("ready");
                         break;
                     }
 
-                    trace!("Updating buffer");
                     m.update(&buffer[..count]);
                 }
                 let h = format!("{:x}", m.finalize());
@@ -151,18 +145,15 @@ impl HashType {
                 trace!("SHA512 hashing buffer");
                 let mut m = sha2::Sha512::new();
                 loop {
-                    trace!("Reading");
                     let count = reader.read(&mut buffer)
                         .await
                         .context("Reading buffer failed")?;
-                    trace!("Read {} bytes", count);
 
                     if count == 0 {
                         trace!("ready");
                         break;
                     }
 
-                    trace!("Updating buffer");
                     m.update(&buffer[..count]);
                 }
                 Ok(HashValue(String::from_utf8(m.finalize()[..].to_vec())?))
