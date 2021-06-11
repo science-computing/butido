@@ -16,10 +16,13 @@ use anyhow::Context;
 use anyhow::Result;
 use clap::ArgMatches;
 use log::trace;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 
 use crate::config::Configuration;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
+use crate::ui::*;
 
 /// Implementation of the "find_pkg" subcommand
 pub async fn find_pkg(
@@ -85,6 +88,17 @@ pub async fn find_pkg(
         };
 
         let format = config.package_print_format();
-        crate::ui::print_packages(&mut outlock, format, iter, config, &flags)
+        let hb = crate::ui::handlebars_for_package_printing(format)?;
+
+        tokio_stream::iter({
+            iter.enumerate()
+                .map(|(i, p)| p.prepare_print(config, &flags, &hb, i))
+        })
+        .map(|pp| pp.into_displayable())
+        .try_for_each(|p| {
+            let r = writeln!(&mut outlock, "{}", p).map_err(anyhow::Error::from);
+            futures::future::ready(r)
+        })
+        .await
     }
 }
