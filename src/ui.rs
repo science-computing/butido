@@ -96,11 +96,8 @@ where
     hb.register_escape_fn(handlebars::no_escape);
     hb.register_template_string("package", format)?;
 
-    for (i, package) in iter.enumerate() {
-        print_package(out, &hb, i, package, config, flags)?;
-    }
-
-    Ok(())
+    iter.enumerate()
+        .try_for_each(|(i, package)| print_package(out, &hb, i, package, config, flags))
 }
 
 fn print_package(
