@@ -232,6 +232,12 @@ impl<'a> ScriptBuilder<'a> {
         hb.register_helper("join", Box::new(JoinHelper));
         hb.register_helper("joinwith", Box::new(JoinWithHelper));
         hb.set_strict_mode(strict_mode);
+
+        #[cfg(debug_assertions)]
+        {
+            trace!("Rendering Package: {:?}", package.debug_details());
+        }
+
         hb.render("script", package)
             .with_context(|| anyhow!("Rendering script for package {} {} failed", package.name(), package.version()))
             .map_err(Error::from)
