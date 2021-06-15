@@ -1,10 +1,8 @@
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
-use std::io::Write;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use handlebars::Handlebars;
 
@@ -170,101 +168,3 @@ impl std::fmt::Display for PrintablePackage {
     }
 }
 
-
-pub fn print_packages<'a, I>(
-    out: &mut dyn Write,
-    format: &str,
-    iter: I,
-    config: &Configuration,
-    flags: &PackagePrintFlags,
-) -> Result<()>
-where
-    I: Iterator<Item = &'a Package>,
-{
-    let mut hb = Handlebars::new();
-    hb.register_escape_fn(handlebars::no_escape);
-    hb.register_template_string("package", format)?;
-
-    iter.enumerate()
-        .try_for_each(|(i, package)| print_package(out, &hb, i, package, config, flags))
-}
-
-fn print_package(
-    out: &mut dyn Write,
-    hb: &Handlebars,
-    i: usize,
-    package: &Package,
-    config: &Configuration,
-    flags: &PackagePrintFlags,
-) -> Result<()> {
-    let script = ScriptBuilder::new(&Shebang::from(config.shebang().clone())).build(
-        package,
-        config.available_phases(),
-        *config.strict_script_interpolation(),
-    ).context("Rendering script for printing it failed")?;
-
-    let script = crate::ui::script_to_printable(
-        &script,
-        flags.script_highlighting,
-        config
-            .script_highlight_theme()
-            .as_ref()
-            .ok_or_else(|| anyhow!("Highlighting for script enabled, but no theme configured"))?,
-        flags.script_line_numbers,
-    )?;
-
-    let mut data = BTreeMap::new();
-    data.insert("i", serde_json::Value::Number(serde_json::Number::from(i)));
-    data.insert("p", serde_json::to_value(package)?);
-    data.insert("script", serde_json::Value::String(script));
-    data.insert("print_any", serde_json::Value::Bool(flags.print_any()));
-    data.insert(
-        "print_runtime_deps",
-        serde_json::Value::Bool(flags.print_runtime_deps),
-    );
-    data.insert(
-        "print_build_deps",
-        serde_json::Value::Bool(flags.print_build_deps),
-    );
-
-    data.insert(
-        "print_sources",
-        serde_json::Value::Bool(flags.print_all || flags.print_sources),
-    );
-    data.insert(
-        "print_dependencies",
-        serde_json::Value::Bool(flags.print_all || flags.print_dependencies),
-    );
-    data.insert(
-        "print_patches",
-        serde_json::Value::Bool(flags.print_all || flags.print_patches),
-    );
-    data.insert(
-        "print_env",
-        serde_json::Value::Bool(flags.print_all || flags.print_env),
-    );
-    data.insert(
-        "print_flags",
-        serde_json::Value::Bool(flags.print_all || flags.print_flags),
-    );
-    data.insert(
-        "print_allowed_images",
-        serde_json::Value::Bool(flags.print_all || flags.print_allowed_images),
-    );
-    data.insert(
-        "print_denied_images",
-        serde_json::Value::Bool(flags.print_all || flags.print_denied_images),
-    );
-    data.insert(
-        "print_phases",
-        serde_json::Value::Bool(flags.print_all || flags.print_phases),
-    );
-    data.insert(
-        "print_script",
-        serde_json::Value::Bool(flags.print_all || flags.print_script),
-    );
-
-    hb.render("package", &data)
-        .map_err(Error::from)
-        .and_then(|r| writeln!(out, "{}", r).map_err(Error::from))
-}
