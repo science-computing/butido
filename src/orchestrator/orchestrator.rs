@@ -383,6 +383,7 @@ impl<'a> Orchestrator<'a> {
         let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
         let (_, jobs_result) = tokio::join!(multibar_block, running_jobs.collect::<Result<()>>());
         let _ = jobs_result?;
+        trace!("All jobs finished");
         match root_receiver.recv().await {
             None                     => Err(anyhow!("No result received...")),
             Some(Ok(results)) => {

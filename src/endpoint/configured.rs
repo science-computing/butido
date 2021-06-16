@@ -640,6 +640,7 @@ impl<'a> PreparedContainer<'a> {
                         art.display()
                     )
                 })?;
+                trace!("Successfully read {} into buffer", art.display());
 
                 let r = container
                     .copy_file_into(&destination, &buf)
