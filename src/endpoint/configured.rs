@@ -20,6 +20,7 @@ use anyhow::anyhow;
 use futures::FutureExt;
 use getset::{CopyGetters, Getters};
 use log::trace;
+use result_inspect::ResultInspect;
 use shiplift::Container;
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
@@ -522,12 +523,16 @@ impl<'a> PreparedContainer<'a> {
                     .with_context(|| anyhow!("Reading file {}", source_path.display()))?;
 
                 drop(entry);
-                let _ = container.copy_file_into(destination, &buf).await?;
-                Ok(())
+                container.copy_file_into(destination, &buf)
+                    .await
+                    .inspect(|_| trace!("Successfully copied source {} to container {}", source_path.display(), container.id()))
+                    .with_context(|| anyhow!("Failed to copy source {} to container {}", source_path.display(), container.id()))
+                    .map_err(Error::from)
             })
             .collect::<futures::stream::FuturesUnordered<_>>()
             .collect::<Result<()>>()
             .await
+            .inspect(|_| trace!("Successfully copied sources to container {}", container.id()))
             .with_context(|| anyhow!("Copying sources to container {}", container.id()))
             .map_err(Error::from)
     }
@@ -560,12 +565,18 @@ impl<'a> PreparedContainer<'a> {
                     .await
                     .with_context(|| anyhow!("Reading file {}", patch.display()))?;
 
-                let _ = container.copy_file_into(destination, &buf).await?;
-                Ok(())
+                container.copy_file_into(destination, &buf)
+                    .await
+                    .map_err(Error::from)
+                    .inspect(|_| trace!("Copying patch {} successfull", patch.display()))
+                    .with_context(|| anyhow!("Copying patch {} to container {}", patch.display(), container.id()))
+                    .map_err(Error::from)
             })
             .collect::<futures::stream::FuturesUnordered<_>>()
             .collect::<Result<()>>()
             .await
+            .map_err(Error::from)
+            .inspect(|_| trace!("Copied all patches"))
             .with_context(|| anyhow!("Copying patches to container {}", container.id()))
             .map_err(Error::from)
     }
@@ -630,6 +641,7 @@ impl<'a> PreparedContainer<'a> {
                 let r = container
                     .copy_file_into(&destination, &buf)
                     .await
+                    .inspect(|_| trace!("Successfully copied {} to container", art.display()))
                     .with_context(|| {
                         anyhow!(
                             "Copying artifact {} to container {} at {}",
@@ -645,6 +657,7 @@ impl<'a> PreparedContainer<'a> {
             .collect::<futures::stream::FuturesUnordered<_>>()
             .collect::<Result<Vec<_>>>()
             .await
+            .inspect(|_| trace!("Successfully copied all artifacts to the container {}", container.id()))
             .with_context(|| anyhow!("Copying artifacts to container {}", container.id()))
             .map_err(Error::from)
             .map(|_| ())
@@ -658,6 +671,7 @@ impl<'a> PreparedContainer<'a> {
         container
             .copy_file_into(script_path, script.as_ref().as_bytes())
             .await
+            .inspect(|_| trace!("Successfully copied script to container {}", container.id()))
             .with_context(|| anyhow!("Copying the script into container {}", container.id()))
             .map_err(Error::from)
     }

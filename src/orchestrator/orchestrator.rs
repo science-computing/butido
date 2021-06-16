@@ -375,6 +375,7 @@ impl<'a> Orchestrator<'a> {
                 let sender = prep.3.into_inner().unwrap_or_else(|| vec![root_sender.clone()]);
                 JobTask::new(prep.0, prep.1, sender)
             })
+            .inspect(|task| trace!("Running: {}", task.jobdef.job.uuid()))
             .map(|task| task.run())
             .collect::<futures::stream::FuturesUnordered<_>>();
         debug!("Built {} jobs", running_jobs.len());
