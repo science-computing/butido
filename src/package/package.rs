@@ -128,6 +128,13 @@ impl Package {
             .chain(runtime_iter)
             .unique_by(|res| res.as_ref().ok().cloned())
     }
+
+    /// Get a wrapper object around self which implements a debug interface with all details about
+    /// the Package object
+    #[cfg(debug_assertions)]
+    pub fn debug_details(&self) -> DebugPackage<'_> {
+        DebugPackage(self)
+    }
 }
 
 impl std::fmt::Debug for Package {
@@ -142,6 +149,65 @@ impl std::fmt::Debug for Package {
                 self.version()
             )
         }
+    }
+}
+
+/// Helper type for printing debug information about a package with much more details than the
+/// Debug impl for Package provides.
+#[cfg(debug_assertions)]
+pub struct DebugPackage<'a>(&'a Package);
+
+#[cfg(debug_assertions)]
+impl<'a> std::fmt::Debug for DebugPackage<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        writeln!(f, "Package({name} {version} ({semver}))",
+            name = self.0.name,
+            version = self.0.version,
+            semver = if self.0.version_is_semver { "is semver" } else { "not semver" })?;
+
+        writeln!(f, "\tSources = ")?;
+        self.0.sources.iter().try_for_each(|(k, v)| writeln!(f, "\t\t{name} = (Url = {url}, Hash = {hash} ({hasht}), {dl})",
+            name = k,
+            url = v.url(),
+            hash = v.hash().value(),
+            hasht = v.hash().hashtype(),
+            dl = if *v.download_manually() { "manual download" } else { "automatic download" },
+        ))?;
+
+        writeln!(f, "\tBuild Dependencies = ")?;
+        self.0.dependencies.build.iter().try_for_each(|d| writeln!(f, "\t\t{:?}", d))?;
+
+        writeln!(f, "\tRuntime Dependencies = ")?;
+        self.0.dependencies.runtime.iter().try_for_each(|r| writeln!(f, "\t\t{:?}", r))?;
+
+        writeln!(f, "\tPatches = ")?;
+        self.0.patches.iter().try_for_each(|p| writeln!(f, "\t\t{}", p.display()))?;
+
+        writeln!(f, "\tEnvironment = ")?;
+        self.0.environment
+            .as_ref()
+            .map(|hm| hm.iter().try_for_each(|(k, v)| writeln!(f, "\t\t{:?} = {}", k, v)))
+            .transpose()?;
+
+        writeln!(f, "\tAllowed Images = ")?;
+
+        self.0.allowed_images
+            .as_ref()
+            .map(|v| v.iter().try_for_each(|i| writeln!(f, "\t\t{:?}", i)))
+            .transpose()?;
+
+        writeln!(f, "\tDenied Images = ")?;
+        self.0.denied_images
+            .as_ref()
+            .map(|v| v.iter().try_for_each(|i| writeln!(f, "\t\t{:?}", i)))
+            .transpose()?;
+
+        writeln!(f, "\tPhases = ")?;
+        self.0.phases
+            .iter()
+            .try_for_each(|(k, _)| writeln!(f, "\t\t{:?} = ...", k))?;
+
+        Ok(())
     }
 }
 
