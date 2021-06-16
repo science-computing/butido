@@ -622,7 +622,10 @@ impl<'a> PreparedContainer<'a> {
                                     found = Some(path);
                                     break;
                                 },
-                                Err(e) => return Err(e),
+                                Err(e) => {
+                                    trace!("Failed to join '{:?}' + '{:?}'", release_store.root_path(), art.display());
+                                    return Err(e)
+                                },
                                 Ok(None) =>  continue,
                             }
                         }
