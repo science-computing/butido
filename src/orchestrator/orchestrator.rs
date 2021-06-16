@@ -542,6 +542,7 @@ impl<'a> JobTask<'a> {
                 //
                 // We only send to one parent, because it doesn't matter
                 // And we know that we have at least one sender
+                log::error!("[{}]: Received errors = {:?}", self.jobdef.job.uuid(), received_errors);
                 self.sender[0].send(Err(received_errors)).await;
 
                 // ... and stop operation, because the whole tree will fail anyways.
