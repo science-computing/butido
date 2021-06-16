@@ -13,18 +13,18 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use futures::FutureExt;
 use getset::{CopyGetters, Getters};
 use log::trace;
 use shiplift::Container;
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
-use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio_stream::StreamExt;
 use typed_builder::TypedBuilder;
 
