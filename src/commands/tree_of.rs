@@ -21,13 +21,11 @@ use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 use crate::package::Dag;
 use crate::repository::Repository;
-use crate::util::progress::ProgressBars;
 
 /// Implementation of the "tree_of" subcommand
 pub async fn tree_of(
     matches: &ArgMatches,
     repo: Repository,
-    progressbars: ProgressBars,
 ) -> Result<()> {
     let pname = matches
         .value_of("package_name")
@@ -46,12 +44,7 @@ pub async fn tree_of(
                 .map(|v| v.matches(p.version()))
                 .unwrap_or(true)
         })
-        .map(|package| {
-            let bar_tree_building = progressbars.bar();
-            let tree = Dag::for_root_package(package.clone(), &repo, Some(&bar_tree_building))?;
-            bar_tree_building.finish_with_message("Finished loading Tree");
-            Ok(tree)
-        })
+        .map(|package| Dag::for_root_package(package.clone(), &repo, None))
         .and_then_ok(|tree| {
             let stdout = std::io::stdout();
             let mut outlock = stdout.lock();
