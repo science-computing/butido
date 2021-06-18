@@ -40,14 +40,14 @@ impl Dag {
     pub fn for_root_package(
         p: Package,
         repo: &Repository,
-        progress: &ProgressBar,
+        progress: Option<&ProgressBar>,
     ) -> Result<Self> {
         fn add_sub_packages<'a>(
             repo: &'a Repository,
             mappings: &mut HashMap<&'a Package, daggy::NodeIndex>,
             dag: &mut daggy::Dag<&'a Package, i8>,
             p: &'a Package,
-            progress: &ProgressBar
+            progress: Option<&ProgressBar>
         ) -> Result<()> {
             p.get_self_packaged_dependencies()
                 .and_then_ok(|(name, constr)| {
@@ -63,7 +63,7 @@ impl Dag {
                         // recurse
                         packs.into_iter()
                             .try_for_each(|p| {
-                                progress.tick();
+                                progress.as_ref().map(|p| p.tick());
 
                                 let idx = dag.add_node(p);
                                 mappings.insert(p, idx);

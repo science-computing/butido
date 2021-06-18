@@ -48,7 +48,7 @@ pub async fn tree_of(
         })
         .map(|package| {
             let bar_tree_building = progressbars.bar();
-            let tree = Dag::for_root_package(package.clone(), &repo, &bar_tree_building)?;
+            let tree = Dag::for_root_package(package.clone(), &repo, Some(&bar_tree_building))?;
             bar_tree_building.finish_with_message("Finished loading Tree");
             Ok(tree)
         })
