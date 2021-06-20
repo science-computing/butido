@@ -144,7 +144,8 @@ impl Repository {
 
                 // Map all `Value`s to String and then join them on the path that is relative to
                 // the root directory of the repository.
-                .map(|patch| patch.into_str().map_err(Error::from))
+                .map(config::Value::into_str)
+                .map_err(Error::from)
                 .map_ok(|patch| path_relative_to_root.join(patch))
                 .inspect(|patch| trace!("Patch relative to root: {:?}", patch.as_ref().map(|p| p.display())))
 
