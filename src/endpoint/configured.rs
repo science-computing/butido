@@ -789,7 +789,6 @@ impl<'a> StartedContainer<'a> {
                             self.create_info.id
                         )
                     })
-                    .map_err(Error::from)
                     .and_then(|l| {
                         crate::log::parser()
                             .parse(l.as_bytes())
@@ -801,31 +800,21 @@ impl<'a> StartedContainer<'a> {
                                     l
                                 )
                             })
-                            .map_err(Error::from)
-                            .and_then(|item| {
-                                let mut exited_successfully = None;
-                                {
-                                    match item {
-                                        LogItem::State(Ok(_)) => {
-                                            exited_successfully = Some((true, None))
-                                        }
-                                        LogItem::State(Err(ref msg)) => {
-                                            exited_successfully = Some((false, Some(msg.clone())))
-                                        }
-                                        _ => {
-                                            // Nothing
-                                        }
-                                    }
-                                }
-
-                                trace!("Log item: {}", item.display()?);
-                                logsink
-                                    .send(item)
-                                    .with_context(|| anyhow!("Sending log to log sink"))
-                                    .map_err(Error::from)
-                                    .map(|_| exited_successfully)
-                            })
                     })
+                    .and_then(|item| {
+                        let exited_successfully = match item {
+                            LogItem::State(Ok(_)) => Some((true, None)),
+                            LogItem::State(Err(ref msg)) => Some((false, Some(msg.clone()))),
+                            _ => None, // Nothing
+                        };
+
+                        trace!("Log item: {}", item.display()?);
+                        logsink
+                            .send(item)
+                            .with_context(|| anyhow!("Sending log to log sink"))
+                            .map(|_| exited_successfully)
+                    })
+                    .map_err(Error::from)
                 })
                 .collect::<Result<Vec<_>>>()
                 .map(|r| {
