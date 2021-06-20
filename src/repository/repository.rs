@@ -110,9 +110,9 @@ impl Repository {
                 let patches_before_merge = match config.get_array("patches") {
                     Ok(v)  => {
                         v.into_iter()
-                            .map(|p| {
-                                p.into_str()
-                                    .map(PathBuf::from)
+                            .map(config::Value::into_str)
+                            .map(|r| {
+                                r.map(PathBuf::from)
                                     .with_context(|| anyhow!("patches must be strings"))
                                     .map_err(Error::from)
                             })
