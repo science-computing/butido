@@ -721,12 +721,12 @@ impl<'a> PreparedContainer<'a> {
     }
 
     pub async fn start(self) -> Result<StartedContainer<'a>> {
-        let container = self.endpoint.docker.containers().get(&self.create_info.id);
-        let _ = container
+        self.endpoint
+            .docker
+            .containers()
+            .get(&self.create_info.id)
             .start()
-            .inspect(|r| {
-                trace!("Starting container {} -> {:?}", self.create_info.id, r);
-            })
+            .inspect(|r| trace!("Starting container {} -> {:?}", self.create_info.id, r))
             .map(|r| {
                 r.with_context(|| {
                     anyhow!(
