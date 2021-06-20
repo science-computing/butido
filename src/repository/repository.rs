@@ -131,17 +131,15 @@ impl Repository {
                 let path_relative_to_root = path.strip_prefix(root)?;
 
                 // get the patches that are in the `config` object after the merge
-                let patches = match config.get_array("patches") {
-                    Ok(v) => {
-                        trace!("Patches after merging: {:?}", v);
-                        v
-                    },
+                let patches = config
+                    .get_array("patches")
+                    .or_else(|e| match e {
 
-                    // if there was none, we simply use an empty array
-                    // This is cheap because Vec::with_capacity(0) does not allocate
-                    Err(config::ConfigError::NotFound(_)) => Vec::with_capacity(0),
-                    Err(e)                                => return Err(e).map_err(Error::from),
-                }
+                        // if there was none, we simply use an empty array
+                        // This is cheap because Vec::with_capacity(0) does not allocate
+                        config::ConfigError::NotFound(_) => Ok(Vec::with_capacity(0)),
+                        other => Err(other),
+                    })?
                 .into_iter()
 
                 // Map all `Value`s to String and then join them on the path that is relative to
