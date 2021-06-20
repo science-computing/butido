@@ -766,13 +766,12 @@ impl<'a> StartedContainer<'a> {
             .build();
         trace!("Exec options = {:?}", exec_opts);
 
-        let container = self.endpoint.docker.containers().get(&self.create_info.id);
-
-        trace!(
-            "Moving logs to log sink for container {}",
-            self.create_info.id
-        );
-        let stream = container.exec(&exec_opts);
+        trace!("Moving logs to log sink for container {}", self.create_info.id);
+        let stream = self.endpoint
+            .docker
+            .containers()
+            .get(&self.create_info.id)
+            .exec(&exec_opts);
 
         let exited_successfully: Option<(bool, Option<String>)> =
             buffer_stream_to_line_stream(stream)
