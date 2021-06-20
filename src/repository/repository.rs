@@ -140,33 +140,33 @@ impl Repository {
                         config::ConfigError::NotFound(_) => Ok(Vec::with_capacity(0)),
                         other => Err(other),
                     })?
-                .into_iter()
+                    .into_iter()
 
-                // Map all `Value`s to String and then join them on the path that is relative to
-                // the root directory of the repository.
-                .map(config::Value::into_str)
-                .map_err(Error::from)
-                .map_ok(|patch| path_relative_to_root.join(patch))
-                .inspect(|patch| trace!("Patch relative to root: {:?}", patch.as_ref().map(|p| p.display())))
+                    // Map all `Value`s to String and then join them on the path that is relative to
+                    // the root directory of the repository.
+                    .map(config::Value::into_str)
+                    .map_err(Error::from)
+                    .map_ok(|patch| path_relative_to_root.join(patch))
+                    .inspect(|patch| trace!("Patch relative to root: {:?}", patch.as_ref().map(|p| p.display())))
 
-                // if the patch file exists, use it (as config::Value).
-                //
-                // Otherwise we have an error here, because we're refering to a non-existing file.
-                .and_then_ok(|patch| if patch.exists() {
-                    trace!("Path to patch exists: {}", patch.display());
-                    Ok(Some(patch))
-                } else if patches_before_merge.iter().any(|pb| pb.file_name() == patch.file_name()) {
-                    // We have a patch already in the array that is named equal to the patch
-                    // we have in the current recursion.
-                    // It seems like this patch was already in the list and we re-found it
-                    // because we loaded a deeper pkg.toml file.
-                    Ok(None)
-                } else {
-                    trace!("Path to patch does not exist: {}", patch.display());
-                    Err(anyhow!("Patch does not exist: {}", patch.display()))
-                })
-                .filter_map_ok(|o| o)
-                .collect::<Result<Vec<_>>>()?;
+                    // if the patch file exists, use it (as config::Value).
+                    //
+                    // Otherwise we have an error here, because we're refering to a non-existing file.
+                    .and_then_ok(|patch| if patch.exists() {
+                        trace!("Path to patch exists: {}", patch.display());
+                        Ok(Some(patch))
+                    } else if patches_before_merge.iter().any(|pb| pb.file_name() == patch.file_name()) {
+                        // We have a patch already in the array that is named equal to the patch
+                        // we have in the current recursion.
+                        // It seems like this patch was already in the list and we re-found it
+                        // because we loaded a deeper pkg.toml file.
+                        Ok(None)
+                    } else {
+                        trace!("Path to patch does not exist: {}", patch.display());
+                        Err(anyhow!("Patch does not exist: {}", patch.display()))
+                    })
+                    .filter_map_ok(|o| o)
+                    .collect::<Result<Vec<_>>>()?;
 
                 // If we found any patches, use them. Otherwise use the array from before the merge
                 // (which already has the correct pathes from the previous recursion).
