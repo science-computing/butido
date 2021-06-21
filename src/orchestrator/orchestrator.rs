@@ -559,12 +559,13 @@ impl<'a> JobTask<'a> {
             self.jobdef.dependencies.iter().map(|u| u.to_string()).collect::<Vec<String>>()
         });
 
+        let dep_len = self.jobdef.dependencies.len();
         // A list of job run results from dependencies that were received from the tasks for the
         // dependencies
-        let mut received_dependencies: HashMap<Uuid, Vec<ProducedArtifact>> = HashMap::new();
+        let mut received_dependencies: HashMap<Uuid, Vec<ProducedArtifact>> = HashMap::with_capacity(dep_len);
 
         // A list of errors that were received from the tasks for the dependencies
-        let mut received_errors: HashMap<Uuid, Error> = HashMap::with_capacity(self.jobdef.dependencies.len());
+        let mut received_errors: HashMap<Uuid, Error> = HashMap::with_capacity(dep_len);
 
         // Helper function to check whether all UUIDs are in a list of UUIDs
         let all_dependencies_are_in = |dependency_uuids: &[Uuid], list: &HashMap<Uuid, Vec<_>>| {
@@ -582,7 +583,7 @@ impl<'a> JobTask<'a> {
                     self.jobdef.job.package().name(),
                     self.jobdef.job.package().version(),
                     received_dependencies.iter().filter(|(rd_uuid, _)| self.jobdef.dependencies.contains(rd_uuid)).count(),
-                    self.jobdef.dependencies.len())
+                    dep_len)
             });
             trace!("[{}]: Updated bar", self.jobdef.job.uuid());
 
