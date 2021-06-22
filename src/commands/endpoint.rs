@@ -11,6 +11,7 @@
 //! Implementation of the 'endpoint' subcommand
 
 use std::collections::HashMap;
+use std::io::Write;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -49,6 +50,7 @@ pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_gen
         Some(("stats", matches)) => stats(endpoint_names, matches, config, progress_generator).await,
         Some(("container", matches)) => crate::commands::endpoint_container::container(endpoint_names, matches, config).await,
         Some(("containers", matches)) => containers(endpoint_names, matches, config).await,
+        Some(("images", matches)) => images(endpoint_names, matches, config).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -421,6 +423,92 @@ async fn containers_stop(endpoint_names: Vec<EndpointName>,
         .await
 }
 
+
+async fn images(endpoint_names: Vec<EndpointName>,
+    matches: &ArgMatches,
+    config: &Configuration,
+) -> Result<()> {
+    match matches.subcommand() {
+        Some(("list", matches)) => images_list(endpoint_names, matches, config).await,
+        Some(("verify-present", matches)) => images_present(endpoint_names, matches, config).await,
+        Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        None => Err(anyhow!("No subcommand")),
+    }
+}
+
+async fn images_list(endpoint_names: Vec<EndpointName>,
+    _matches: &ArgMatches,
+    config: &Configuration,
+) -> Result<()> {
+    let mut iter = connect_to_endpoints(config, &endpoint_names)
+        .await?
+        .into_iter()
+        .map(move |ep| async move { ep.images(None).await })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<Result<Vec<_>>>()
+        .await?
+        .into_iter()
+        .flatten();
+
+    let out = std::io::stdout();
+    let mut lock = out.lock();
+
+    iter.try_for_each(|img| {
+        writeln!(lock, "{created} {id}", created = img.created(), id = {
+            if let Some(tags)= img.tags() {
+                tags.join(", ")
+            } else {
+                img.id().clone()
+            }
+        }).map_err(Error::from)
+    })
+}
+
+async fn images_present(endpoint_names: Vec<EndpointName>,
+    _matches: &ArgMatches,
+    config: &Configuration,
+) -> Result<()> {
+    use crate::util::docker::ImageName;
+
+    let eps = connect_to_endpoints(config, &endpoint_names).await?;
+
+    let ep_names_to_images = eps.iter()
+        .map(|ep| async move {
+            ep.images(None).await.map(|imgs| {
+                let img_tags = imgs.filter_map(|img| img.tags().clone().map(Vec::into_iter))
+                    .flatten()
+                    .map(ImageName::from)
+                    .collect();
+
+                (ep.name().clone(), img_tags)
+            })
+        })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<Result<Vec<(EndpointName, Vec<ImageName>)>>>()
+        .await?
+        .into_iter()
+        .collect::<HashMap<EndpointName, Vec<ImageName>>>();
+
+    let out = std::io::stdout();
+    let mut lock = out.lock();
+
+    ep_names_to_images
+        .iter()
+        .map(|(ep_name, ep_imgs)| {
+            config.docker()
+                .images()
+                .iter()
+                .map(|config_img| (ep_imgs.contains(config_img), config_img))
+                .try_for_each(|(found, img_name)| {
+                    if found {
+                        writeln!(lock, "found {img} in {ep}", img = img_name, ep = ep_name).map_err(Error::from)
+                    } else {
+                        writeln!(lock, "{img} not found", img = img_name).map_err(Error::from)
+                    }
+                })
+        })
+        .collect::<Result<()>>()
+}
 
 /// Helper function to connect to all endpoints from the configuration, that appear (by name) in
 /// the `endpoint_names` list
