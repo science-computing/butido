@@ -33,11 +33,12 @@ use log::trace;
 
 use crate::commands::util::get_date_filter;
 use crate::config::Configuration;
-use crate::db::models;
 use crate::db::DbConnectionConfig;
+use crate::db::models;
 use crate::log::JobResult;
 use crate::package::Script;
 use crate::schema;
+use crate::util::progress::ProgressBars;
 
 diesel_migrations::embed_migrations!("migrations");
 
@@ -46,19 +47,20 @@ pub fn db(
     db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
+    progressbars: ProgressBars,
 ) -> Result<()> {
     match matches.subcommand() {
         Some(("cli", matches)) => cli(db_connection_config, matches),
-        Some(("setup", _matches)) => setup(db_connection_config),
-        Some(("artifacts", matches)) => artifacts(db_connection_config, matches),
-        Some(("envvars", matches)) => envvars(db_connection_config, matches),
-        Some(("images", matches)) => images(db_connection_config, matches),
-        Some(("submit", matches)) => submit(db_connection_config, matches),
-        Some(("submits", matches)) => submits(db_connection_config, matches),
-        Some(("jobs", matches)) => jobs(db_connection_config, matches),
-        Some(("job", matches)) => job(db_connection_config, config, matches),
-        Some(("log-of", matches)) => log_of(db_connection_config, matches),
-        Some(("releases", matches)) => releases(db_connection_config, config, matches),
+        Some(("setup", _matches)) => setup(db_connection_config, progressbars),
+        Some(("artifacts", matches)) => artifacts(db_connection_config, matches, progressbars),
+        Some(("envvars", matches)) => envvars(db_connection_config, matches, progressbars),
+        Some(("images", matches)) => images(db_connection_config, matches, progressbars),
+        Some(("submit", matches)) => submit(db_connection_config, matches, progressbars),
+        Some(("submits", matches)) => submits(db_connection_config, matches, progressbars),
+        Some(("jobs", matches)) => jobs(db_connection_config, matches, progressbars),
+        Some(("job", matches)) => job(db_connection_config, config, matches, progressbars),
+        Some(("log-of", matches)) => log_of(db_connection_config, matches, progressbars),
+        Some(("releases", matches)) => releases(db_connection_config, config, matches, progressbars),
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -148,18 +150,18 @@ fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Re
         .run_for_uri(db_connection_config)
 }
 
-fn setup(conn_cfg: DbConnectionConfig<'_>) -> Result<()> {
-    let conn = conn_cfg.establish_connection()?;
+fn setup(conn_cfg: DbConnectionConfig<'_>, progressbars: ProgressBars) -> Result<()> {
+    let conn = conn_cfg.establish_connection(&progressbars)?;
     embedded_migrations::run_with_output(&conn, &mut std::io::stdout()).map_err(Error::from)
 }
 
 /// Implementation of the "db artifacts" subcommand
-fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
+fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches, progressbars: ProgressBars) -> Result<()> {
     use crate::schema::artifacts::dsl;
 
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec!["Path", "Released", "Job"]);
-    let conn = conn_cfg.establish_connection()?;
+    let conn = conn_cfg.establish_connection(&progressbars)?;
     let data = matches
         .value_of("job_uuid")
         .map(uuid::Uuid::parse_str)
@@ -203,12 +205,12 @@ fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<(
 }
 
 /// Implementation of the "db envvars" subcommand
-fn envvars(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
+fn envvars(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches, progressbars: ProgressBars) -> Result<()> {
     use crate::schema::envvars::dsl;
 
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec!["Name", "Value"]);
-    let conn = conn_cfg.establish_connection()?;
+    let conn = conn_cfg.establish_connection(&progressbars)?;
     let data = dsl::envvars
         .load::<models::EnvVar>(&conn)?
         .into_iter()
@@ -225,12 +227,12 @@ fn envvars(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
 }
 
 /// Implementation of the "db images" subcommand
-fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
+fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches, progressbars: ProgressBars) -> Result<()> {
     use crate::schema::images::dsl;
 
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec!["Name"]);
-    let conn = conn_cfg.establish_connection()?;
+    let conn = conn_cfg.establish_connection(&progressbars)?;
     let data = dsl::images
         .load::<models::Image>(&conn)?
         .into_iter()
@@ -247,8 +249,8 @@ fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 }
 
 /// Implementation of the "db submit" subcommand
-fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
-    let conn = conn_cfg.establish_connection()?;
+fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches, progressbars: ProgressBars) -> Result<()> {
+    let conn = conn_cfg.establish_connection(&progressbars)?;
     let submit_id = matches.value_of("submit")
         .map(uuid::Uuid::from_str)
         .transpose()
@@ -331,11 +333,11 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 }
 
 /// Implementation of the "db submits" subcommand
-fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
+fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches, progressbars: ProgressBars) -> Result<()> {
     let csv = matches.is_present("csv");
     let limit = matches.value_of("limit").map(i64::from_str).transpose()?;
     let hdrs = crate::commands::util::mk_header(vec!["Time", "UUID"]);
-    let conn = conn_cfg.establish_connection()?;
+    let conn = conn_cfg.establish_connection(&progressbars)?;
 
     let query = schema::submits::table
         .order_by(schema::submits::id.desc()); // required for the --limit implementation
@@ -397,7 +399,7 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
 }
 
 /// Implementation of the "db jobs" subcommand
-fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
+fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches, progressbars: ProgressBars) -> Result<()> {
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec![
         "Submit",
@@ -408,7 +410,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
         "Package",
         "Version",
     ]);
-    let conn = conn_cfg.establish_connection()?;
+    let conn = conn_cfg.establish_connection(&progressbars)?;
     let older_than_filter = get_date_filter("older_than", matches)?;
     let newer_than_filter = get_date_filter("newer_than", matches)?;
 
@@ -495,14 +497,14 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
 }
 
 /// Implementation of the "db job" subcommand
-fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
+fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches, progressbars: ProgressBars) -> Result<()> {
     let script_highlight = !matches.is_present("no_script_highlight");
     let script_line_numbers = !matches.is_present("no_script_line_numbers");
     let configured_theme = config.script_highlight_theme();
     let show_log = matches.is_present("show_log");
     let show_script = matches.is_present("show_script");
     let csv = matches.is_present("csv");
-    let conn = conn_cfg.establish_connection()?;
+    let conn = conn_cfg.establish_connection(&progressbars)?;
     let job_uuid = matches
         .value_of("job_uuid")
         .map(uuid::Uuid::parse_str)
@@ -669,8 +671,8 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
 }
 
 /// Implementation of the subcommand "db log-of"
-fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
-    let conn   = conn_cfg.establish_connection()?;
+fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches, progressbars: ProgressBars) -> Result<()> {
+    let conn   = conn_cfg.establish_connection(&progressbars)?;
     let job_uuid = matches
         .value_of("job_uuid")
         .map(uuid::Uuid::parse_str)
@@ -692,9 +694,9 @@ fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 }
 
 /// Implementation of the "db releases" subcommand
-fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
+fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches, progressbars: ProgressBars) -> Result<()> {
     let csv    = matches.is_present("csv");
-    let conn   = conn_cfg.establish_connection()?;
+    let conn   = conn_cfg.establish_connection(&progressbars)?;
     let header = crate::commands::util::mk_header(["Package", "Version", "Date", "Path"].to_vec());
     let mut query = schema::jobs::table
         .inner_join(schema::packages::table)

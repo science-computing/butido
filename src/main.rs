@@ -151,9 +151,9 @@ async fn main() -> Result<()> {
     let db_connection_config = crate::db::DbConnectionConfig::parse(&config, &cli)?;
     match cli.subcommand() {
         Some(("generate-completions", matches)) => generate_completions(matches),
-        Some(("db", matches)) => crate::commands::db(db_connection_config, &config, matches)?,
+        Some(("db", matches)) => crate::commands::db(db_connection_config, &config, matches, progressbars)?,
         Some(("build", matches)) => {
-            let conn = db_connection_config.establish_connection()?;
+            let conn = db_connection_config.establish_connection(&progressbars)?;
 
             let repo = load_repo()?;
 
@@ -199,7 +199,7 @@ async fn main() -> Result<()> {
 
         Some(("find-artifact", matches)) => {
             let repo = load_repo()?;
-            let conn = db_connection_config.establish_connection()?;
+            let conn = db_connection_config.establish_connection(&progressbars)?;
             crate::commands::find_artifact(matches, &config, progressbars, repo, conn)
                 .await
                 .context("find-artifact command failed")?
@@ -220,7 +220,7 @@ async fn main() -> Result<()> {
         }
 
         Some(("release", matches)) => {
-            crate::commands::release(db_connection_config, &config, matches)
+            crate::commands::release(db_connection_config, &config, matches, progressbars)
                 .await
                 .context("release command failed")?
         }
@@ -241,7 +241,7 @@ async fn main() -> Result<()> {
 
         Some(("metrics", _)) => {
             let repo = load_repo()?;
-            let conn = db_connection_config.establish_connection()?;
+            let conn = db_connection_config.establish_connection(&progressbars)?;
             crate::commands::metrics(&repo_path, &config, repo, conn)
                 .await
                 .context("metrics command failed")?
