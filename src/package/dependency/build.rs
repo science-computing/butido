@@ -39,3 +39,23 @@ impl ParseDependency for BuildDependency {
         crate::package::dependency::parse_package_dependency_string_into_name_and_version(&self.0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(serde::Deserialize)]
+    #[allow(unused)]
+    pub struct TestSetting {
+        setting: BuildDependency,
+    }
+
+    #[test]
+    fn test_parse_dependency() {
+        let dependency_str = r#"setting = "foo""#;
+        let d: TestSetting = toml::from_str(dependency_str).unwrap();
+
+        assert_eq!(d.setting.0, "foo");
+    }
+}
+
