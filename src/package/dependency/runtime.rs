@@ -29,6 +29,13 @@ pub enum Dependency {
     },
 }
 
+#[cfg(test)]
+impl Dependency {
+    pub fn new_conditional(name: String, condition: Condition) -> Self {
+        Dependency::Conditional { name, condition }
+    }
+}
+
 impl AsRef<str> for Dependency {
     fn as_ref(&self) -> &str {
         match self {
