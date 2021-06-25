@@ -41,6 +41,17 @@ pub struct Condition {
     pub(super) in_image: Option<OneOrMore<String>>,
 }
 
+#[cfg(test)]
+impl Condition {
+    pub fn new(has_env: Option<OneOrMore<EnvironmentVariableName>>,
+               env_eq: Option<HashMap<EnvironmentVariableName, String>>,
+               in_image: Option<OneOrMore<String>>)
+        -> Self
+    {
+        Condition { has_env, env_eq, in_image }
+    }
+}
+
 /// Manual implementation of PartialOrd for Condition
 ///
 /// Because HashMap does not implement PartialOrd
