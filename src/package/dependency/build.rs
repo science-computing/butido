@@ -12,22 +12,25 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::package::dependency::ParseDependency;
-use crate::package::dependency::StringEqual;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
+use crate::package::dependency::ParseDependency;
+use crate::package::dependency::StringEqual;
+use crate::package::dependency::condition::Condition;
 
 /// A dependency that is packaged and is only required during build time
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(untagged)]
 pub enum BuildDependency {
     Simple(String),
+    Conditional(String, Condition),
 }
 
 impl AsRef<str> for BuildDependency {
     fn as_ref(&self) -> &str {
         match self {
             BuildDependency::Simple(name) => name,
+            BuildDependency::Conditional(name, _) => name,
         }
     }
 }
@@ -36,6 +39,7 @@ impl StringEqual for BuildDependency {
     fn str_equal(&self, s: &str) -> bool {
         match self {
             BuildDependency::Simple(name) => name == s,
+            BuildDependency::Conditional(name, _) => name == s,
         }
     }
 }
@@ -61,6 +65,7 @@ mod tests {
         let s: TestSetting = toml::from_str(r#"setting = "foo""#).expect("Parsing TestSetting failed");
         match s.setting {
             BuildDependency::Simple(name) => assert_eq!(name, "foo", "Expected 'foo', got {}", name),
+            other => panic!("Unexpected deserialization to other variant: {:?}", other),
         }
     }
 }

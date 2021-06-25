@@ -12,22 +12,25 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::package::dependency::ParseDependency;
-use crate::package::dependency::StringEqual;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
+use crate::package::dependency::ParseDependency;
+use crate::package::dependency::StringEqual;
+use crate::package::dependency::condition::Condition;
 
 /// A dependency that is packaged and is required during runtime
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(untagged)]
 pub enum Dependency {
     Simple(String),
+    Conditional(String, Condition),
 }
 
 impl AsRef<str> for Dependency {
     fn as_ref(&self) -> &str {
         match self {
             Dependency::Simple(name) => name,
+            Dependency::Conditional(name, _) => name,
         }
     }
 }
@@ -36,6 +39,7 @@ impl StringEqual for Dependency {
     fn str_equal(&self, s: &str) -> bool {
         match self {
             Dependency::Simple(name) => name == s,
+            Dependency::Conditional(name, _) => name == s,
         }
     }
 }
@@ -68,6 +72,7 @@ mod tests {
 
         match s.setting {
             Dependency::Simple(name) => assert_eq!(name, "foo", "Expected 'foo', got {}", name),
+            other => panic!("Unexpected deserialization to other variant: {:?}", other),
         }
     }
 }

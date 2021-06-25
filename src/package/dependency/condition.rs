@@ -11,6 +11,7 @@
 use std::collections::HashMap;
 
 use serde::Deserialize;
+use serde::Serialize;
 
 use crate::util::EnvironmentVariableName;
 
@@ -23,7 +24,7 @@ use crate::util::EnvironmentVariableName;
 /// build image is used.
 /// All these settings are optional, of course.
 ///
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Condition {
     #[serde(rename = "has_env", skip_serializing_if = "Option::is_none")]
     has_env: Option<OneOrMore<EnvironmentVariableName>>,
@@ -35,11 +36,71 @@ pub struct Condition {
     in_image: Option<OneOrMore<String>>,
 }
 
+/// Manual implementation of PartialOrd for Condition
+///
+/// Because HashMap does not implement PartialOrd
+impl PartialOrd for Condition {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        use std::cmp::Ordering as O;
+
+        let cmp_has_env = match (self.has_env.as_ref(), other.has_env.as_ref()) {
+            (Some(a), Some(b)) => a.partial_cmp(b),
+            (Some(_), None)    => Some(O::Greater),
+            (None, Some(_))    => Some(O::Less),
+            (None, None)       => Some(O::Equal),
+        };
+
+        if cmp_has_env.as_ref().map(|o| *o != O::Equal).unwrap_or(false) {
+            return cmp_has_env
+        }
+
+        let cmp_env_eq = match (self.env_eq.as_ref(), other.env_eq.as_ref()) {
+            // TODO: Is this safe? We ignore the HashMaps here and just say they are equal. They are most certainly not.
+            (Some(_), Some(_)) => Some(O::Equal),
+            (Some(_), None)    => Some(O::Greater),
+            (None, Some(_))    => Some(O::Less),
+            (None, None)       => Some(O::Equal),
+        };
+
+        if cmp_env_eq.as_ref().map(|o| *o != O::Equal).unwrap_or(false) {
+            return cmp_env_eq
+        }
+
+        match (self.in_image.as_ref(), other.in_image.as_ref()) {
+            (Some(a), Some(b)) => a.partial_cmp(b),
+            (Some(_), None)    => Some(O::Greater),
+            (None, Some(_))    => Some(O::Less),
+            (None, None)       => Some(O::Equal),
+        }
+    }
+}
+
+/// Manual implementation of Ord for Condition
+///
+/// Because HashMap does not implement Ord
+impl Ord for Condition {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap_or(std::cmp::Ordering::Equal)
+    }
+}
+
+/// Manual implementation of Hash for Condition
+///
+/// Because HashMap does not implement Hash
+impl std::hash::Hash for Condition {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.has_env.hash(state);
+        if let Some(hm) = self.env_eq.as_ref() {
+            hm.iter().for_each(|(k, v)| (k, v).hash(state));
+        };
+        self.in_image.hash(state);
+    }
+}
+
 
 /// Helper type for supporting Vec<T> and T in value
 /// position of Condition
-#[cfg_attr(test, derive(Eq, PartialEq))]
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(untagged)]
 pub enum OneOrMore<T: Sized> {
     One(T),
