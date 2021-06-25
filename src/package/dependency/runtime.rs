@@ -19,30 +19,36 @@ use crate::package::PackageVersionConstraint;
 
 /// A dependency that is packaged and is required during runtime
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
-#[serde(transparent)]
-pub struct Dependency(String);
+#[serde(untagged)]
+pub enum Dependency {
+    Simple(String),
+}
 
 impl AsRef<str> for Dependency {
     fn as_ref(&self) -> &str {
-        self.0.as_ref()
+        match self {
+            Dependency::Simple(name) => name,
+        }
     }
 }
 
 impl StringEqual for Dependency {
     fn str_equal(&self, s: &str) -> bool {
-        self.0 == s
+        match self {
+            Dependency::Simple(name) => name == s,
+        }
     }
 }
 
 impl From<String> for Dependency {
     fn from(s: String) -> Dependency {
-        Dependency(s)
+        Dependency::Simple(s)
     }
 }
 
 impl ParseDependency for Dependency {
     fn parse_as_name_and_version(&self) -> Result<(PackageName, PackageVersionConstraint)> {
-        crate::package::dependency::parse_package_dependency_string_into_name_and_version(&self.0)
+        crate::package::dependency::parse_package_dependency_string_into_name_and_version(self.as_ref())
     }
 }
 
@@ -60,7 +66,9 @@ mod tests {
     fn test_parse_dependency() {
         let s: TestSetting = toml::from_str(r#"setting = "foo""#).expect("Parsing TestSetting failed");
 
-        assert_eq!(s.setting.0, "foo");
+        match s.setting {
+            Dependency::Simple(name) => assert_eq!(name, "foo", "Expected 'foo', got {}", name),
+        }
     }
 }
 
