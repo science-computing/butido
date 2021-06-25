@@ -40,9 +40,20 @@ pub async fn tree_of(
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
+    let image_name = matches
+        .value_of("image")
+        .map(String::from)
+        .map(ImageName::from);
+
+    let additional_env = matches
+        .values_of("env")
+        .unwrap_or_default()
+        .map(crate::util::env::parse_to_env)
+        .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
+
     let condition_data = ConditionData {
-        image_name: None
-        env: &[],
+        image_name: image_name.as_ref(),
+        env: &additional_env,
     };
 
     repo.packages()
