@@ -24,7 +24,6 @@ use crate::package::condition::ConditionData;
 use crate::repository::Repository;
 use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
-use crate::util::progress::ProgressBars;
 
 /// Implementation of the "tree_of" subcommand
 pub async fn tree_of(

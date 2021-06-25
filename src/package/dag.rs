@@ -161,11 +161,14 @@ mod tests {
 
     use std::collections::BTreeMap;
 
+    use crate::package::Dependencies;
+    use crate::package::Dependency;
+    use crate::package::condition::Condition;
+    use crate::package::condition::OneOrMore;
     use crate::package::tests::package;
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
-    use crate::package::Dependencies;
-    use crate::package::Dependency;
+    use crate::util::docker::ImageName;
 
     use indicatif::ProgressBar;
 
@@ -588,5 +591,131 @@ mod tests {
         assert!(ps.iter().any(|p| *p.name() == pname("p3")));
         assert!(ps.iter().any(|p| *p.name() == pname("p4")));
     }
+
+
+    /// Build a repository with two packages and a condition for their dependency
+    fn repo_with_ab_packages_with_condition(cond: Condition) -> (Package, Repository) {
+        let mut btree = BTreeMap::new();
+
+        let mut p1 = {
+            let name = "a";
+            let vers = "1";
+            let pack = package(name, vers, "https://rust-lang.org", "123");
+            btree.insert((pname(name), pversion(vers)), pack.clone());
+            pack
+        };
+
+        {
+            let name = "b";
+            let vers = "2";
+            let pack = package(name, vers, "https://rust-lang.org", "124");
+            btree.insert((pname(name), pversion(vers)), pack);
+        }
+
+        {
+            let d = Dependency::new_conditional(String::from("b =2"), cond);
+            let ds = Dependencies::with_runtime_dependency(d);
+            p1.set_dependencies(ds);
+        }
+
+        (p1, Repository::from(btree))
+    }
+
+    // Test whether the dependency DAG is correctly build if there is NO conditional data passed
+    //
+    // Because the dependency is conditional with "fooimage" required as build-image, the
+    // dependency DAG should NOT contain package "b"
+    #[test]
+    fn test_add_two_dependent_packages_with_image_conditional() {
+        let condition = {
+            let in_image = Some(OneOrMore::<String>::One(String::from("fooimage")));
+            Condition::new(None, None, in_image)
+        };
+        let (p1, repo) = repo_with_ab_packages_with_condition(condition);
+
+        let condition_data = ConditionData {
+            image_name: None,
+            env: &[],
+        };
+
+        let progress = ProgressBar::hidden();
+
+        let dag = Dag::for_root_package(p1, &repo, Some(&progress), &condition_data);
+        assert!(dag.is_ok());
+        let dag = dag.unwrap();
+        let ps = dag.all_packages();
+
+        assert!(ps.iter().any(|p| *p.name() == pname("a")));
+        assert!(ps.iter().any(|p| *p.version() == pversion("1")));
+
+        // Not in the tree:
+        assert!(!ps.iter().any(|p| *p.name() == pname("b")));
+        assert!(!ps.iter().any(|p| *p.version() == pversion("2")));
+    }
+
+    // Test whether the dependency DAG is correctly build if a image is used, but not the one
+    // required
+    //
+    // Because the dependency is conditional with "fooimage" required as build-image, but
+    // "barimage" is used, the dependency DAG should NOT contain package "b"
+    #[test]
+    fn test_add_two_dependent_packages_with_image_conditional_but_other_image_provided() {
+        let condition = {
+            let in_image = Some(OneOrMore::<String>::One(String::from("fooimage")));
+            Condition::new(None, None, in_image)
+        };
+        let (p1, repo) = repo_with_ab_packages_with_condition(condition);
+
+        let img_name = ImageName::from("barimage");
+        let condition_data = ConditionData {
+            image_name: Some(&img_name),
+            env: &[],
+        };
+
+        let progress = ProgressBar::hidden();
+
+        let dag = Dag::for_root_package(p1, &repo, Some(&progress), &condition_data);
+        assert!(dag.is_ok());
+        let dag = dag.unwrap();
+        let ps = dag.all_packages();
+
+        assert!(ps.iter().any(|p| *p.name() == pname("a")));
+        assert!(ps.iter().any(|p| *p.version() == pversion("1")));
+
+        // Not in the tree:
+        assert!(!ps.iter().any(|p| *p.name() == pname("b")));
+        assert!(!ps.iter().any(|p| *p.version() == pversion("2")));
+    }
+
+    // Test whether the dependency DAG is correctly build if the right image name is passed
+    #[test]
+    fn test_add_two_dependent_packages_with_image_conditional_and_image_provided() {
+        let condition = {
+            let in_image = Some(OneOrMore::<String>::One(String::from("fooimage")));
+            Condition::new(None, None, in_image)
+        };
+        let (p1, repo) = repo_with_ab_packages_with_condition(condition);
+
+        let img_name = ImageName::from("fooimage");
+        let condition_data = ConditionData {
+            image_name: Some(&img_name),
+            env: &[],
+        };
+
+        let progress = ProgressBar::hidden();
+
+        let dag = Dag::for_root_package(p1, &repo, Some(&progress), &condition_data);
+        assert!(dag.is_ok());
+        let dag = dag.unwrap();
+        let ps = dag.all_packages();
+
+        assert!(ps.iter().any(|p| *p.name() == pname("a")));
+        assert!(ps.iter().any(|p| *p.version() == pversion("1")));
+
+        // IN the tree:
+        assert!(ps.iter().any(|p| *p.name() == pname("b")));
+        assert!(ps.iter().any(|p| *p.version() == pversion("2")));
+    }
+
 }
 
