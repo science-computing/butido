@@ -24,7 +24,7 @@ pub use build::*;
 mod runtime;
 pub use runtime::*;
 
-pub(self) mod condition;
+pub mod condition;
 
 pub trait StringEqual {
     fn str_equal(&self, s: &str) -> bool;

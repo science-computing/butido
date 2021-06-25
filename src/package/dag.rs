@@ -25,6 +25,7 @@ use resiter::AndThen;
 use getset::Getters;
 
 use crate::package::Package;
+use crate::package::condition::ConditionData;
 use crate::repository::Repository;
 
 #[derive(Debug, Getters)]
@@ -41,6 +42,7 @@ impl Dag {
         p: Package,
         repo: &Repository,
         progress: Option<&ProgressBar>,
+        _conditional_data: &ConditionData<'_>, // required for selecting packages with conditional dependencies
     ) -> Result<Self> {
         fn add_sub_packages<'a>(
             repo: &'a Repository,
@@ -182,7 +184,13 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, Some(&progress));
+        let condition_data = ConditionData {
+            image_name: None,
+            env: &[],
+        };
+
+        let r = Dag::for_root_package(p1, &repo, Some(&progress), &condition_data);
+
         assert!(r.is_ok());
     }
 
@@ -214,7 +222,12 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let dag = Dag::for_root_package(p1, &repo, Some(&progress));
+        let condition_data = ConditionData {
+            image_name: None,
+            env: &[],
+        };
+
+        let dag = Dag::for_root_package(p1, &repo, Some(&progress), &condition_data);
         assert!(dag.is_ok());
         let dag = dag.unwrap();
         let ps = dag.all_packages();
@@ -303,7 +316,12 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, Some(&progress));
+        let condition_data = ConditionData {
+            image_name: None,
+            env: &[],
+        };
+
+        let r = Dag::for_root_package(p1, &repo, Some(&progress), &condition_data);
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();
@@ -446,7 +464,12 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, Some(&progress));
+        let condition_data = ConditionData {
+            image_name: None,
+            env: &[],
+        };
+
+        let r = Dag::for_root_package(p1, &repo, Some(&progress), &condition_data);
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();
@@ -551,7 +574,12 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, Some(&progress));
+        let condition_data = ConditionData {
+            image_name: None,
+            env: &[],
+        };
+
+        let r = Dag::for_root_package(p1, &repo, Some(&progress), &condition_data);
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();

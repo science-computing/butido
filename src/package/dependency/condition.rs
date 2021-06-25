@@ -15,6 +15,7 @@ use serde::Serialize;
 use getset::Getters;
 
 use crate::util::EnvironmentVariableName;
+use crate::util::docker::ImageName;
 
 /// The Condition type
 ///
@@ -132,6 +133,13 @@ impl From<String> for OneOrMore<String> {
     fn from(s: String) -> Self {
         OneOrMore::One(s)
     }
+}
+
+
+#[derive(Debug)]
+pub struct ConditionData<'a> {
+    pub(crate) image_name: Option<&'a ImageName>,
+    pub(crate) env: &'a [(EnvironmentVariableName, String)],
 }
 
 #[cfg(test)]

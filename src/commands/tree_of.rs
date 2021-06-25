@@ -20,7 +20,11 @@ use resiter::AndThen;
 use crate::package::Dag;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
+use crate::package::condition::ConditionData;
 use crate::repository::Repository;
+use crate::util::EnvironmentVariableName;
+use crate::util::docker::ImageName;
+use crate::util::progress::ProgressBars;
 
 /// Implementation of the "tree_of" subcommand
 pub async fn tree_of(
@@ -36,6 +40,11 @@ pub async fn tree_of(
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
+    let condition_data = ConditionData {
+        image_name: None
+        env: &[],
+    };
+
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| {
@@ -44,7 +53,7 @@ pub async fn tree_of(
                 .map(|v| v.matches(p.version()))
                 .unwrap_or(true)
         })
-        .map(|package| Dag::for_root_package(package.clone(), &repo, None))
+        .map(|package| Dag::for_root_package(package.clone(), &repo, None, &condition_data))
         .and_then_ok(|tree| {
             let stdout = std::io::stdout();
             let mut outlock = stdout.lock();
