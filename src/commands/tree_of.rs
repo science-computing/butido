@@ -17,9 +17,9 @@ use anyhow::Result;
 use clap::ArgMatches;
 use resiter::AndThen;
 
+use crate::package::Dag;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
-use crate::package::Dag;
 use crate::repository::Repository;
 use crate::util::progress::ProgressBars;
 

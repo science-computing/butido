@@ -33,22 +33,22 @@ use tokio_stream::StreamExt;
 use uuid::Uuid;
 
 use crate::config::*;
-use crate::filestore::path::StoreRoot;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
+use crate::filestore::path::StoreRoot;
 use crate::job::JobResource;
 use crate::log::LogItem;
 use crate::orchestrator::OrchestratorSetup;
+use crate::package::Dag;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::package::Shebang;
-use crate::package::Dag;
 use crate::repository::Repository;
 use crate::schema;
 use crate::source::SourceCache;
+use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
-use crate::util::EnvironmentVariableName;
 
 /// Implementation of the "build" subcommand
 #[allow(clippy::too_many_arguments)]
