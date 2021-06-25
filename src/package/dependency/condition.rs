@@ -29,15 +29,15 @@ use crate::util::EnvironmentVariableName;
 pub struct Condition {
     #[serde(rename = "has_env", skip_serializing_if = "Option::is_none")]
     #[getset(get = "pub")]
-    has_env: Option<OneOrMore<EnvironmentVariableName>>,
+    pub(super) has_env: Option<OneOrMore<EnvironmentVariableName>>,
 
     #[serde(rename = "env_eq", skip_serializing_if = "Option::is_none")]
     #[getset(get = "pub")]
-    env_eq: Option<HashMap<EnvironmentVariableName, String>>,
+    pub(super) env_eq: Option<HashMap<EnvironmentVariableName, String>>,
 
     #[serde(rename = "in_image", skip_serializing_if = "Option::is_none")]
     #[getset(get = "pub")]
-    in_image: Option<OneOrMore<String>>,
+    pub(super) in_image: Option<OneOrMore<String>>,
 }
 
 /// Manual implementation of PartialOrd for Condition
@@ -117,6 +117,20 @@ impl<T: Sized> Into<Vec<T>> for OneOrMore<T> {
             OneOrMore::One(o) => vec![o],
             OneOrMore::More(m) => m,
         }
+    }
+}
+
+#[cfg(test)]
+impl From<Vec<String>> for OneOrMore<String> {
+    fn from(v: Vec<String>) -> Self {
+        OneOrMore::More(v)
+    }
+}
+
+#[cfg(test)]
+impl From<String> for OneOrMore<String> {
+    fn from(s: String) -> Self {
+        OneOrMore::One(s)
     }
 }
 
