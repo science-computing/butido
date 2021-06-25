@@ -12,6 +12,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 use serde::Serialize;
+use getset::Getters;
 
 use crate::util::EnvironmentVariableName;
 
@@ -24,15 +25,18 @@ use crate::util::EnvironmentVariableName;
 /// build image is used.
 /// All these settings are optional, of course.
 ///
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Getters, Clone, Debug, Eq, PartialEq)]
 pub struct Condition {
     #[serde(rename = "has_env", skip_serializing_if = "Option::is_none")]
+    #[getset(get = "pub")]
     has_env: Option<OneOrMore<EnvironmentVariableName>>,
 
     #[serde(rename = "env_eq", skip_serializing_if = "Option::is_none")]
+    #[getset(get = "pub")]
     env_eq: Option<HashMap<EnvironmentVariableName, String>>,
 
     #[serde(rename = "in_image", skip_serializing_if = "Option::is_none")]
+    #[getset(get = "pub")]
     in_image: Option<OneOrMore<String>>,
 }
 
