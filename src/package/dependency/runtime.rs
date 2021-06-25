@@ -45,3 +45,22 @@ impl ParseDependency for Dependency {
         crate::package::dependency::parse_package_dependency_string_into_name_and_version(&self.0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(serde::Deserialize)]
+    #[allow(unused)]
+    pub struct TestSetting {
+        setting: Dependency,
+    }
+
+    #[test]
+    fn test_parse_dependency() {
+        let s: TestSetting = toml::from_str(r#"setting = "foo""#).expect("Parsing TestSetting failed");
+
+        assert_eq!(s.setting.0, "foo");
+    }
+}
+
