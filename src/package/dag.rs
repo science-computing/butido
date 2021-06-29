@@ -26,6 +26,8 @@ use ptree::TreeItem;
 use resiter::AndThen;
 
 use crate::package::Package;
+use crate::package::PackageName;
+use crate::package::PackageVersionConstraint;
 use crate::package::condition::ConditionCheckable;
 use crate::package::condition::ConditionData;
 use crate::package::dependency::ParseDependency;
@@ -48,18 +50,21 @@ impl Dag {
         progress: Option<&ProgressBar>,
         conditional_data: &ConditionData<'_>, // required for selecting packages with conditional dependencies
     ) -> Result<Self> {
-        fn add_sub_packages<'a>(
-            repo: &'a Repository,
-            mappings: &mut HashMap<&'a Package, daggy::NodeIndex>,
-            dag: &mut daggy::Dag<&'a Package, i8>,
-            p: &'a Package,
-            progress: Option<&ProgressBar>
-            conditional_data: &ConditionData<'_>,
-        ) -> Result<()> {
-            let build_dependencies = p.dependencies()
+
+        /// Helper fn to get the dependencies of a package
+        ///
+        /// This function helps getting the dependencies of a package as an iterator over
+        /// (Name, Version).
+        ///
+        /// It also filters out dependencies that do not match the `conditional_data` passed and
+        /// makes the dependencies unique over (name, version).
+        fn get_package_dependencies<'a>(package: &'a Package, conditional_data: &'a ConditionData<'_>)
+            -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a
+        {
+            let build_dependencies = package.dependencies()
                 .build()
                 .iter()
-                .map(|d| {
+                .map(move |d| {
                     // Check whether the condition of the dependency matches our data
                     let take = d.check_condition(conditional_data)?;
                     let (name, version) = d.parse_as_name_and_version()?;
@@ -68,10 +73,10 @@ impl Dag {
                     Ok((take, name, version))
                 });
 
-            let runtime_dependencies = p.dependencies()
+            let runtime_dependencies = package.dependencies()
                 .runtime()
                 .iter()
-                .map(|d| {
+                .map(move |d| {
                     // Check whether the condition of the dependency matches our data
                     let take = d.check_condition(conditional_data)?;
                     let (name, version) = d.parse_as_name_and_version()?;
@@ -79,7 +84,6 @@ impl Dag {
                     // (dependency check result, name of the dependency, version of the dependency)
                     Ok((take, name, version))
                 });
-
 
             build_dependencies
                 .chain(runtime_dependencies)
@@ -98,6 +102,17 @@ impl Dag {
                 // Make all dependencies unique, because we don't want to build one dependency
                 // multiple times
                 .unique_by(|res| res.as_ref().ok().cloned())
+        }
+
+        fn add_sub_packages<'a>(
+            repo: &'a Repository,
+            mappings: &mut HashMap<&'a Package, daggy::NodeIndex>,
+            dag: &mut daggy::Dag<&'a Package, i8>,
+            p: &'a Package,
+            progress: Option<&ProgressBar>,
+            conditional_data: &ConditionData<'_>,
+        ) -> Result<()> {
+            get_package_dependencies(p, conditional_data)
                 .and_then_ok(|(name, constr)| {
                     trace!("Dependency for {} {} found: {:?}", p.name(), p.version(), name);
                     let packs = repo.find_with_version(&name, &constr);
@@ -132,48 +147,7 @@ impl Dag {
         ) -> Result<()>
         {
             for (package, idx) in mappings {
-                let build_dependencies = package.dependencies()
-                    .build()
-                    .iter()
-                    .map(|d| {
-                        // Check whether the condition of the dependency matches our data
-                        let take = d.check_condition(conditional_data)?;
-                        let (name, version) = d.parse_as_name_and_version()?;
-
-                        // (dependency check result, name of the dependency, version of the dependency)
-                        Ok((take, name, version))
-                    });
-
-                let runtime_dependencies = package.dependencies()
-                    .runtime()
-                    .iter()
-                    .map(|d| {
-                        // Check whether the condition of the dependency matches our data
-                        let take = d.check_condition(conditional_data)?;
-                        let (name, version) = d.parse_as_name_and_version()?;
-
-                        // (dependency check result, name of the dependency, version of the dependency)
-                        Ok((take, name, version))
-                    });
-
-
-                build_dependencies
-                    .chain(runtime_dependencies)
-
-                    // Now filter out all dependencies where their condition did not match our
-                    // `conditional_data`.
-                    .filter(|res| match res {
-                        Ok((true, _, _)) => true,
-                        Ok((false, _, _)) => false,
-                        Err(_) => true,
-                    })
-
-                    // Map out the boolean from the condition, because we don't need that later on
-                    .map(|res| res.map(|(_, name, vers)| (name, vers)))
-
-                    // Make all dependencies unique, because we don't want to build one dependency
-                    // multiple times
-                    .unique_by(|res| res.as_ref().ok().cloned())
+                get_package_dependencies(package, conditional_data)
                     .and_then_ok(|(name, constr)| {
                         mappings
                             .iter()
