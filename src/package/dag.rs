@@ -26,9 +26,11 @@ use ptree::TreeItem;
 use resiter::AndThen;
 
 use crate::package::Package;
+use crate::package::condition::ConditionCheckable;
 use crate::package::condition::ConditionData;
 use crate::package::dependency::ParseDependency;
 use crate::repository::Repository;
+
 
 #[derive(Debug, Getters)]
 pub struct Dag {
@@ -44,7 +46,7 @@ impl Dag {
         p: Package,
         repo: &Repository,
         progress: Option<&ProgressBar>,
-        _conditional_data: &ConditionData<'_>, // required for selecting packages with conditional dependencies
+        conditional_data: &ConditionData<'_>, // required for selecting packages with conditional dependencies
     ) -> Result<Self> {
         fn add_sub_packages<'a>(
             repo: &'a Repository,
@@ -52,19 +54,49 @@ impl Dag {
             dag: &mut daggy::Dag<&'a Package, i8>,
             p: &'a Package,
             progress: Option<&ProgressBar>
+            conditional_data: &ConditionData<'_>,
         ) -> Result<()> {
             let build_dependencies = p.dependencies()
                 .build()
                 .iter()
-                .map(|d| d.parse_as_name_and_version());
+                .map(|d| {
+                    // Check whether the condition of the dependency matches our data
+                    let take = d.check_condition(conditional_data)?;
+                    let (name, version) = d.parse_as_name_and_version()?;
+
+                    // (dependency check result, name of the dependency, version of the dependency)
+                    Ok((take, name, version))
+                });
 
             let runtime_dependencies = p.dependencies()
                 .runtime()
                 .iter()
-                .map(|d| d.parse_as_name_and_version());
+                .map(|d| {
+                    // Check whether the condition of the dependency matches our data
+                    let take = d.check_condition(conditional_data)?;
+                    let (name, version) = d.parse_as_name_and_version()?;
+
+                    // (dependency check result, name of the dependency, version of the dependency)
+                    Ok((take, name, version))
+                });
+
 
             build_dependencies
                 .chain(runtime_dependencies)
+
+                // Now filter out all dependencies where their condition did not match our
+                // `conditional_data`.
+                .filter(|res| match res {
+                    Ok((true, _, _)) => true,
+                    Ok((false, _, _)) => false,
+                    Err(_) => true,
+                })
+
+                // Map out the boolean from the condition, because we don't need that later on
+                .map(|res| res.map(|(_, name, vers)| (name, vers)))
+
+                // Make all dependencies unique, because we don't want to build one dependency
+                // multiple times
                 .unique_by(|res| res.as_ref().ok().cloned())
                 .and_then_ok(|(name, constr)| {
                     trace!("Dependency for {} {} found: {:?}", p.name(), p.version(), name);
@@ -85,7 +117,7 @@ impl Dag {
                                 mappings.insert(p, idx);
 
                                 trace!("Recursing for: {:?}", p);
-                                add_sub_packages(repo, mappings, dag, p, progress)
+                                add_sub_packages(repo, mappings, dag, p, progress, conditional_data)
                             })
                     } else {
                         Ok(())
@@ -94,20 +126,53 @@ impl Dag {
                 .collect::<Result<()>>()
         }
 
-        fn add_edges(mappings: &HashMap<&Package, daggy::NodeIndex>, dag: &mut daggy::Dag<&Package, i8>) -> Result<()> {
+        fn add_edges(mappings: &HashMap<&Package, daggy::NodeIndex>,
+            dag: &mut daggy::Dag<&Package, i8>,
+            conditional_data: &ConditionData<'_>,
+        ) -> Result<()>
+        {
             for (package, idx) in mappings {
                 let build_dependencies = package.dependencies()
                     .build()
                     .iter()
-                    .map(|d| d.parse_as_name_and_version());
+                    .map(|d| {
+                        // Check whether the condition of the dependency matches our data
+                        let take = d.check_condition(conditional_data)?;
+                        let (name, version) = d.parse_as_name_and_version()?;
+
+                        // (dependency check result, name of the dependency, version of the dependency)
+                        Ok((take, name, version))
+                    });
 
                 let runtime_dependencies = package.dependencies()
                     .runtime()
                     .iter()
-                    .map(|d| d.parse_as_name_and_version());
+                    .map(|d| {
+                        // Check whether the condition of the dependency matches our data
+                        let take = d.check_condition(conditional_data)?;
+                        let (name, version) = d.parse_as_name_and_version()?;
+
+                        // (dependency check result, name of the dependency, version of the dependency)
+                        Ok((take, name, version))
+                    });
+
 
                 build_dependencies
                     .chain(runtime_dependencies)
+
+                    // Now filter out all dependencies where their condition did not match our
+                    // `conditional_data`.
+                    .filter(|res| match res {
+                        Ok((true, _, _)) => true,
+                        Ok((false, _, _)) => false,
+                        Err(_) => true,
+                    })
+
+                    // Map out the boolean from the condition, because we don't need that later on
+                    .map(|res| res.map(|(_, name, vers)| (name, vers)))
+
+                    // Make all dependencies unique, because we don't want to build one dependency
+                    // multiple times
                     .unique_by(|res| res.as_ref().ok().cloned())
                     .and_then_ok(|(name, constr)| {
                         mappings
@@ -131,8 +196,8 @@ impl Dag {
         trace!("Making package Tree for {:?}", p);
         let root_idx = dag.add_node(&p);
         mappings.insert(&p, root_idx);
-        add_sub_packages(repo, &mut mappings, &mut dag, &p, progress)?;
-        add_edges(&mappings, &mut dag)?;
+        add_sub_packages(repo, &mut mappings, &mut dag, &p, progress, conditional_data)?;
+        add_edges(&mappings, &mut dag, conditional_data)?;
         trace!("Finished makeing package Tree");
 
         Ok(Dag {
