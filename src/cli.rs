@@ -27,11 +27,11 @@ pub fn cli<'a>() -> App<'a> {
         .version(crate_version!())
         .about("Generic Build Orchestration System for building linux packages with docker")
 
-        .after_help(r#"
+        .after_help(indoc::indoc!(r#"
             The following environment variables can be passed to butido:
 
                 RUST_LOG - to enable logging, for exact usage see the rust cookbook
-        "#)
+        "#))
 
         .arg(Arg::new("hide_bars")
             .required(false)
