@@ -185,5 +185,40 @@ mod tests {
             other => panic!("Unexpected deserialization to other variant: {:?}", other),
         }
     }
+
+    #[test]
+    fn test_parse_conditional_dependencies_pretty_3() {
+        let pretty = r#"
+            [[settings]]
+            name = "foo"
+            condition.in_image = "bar"
+
+            [[settings]]
+            name = "baz"
+            condition.in_image = "boogie"
+        "#;
+
+        let s: TestSettings = toml::from_str(pretty).expect("Parsing TestSetting failed");
+
+        match s.settings.get(0).expect("Has not one dependencies") {
+            Dependency::Conditional { name, condition } => {
+                assert_eq!(name, "foo", "Expected 'foo', got {}", name);
+                assert_eq!(*condition.has_env(), None);
+                assert_eq!(*condition.env_eq(), None);
+                assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
+            },
+            other => panic!("Unexpected deserialization to other variant: {:?}", other),
+        }
+
+        match s.settings.get(1).expect("Has not two dependencies") {
+            Dependency::Conditional { name, condition } => {
+                assert_eq!(name, "baz", "Expected 'baz', got {}", name);
+                assert_eq!(*condition.has_env(), None);
+                assert_eq!(*condition.env_eq(), None);
+                assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("boogie"))));
+            },
+            other => panic!("Unexpected deserialization to other variant: {:?}", other),
+        }
+    }
 }
 
