@@ -51,6 +51,19 @@ impl Dag {
         conditional_data: &ConditionData<'_>, // required for selecting packages with conditional dependencies
     ) -> Result<Self> {
 
+        /// helper fn with bad name to check the dependency condition of a dependency and parse the dependency into a tuple of
+        /// name and version for further processing
+        fn process<D: ConditionCheckable + ParseDependency>(d: &D, conditional_data: &ConditionData<'_>)
+            -> Result<(bool, PackageName, PackageVersionConstraint)>
+        {
+            // Check whether the condition of the dependency matches our data
+            let take = d.check_condition(conditional_data)?;
+            let (name, version) = d.parse_as_name_and_version()?;
+
+            // (dependency check result, name of the dependency, version of the dependency)
+            Ok((take, name, version))
+        }
+
         /// Helper fn to get the dependencies of a package
         ///
         /// This function helps getting the dependencies of a package as an iterator over
@@ -61,32 +74,17 @@ impl Dag {
         fn get_package_dependencies<'a>(package: &'a Package, conditional_data: &'a ConditionData<'_>)
             -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a
         {
-            let build_dependencies = package.dependencies()
+
+            package.dependencies()
                 .build()
                 .iter()
-                .map(move |d| {
-                    // Check whether the condition of the dependency matches our data
-                    let take = d.check_condition(conditional_data)?;
-                    let (name, version) = d.parse_as_name_and_version()?;
-
-                    // (dependency check result, name of the dependency, version of the dependency)
-                    Ok((take, name, version))
-                });
-
-            let runtime_dependencies = package.dependencies()
-                .runtime()
-                .iter()
-                .map(move |d| {
-                    // Check whether the condition of the dependency matches our data
-                    let take = d.check_condition(conditional_data)?;
-                    let (name, version) = d.parse_as_name_and_version()?;
-
-                    // (dependency check result, name of the dependency, version of the dependency)
-                    Ok((take, name, version))
-                });
-
-            build_dependencies
-                .chain(runtime_dependencies)
+                .map(move |d| process(d, conditional_data))
+                .chain({
+                    package.dependencies()
+                        .runtime()
+                        .iter()
+                        .map(move |d| process(d, conditional_data))
+                })
 
                 // Now filter out all dependencies where their condition did not match our
                 // `conditional_data`.
