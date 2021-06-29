@@ -247,6 +247,42 @@ pub struct ConditionData<'a> {
     pub(crate) env: &'a [(EnvironmentVariableName, String)],
 }
 
+/// Trait for all things that have a condition that can be checked against ConditionData.
+///
+/// To be implemented by dependency types.
+///
+/// # Return value
+///
+/// Ok(true) if the dependency is relevant, considering the ConditionData
+/// Ok(false) if the dependency should be ignored, considering the ConditionData
+/// Err(_) if the condition checking failed (see `Condition::matches`)
+///
+pub trait ConditionCheckable {
+    fn check_condition(&self, data: &ConditionData<'_>) -> Result<bool>;
+}
+
+impl ConditionCheckable for crate::package::BuildDependency {
+    fn check_condition(&self, data: &ConditionData<'_>) -> Result<bool> {
+        match self {
+            // If the dependency is a simple one, e.g. "foo =1.2.3", there is no condition, so the
+            // dependency has always to be used
+            crate::package::BuildDependency::Simple(_) => Ok(true),
+            crate::package::BuildDependency::Conditional { condition, .. } => condition.matches(data),
+        }
+    }
+}
+
+impl ConditionCheckable for crate::package::Dependency {
+    fn check_condition(&self, data: &ConditionData<'_>) -> Result<bool> {
+        match self {
+            // If the dependency is a simple one, e.g. "foo =1.2.3", there is no condition, so the
+            // dependency has always to be used
+            crate::package::Dependency::Simple(_) => Ok(true),
+            crate::package::Dependency::Conditional { condition, .. } => condition.matches(data),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
