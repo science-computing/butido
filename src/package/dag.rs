@@ -17,15 +17,17 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use daggy::Walker;
+use getset::Getters;
 use indicatif::ProgressBar;
+use itertools::Itertools;
 use log::trace;
 use ptree::Style;
 use ptree::TreeItem;
 use resiter::AndThen;
-use getset::Getters;
 
 use crate::package::Package;
 use crate::package::condition::ConditionData;
+use crate::package::dependency::ParseDependency;
 use crate::repository::Repository;
 
 #[derive(Debug, Getters)]
@@ -51,7 +53,19 @@ impl Dag {
             p: &'a Package,
             progress: Option<&ProgressBar>
         ) -> Result<()> {
-            p.get_self_packaged_dependencies()
+            let build_dependencies = p.dependencies()
+                .build()
+                .iter()
+                .map(|d| d.parse_as_name_and_version());
+
+            let runtime_dependencies = p.dependencies()
+                .runtime()
+                .iter()
+                .map(|d| d.parse_as_name_and_version());
+
+            build_dependencies
+                .chain(runtime_dependencies)
+                .unique_by(|res| res.as_ref().ok().cloned())
                 .and_then_ok(|(name, constr)| {
                     trace!("Dependency for {} {} found: {:?}", p.name(), p.version(), name);
                     let packs = repo.find_with_version(&name, &constr);
@@ -82,7 +96,19 @@ impl Dag {
 
         fn add_edges(mappings: &HashMap<&Package, daggy::NodeIndex>, dag: &mut daggy::Dag<&Package, i8>) -> Result<()> {
             for (package, idx) in mappings {
-                package.get_self_packaged_dependencies()
+                let build_dependencies = package.dependencies()
+                    .build()
+                    .iter()
+                    .map(|d| d.parse_as_name_and_version());
+
+                let runtime_dependencies = package.dependencies()
+                    .runtime()
+                    .iter()
+                    .map(|d| d.parse_as_name_and_version());
+
+                build_dependencies
+                    .chain(runtime_dependencies)
+                    .unique_by(|res| res.as_ref().ok().cloned())
                     .and_then_ok(|(name, constr)| {
                         mappings
                             .iter()
