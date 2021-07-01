@@ -214,6 +214,49 @@ pub async fn download(
     repo: Repository,
     progressbars: ProgressBars,
 ) -> Result<()> {
+    async fn perform_download(source: &SourceEntry, bar: &indicatif::ProgressBar) -> Result<()> {
+        trace!("Creating: {:?}", source);
+        let file = source.create().await.with_context(|| {
+            anyhow!(
+                "Creating source file destination: {}",
+                source.path().display()
+            )
+        })?;
+
+        let mut file = tokio::io::BufWriter::new(file);
+        let response = match reqwest::get(source.url().as_ref()).await {
+            Ok(resp) => resp,
+            Err(e) => {
+                bar.finish_with_message(format!("Failed: {}", source.url()));
+                return Err(e).with_context(|| anyhow!("Downloading '{}'", source.url()))
+            }
+        };
+
+        if let Some(len) = response.content_length() {
+            bar.set_length(len);
+        }
+
+        let mut stream = reqwest::get(source.url().as_ref()).await?.bytes_stream();
+        let mut bytes_written = 0;
+        while let Some(bytes) = stream.next().await {
+            let bytes = bytes?;
+            file.write_all(bytes.as_ref()).await?;
+            bytes_written += bytes.len();
+
+            bar.inc(bytes.len() as u64);
+            if let Some(len) = response.content_length() {
+                bar.set_message(format!("Downloading {} ({}/{} bytes)", source.url(), bytes_written, len));
+            } else {
+                bar.set_message(format!("Downloading {} ({} bytes)", source.url(), bytes_written));
+            }
+        }
+
+        file.flush()
+            .await
+            .map_err(Error::from)
+            .map(|_| ())
+    }
+
     let force = matches.is_present("force");
     let cache = PathBuf::from(config.source_cache_root());
     let sc = SourceCache::new(cache);
@@ -260,49 +303,6 @@ pub async fn download(
                     if source_path_exists && !force {
                         Err(anyhow!("Source exists: {}", source.path().display()))
                     } else {
-                        async fn perform_download(source: &SourceEntry, bar: &indicatif::ProgressBar) -> Result<()> {
-                            trace!("Creating: {:?}", source);
-                            let file = source.create().await.with_context(|| {
-                                anyhow!(
-                                    "Creating source file destination: {}",
-                                    source.path().display()
-                                )
-                            })?;
-
-                            let mut file = tokio::io::BufWriter::new(file);
-                            let response = match reqwest::get(source.url().as_ref()).await {
-                                Ok(resp) => resp,
-                                Err(e) => {
-                                    bar.finish_with_message(format!("Failed: {}", source.url()));
-                                    return Err(e).with_context(|| anyhow!("Downloading '{}'", source.url()))
-                                }
-                            };
-
-                            if let Some(len) = response.content_length() {
-                                bar.set_length(len);
-                            }
-
-                            let mut stream = reqwest::get(source.url().as_ref()).await?.bytes_stream();
-                            let mut bytes_written = 0;
-                            while let Some(bytes) = stream.next().await {
-                                let bytes = bytes?;
-                                file.write_all(bytes.as_ref()).await?;
-                                bytes_written += bytes.len();
-
-                                bar.inc(bytes.len() as u64);
-                                if let Some(len) = response.content_length() {
-                                    bar.set_message(format!("Downloading {} ({}/{} bytes)", source.url(), bytes_written, len));
-                                } else {
-                                    bar.set_message(format!("Downloading {} ({} bytes)", source.url(), bytes_written));
-                                }
-                            }
-
-                            file.flush()
-                                .await
-                                .map_err(Error::from)
-                                .map(|_| ())
-                        }
-
                         if source_path_exists /* && force is implied by 'if' above*/ {
                             if let Err(e) = source.remove_file().await {
                                 bar.finish_with_message(format!("Failed to remove existing file: {}", source.path().display()));
