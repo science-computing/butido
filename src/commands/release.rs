@@ -140,7 +140,7 @@ async fn new_release(
     let interactive = !matches.is_present("noninteractive");
 
     let now = chrono::offset::Local::now().naive_local();
-    arts.into_iter()
+    let (_oks, errors): (Vec<_>, Vec<_>) = arts.into_iter()
         .map(|art| async move {
             let art_path = staging_base.join(&art.path);
             let dest_path = config.releases_directory().join(release_store_name).join(&art.path);
@@ -174,28 +174,42 @@ async fn new_release(
                 }
 
                 // else !dest_path.exists()
-                tokio::fs::copy(&art_path, &dest_path)
+                let dest_path = tokio::fs::copy(&art_path, &dest_path)
                     .await
                     .with_context(|| anyhow!("Copying {} to {}", art_path.display(), dest_path.display()))
                     .map_err(Error::from)
-                    .map(|_| (art, dest_path))
+                    .map(|_| dest_path);
+
+                debug!("Updating {:?} to set released = true", art);
+                let rel = crate::db::models::Release::create(&conn, &art, &now, &release_store)?;
+                debug!("Release object = {:?}", rel);
+                Ok(dest_path)
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Result<Vec<_>>>()
-        .await?
+        .collect::<Vec<Result<_>>>()
+        .await
         .into_iter()
-        .try_for_each(|(art, dest_path)| {
-            debug!("Updating {:?} to set released = true", art);
-            let rel = crate::db::models::Release::create(&conn, &art, &now, &release_store)?;
-            debug!("Release object = {:?}", rel);
-
+        .and_then_ok(|dest_path| {
             if print_released_file_pathes {
                 writeln!(std::io::stdout(), "{}", dest_path.display()).map_err(Error::from)
             } else {
                 Ok(())
             }
         })
+        .partition(Result::is_ok);
+
+    let mut any_err = false;
+    for error in errors {
+        any_err = true;
+        error!("Error: {}", error);
+    }
+
+    if any_err {
+        Err(anyhow!("Releasing one or more artifacts failed"))
+    } else {
+        Ok(())
+    }
 }
 
 pub async fn rm_release(
