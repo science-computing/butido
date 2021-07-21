@@ -461,10 +461,19 @@ struct JobTask<'a> {
 impl<'a> Drop for JobTask<'a> {
     fn drop(&mut self) {
         if !self.bar.is_finished() {
-            self.bar.finish_with_message(format!("[{} {} {}] Stopped, error on other task",
+            // If there are dependencies, the error is probably from another task
+            // If there are no dependencies, the error was caused by something else
+            let errmsg = if self.jobdef.dependencies.is_empty() {
+                "error occured"
+            } else {
+                "error on other task"
+            };
+
+            self.bar.finish_with_message(format!("[{} {} {}] Stopped, {msg}",
                 self.jobdef.job.uuid(),
                 self.jobdef.job.package().name(),
-                self.jobdef.job.package().version()));
+                self.jobdef.job.package().version(),
+                msg = errmsg));
         }
     }
 }
