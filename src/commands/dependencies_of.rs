@@ -10,14 +10,19 @@
 
 //! Implementation of the 'dependencies-of' subcommand
 
+use std::io::Write;
+
 use anyhow::Result;
 use clap::ArgMatches;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use log::trace;
 
 use crate::commands::util::getbool;
 use crate::config::*;
 use crate::package::PackageName;
 use crate::repository::Repository;
+use crate::ui::*;
 
 /// Implementation of the "dependencies_of" subcommand
 pub async fn dependencies_of(
@@ -39,11 +44,9 @@ pub async fn dependencies_of(
     };
 
     let format = config.package_print_format();
-    let mut stdout = std::io::stdout();
-    let iter = repo
-        .packages()
-        .filter(|package| package_filter.filter(package))
-        .inspect(|pkg| trace!("Found package: {:?}", pkg));
+    let hb = crate::ui::handlebars_for_package_printing(format)?;
+    let stdout = std::io::stdout();
+    let mut outlock = stdout.lock();
 
     let print_runtime_deps = getbool(
         matches,
@@ -80,5 +83,18 @@ pub async fn dependencies_of(
         script_highlighting: false,
     };
 
-    crate::ui::print_packages(&mut stdout, format, iter, config, &flags)
+    let iter = repo
+        .packages()
+        .filter(|package| package_filter.filter(package))
+        .inspect(|pkg| trace!("Found package: {:?}", pkg))
+        .enumerate()
+        .map(|(i, p)| p.prepare_print(config, &flags, &hb, i));
+
+    tokio_stream::iter(iter)
+        .map(|pp| pp.into_displayable())
+        .try_for_each(|p| {
+            let r = writeln!(&mut outlock, "{}", p).map_err(anyhow::Error::from);
+            futures::future::ready(r)
+        })
+        .await
 }

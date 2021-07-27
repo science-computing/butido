@@ -10,8 +10,12 @@
 
 //! Implementation of the 'what_depends' subcommand
 
+use std::io::Write;
+
 use anyhow::Result;
 use clap::ArgMatches;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use log::trace;
 use resiter::Filter;
 use resiter::Map;
@@ -20,6 +24,7 @@ use crate::commands::util::getbool;
 use crate::config::*;
 use crate::package::PackageName;
 use crate::repository::Repository;
+use crate::ui::*;
 
 /// Implementation of the "what_depends" subcommand
 pub async fn what_depends(
@@ -54,16 +59,9 @@ pub async fn what_depends(
         )
     };
 
-    let format = config.package_print_format();
-    let mut stdout = std::io::stdout();
-
-    let packages = repo
-        .packages()
-        .map(|package| package_filter.filter(package).map(|b| (b, package)))
-        .filter_ok(|(b, _)| *b)
-        .map_ok(|tpl| tpl.1)
-        .inspect(|pkg| trace!("Found package: {:?}", pkg))
-        .collect::<Result<Vec<_>>>()?;
+    let hb = crate::ui::handlebars_for_package_printing(config.package_print_format())?;
+    let stdout = std::io::stdout();
+    let mut outlock = stdout.lock();
 
     let flags = crate::ui::PackagePrintFlags {
         print_all: false,
@@ -82,5 +80,23 @@ pub async fn what_depends(
         script_highlighting: false,
     };
 
-    crate::ui::print_packages(&mut stdout, format, packages.into_iter(), config, &flags)
+    let mut i = 0;
+    let iter = repo
+        .packages()
+        .map(|package| package_filter.filter(package).map(|b| (b, package)))
+        .filter_ok(|(b, _)| *b)
+        .map_ok(|tpl| tpl.1)
+        .inspect(|pkg| trace!("Found package: {:?}", pkg))
+        .map_ok(|p| { // poor mans enumerate_ok()
+            i += 1;
+            p.prepare_print(config, &flags, &hb, i)
+        });
+
+    tokio_stream::iter(iter)
+        .map(|pp| pp.and_then(|p| p.into_displayable()))
+        .try_for_each(|p| {
+            let r = writeln!(&mut outlock, "{}", p).map_err(anyhow::Error::from);
+            futures::future::ready(r)
+        })
+        .await
 }
