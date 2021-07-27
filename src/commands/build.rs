@@ -226,7 +226,7 @@ pub async fn build(
 
     let dag = {
         let bar_tree_building = progressbars.bar();
-        let dag = Dag::for_root_package(package.clone(), &repo, &bar_tree_building)?;
+        let dag = Dag::for_root_package(package.clone(), &repo, Some(&bar_tree_building))?;
         bar_tree_building.finish_with_message("Finished loading Dag");
         dag
     };
