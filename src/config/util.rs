@@ -26,63 +26,78 @@ pub fn default_package_print_format() -> String {
     String::from(indoc::indoc!(
         r#"
             {{i}} - {{p.name}} : {{p.version}}
-            {{~ #if print_any }}
+            {{~ #if print_any}}
+
             ==================================
 
-            {{~#if print_sources}}
+            {{#if print_sources}}
             Sources:
-                {{#each p.sources ~}}
-                    {{~@key}} = {{this.url}} - {{this.hash.hash}} ({{this.hash.type}})
-                {{/each~}}
+            {{#each p.sources}}
+                {{@key}} = {{this.url}} - {{this.hash.hash}} ({{this.hash.type}})
+            {{/each}}
             {{/if~}}
-            {{~#if print_dependencies}}
+
+            {{#if print_dependencies}}
             Dependencies:
-                {{#if print_build_deps ~}}
-                    {{~ #each p.dependencies.build}}
-                        {{~ this}} (build)
-                {{/each ~}}
-                {{/if ~}}
-                {{~ #if print_runtime_deps ~}}
-                    {{~ #each p.dependencies.runtime}}
-                        {{~ this}} (runtime)
-                {{/each ~}}
-                {{/if ~}}
+            {{#if print_build_deps ~}}
+            {{#each p.dependencies.build}}
+                {{this}} (build)
+            {{/each}}
             {{/if}}
-            {{~#if print_patches}}
-            Patches:
-                {{#each p.patches}}{{this}},
-                {{/each~}}
+            {{#if print_runtime_deps ~}}
+            {{#each p.dependencies.runtime}}
+                {{this}} (runtime)
+            {{/each}}
             {{/if}}
-            {{~#if print_env}}
-            Environment:
-                {{#each p.environment}}{{@key}}={{this}}
-                {{/each~}}
             {{/if~}}
+
+            {{#if print_patches}}
+            Patches:
+            {{#each p.patches}}
+                {{this}},
+            {{/each~}}
+            {{/if~}}
+
+            {{#if print_env}}
+            Environment:
+            {{#each p.environment}}
+                {{@key}}={{this}}
+            {{/each~}}
+            {{/if~}}
+
             {{~#if print_flags}}
             Flags:
-                {{#each p.flags}}{{this}}
-                {{/each~}}
+            {{#each p.flags}}
+                {{this}}
+            {{/each}}
             {{/if~}}
+
             {{~#if print_allowed_images}}
             Only supported on:
-                {{#each p.allowed_images}}{{this}}
-                {{/each~}}
+            {{#each p.allowed_images}}
+                {{this}}
+            {{/each}}
             {{/if~}}
+
             {{~#if print_denied_images}}
             Denied on:
-                {{#each p.denied_images}}{{this}}
-                {{/each~}}
+            {{#each p.denied_images}}
+                {{this}}
+            {{/each}}
             {{/if~}}
-            {{~#if print_phases}}
+
+            {{#if print_phases}}
             Phases:
-                {{#each p.phases}}{{@key}}
-                {{/each~}}
+            {{#each p.phases}}
+                {{@key}}
+            {{/each}}
             {{/if~}}
+
             {{~#if print_script}}
             {{script}}
             {{/if~}}
             {{~ /if ~}}
-    "#
+        "#
     ))
 }
 
