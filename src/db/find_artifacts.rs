@@ -24,7 +24,6 @@ use diesel::RunQueryDsl;
 use log::trace;
 use resiter::AndThen;
 use resiter::FilterMap;
-use resiter::Map;
 
 use crate::config::Configuration;
 use crate::db::models as dbmodels;
@@ -33,7 +32,6 @@ use crate::filestore::path::FullArtifactPath;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 use crate::package::Package;
-use crate::package::ParseDependency;
 use crate::package::ScriptBuilder;
 use crate::package::Shebang;
 use crate::schema;
@@ -73,24 +71,6 @@ pub fn find_artifacts<'a>(
     };
 
     let package_environment = pkg.environment();
-    let build_dependencies_names = pkg
-        .dependencies()
-        .build()
-        .iter()
-        .map(|d| d.parse_as_name_and_version())
-        .map_ok(|tpl| tpl.0) // TODO: We only filter by dependency NAME right now, not by version constraint
-        .collect::<Result<Vec<_>>>()?;
-
-    let runtime_dependencies_names = pkg
-        .dependencies()
-        .runtime()
-        .iter()
-        .map(|d| d.parse_as_name_and_version())
-        .map_ok(|tpl| tpl.0) // TODO: We only filter by dependency NAME right now, not by version constraint
-        .collect::<Result<Vec<_>>>()?;
-
-    trace!("Build dependency names: {:?}", build_dependencies_names);
-    trace!("Runtime dependency names: {:?}", runtime_dependencies_names);
     let mut query = schema::packages::table
         .filter({
             // The package with pkg.name() and pkg.version()
