@@ -36,7 +36,7 @@ daggy          = { version = "0.7", features = [ "serde" ] }
 dialoguer      = "0.8"
 diesel         = { version = ">=1.4.6", features = ["postgres", "chrono", "uuid", "serde_json"] }
 diesel_migrations = "*"
-env_logger     = "0.8"
+env_logger     = "0.9"
 filters        = "0.4.0"
 futures        = "0.3"
 getset         = "0.1"
@@ -93,4 +93,8 @@ rand = "=0.4.3"
 
 # See https://github.com/bitvecto-rs/bitvec/issues/105#issuecomment-778570981
 funty = "=1.1.0"
+
+# Pin, because dialoguer pulls it in, but 1.4.x and newer has MSRV 1.51.0. With
+# the pin here, we enforce the build to not use 1.4.0 or newer.
+zeroize = ">=1.3.0, <1.4.0"
 
