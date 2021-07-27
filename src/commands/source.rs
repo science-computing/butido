@@ -224,7 +224,16 @@ pub async fn download(
         })?;
 
         let mut file = tokio::io::BufWriter::new(file);
-        let response = match reqwest::get(source.url().as_ref()).await {
+        let client = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::limited(10))
+            .build()
+            .context("Building HTTP client failed")?;
+
+        let request = client.get(source.url().as_ref())
+            .build()
+            .with_context(|| anyhow!("Building request for {} failed", source.url().as_ref()))?;
+
+        let response = match client.execute(request).await {
             Ok(resp) => resp,
             Err(e) => {
                 bar.finish_with_message(format!("Failed: {}", source.url()));
