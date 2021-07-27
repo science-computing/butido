@@ -297,6 +297,23 @@ impl Endpoint {
             Ok(None)
         }
     }
+
+    pub async fn images(&self, name_filter: Option<&str>) -> Result<impl Iterator<Item = Image>> {
+        let mut listopts = shiplift::builder::ImageListOptions::builder();
+
+        if let Some(name) = name_filter {
+            listopts.filter_name(name);
+        } else {
+            listopts.all();
+        }
+
+        self.docker
+            .images()
+            .list(&listopts.build())
+            .await
+            .map_err(Error::from)
+            .map(|v| v.into_iter().map(Image::from))
+    }
 }
 
 /// Helper type to store endpoint statistics
@@ -354,6 +371,28 @@ impl From<shiplift::rep::Container> for ContainerStat {
             image_id: cont.image_id,
             state: cont.state,
             status: cont.status,
+        }
+    }
+}
+
+#[derive(Getters)]
+pub struct Image {
+    #[getset(get = "pub")]
+    created: chrono::DateTime<chrono::Utc>,
+
+    #[getset(get = "pub")]
+    id: String,
+
+    #[getset(get = "pub")]
+    tags: Option<Vec<String>>,
+}
+
+impl From<shiplift::rep::Image> for Image {
+    fn from(img: shiplift::rep::Image) -> Self {
+        Image {
+            created: img.created,
+            id: img.id,
+            tags: img.repo_tags,
         }
     }
 }
