@@ -22,18 +22,20 @@ use log::{debug, info, trace};
 use tokio_stream::StreamExt;
 
 use crate::config::Configuration;
-use crate::db::models as dbmodels;
 use crate::db::DbConnectionConfig;
+use crate::db::models as dbmodels;
+use crate::util::progress::ProgressBars;
 
 /// Implementation of the "release" subcommand
 pub async fn release(
     db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
+    progressbars: ProgressBars,
 ) -> Result<()> {
     match matches.subcommand() {
-        Some(("new", matches))  => new_release(db_connection_config, config, matches).await,
-        Some(("rm", matches))   => rm_release(db_connection_config, config, matches).await,
+        Some(("new", matches))  => new_release(db_connection_config, config, matches, progressbars).await,
+        Some(("rm", matches))   => rm_release(db_connection_config, config, matches, progressbars).await,
         Some((other, _matches)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("Missing subcommand")),
     }
@@ -44,6 +46,7 @@ async fn new_release(
     db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
+    progressbars: ProgressBars,
 ) -> Result<()> {
     let print_released_file_pathes = !matches.is_present("quiet");
     let release_store_name = matches.value_of("release_store_name").unwrap(); // safe by clap
@@ -60,7 +63,7 @@ async fn new_release(
 
     debug!("Release called for: {:?} {:?}", pname, pvers);
 
-    let conn = db_connection_config.establish_connection()?;
+    let conn = db_connection_config.establish_connection(&progressbars)?;
     let submit_uuid = matches
         .value_of("submit_uuid")
         .map(uuid::Uuid::parse_str)
@@ -193,6 +196,7 @@ pub async fn rm_release(
     db_connection_config: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
+    progressbars: ProgressBars,
 ) -> Result<()> {
     let release_store_name = matches.value_of("release_store_name").map(String::from).unwrap(); // safe by clap
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
@@ -209,7 +213,7 @@ pub async fn rm_release(
     let pvers = matches.value_of("package_version").map(String::from).unwrap(); // safe by clap
     debug!("Remove Release called for: {:?} {:?}", pname, pvers);
 
-    let conn = db_connection_config.establish_connection()?;
+    let conn = db_connection_config.establish_connection(&progressbars)?;
 
     let (release, artifact) = crate::schema::jobs::table
         .inner_join(crate::schema::packages::table)
