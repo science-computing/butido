@@ -143,7 +143,7 @@ async fn main() -> Result<()> {
 
     let load_repo = || -> Result<Repository> {
         let bar = progressbars.bar();
-        let repo = Repository::load(&repo_path, &bar)
+        let repo = Repository::load(repo_path, &bar)
             .context("Loading the repository")?;
         bar.finish_with_message("Repository loading finished");
         Ok(repo)
@@ -159,13 +159,13 @@ async fn main() -> Result<()> {
             let repo = load_repo()?;
 
             crate::commands::build(
-                &repo_path,
+                repo_path,
                 matches,
                 progressbars,
                 conn,
                 &config,
                 repo,
-                &repo_path,
+                repo_path,
             )
             .await
             .context("build command failed")?
@@ -228,7 +228,7 @@ async fn main() -> Result<()> {
 
         Some(("lint", matches)) => {
             let repo = load_repo()?;
-            crate::commands::lint(&repo_path, matches, progressbars, &config, repo)
+            crate::commands::lint(repo_path, matches, progressbars, &config, repo)
                 .await
                 .context("lint command failed")?
         }
@@ -243,7 +243,7 @@ async fn main() -> Result<()> {
         Some(("metrics", _)) => {
             let repo = load_repo()?;
             let conn = db_connection_config.establish_connection()?;
-            crate::commands::metrics(&repo_path, &config, repo, conn)
+            crate::commands::metrics(repo_path, &config, repo, conn)
                 .await
                 .context("metrics command failed")?
         }

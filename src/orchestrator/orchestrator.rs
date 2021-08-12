@@ -674,7 +674,7 @@ impl<'a> JobTask<'a> {
 
         // Create a RunnableJob object
         let runnable = RunnableJob::build_from_job(
-            &self.jobdef.job,
+            self.jobdef.job,
             self.source_cache,
             self.config,
             self.git_author_env,

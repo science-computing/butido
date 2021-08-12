@@ -102,7 +102,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .inspect(|pkg| trace!("Found package: {:?}", pkg))
         .map(|pkg| {
             let script_filter = !matches.is_present("no_script_filter");
-            let pathes = crate::db::find_artifacts(database.clone(), config, &pkg, &release_stores, staging_store.as_ref(), &env_filter, script_filter)?;
+            let pathes = crate::db::find_artifacts(database.clone(), config, pkg, &release_stores, staging_store.as_ref(), &env_filter, script_filter)?;
 
             pathes.iter()
                 .map(|tpl| (tpl.0.joined(), tpl.1))

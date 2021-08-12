@@ -289,7 +289,7 @@ pub async fn build(
         .collect::<Result<Vec<()>>>()?;
 
     trace!("Setting up database jobs for Package, GitHash, Image");
-    let db_package = async { Package::create_or_fetch(&database_connection, &package) };
+    let db_package = async { Package::create_or_fetch(&database_connection, package) };
     let db_githash = async { GitHash::create_or_fetch(&database_connection, &hash_str) };
     let db_image = async { Image::create_or_fetch(&database_connection, &image_name) };
     let db_envs = async {
