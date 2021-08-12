@@ -106,7 +106,7 @@ where
 
     if !lint_ok {
         bar.finish_with_message("Linting errored");
-        return Err(anyhow!("Linting was not successful"));
+        Err(anyhow!("Linting was not successful"))
     } else {
         bar.finish_with_message(format!(
             "Finished linting {} package scripts",

@@ -46,7 +46,7 @@ pub async fn source(
         Some(("download", matches)) => download(matches, config, repo, progressbars).await,
         Some(("of", matches)) => of(matches, config, repo).await,
         Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
-        None => return Err(anyhow!("No subcommand")),
+        None => Err(anyhow!("No subcommand")),
     }
 }
 
