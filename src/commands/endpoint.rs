@@ -494,7 +494,7 @@ async fn images_present(endpoint_names: Vec<EndpointName>,
 
     ep_names_to_images
         .iter()
-        .map(|(ep_name, ep_imgs)| {
+        .try_for_each(|(ep_name, ep_imgs)| {
             config.docker()
                 .images()
                 .iter()
@@ -507,7 +507,6 @@ async fn images_present(endpoint_names: Vec<EndpointName>,
                     }
                 })
         })
-        .collect::<Result<()>>()
 }
 
 /// Helper function to connect to all endpoints from the configuration, that appear (by name) in
