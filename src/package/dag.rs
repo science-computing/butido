@@ -182,7 +182,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, &progress);
+        let r = Dag::for_root_package(p1, &repo, Some(&progress));
         assert!(r.is_ok());
     }
 
@@ -214,7 +214,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let dag = Dag::for_root_package(p1, &repo, &progress);
+        let dag = Dag::for_root_package(p1, &repo, Some(&progress));
         assert!(dag.is_ok());
         let dag = dag.unwrap();
         let ps = dag.all_packages();
@@ -303,7 +303,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, &progress);
+        let r = Dag::for_root_package(p1, &repo, Some(&progress));
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();
@@ -446,7 +446,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, &progress);
+        let r = Dag::for_root_package(p1, &repo, Some(&progress));
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();
@@ -551,7 +551,7 @@ mod tests {
         let repo = Repository::from(btree);
         let progress = ProgressBar::hidden();
 
-        let r = Dag::for_root_package(p1, &repo, &progress);
+        let r = Dag::for_root_package(p1, &repo, Some(&progress));
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();
