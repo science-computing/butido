@@ -63,7 +63,7 @@ impl Dag {
                         // recurse
                         packs.into_iter()
                             .try_for_each(|p| {
-                                progress.as_ref().map(|p| p.tick());
+                                let _ = progress.as_ref().map(|p| p.tick());
 
                                 let idx = dag.add_node(p);
                                 mappings.insert(p, idx);
