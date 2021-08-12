@@ -128,7 +128,7 @@ impl<'a> HighlightedScript<'a> {
             .get(self.script_theme)
             .ok_or_else(|| anyhow!("Theme not available: {}", self.script_theme))?;
 
-        let mut h = HighlightLines::new(syntax, &theme);
+        let mut h = HighlightLines::new(syntax, theme);
 
         Ok({
             LinesWithEndings::from(&self.script.0).map(move |line| {

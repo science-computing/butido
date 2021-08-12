@@ -25,7 +25,7 @@ mod package;
 pub use crate::ui::package::*;
 
 pub fn package_repo_cleanness_check(repo: &git2::Repository) -> Result<()> {
-    if !crate::util::git::repo_is_clean(&repo)? {
+    if !crate::util::git::repo_is_clean(repo)? {
         error!(
             "Repository not clean, refusing to go on: {}",
             repo.path().display()

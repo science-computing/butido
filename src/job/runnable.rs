@@ -77,7 +77,7 @@ impl RunnableJob {
                 .inspect(|(name, _)| debug!("Checking: {}", name))
                 .try_for_each(|(name, _)| {
                     trace!("{:?} contains? {:?}", config.containers().allowed_env(), name);
-                    if !config.containers().allowed_env().contains(&name) {
+                    if !config.containers().allowed_env().contains(name) {
                         Err(anyhow!("Environment variable name not allowed: {}", name))
                     } else {
                         Ok(())
@@ -127,7 +127,7 @@ impl RunnableJob {
     }
 
     pub fn package_sources(&self) -> Vec<SourceEntry> {
-        self.source_cache.sources_for(&self.package())
+        self.source_cache.sources_for(self.package())
     }
 
     pub fn environment(&self) -> impl Iterator<Item = (&EnvironmentVariableName, &String)> {

@@ -48,7 +48,7 @@ impl StoreRoot {
         let join = self.0.join(&ap.0);
 
         if join.is_file() {
-            Ok(Some(FullArtifactPath(&self, ap)))
+            Ok(Some(FullArtifactPath(self, ap)))
         } else if join.is_dir() {
             Err(anyhow!("Cannot load non-file path: {}", join.display()))
         } else {
