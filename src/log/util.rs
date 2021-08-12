@@ -10,6 +10,7 @@
 
 use shiplift::tty::TtyChunk;
 
+#[allow(clippy::enum_variant_names)]
 pub enum TtyChunkBuf {
     StdIn(Vec<u8>),
     StdOut(Vec<u8>),
