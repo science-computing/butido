@@ -66,14 +66,23 @@ pub async fn verify(
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
+    let matching_regexp = matches.value_of("matching")
+        .map(crate::commands::util::mk_package_name_regex)
+        .transpose()?;
+
     let packages = repo
         .packages()
-        .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| {
-            pvers
-                .as_ref()
-                .map(|v| v.matches(p.version()))
-                .unwrap_or(true)
+            match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
+                (None, None, None)              => true,
+                (Some(pname), None, None)       => p.name() == pname,
+                (Some(pname), Some(vers), None) => p.name() == pname && vers.matches(p.version()),
+                (None, None, Some(regex))       => regex.is_match(p.name()),
+
+                (_, _, _) => {
+                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
+                },
+            }
         })
         .inspect(|p| trace!("Found for verification: {} {}", p.name(), p.version()));
 
