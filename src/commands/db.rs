@@ -338,17 +338,25 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches, progressbars:
     let limit = matches.value_of("limit").map(i64::from_str).transpose()?;
     let hdrs = crate::commands::util::mk_header(vec!["Time", "UUID"]);
     let conn = conn_cfg.establish_connection(&progressbars)?;
+    let commit = matches.value_of("for-commit");
 
     let query = schema::submits::table
-        .order_by(schema::submits::id.desc()); // required for the --limit implementation
+        .order_by(schema::submits::id.desc()) // required for the --limit implementation
+        .inner_join(schema::githashes::table.on(schema::submits::repo_hash_id.eq(schema::githashes::id)))
+        .into_boxed();
+
+    let query = if let Some(commithash) = commit.as_ref() {
+        query.filter(schema::githashes::hash.eq(commithash))
+    } else {
+        query
+    };
 
     let submits = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
         // Get all submits which included the package, but were not necessarily made _for_ the package
         let query = query
             .inner_join(schema::jobs::table)
             .inner_join(schema::packages::table.on(schema::jobs::package_id.eq(schema::packages::id)))
-            .filter(schema::packages::name.eq(&pkgname))
-            .into_boxed();
+            .filter(schema::packages::name.eq(&pkgname));
 
         if let Some(limit) = limit {
             query.limit(limit)
@@ -363,8 +371,7 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches, progressbars:
             .inner_join({
                 schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
             })
-            .filter(schema::packages::dsl::name.eq(&pkgname))
-            .into_boxed();
+            .filter(schema::packages::dsl::name.eq(&pkgname));
 
         if let Some(limit) = limit {
             query.limit(limit)
@@ -374,9 +381,12 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches, progressbars:
         .select(schema::submits::all_columns)
         .load::<models::Submit>(&conn)?
     } else if let Some(limit) = limit {
-        query.limit(limit).load::<models::Submit>(&conn)?
+        query.select(schema::submits::all_columns)
+            .limit(limit)
+            .load::<models::Submit>(&conn)?
     } else {
-        query.load::<models::Submit>(&conn)?
+        query.select(schema::submits::all_columns)
+            .load::<models::Submit>(&conn)?
     };
 
     // Helper to map Submit -> Vec<String>
