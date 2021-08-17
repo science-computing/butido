@@ -19,7 +19,6 @@ use getset::Getters;
 use log::debug;
 
 use crate::config::Configuration;
-use crate::util::progress::ProgressBars;
 
 #[derive(Getters)]
 pub struct DbConnectionConfig<'a> {
@@ -79,7 +78,7 @@ impl<'a> DbConnectionConfig<'a> {
         })
     }
 
-    pub fn establish_connection(self, progressbars: &ProgressBars) -> Result<PgConnection> {
+    pub fn establish_connection(self) -> Result<PgConnection> {
         debug!("Trying to connect to database: {:?}", self);
         let database_uri: String = format!(
             "postgres://{user}:{password}@{host}:{port}/{name}?connect_timeout={timeout}",
@@ -90,17 +89,7 @@ impl<'a> DbConnectionConfig<'a> {
             name = self.database_name,
             timeout = self.database_connection_timeout,
         );
-
-        let bar = progressbars.spinner();
-        bar.set_message("Establishing database connection");
-
-        let conn = PgConnection::establish(&database_uri).map_err(Error::from);
-        if conn.is_err() {
-            bar.finish_with_message("Connection could not be established");
-        } else {
-            bar.finish_with_message("Connection established");
-        }
-        conn
+        PgConnection::establish(&database_uri).map_err(Error::from)
     }
 
 }
