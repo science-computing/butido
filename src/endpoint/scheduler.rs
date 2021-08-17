@@ -337,7 +337,10 @@ impl<'a> LogReceiver<'a> {
         // Reserve a reasonable amount of elements.
         accu.reserve(4096);
 
-        let mut logfile = self.get_logfile().await.transpose()?;
+        let mut logfile = self.get_logfile()
+            .await
+            .transpose()
+            .context("Getting Logfile")?;
 
         // The timeout for the log-receive-timeout
         //
@@ -435,14 +438,15 @@ impl<'a> LogReceiver<'a> {
     async fn get_logfile(&self) -> Option<Result<tokio::io::BufWriter<tokio::fs::File>>> {
         if let Some(log_dir) = self.log_dir.as_ref() {
             Some({
-                let path = log_dir.join(self.job_id.to_string()).join(".log");
+                let path = log_dir.join(format!("{}.log", self.job_id.to_string()));
                 tokio::fs::OpenOptions::new()
                     .create(true)
                     .create_new(true)
                     .write(true)
-                    .open(path)
+                    .open(&path)
                     .await
                     .map(tokio::io::BufWriter::new)
+                    .with_context(|| anyhow!("Opening {}", path.display()))
                     .map_err(Error::from)
             })
         } else {
