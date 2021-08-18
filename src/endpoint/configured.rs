@@ -721,12 +721,12 @@ impl<'a> PreparedContainer<'a> {
     }
 
     pub async fn start(self) -> Result<StartedContainer<'a>> {
-        let container = self.endpoint.docker.containers().get(&self.create_info.id);
-        let _ = container
+        self.endpoint
+            .docker
+            .containers()
+            .get(&self.create_info.id)
             .start()
-            .inspect(|r| {
-                trace!("Starting container {} -> {:?}", self.create_info.id, r);
-            })
+            .inspect(|r| trace!("Starting container {} -> {:?}", self.create_info.id, r))
             .map(|r| {
                 r.with_context(|| {
                     anyhow!(
@@ -766,13 +766,12 @@ impl<'a> StartedContainer<'a> {
             .build();
         trace!("Exec options = {:?}", exec_opts);
 
-        let container = self.endpoint.docker.containers().get(&self.create_info.id);
-
-        trace!(
-            "Moving logs to log sink for container {}",
-            self.create_info.id
-        );
-        let stream = container.exec(&exec_opts);
+        trace!("Moving logs to log sink for container {}", self.create_info.id);
+        let stream = self.endpoint
+            .docker
+            .containers()
+            .get(&self.create_info.id)
+            .exec(&exec_opts);
 
         let exited_successfully: Option<(bool, Option<String>)> =
             buffer_stream_to_line_stream(stream)
@@ -790,7 +789,6 @@ impl<'a> StartedContainer<'a> {
                             self.create_info.id
                         )
                     })
-                    .map_err(Error::from)
                     .and_then(|l| {
                         crate::log::parser()
                             .parse(l.as_bytes())
@@ -802,31 +800,21 @@ impl<'a> StartedContainer<'a> {
                                     l
                                 )
                             })
-                            .map_err(Error::from)
-                            .and_then(|item| {
-                                let mut exited_successfully = None;
-                                {
-                                    match item {
-                                        LogItem::State(Ok(_)) => {
-                                            exited_successfully = Some((true, None))
-                                        }
-                                        LogItem::State(Err(ref msg)) => {
-                                            exited_successfully = Some((false, Some(msg.clone())))
-                                        }
-                                        _ => {
-                                            // Nothing
-                                        }
-                                    }
-                                }
-
-                                trace!("Log item: {}", item.display()?);
-                                logsink
-                                    .send(item)
-                                    .with_context(|| anyhow!("Sending log to log sink"))
-                                    .map_err(Error::from)
-                                    .map(|_| exited_successfully)
-                            })
                     })
+                    .and_then(|item| {
+                        let exited_successfully = match item {
+                            LogItem::State(Ok(_)) => Some((true, None)),
+                            LogItem::State(Err(ref msg)) => Some((false, Some(msg.clone()))),
+                            _ => None, // Nothing
+                        };
+
+                        trace!("Log item: {}", item.display()?);
+                        logsink
+                            .send(item)
+                            .with_context(|| anyhow!("Sending log to log sink"))
+                            .map(|_| exited_successfully)
+                    })
+                    .map_err(Error::from)
                 })
                 .collect::<Result<Vec<_>>>()
                 .map(|r| {
