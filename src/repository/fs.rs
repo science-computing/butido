@@ -106,6 +106,25 @@ impl FileSystemRepresentation {
 
         Ok(fsr)
     }
+
+    pub fn get_files_for<'a>(&'a self, path: &Path) -> Result<Vec<&'a String>> {
+        let mut res = Vec::with_capacity(10); // good enough
+
+        let mut curr_hm = &self.elements;
+        for elem in path.components() {
+            let elem = PathComponent::try_from(&elem)?;
+
+            match curr_hm.get(&elem) {
+                Some(Element::File(cont)) => res.push(cont),
+                Some(Element::Dir(hm)) => curr_hm = hm,
+                None => {
+                    unimplemented!()
+                },
+            }
+        }
+
+        Ok(res)
+    }
 }
 
 fn is_pkgtoml(entry: &DirEntry) -> bool {
