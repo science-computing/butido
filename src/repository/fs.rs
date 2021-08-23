@@ -16,6 +16,7 @@ use resiter::AndThen;
 pub struct FileSystemRepresentation {
     root: PathBuf,
     elements: HashMap<PathComponent, Element>,
+    files: Vec<PathBuf>,
 }
 
 enum Element {
@@ -65,6 +66,7 @@ impl FileSystemRepresentation {
         let mut fsr = FileSystemRepresentation {
             root: root.clone(),
             elements: HashMap::new(),
+            files: vec![],
         };
 
         WalkDir::new(root)
@@ -77,6 +79,7 @@ impl FileSystemRepresentation {
             .map_err(Error::from)
             .and_then_ok(|de| {
                 let mut curr_hm = &mut fsr.elements;
+                fsr.files.push(de.path().to_path_buf());
 
                 // traverse the HashMap tree
                 for cmp in de.path().components() {
