@@ -107,6 +107,41 @@ impl FileSystemRepresentation {
         Ok(fsr)
     }
 
+    pub fn is_leaf_file(&self, path: &Path) -> Result<bool> {
+        let mut curr_hm = &self.elements;
+
+        fn toml_files_in_tree(hm: &HashMap<PathComponent, Element>) -> bool {
+            for value in hm.values() {
+                match value {
+                    Element::File(_) => return true,
+                    Element::Dir(hm) => if toml_files_in_tree(hm) {
+                        return true
+                    },
+                }
+            }
+            false
+        }
+
+        for elem in path.components() {
+            let elem = PathComponent::try_from(&elem)?;
+
+            match curr_hm.get(&elem) {
+                Some(Element::File(_)) => {
+                    // if I have a file now, and the current hashmap only holds either
+                    // * No directory
+                    // * or a directory where all subdirs do not contain a pkg.toml
+                    return Ok(curr_hm.values().count() == 1 || !toml_files_in_tree(curr_hm))
+                },
+                Some(Element::Dir(hm)) => curr_hm = hm,
+                None => {
+                    unimplemented!()
+                },
+            }
+        }
+
+        Ok(false)
+    }
+
     pub fn get_files_for<'a>(&'a self, path: &Path) -> Result<Vec<&'a String>> {
         let mut res = Vec::with_capacity(10); // good enough
 
