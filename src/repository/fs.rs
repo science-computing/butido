@@ -186,3 +186,194 @@ fn load_file(path: &Path) -> Result<String> {
         .map_err(Error::from)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn dir(name: &str, hm: Vec<(PathComponent, Element)>) -> (PathComponent, Element) {
+        (PathComponent::DirName(name.to_string()), Element::Dir(hm.into_iter().collect()))
+    }
+
+    fn pkgtoml(content: &str) -> (PathComponent, Element) {
+        (PathComponent::PkgToml, Element::File(content.to_string()))
+    }
+
+    #[test]
+    fn test_one_file_in_directory() {
+        let fsr = FileSystemRepresentation {
+            root: PathBuf::from("/"),
+
+            // Representing
+            //  /
+            //  /foo
+            //  /foo/pkg.toml
+            elements: vec![
+                dir("foo", vec![
+                    pkgtoml("content")
+                ])
+            ].into_iter().collect(),
+
+            files: vec![
+                PathBuf::from("foo/pkg.toml")
+            ],
+        };
+
+        let path = "foo/pkg.toml".as_ref();
+
+        assert!(fsr.is_leaf_file(path).unwrap());
+        assert_eq!(fsr.get_files_for(path).unwrap(), vec!["content"]);
+    }
+
+    #[test]
+    fn test_deep_pkgtoml() {
+        let fsr = FileSystemRepresentation {
+            root: PathBuf::from("/"),
+
+            // Representing
+            //  /
+            //  /foo
+            //  /foo/bar
+            //  /foo/baz
+            //  /foo/baz/pkg.toml
+            elements: vec![
+                dir("foo", vec![
+                    dir("bar", vec![
+                        dir("baz", vec![
+                            pkgtoml("content"),
+                        ])
+                    ])
+                ])
+            ].into_iter().collect(),
+
+            files: vec![
+                PathBuf::from("foo/bar/baz/pkg.toml")
+            ],
+        };
+
+        let path = "foo/bar/baz/pkg.toml".as_ref();
+
+        assert!(fsr.is_leaf_file(path).unwrap());
+        assert_eq!(fsr.get_files_for(path).unwrap(), vec!["content"]);
+    }
+
+    #[test]
+    fn test_hierarchy() {
+        let fsr = FileSystemRepresentation {
+            root: PathBuf::from("/"),
+
+            // Representing
+            //  /
+            //  /foo
+            //  /foo/bar
+            //  /foo/baz
+            //  /foo/baz/pkg.toml
+            elements: vec![
+                dir("foo", vec![
+                    pkgtoml("content1"),
+                    dir("bar", vec![
+                        pkgtoml("content2"),
+                        dir("baz", vec![
+                            pkgtoml("content3"),
+                        ])
+                    ])
+                ])
+            ].into_iter().collect(),
+
+            files: vec![
+                PathBuf::from("foo/pkg.toml"),
+                PathBuf::from("foo/bar/pkg.toml"),
+                PathBuf::from("foo/bar/baz/pkg.toml")
+            ],
+        };
+
+        {
+            let path = "foo/pkg.toml".as_ref();
+
+            assert!(!fsr.is_leaf_file(path).unwrap());
+        }
+        {
+            let path = "foo/bar/pkg.toml".as_ref();
+
+            assert!(!fsr.is_leaf_file(path).unwrap());
+        }
+        {
+            let path = "foo/bar/baz/pkg.toml".as_ref();
+
+            assert!(fsr.is_leaf_file(path).unwrap());
+            assert_eq!(fsr.get_files_for(path).unwrap(), vec!["content1", "content2", "content3"]);
+        }
+    }
+
+    #[test]
+    fn test_hierarchy_with_missing_intermediate_files() {
+        let fsr = FileSystemRepresentation {
+            root: PathBuf::from("/"),
+
+            // Representing
+            //  /
+            //  /foo
+            //  /foo/bar
+            //  /foo/baz
+            //  /foo/baz/pkg.toml
+            elements: vec![
+                dir("foo", vec![
+                    pkgtoml("content1"),
+                    dir("bar", vec![
+                        dir("baz", vec![
+                            pkgtoml("content3"),
+                        ])
+                    ])
+                ])
+            ].into_iter().collect(),
+
+            files: vec![
+                PathBuf::from("foo/pkg.toml"),
+                PathBuf::from("foo/bar/baz/pkg.toml")
+            ],
+        };
+
+        let path = "foo/pkg.toml".as_ref();
+        assert!(!fsr.is_leaf_file(path).unwrap());
+
+        let path = "foo/bar/baz/pkg.toml".as_ref();
+        assert!(fsr.is_leaf_file(path).unwrap());
+        assert_eq!(fsr.get_files_for(path).unwrap(), vec!["content1", "content3"]);
+    }
+
+    #[test]
+    fn test_hierarchy_with_toplevel_file() {
+        let fsr = FileSystemRepresentation {
+            root: PathBuf::from("/"),
+
+            // Representing
+            //  /
+            //  /foo
+            //  /foo/bar
+            //  /foo/baz
+            //  /foo/baz/pkg.toml
+            elements: vec![
+                pkgtoml("content1"),
+                dir("foo", vec![
+                    dir("bar", vec![
+                        dir("baz", vec![
+                            pkgtoml("content3"),
+                        ])
+                    ])
+                ])
+            ].into_iter().collect(),
+
+            files: vec![
+                PathBuf::from("pkg.toml"),
+                PathBuf::from("foo/bar/baz/pkg.toml")
+            ],
+        };
+
+        let path = "pkg.toml".as_ref();
+        assert!(!fsr.is_leaf_file(path).unwrap());
+
+        let path = "foo/bar/baz/pkg.toml".as_ref();
+        assert!(fsr.is_leaf_file(path).unwrap());
+        assert_eq!(fsr.get_files_for(path).unwrap(), vec!["content1", "content3"]);
+    }
+
+}
