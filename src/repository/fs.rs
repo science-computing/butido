@@ -12,6 +12,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::Error;
+use resiter::Filter;
 use resiter::Map;
 use resiter::AndThen;
 
@@ -90,12 +91,14 @@ impl FileSystemRepresentation {
             files: vec![],
         };
 
+        log::trace!("Loading files from filesystem starting at: {}", root.display());
         WalkDir::new(root)
             .follow_links(false)
             .max_open(100)
             .same_file_system(true)
             .into_iter()
-            .filter_entry(|e| is_pkgtoml(e))
+            .filter_entry(|e| !is_hidden(e) && (is_pkgtoml(e) || is_dir(e)))
+            .filter_ok(|e| is_pkgtoml(e))
             .inspect(|el| log::trace!("Loading: {:?}", el))
             .map_err(Error::from)
             .and_then_ok(|de| {
@@ -193,11 +196,23 @@ impl FileSystemRepresentation {
     }
 }
 
+fn is_hidden(entry: &DirEntry) -> bool {
+    log::trace!("Check {:?} is hidden", entry);
+    entry.file_name().to_str().map(|s| s.starts_with(".")).unwrap_or(false)
+}
+
+fn is_dir(entry: &DirEntry) -> bool {
+    log::trace!("Check {:?} is directory", entry);
+    entry.file_type().is_dir()
+}
+
 fn is_pkgtoml(entry: &DirEntry) -> bool {
+    log::trace!("Check {:?} == 'pkg.toml'", entry);
     entry.file_name().to_str().map(|s| s == "pkg.toml").unwrap_or(false)
 }
 
 fn load_file(path: &Path) -> Result<String> {
+    log::trace!("Reading {}", path.display());
     std::fs::read_to_string(path)
         .with_context(|| anyhow!("Reading file from filesystem: {}", path.display()))
         .map_err(Error::from)
