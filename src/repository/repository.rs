@@ -19,6 +19,7 @@ use anyhow::Result;
 use log::trace;
 use resiter::AndThen;
 use resiter::FilterMap;
+use resiter::Filter;
 use resiter::Map;
 
 use crate::package::Package;
@@ -40,192 +41,98 @@ impl From<BTreeMap<(PackageName, PackageVersion), Package>> for Repository {
 
 impl Repository {
     pub fn load(path: &Path, progress: &indicatif::ProgressBar) -> Result<Self> {
-        fn all_subdirs(p: &Path) -> Result<Vec<PathBuf>> {
-            let mut v = Vec::new();
-            for de in p.read_dir()? {
-                let de = de?;
-                let is_dir = de.file_type()?.is_dir();
-                let is_hidden = de
-                    .path()
-                    .file_name()
-                    .and_then(|s| s.to_str())
-                    .map(|s| s.starts_with('.'))
-                    .unwrap_or(false);
+        use crate::repository::fs::FileSystemRepresentation;
+        use config::Config;
 
-                if is_dir && !is_hidden {
-                    v.push(de.path());
-                }
-            }
+        trace!("Loading files from filesystem");
+        let fsr = FileSystemRepresentation::load(path.to_path_buf())?;
 
-            Ok(v)
-        }
-
-        fn load_recursive(
-            root: &Path,
-            path: &Path,
-            mut config: config::Config,
-            progress: &indicatif::ProgressBar,
-        ) -> Result<Vec<Result<Package>>> {
-            let pkg_file = path.join("pkg.toml");
-
-            if pkg_file.is_file() {
-                let buf = std::fs::read_to_string(&pkg_file)
-                    .with_context(|| anyhow!("Reading {}", pkg_file.display()))?;
-
-                // This function has an issue: It loads packages recursively, but if there are
-                // patches set for a package, these patches are set _relative_ to the current
-                // pkg.toml file.
-                //
-                // E.G.:
-                // (1) /pkg.toml
-                // (2) /a/pkg.toml
-                // (3) /a/1.0/pkg.toml
-                // (4) /a/2.0/pkg.toml
-                //
-                // If (2) defines a patches = ["./1.patch"], the patch exists at /a/1.patch.
-                // We can fix that by modifying the Config object after loading (2) and fixing the
-                // path of the patch to be relative to the repostory root.
-                //
-                // But if we continue loading the /a/ subdirectory recursively, this value gets
-                // overwritten by Config::refresh(), which is called by Config::merge, for example.
-                //
-                // The trick is, to get the list of patches _before_ the merge, and later
-                // re-setting them after the merge, if there were no new patches set (which itself
-                // is tricky to find out, because the `Config` object _looks like_ there is a new
-                // array set).
-                //
-                // If (3), for example, does set a new patches=[] array, the old array is
-                // invalidated and no longer relevant for that package!
-                // Thus, we can savely throw it away and continue with the new array, fixing the
-                // pathes to be relative to repo root again.
-                //
-                // If (4) does _not_ set any patches, we must ensure that the patches from the
-                // loading of (2) are used and not overwritten by the Config::refresh() call
-                // happening during Config::merge().
-                //
-
-                // first of all, we get the patches array.
-                // This is either the patches array from the last recursion or the newly set one,
-                // that doesn't matter here.
-                let patches_before_merge = match config.get_array("patches") {
-                    Ok(v)  => {
-                        v.into_iter()
-                            .map(config::Value::into_str)
-                            .map(|r| {
-                                r.map(PathBuf::from)
-                                    .with_context(|| anyhow!("patches must be strings"))
-                                    .map_err(Error::from)
-                            })
-                            .collect::<Result<Vec<_>>>()?
-                    },
-                    Err(config::ConfigError::NotFound(_)) => vec![],
-                    Err(e)                                => return Err(e).map_err(Error::from),
-                };
-                trace!("Patches before merging: {:?}", patches_before_merge);
-
-                // Merge the new pkg.toml file over the already loaded configuration
-                config
-                    .merge(config::File::from_str(&buf, config::FileFormat::Toml))
-                    .with_context(|| anyhow!("Loading contents of {}", pkg_file.display()))?;
-
-                let path_relative_to_root = path.strip_prefix(root)?;
-
-                // get the patches that are in the `config` object after the merge
-                let patches = config
-                    .get_array("patches")
-                    .or_else(|e| match e {
-
-                        // if there was none, we simply use an empty array
-                        // This is cheap because Vec::with_capacity(0) does not allocate
-                        config::ConfigError::NotFound(_) => Ok(Vec::with_capacity(0)),
-                        other => Err(other),
-                    })?
-                    .into_iter()
-
-                    // Map all `Value`s to String and then join them on the path that is relative to
-                    // the root directory of the repository.
+        fn get_patches(config: &Config) -> Result<Vec<PathBuf>> {
+            match config.get_array("patches") {
+                Ok(v)  => v.into_iter()
                     .map(config::Value::into_str)
                     .map_err(Error::from)
-                    .map_ok(|patch| path_relative_to_root.join(patch))
-                    .inspect(|patch| trace!("Patch relative to root: {:?}", patch.as_ref().map(|p| p.display())))
-
-                    // if the patch file exists, use it (as config::Value).
-                    //
-                    // Otherwise we have an error here, because we're refering to a non-existing file.
-                    .and_then_ok(|patch| if patch.exists() {
-                        trace!("Path to patch exists: {}", patch.display());
-                        Ok(Some(patch))
-                    } else if patches_before_merge.iter().any(|pb| pb.file_name() == patch.file_name()) {
-                        // We have a patch already in the array that is named equal to the patch
-                        // we have in the current recursion.
-                        // It seems like this patch was already in the list and we re-found it
-                        // because we loaded a deeper pkg.toml file.
-                        Ok(None)
-                    } else {
-                        trace!("Path to patch does not exist: {}", patch.display());
-                        Err(anyhow!("Patch does not exist: {}", patch.display()))
-                    })
-                    .filter_map_ok(|o| o)
-                    .collect::<Result<Vec<_>>>()?;
-
-                // If we found any patches, use them. Otherwise use the array from before the merge
-                // (which already has the correct pathes from the previous recursion).
-                let patches = if !patches.is_empty() && patches.iter().all(|p| p.exists()) {
-                    patches
-                } else {
-                    patches_before_merge
-                };
-
-                trace!("Patches after postprocessing merge: {:?}", patches);
-                let patches = patches
-                    .into_iter()
-                    .map(|p| p.display().to_string())
-                    .map(config::Value::from)
-                    .collect::<Vec<_>>();
-                config.set_once("patches", config::Value::from(patches))?;
-            }
-
-            let subdirs = all_subdirs(path)
-                .with_context(|| anyhow!("Finding subdirs for {}", pkg_file.display()))?;
-
-            if subdirs.is_empty() {
-                progress.tick();
-                if pkg_file.is_file() {
-                    let package = config.try_into()
-                        .with_context(|| anyhow!("Failed to parse {} into package", path.display()))
-                        .and_then(|package: Package| {
-                            if package.name().is_empty() {
-                                Err(anyhow!("Package name cannot be empty: {}", pkg_file.display()))
-                            } else if package.version().is_empty() {
-                                Err(anyhow!("Package version cannot be empty: {}", pkg_file.display()))
-                            } else {
-                                Ok(package)
-                            }
-                        });
-
-                    Ok(vec![package])
-                } else {
-                    Ok(vec![])
-                }
-            } else {
-                subdirs.into_iter().fold(Ok(Vec::new()), |vec, dir| {
-                    vec.and_then(|mut v| {
-                        trace!("Recursing into {}", dir.display());
-                        let mut loaded = load_recursive(root, &dir, config.clone(), progress)
-                            .with_context(|| anyhow!("Reading package from {}", pkg_file.display()))?;
-
-                        v.append(&mut loaded);
-                        Ok(v)
-                    })
-                })
+                    .map_err(|e| e.context("patches must be strings"))
+                    .map_err(Error::from)
+                    .map_ok(PathBuf::from)
+                    .collect(),
+                Err(config::ConfigError::NotFound(_)) => Ok(Vec::with_capacity(0)),
+                Err(e) => Err(e).map_err(Error::from),
             }
         }
 
-        let inner = load_recursive(path, path, config::Config::default(), progress)
-            .with_context(|| anyhow!("Recursing for {}", path.display()))?
-            .into_iter()
-            .inspect(|p| trace!("Loading into repository: {:?}", p))
-            .map_ok(|p| ((p.name().clone(), p.version().clone()), p))
+        let inner = fsr.files()
+            .iter()
+            .inspect(|path| trace!("Checking for leaf file: {}", path.display()))
+            .map(|path| fsr.is_leaf_file(path).map(|b| (path, b)))
+            .filter_ok(|(_, b)| *b)
+            .inspect(|r| trace!("Loading files for {:?}", r))
+            .and_then_ok(|(path, _)| fsr.get_files_for(path))
+            .and_then_ok(|layers| {
+                progress.tick();
+                layers.iter()
+                    .inspect(|(path, _)| trace!("Loading layer at {}", path.display()))
+                    .fold(Ok(Config::default()), |config, (path, ref content)| {
+                        let mut config = config?;
+                        let patches_before_merge = get_patches(&config)?;
+
+                        config.merge(config::File::from_str(&content, config::FileFormat::Toml))
+                            .with_context(|| anyhow!("Loading contents of {}", path.display()))?;
+
+                        // get the patches that are in the `config` object after the merge
+                        let patches = get_patches(&config)?
+                            .into_iter()
+                            .map(|p| {
+                                if let Some(current_dir) = path.parent() {
+                                    fsr.root().join(current_dir).join(p)
+                                } else {
+                                    unimplemented!()
+                                }
+                            })
+                            .inspect(|patch| trace!("Patch: {:?}", patch))
+
+                            // if the patch file exists, use it (as config::Value).
+                            //
+                            // Otherwise we have an error here, because we're refering to a non-existing file.
+                            .map(|patch| if patch.exists() {
+                                trace!("Path to patch exists: {}", patch.display());
+                                Ok(Some(patch))
+                            } else if patches_before_merge.iter().any(|pb| pb.file_name() == patch.file_name()) {
+                                // We have a patch already in the array that is named equal to the patch
+                                // we have in the fold iteration.
+                                // It seems like this patch was already in the list and we re-found it
+                                // because we loaded a "deeper" pkg.toml file.
+                                Ok(None)
+                            } else {
+                                trace!("Path to patch does not exist: {}", patch.display());
+                                Err(anyhow!("Patch does not exist: {}", patch.display()))
+                            })
+                            .filter_map_ok(|o| o)
+                            .collect::<Result<Vec<_>>>()?;
+
+                        // If we found any patches, use them. Otherwise use the array from before the merge
+                        // (which already has the correct pathes from the previous recursion).
+                        let patches = if !patches.is_empty() && patches.iter().all(|p| p.exists()) {
+                            patches
+                        } else {
+                            patches_before_merge
+                        };
+
+                        trace!("Patches after postprocessing merge: {:?}", patches);
+                        let patches = patches
+                            .into_iter()
+                            .map(|p| p.display().to_string())
+                            .map(config::Value::from)
+                            .collect::<Vec<_>>();
+                        config.set_once("patches", config::Value::from(patches))?;
+                        Ok(config)
+                    })
+            })
+            .and_then_ok(|config| {
+                let package = config.try_into::<Package>()?;
+                let key = (package.name().clone(), package.version().clone());
+                Ok((key, package))
+            })
             .collect::<Result<_>>()?;
 
         Ok(Repository { inner })
