@@ -17,11 +17,13 @@ use resiter::AndThen;
 
 #[derive(Debug, getset::Getters)]
 pub struct FileSystemRepresentation {
+    #[getset(get = "pub")]
     root: PathBuf,
-    elements: HashMap<PathComponent, Element>,
 
     #[getset(get = "pub")]
     files: Vec<PathBuf>,
+
+    elements: HashMap<PathComponent, Element>,
 }
 
 #[derive(Debug)]
