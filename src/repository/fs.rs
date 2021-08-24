@@ -15,10 +15,12 @@ use anyhow::Error;
 use resiter::Map;
 use resiter::AndThen;
 
-#[derive(Debug)]
+#[derive(Debug, getset::Getters)]
 pub struct FileSystemRepresentation {
     root: PathBuf,
     elements: HashMap<PathComponent, Element>,
+
+    #[getset(get = "pub")]
     files: Vec<PathBuf>,
 }
 
