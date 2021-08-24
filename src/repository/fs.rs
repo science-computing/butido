@@ -15,12 +15,14 @@ use anyhow::Error;
 use resiter::Map;
 use resiter::AndThen;
 
+#[derive(Debug)]
 pub struct FileSystemRepresentation {
     root: PathBuf,
     elements: HashMap<PathComponent, Element>,
     files: Vec<PathBuf>,
 }
 
+#[derive(Debug)]
 enum Element {
     File(String),
     Dir(HashMap<PathComponent, Element>)
@@ -35,7 +37,7 @@ impl Element {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum PathComponent {
     PkgToml,
     DirName(String),
