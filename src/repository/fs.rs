@@ -103,14 +103,15 @@ impl FileSystemRepresentation {
             .map_err(Error::from)
             .and_then_ok(|de| {
                 let mut curr_hm = &mut fsr.elements;
-                fsr.files.push(de.path().to_path_buf());
+                let de_path = de.path().strip_prefix(&fsr.root)?;
+                fsr.files.push(de_path.to_path_buf());
 
                 // traverse the HashMap tree
-                for cmp in de.path().components() {
+                for cmp in de_path.components() {
                     match PathComponent::try_from(&cmp)? {
                         PathComponent::PkgToml => {
                             curr_hm.entry(PathComponent::PkgToml)
-                                .or_insert(Element::File(load_file(de.path())?));
+                                .or_insert(Element::File(load_file(de_path)?));
                         },
                         dir @ PathComponent::DirName(_) => {
                             curr_hm.entry(dir.clone())
