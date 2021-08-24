@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 use std::path::Component;
 use std::convert::TryFrom;
+use std::convert::TryInto;
 
 use walkdir::DirEntry;
 use walkdir::WalkDir;
@@ -91,10 +92,21 @@ impl FileSystemRepresentation {
             files: vec![],
         };
 
+        let max_files_open = {
+            let (soft, _hard) = rlimit::getrlimit(rlimit::Resource::NOFILE)?;
+
+            // use less than the soft limit if the soft limit is above 15
+            soft.checked_sub(16)
+                .unwrap_or(soft)
+                .try_into() // we need to have a usize
+                .unwrap_or(usize::MAX) // if usize is smaller than u64, usize::MAX will do
+        };
+
         log::trace!("Loading files from filesystem starting at: {}", root.display());
+        log::trace!("Loading with a maximum of {} files open", max_files_open);
         WalkDir::new(root)
             .follow_links(false)
-            .max_open(100)
+            .max_open(max_files_open)
             .same_file_system(true)
             .into_iter()
             .filter_entry(|e| !is_hidden(e) && (is_pkgtoml(e) || is_dir(e)))
