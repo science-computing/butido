@@ -70,6 +70,13 @@ impl PathComponent {
     fn is_pkg_toml(&self) -> bool {
         std::matches!(self, PathComponent::PkgToml)
     }
+
+    fn dir_name(&self) -> Option<&str> {
+        match self {
+            PathComponent::PkgToml => None,
+            PathComponent::DirName(dn) => Some(dn)
+        }
+    }
 }
 
 
