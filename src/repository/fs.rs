@@ -1,3 +1,5 @@
+#![allow(unused)] // TODO: Remove allow(unused)
+
 use std::path::Path;
 use std::path::PathBuf;
 use std::collections::HashMap;
