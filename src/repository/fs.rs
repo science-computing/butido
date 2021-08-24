@@ -60,6 +60,12 @@ impl TryFrom<&std::path::Component<'_>> for PathComponent {
     }
 }
 
+impl PathComponent {
+    fn is_pkg_toml(&self) -> bool {
+        std::matches!(self, PathComponent::PkgToml)
+    }
+}
+
 
 impl FileSystemRepresentation {
     pub fn load(root: PathBuf) -> Result<Self> {
@@ -148,6 +154,12 @@ impl FileSystemRepresentation {
         let mut curr_hm = &self.elements;
         for elem in path.components() {
             let elem = PathComponent::try_from(&elem)?;
+
+            if !elem.is_pkg_toml() {
+                if let Some(Element::File(intermediate)) = curr_hm.get(&PathComponent::PkgToml) {
+                    res.push(intermediate);
+                }
+            }
 
             match curr_hm.get(&elem) {
                 Some(Element::File(cont)) => res.push(cont),
