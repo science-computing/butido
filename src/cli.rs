@@ -248,7 +248,7 @@ pub fn cli<'a>() -> App<'a> {
                     .about("Only list LIMIT submits")
                 )
                 .arg(Arg::new("for-commit")
-                    .required(true)
+                    .required(false)
                     .multiple(false)
                     .long("commit")
                     .takes_value(true)
