@@ -17,9 +17,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use log::trace;
-use resiter::AndThen;
 use resiter::FilterMap;
-use resiter::Filter;
 use resiter::Map;
 
 use crate::package::Package;
@@ -40,9 +38,15 @@ impl From<BTreeMap<(PackageName, PackageVersion), Package>> for Repository {
 }
 
 impl Repository {
+    fn new(inner: BTreeMap<(PackageName, PackageVersion), Package>) -> Self {
+        Repository { inner }
+    }
+
     pub fn load(path: &Path, progress: &indicatif::ProgressBar) -> Result<Self> {
         use crate::repository::fs::FileSystemRepresentation;
         use config::Config;
+        use rayon::iter::IntoParallelRefIterator;
+        use rayon::iter::ParallelIterator;
 
         trace!("Loading files from filesystem");
         let fsr = FileSystemRepresentation::load(path.to_path_buf())?;
@@ -61,18 +65,24 @@ impl Repository {
             }
         }
 
-        let inner = fsr.files()
-            .iter()
+        fsr.files()
+            .par_iter()
             .inspect(|path| trace!("Checking for leaf file: {}", path.display()))
-            .map(|path| fsr.is_leaf_file(path).map(|b| (path, b)))
-            .filter_ok(|(_, b)| *b)
+            .filter_map(|path| {
+                match fsr.is_leaf_file(path) {
+                    Ok(true) => Some(Ok(path)),
+                    Ok(false) => None,
+                    Err(e) => Some(Err(e)),
+                }
+            })
             .inspect(|r| trace!("Loading files for {:?}", r))
-            .and_then_ok(|(path, _)| fsr.get_files_for(path))
-            .and_then_ok(|layers| {
+            .map(|path| {
                 progress.tick();
-                layers.iter()
+                let path = path?;
+                fsr.get_files_for(path)?
+                    .iter()
                     .inspect(|(path, _)| trace!("Loading layer at {}", path.display()))
-                    .fold(Ok(Config::default()), |config, (path, ref content)| {
+                    .fold(Ok(Config::default()) as Result<_>, |config, (path, ref content)| {
                         let mut config = config?;
                         let patches_before_merge = get_patches(&config)?;
 
@@ -127,15 +137,11 @@ impl Repository {
                         config.set_once("patches", config::Value::from(patches))?;
                         Ok(config)
                     })
+                    .and_then(|c| c.try_into::<Package>().map_err(Error::from))
+                    .map(|pkg| ((pkg.name().clone(), pkg.version().clone()), pkg))
             })
-            .and_then_ok(|config| {
-                let package = config.try_into::<Package>()?;
-                let key = (package.name().clone(), package.version().clone());
-                Ok((key, package))
-            })
-            .collect::<Result<_>>()?;
-
-        Ok(Repository { inner })
+            .collect::<Result<BTreeMap<_, _>>>()
+            .map(Repository::new)
     }
 
     pub fn find_by_name<'a>(&'a self, name: &PackageName) -> Vec<&'a Package> {
