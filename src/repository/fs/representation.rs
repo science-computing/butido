@@ -149,9 +149,7 @@ impl FileSystemRepresentation {
                     return Ok(curr_hm.values().count() == 1 || !toml_files_in_tree(curr_hm))
                 },
                 Some(Element::Dir(hm)) => curr_hm = hm,
-                None => {
-                    unimplemented!()
-                },
+                None => anyhow::bail!("Path component '{:?}' was not loaded in map, this is most likely a bug", elem),
             }
         }
 
@@ -189,9 +187,7 @@ impl FileSystemRepresentation {
                     curr_path = curr_path.join(elem.dir_name().unwrap()); // unwrap safe by above match
                     curr_hm = hm;
                 }
-                None => {
-                    unimplemented!()
-                },
+                None => anyhow::bail!("Path component '{:?}' was not loaded in map, this is most likely a bug", elem),
             }
         }
 
