@@ -1,21 +1,32 @@
-#![allow(unused)] // TODO: Remove allow(unused)
+//
+// Copyright (c) 2020-2021 science+computing ag and other contributors
+//
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
 
-use std::path::Path;
-use std::path::PathBuf;
 use std::collections::HashMap;
-use std::path::Component;
 use std::convert::TryFrom;
 use std::convert::TryInto;
+use std::path::Component;
+use std::path::Path;
+use std::path::PathBuf;
 
-use walkdir::DirEntry;
-use walkdir::WalkDir;
-use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Result;
 use anyhow::Error;
+use anyhow::Result;
+use anyhow::anyhow;
+use resiter::AndThen;
 use resiter::Filter;
 use resiter::Map;
-use resiter::AndThen;
+use walkdir::DirEntry;
+use walkdir::WalkDir;
+
+use crate::repository::fs::element::Element;
+use crate::repository::fs::path::PathComponent;
 
 /// A type representing the filesystem
 ///
@@ -31,81 +42,6 @@ pub struct FileSystemRepresentation {
 
     elements: HashMap<PathComponent, Element>,
 }
-
-/// One element in the tree inside FileSystemRepresentation
-///
-/// This is either a File, or a Directory that contains more (Files or Directories).
-#[derive(Debug)]
-enum Element {
-    File(String),
-    Dir(HashMap<PathComponent, Element>)
-}
-
-impl Element {
-    /// Helper fn to get the directory contents of the element, if the element is an Element::Dir
-    fn get_map_mut(&mut self) -> Option<&mut HashMap<PathComponent, Element>> {
-        match self {
-            Element::File(_) => None,
-            Element::Dir(ref mut hm) => Some(hm),
-        }
-    }
-}
-
-/// Helper type for filtering for pathes we need or dont need
-///
-/// We either have a directory, which has a name, or we have a pkg.toml file, which is of interest.
-/// All other files can be ignored and thus are not represented by this type.
-///
-/// The PathComponent::DirName(_) represents a _part_ of a Path. Something like
-///
-/// ```ignore
-///     let p = PathBuf::from("foo/bar/baz")
-///     p.components().map(PathComponent::DirName) // does not actually work because of types
-/// ```
-///
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum PathComponent {
-    PkgToml,
-    DirName(String),
-}
-
-impl TryFrom<&std::path::Component<'_>> for PathComponent {
-    type Error = anyhow::Error;
-
-    fn try_from(c: &std::path::Component) -> Result<Self> {
-        match *c {
-            Component::Prefix(_) => anyhow::bail!("Unexpected path component: Prefix"),
-            Component::RootDir => anyhow::bail!("Unexpected path component: RootDir"),
-            Component::CurDir => anyhow::bail!("Unexpected path component: CurDir"),
-            Component::ParentDir => anyhow::bail!("Unexpected path component: ParentDir"),
-            Component::Normal(filename) => {
-                let filename = filename.to_str().ok_or_else(|| anyhow!("UTF8-error"))?;
-                if filename == "pkg.toml" {
-                    Ok(PathComponent::PkgToml)
-                } else {
-                    Ok(PathComponent::DirName(filename.to_string()))
-                }
-            },
-        }
-    }
-}
-
-impl PathComponent {
-    /// Helper fn whether this PathComponent is a PathComponent::PkgToml
-    fn is_pkg_toml(&self) -> bool {
-        std::matches!(self, PathComponent::PkgToml)
-    }
-
-    /// Helper fn to get the directory name of this PathComponent if it is a PathComponent::DirName
-    /// or None if it is not.
-    fn dir_name(&self) -> Option<&str> {
-        match self {
-            PathComponent::PkgToml => None,
-            PathComponent::DirName(dn) => Some(dn)
-        }
-    }
-}
-
 
 impl FileSystemRepresentation {
     /// Load the FileSystemRepresentation object starting a `root`.
