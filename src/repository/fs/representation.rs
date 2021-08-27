@@ -11,7 +11,6 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
-use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
 

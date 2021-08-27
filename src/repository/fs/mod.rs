@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-#![allow(unused)] // TODO: Remove allow(unused)
-
 mod representation;
 pub use representation::FileSystemRepresentation;
 

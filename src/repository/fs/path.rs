@@ -8,11 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::path::Component;
-use std::path::Path;
-use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Result;
