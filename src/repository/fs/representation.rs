@@ -123,6 +123,10 @@ impl FileSystemRepresentation {
 
         // Helper to check whether a tree contains pkg.toml files, recursively
         fn toml_files_in_tree(hm: &HashMap<PathComponent, Element>) -> bool {
+            if let Some(Element::File(_)) = hm.get(&PathComponent::PkgToml) {
+                return true
+            }
+
             for value in hm.values() {
                 match value {
                     Element::File(_) => return true,
