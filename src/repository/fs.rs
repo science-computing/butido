@@ -17,6 +17,10 @@ use resiter::Filter;
 use resiter::Map;
 use resiter::AndThen;
 
+/// A type representing the filesystem
+///
+/// This type can be used to load pkg.toml files from the filesystem. As soon as this object is
+/// loaded, all filesystem access is done and postprocessing of the loaded data can happen
 #[derive(Debug, getset::Getters)]
 pub struct FileSystemRepresentation {
     #[getset(get = "pub")]
@@ -28,6 +32,9 @@ pub struct FileSystemRepresentation {
     elements: HashMap<PathComponent, Element>,
 }
 
+/// One element in the tree inside FileSystemRepresentation
+///
+/// This is either a File, or a Directory that contains more (Files or Directories).
 #[derive(Debug)]
 enum Element {
     File(String),
@@ -35,6 +42,7 @@ enum Element {
 }
 
 impl Element {
+    /// Helper fn to get the directory contents of the element, if the element is an Element::Dir
     fn get_map_mut(&mut self) -> Option<&mut HashMap<PathComponent, Element>> {
         match self {
             Element::File(_) => None,
@@ -43,6 +51,18 @@ impl Element {
     }
 }
 
+/// Helper type for filtering for pathes we need or dont need
+///
+/// We either have a directory, which has a name, or we have a pkg.toml file, which is of interest.
+/// All other files can be ignored and thus are not represented by this type.
+///
+/// The PathComponent::DirName(_) represents a _part_ of a Path. Something like
+///
+/// ```ignore
+///     let p = PathBuf::from("foo/bar/baz")
+///     p.components().map(PathComponent::DirName) // does not actually work because of types
+/// ```
+///
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum PathComponent {
     PkgToml,
@@ -71,10 +91,13 @@ impl TryFrom<&std::path::Component<'_>> for PathComponent {
 }
 
 impl PathComponent {
+    /// Helper fn whether this PathComponent is a PathComponent::PkgToml
     fn is_pkg_toml(&self) -> bool {
         std::matches!(self, PathComponent::PkgToml)
     }
 
+    /// Helper fn to get the directory name of this PathComponent if it is a PathComponent::DirName
+    /// or None if it is not.
     fn dir_name(&self) -> Option<&str> {
         match self {
             PathComponent::PkgToml => None,
@@ -85,6 +108,7 @@ impl PathComponent {
 
 
 impl FileSystemRepresentation {
+    /// Load the FileSystemRepresentation object starting a `root`.
     pub fn load(root: PathBuf) -> Result<Self> {
         let mut fsr = FileSystemRepresentation {
             root: root.clone(),
@@ -92,6 +116,7 @@ impl FileSystemRepresentation {
             files: vec![],
         };
 
+        // get the number of maximum files open (ulimit -n on linux)
         let max_files_open = {
             let (soft, _hard) = rlimit::getrlimit(rlimit::Resource::NOFILE)?;
 
@@ -144,9 +169,23 @@ impl FileSystemRepresentation {
         Ok(fsr)
     }
 
+    /// Check the tree whether a `Path` points to a file in a directory that does not contain more
+    /// directories containing pkg.toml files.
+    ///
+    /// # Example
+    ///
+    ///     /
+    ///     /foo/
+    ///     /foo/pkg.toml <-- is leaf
+    ///     /bar/
+    ///     /bar/pkg.toml <-- is not a leaf
+    ///     /bar/baz/pkg.toml <-- is a leaf
+    ///
+    ///
     pub fn is_leaf_file(&self, path: &Path) -> Result<bool> {
         let mut curr_hm = &self.elements;
 
+        // Helper to check whether a tree contains pkg.toml files, recursively
         fn toml_files_in_tree(hm: &HashMap<PathComponent, Element>) -> bool {
             for value in hm.values() {
                 match value {
@@ -179,6 +218,17 @@ impl FileSystemRepresentation {
         Ok(false)
     }
 
+    /// Get a Vec<(PathBuf, &String)> for the `path`
+    ///
+    /// The result of this function is the trail of pkg.toml files from `self.root` to `path`,
+    /// whereas the PathBuf is the actual path to the file and the `&String` is the content of the
+    /// individual file.
+    ///
+    /// Merging all Strings in the returned Vec as Config objects should produce a Package. to
+    /// `path`, whereas the PathBuf is the actual path to the file and the `&String` is the content
+    /// of the individual file.
+    ///
+    /// Merging all Strings in the returned Vec as Config objects should produce a Package.
     pub fn get_files_for<'a>(&'a self, path: &Path) -> Result<Vec<(PathBuf, &'a String)>> {
         let mut res = Vec::with_capacity(10); // good enough
 
@@ -209,21 +259,25 @@ impl FileSystemRepresentation {
     }
 }
 
+/// Helper to check whether a DirEntry points to a hidden file
 fn is_hidden(entry: &DirEntry) -> bool {
     log::trace!("Check {:?} is hidden", entry);
     entry.file_name().to_str().map(|s| s.starts_with(".")).unwrap_or(false)
 }
 
+/// Helper to check whether a DirEntry points to a directory
 fn is_dir(entry: &DirEntry) -> bool {
     log::trace!("Check {:?} is directory", entry);
     entry.file_type().is_dir()
 }
 
+/// Helper to check whether a DirEntry points to a pkg.toml file
 fn is_pkgtoml(entry: &DirEntry) -> bool {
     log::trace!("Check {:?} == 'pkg.toml'", entry);
     entry.file_name().to_str().map(|s| s == "pkg.toml").unwrap_or(false)
 }
 
+/// Helper fn to load a Path into memory as String
 fn load_file(path: &Path) -> Result<String> {
     log::trace!("Reading {}", path.display());
     std::fs::read_to_string(path)
