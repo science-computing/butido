@@ -8,9 +8,11 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-#![allow(clippy::module_inception)]
-mod repository;
-pub use repository::*;
+#![allow(unused)] // TODO: Remove allow(unused)
 
-mod fs;
+mod representation;
+pub use representation::FileSystemRepresentation;
+
+mod element;
+mod path;
 
