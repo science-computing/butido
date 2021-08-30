@@ -87,7 +87,7 @@ impl FileSystemRepresentation {
                         },
                         dir @ PathComponent::DirName(_) => {
                             curr_hm.entry(dir.clone())
-                                .or_insert(Element::Dir(HashMap::new()));
+                                .or_insert_with(|| Element::Dir(HashMap::new()));
 
                             curr_hm = curr_hm.get_mut(&dir)
                                 .unwrap() // safe, because we just inserted it
