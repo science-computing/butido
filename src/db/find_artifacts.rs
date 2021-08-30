@@ -12,7 +12,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Error;
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use diesel::BoolExpressionMethods;
@@ -144,79 +143,75 @@ impl<'a> FindArtifacts<'a> {
 
                 (arts, jobs)
             })
-            .load::<(dbmodels::Artifact, dbmodels::Job)>(&*self.database_connection)
-            .map_err(Error::from)
-            .and_then(|results: Vec<_>| {
-                results
+            .load::<(dbmodels::Artifact, dbmodels::Job)>(&*self.database_connection)?
+            .into_iter()
+            .inspect(|(art, job)| log::debug!("Filtering further: {:?}, job {:?}", art, job.id))
+            //
+            // Filter by environment variables
+            // All environment variables of the package must be present in the loaded
+            // package, so that we can be sure that the loaded package was built with
+            // the same ENV.
+            //
+            // TODO:
+            // Doing this in the database query would be way nicer, but I was not able
+            // to implement it.
+            //
+            .map(|tpl| -> Result<(_, _)> {
+                // This is a Iterator::filter() but because our condition here might fail, we
+                // map() and do the actual filtering later.
+
+                let job = tpl.1;
+                let job_env: Vec<(String, String)> = job
+                    .env(&*self.database_connection)?
                     .into_iter()
-                    .inspect(|(art, job)| log::debug!("Filtering further: {:?}, job {:?}", art, job.id))
-                    //
-                    // Filter by environment variables
-                    // All environment variables of the package must be present in the loaded
-                    // package, so that we can be sure that the loaded package was built with
-                    // the same ENV.
-                    //
-                    // TODO:
-                    // Doing this in the database query would be way nicer, but I was not able
-                    // to implement it.
-                    //
-                    .map(|tpl| -> Result<(_, _)> {
-                        // This is a Iterator::filter() but because our condition here might fail, we
-                        // map() and do the actual filtering later.
+                    .map(|var: dbmodels::EnvVar| (var.name, var.value))
+                    .collect();
 
-                        let job = tpl.1;
-                        let job_env: Vec<(String, String)> = job
-                            .env(&*self.database_connection)?
-                            .into_iter()
-                            .map(|var: dbmodels::EnvVar| (var.name, var.value))
-                            .collect();
-
-                        trace!("The job we found had env: {:?}", job_env);
-                        let envs_equal = environments_equal(&job_env, package_environment.as_ref(), self.env_filter);
-                        trace!("environments where equal = {}", envs_equal);
-                        Ok((tpl.0, envs_equal))
-                    })
-                    .filter(|r| match r { // the actual filtering from above
-                        Err(_)         => true,
-                        Ok((_, bl)) => *bl,
-                    })
-                    .and_then_ok(|(art, _)| {
-                        if let Some(release) = art.get_release(&*self.database_connection)? {
-                            Ok((art, Some(release.release_date)))
-                        } else {
-                            Ok((art, None))
-                        }
-                    })
-                    .and_then_ok(|(p, ndt)| ArtifactPath::new(PathBuf::from(p.path)).map(|a| (a, ndt)))
-                    .and_then_ok(|(artpath, ndt)| {
-                        if let Some(staging) = self.staging_store.as_ref() {
-                            trace!(
-                                "Searching in staging: {:?} for {:?}",
-                                staging.root_path(),
-                                artpath
-                            );
-                            if let Some(art) = staging.get(&artpath) {
-                                trace!("Found in staging: {:?}", art);
-                                return staging.root_path().join(art).map(|p| p.map(|p| (p, ndt)))
-                            }
-                        }
-
-                        // If we cannot find the artifact in the release store either, we return None.
-                        // This is the case if there indeed was a release, but it was removed from the
-                        // filesystem.
-                        for release_store in self.release_stores {
-                            if let Some(art) = release_store.get(&artpath) {
-                                trace!("Found in release: {:?}", art);
-                                return release_store.root_path().join(art).map(|p| p.map(|p| (p, ndt)))
-                            }
-                        }
-
-                        trace!("Found no release for artifact {:?} in any release store", artpath.display());
-                        Ok(None)
-                    })
-                    .filter_map_ok(|opt| opt)
-                    .collect::<Result<Vec<(FullArtifactPath<'a>, Option<NaiveDateTime>)>>>()
+                trace!("The job we found had env: {:?}", job_env);
+                let envs_equal = environments_equal(&job_env, package_environment.as_ref(), self.env_filter);
+                trace!("environments where equal = {}", envs_equal);
+                Ok((tpl.0, envs_equal))
             })
+            .filter(|r| match r { // the actual filtering from above
+                Err(_)         => true,
+                Ok((_, bl)) => *bl,
+            })
+            .and_then_ok(|(art, _)| {
+                if let Some(release) = art.get_release(&*self.database_connection)? {
+                    Ok((art, Some(release.release_date)))
+                } else {
+                    Ok((art, None))
+                }
+            })
+            .and_then_ok(|(p, ndt)| ArtifactPath::new(PathBuf::from(p.path)).map(|a| (a, ndt)))
+            .and_then_ok(|(artpath, ndt)| {
+                if let Some(staging) = self.staging_store.as_ref() {
+                    trace!(
+                        "Searching in staging: {:?} for {:?}",
+                        staging.root_path(),
+                        artpath
+                    );
+                    if let Some(art) = staging.get(&artpath) {
+                        trace!("Found in staging: {:?}", art);
+                        return staging.root_path().join(art).map(|p| p.map(|p| (p, ndt)))
+                    }
+                }
+
+                // If we cannot find the artifact in the release store either, we return None.
+                // This is the case if there indeed was a release, but it was removed from the
+                // filesystem.
+                for release_store in self.release_stores {
+                    if let Some(art) = release_store.get(&artpath) {
+                        trace!("Found in release: {:?}", art);
+                        return release_store.root_path().join(art).map(|p| p.map(|p| (p, ndt)))
+                    }
+                }
+
+                trace!("Found no release for artifact {:?} in any release store", artpath.display());
+                Ok(None)
+            })
+            .filter_map_ok(|opt| opt)
+            .collect::<Result<Vec<(FullArtifactPath<'a>, Option<NaiveDateTime>)>>>()
     }
 }
 
