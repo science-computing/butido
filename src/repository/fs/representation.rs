@@ -197,7 +197,7 @@ impl FileSystemRepresentation {
 /// Helper to check whether a DirEntry points to a hidden file
 fn is_hidden(entry: &DirEntry) -> bool {
     log::trace!("Check {:?} is hidden", entry);
-    entry.file_name().to_str().map(|s| s.starts_with(".")).unwrap_or(false)
+    entry.file_name().to_str().map(|s| s.starts_with('.')).unwrap_or(false)
 }
 
 /// Helper to check whether a DirEntry points to a directory
