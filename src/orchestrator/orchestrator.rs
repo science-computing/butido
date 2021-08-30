@@ -645,6 +645,7 @@ impl<'a> JobTask<'a> {
                 .config(self.config)
                 .package(self.jobdef.job.package())
                 .release_stores(&self.release_stores)
+                .image_name(Some(self.jobdef.job.image()))
 
                 // We can simply pass the staging store here, because it doesn't hurt. There are
                 // two scenarios:
