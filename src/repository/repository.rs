@@ -94,7 +94,7 @@ impl Repository {
                             .into_iter()
                             .map(|p| {
                                 if let Some(current_dir) = path.parent() {
-                                    fsr.root().join(current_dir).join(p)
+                                    current_dir.join(p)
                                 } else {
                                     unimplemented!()
                                 }
@@ -122,7 +122,7 @@ impl Repository {
 
                         // If we found any patches, use them. Otherwise use the array from before the merge
                         // (which already has the correct pathes from the previous recursion).
-                        let patches = if !patches.is_empty() && patches.iter().all(|p| p.exists()) {
+                        let patches = if !patches.is_empty() {
                             patches
                         } else {
                             patches_before_merge
