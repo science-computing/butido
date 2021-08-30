@@ -640,11 +640,11 @@ impl<'a> JobTask<'a> {
                 .chain(self.git_commit_env.cloned().into_iter())
                 .collect::<Vec<_>>();
 
-            let replacement_artifacts = crate::db::find_artifacts(
-                self.database.clone(),
-                self.config,
-                self.jobdef.job.package(),
-                &self.release_stores,
+            let replacement_artifacts = crate::db::FindArtifacts::builder()
+                .database_connection(self.database.clone())
+                .config(self.config)
+                .package(self.jobdef.job.package())
+                .release_stores(&self.release_stores)
 
                 // We can simply pass the staging store here, because it doesn't hurt. There are
                 // two scenarios:
@@ -659,10 +659,11 @@ impl<'a> JobTask<'a> {
                 // The fact that released artifacts are returned prefferably from this function
                 // call does not change anything, because if there is an artifact that's a released
                 // one that matches this job, we should use it anyways.
-                Some(&staging_store),
-                &additional_env,
-                true
-            )?;
+                .staging_store(Some(&staging_store))
+                .env_filter(&additional_env)
+                .script_filter(true)
+                .build()
+                .run()?;
 
             debug!("[{}]: Found {} replacement artifacts", self.jobdef.job.uuid(), replacement_artifacts.len());
             trace!("[{}]: Found replacement artifacts: {:?}", self.jobdef.job.uuid(), replacement_artifacts);
