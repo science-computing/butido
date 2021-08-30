@@ -17,6 +17,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use log::trace;
+use resiter::AndThen;
 use resiter::FilterMap;
 use resiter::Map;
 
@@ -92,19 +93,17 @@ impl Repository {
                         // get the patches that are in the `config` object after the merge
                         let patches = get_patches(&config)?
                             .into_iter()
-                            .map(|p| {
-                                if let Some(current_dir) = path.parent() {
-                                    fsr.root().join(current_dir).join(p)
-                                } else {
-                                    unimplemented!()
-                                }
+                            .map(|p| if let Some(current_dir) = path.parent() {
+                                Ok(current_dir.join(p))
+                            } else {
+                                Err(anyhow!("Path should point to path with parent, but doesn't: {}", path.display()))
                             })
                             .inspect(|patch| trace!("Patch: {:?}", patch))
 
                             // if the patch file exists, use it (as config::Value).
                             //
                             // Otherwise we have an error here, because we're refering to a non-existing file.
-                            .map(|patch| if patch.exists() {
+                            .and_then_ok(|patch| if patch.exists() {
                                 trace!("Path to patch exists: {}", patch.display());
                                 Ok(Some(patch))
                             } else if patches_before_merge.iter().any(|pb| pb.file_name() == patch.file_name()) {
@@ -122,7 +121,7 @@ impl Repository {
 
                         // If we found any patches, use them. Otherwise use the array from before the merge
                         // (which already has the correct pathes from the previous recursion).
-                        let patches = if !patches.is_empty() && patches.iter().all(|p| p.exists()) {
+                        let patches = if !patches.is_empty() {
                             patches
                         } else {
                             patches_before_merge
