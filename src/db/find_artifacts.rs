@@ -35,6 +35,7 @@ use crate::package::ScriptBuilder;
 use crate::package::Shebang;
 use crate::schema;
 use crate::util::EnvironmentVariableName;
+use crate::util::docker::ImageName;
 
 /// Find an artifact by a job description
 ///
@@ -68,6 +69,10 @@ pub struct FindArtifacts<'a> {
 
     /// Filter for these environment variables
     env_filter: &'a [(EnvironmentVariableName, String)],
+
+    /// Filter for image name
+    #[builder(default)]
+    image_name: Option<&'a ImageName>,
 
     /// Search for this package
     package: &'a Package,
@@ -131,6 +136,10 @@ impl<'a> FindArtifacts<'a> {
 
         if let Some(script_text) = script.as_ref() {
             query = query.filter(schema::jobs::script_text.eq(script_text.as_ref()));
+        }
+
+        if let Some(image_name) = self.image_name.as_ref() {
+            query = query.filter(schema::images::name.eq(image_name.as_ref()));
         }
 
         trace!("Query = {}", diesel::debug_query(&query));
