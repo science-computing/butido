@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.2.1
+
+Bugfix release. Fixes:
+
+* The logfile path is now constructed correctly
+    * c9ab871ca121efd783cb0c3d2afc001f64fdfda7
+
+* punctuation (.-) in package name is now allowed
+    * 3066146b852e6b98454cbd1b7b035a7fccb80d97
+
+* Indention from help text was removed
+    * 21e4b7d2f1c9ea603870b6c49d27d7177911bc60
+
+* HTTP redirects are followed (only 10 for now)
+    * 80792234d085a6ef990d1746f7a90b7ba8e408b7
+
+* If a dependency gets rebuild, the dependent package gets rebuild, too
+    * 216a265f6b87eb18da08fcb78aa8bd36ab1abd02
+
+* Package print format default was updated
+    * 2b42b5915f9ad974c8af76c524768e993925d632
+
+* trace output was fixed
+    * 027c1f23f5221c7463b12086e1a77887d282e398
+
+
 ## v0.2.0
 
 The v0.2.0 release of butido is considered incompatible with the v0.1.x
