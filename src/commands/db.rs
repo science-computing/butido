@@ -341,10 +341,17 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
     let query = schema::submits::table
         .order_by(schema::submits::id.desc()) // required for the --limit implementation
         .inner_join(schema::githashes::table.on(schema::submits::repo_hash_id.eq(schema::githashes::id)))
+        .inner_join(schema::images::table)
         .into_boxed();
 
     let query = if let Some(commithash) = commit.as_ref() {
         query.filter(schema::githashes::hash.eq(commithash))
+    } else {
+        query
+    };
+
+    let query = if let Some(image) = matches.value_of("image") {
+        query.filter(schema::images::name.eq(image))
     } else {
         query
     };
