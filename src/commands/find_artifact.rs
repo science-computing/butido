@@ -31,6 +31,7 @@ use crate::filestore::path::StoreRoot;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
 use crate::util::progress::ProgressBars;
+use crate::util::docker::ImageName;
 
 /// Implementation of the "find_artifact" subcommand
 pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progressbars: ProgressBars, repo: Repository, database_connection: PgConnection) -> Result<()> {
@@ -49,6 +50,10 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .map(|vals| vals.map(crate::util::env::parse_to_env).collect::<Result<Vec<_>>>())
         .transpose()?
         .unwrap_or_default();
+
+    let image_name = matches.value_of("image")
+        .map(String::from)
+        .map(ImageName::from);
 
     log::debug!("Finding artifacts for '{:?}' '{:?}'", package_name_regex, package_version_constraint);
 
@@ -102,7 +107,17 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .inspect(|pkg| trace!("Found package: {:?}", pkg))
         .map(|pkg| {
             let script_filter = !matches.is_present("no_script_filter");
-            let pathes = crate::db::find_artifacts(database.clone(), config, pkg, &release_stores, staging_store.as_ref(), &env_filter, script_filter)?;
+            let pathes = crate::db::FindArtifacts::builder()
+                .config(config)
+                .release_stores(&release_stores)
+                .staging_store(staging_store.as_ref())
+                .database_connection(database.clone())
+                .env_filter(&env_filter)
+                .script_filter(script_filter)
+                .image_name(image_name.as_ref())
+                .package(pkg)
+                .build()
+                .run()?;
 
             pathes.iter()
                 .map(|tpl| (tpl.0.joined(), tpl.1))

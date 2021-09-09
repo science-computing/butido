@@ -12,6 +12,6 @@ mod connection;
 pub use connection::*;
 
 mod find_artifacts;
-pub use find_artifacts::find_artifacts;
+pub use find_artifacts::FindArtifacts;
 
 pub mod models;
