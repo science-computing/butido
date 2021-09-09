@@ -334,7 +334,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
     let limit = matches.value_of("limit").map(i64::from_str).transpose()?;
-    let hdrs = crate::commands::util::mk_header(vec!["Time", "UUID"]);
+    let hdrs = crate::commands::util::mk_header(vec!["Time", "UUID", "For Package", "For Package Version"]);
     let conn = conn_cfg.establish_connection()?;
     let commit = matches.value_of("for-commit");
 
@@ -350,19 +350,36 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
     };
 
     let submits = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
+        // In the case of a with_pkg command, we must execute two queries on the database, as the
+        // diesel framework does not yet support aliases for queries (see
+        // https://github.com/diesel-rs/diesel/pull/2254).
+        // This is due to the fact that we need to join the packages table twice, once to filter
+        // out all submits that did not include the "with pkg" and once to join the requested
+        // package for the output.
+
         // Get all submits which included the package, but were not necessarily made _for_ the package
         let query = query
             .inner_join(schema::jobs::table)
             .inner_join(schema::packages::table.on(schema::jobs::package_id.eq(schema::packages::id)))
             .filter(schema::packages::name.eq(&pkgname));
 
-        if let Some(limit) = limit {
+        let query = if let Some(limit) = limit {
             query.limit(limit)
         } else {
             query
-        }
-        .select(schema::submits::all_columns)
-        .load::<models::Submit>(&conn)?
+        };
+
+        // Only load the IDs of the submits, so we can later use them to filter the submits
+        let submit_ids = query.select(schema::submits::id).load::<i32>(&conn)?;
+
+        schema::submits::table
+            .order_by(schema::submits::id.desc()) // required for the --limit implementation
+            .inner_join({
+                schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
+            })
+            .filter(schema::submits::id.eq_any(submit_ids))
+            .select((schema::submits::all_columns, schema::packages::all_columns))
+            .load::<(models::Submit, models::Package)>(&conn)?
     } else if let Some(pkgname) = matches.value_of("for_pkg") {
         // Get all submits _for_ the package
         let query = query
@@ -376,22 +393,31 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
         } else {
             query
         }
-        .select(schema::submits::all_columns)
-        .load::<models::Submit>(&conn)?
+        .select((schema::submits::all_columns, schema::packages::all_columns))
+        .load::<(models::Submit, models::Package)>(&conn)?
     } else if let Some(limit) = limit {
-        query.select(schema::submits::all_columns)
+        query
+            .inner_join({
+                schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
+            })
+            .select((schema::submits::all_columns, schema::packages::all_columns))
             .limit(limit)
-            .load::<models::Submit>(&conn)?
+            .load::<(models::Submit, models::Package)>(&conn)?
     } else {
-        query.select(schema::submits::all_columns)
-            .load::<models::Submit>(&conn)?
+        query.inner_join({
+                schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
+            })
+            .select((schema::submits::all_columns, schema::packages::all_columns))
+            .load::<(models::Submit, models::Package)>(&conn)?
     };
 
-    // Helper to map Submit -> Vec<String>
-    let submit_to_vec = |submit: models::Submit| {
+    // Helper to map (Submit, Package) -> Vec<String>
+    let submit_to_vec = |(submit, package): (models::Submit, models::Package)| {
         vec![
             submit.submit_time.to_string(),
             submit.uuid.to_string(),
+            package.name,
+            package.version,
         ]
     };
 
