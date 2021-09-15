@@ -246,6 +246,7 @@ impl Endpoint {
     pub fn utilization(&self) -> f64 {
         let max_jobs = self.num_max_jobs() as f64;
         let run_jobs = self.running_jobs() as f64;
+        trace!("utilization of {}: 100.0 / {} * {}", self.name(), max_jobs, run_jobs);
         100.0 / max_jobs * run_jobs
     }
 
