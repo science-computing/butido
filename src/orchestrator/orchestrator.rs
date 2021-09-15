@@ -43,6 +43,7 @@ use crate::filestore::StagingStore;
 use crate::job::Dag;
 use crate::job::JobDefinition;
 use crate::job::RunnableJob;
+use crate::orchestrator::util::*;
 use crate::source::SourceCache;
 use crate::util::EnvironmentVariableName;
 use crate::util::progress::ProgressBars;
@@ -591,14 +592,14 @@ impl<'a> JobTask<'a> {
             // receive from the receiver
             let continue_receiving = self.perform_receive(&mut received_dependencies, &mut received_errors).await?;
 
-            trace!("[{}]: Received errors = {:?}", self.jobdef.job.uuid(), received_errors);
+            trace!("[{}]: Received errors = {}", self.jobdef.job.uuid(), received_errors.display_error_map());
             // if there are any errors from child tasks
             if !received_errors.is_empty() {
                 // send them to the parent,...
                 //
                 // We only send to one parent, because it doesn't matter
                 // And we know that we have at least one sender
-                log::error!("[{}]: Received errors = {:?}", self.jobdef.job.uuid(), received_errors);
+                log::error!("[{}]: Received errors = {}", self.jobdef.job.uuid(), received_errors.display_error_map());
                 self.sender[0].send(Err(received_errors)).await;
 
                 // ... and stop operation, because the whole tree will fail anyways.
