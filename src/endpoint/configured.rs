@@ -420,14 +420,16 @@ pub struct EndpointHandle(Arc<Endpoint>);
 
 impl EndpointHandle {
     pub fn new(ep: Arc<Endpoint>) -> Self {
-        let _ = ep.running_jobs.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let res = ep.running_jobs.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        trace!("Endpoint {} has one job more: {}", ep.name(), res + 1);
         EndpointHandle(ep)
     }
 }
 
 impl Drop for EndpointHandle {
     fn drop(&mut self) {
-        let _ = self.0.running_jobs.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        let res = self.0.running_jobs.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        trace!("Endpoint {} has one job less: {}", self.0.name(), res - 1);
     }
 }
 
