@@ -83,7 +83,7 @@ impl Repository {
                 fsr.get_files_for(path)?
                     .iter()
                     .inspect(|(path, _)| trace!("Loading layer at {}", path.display()))
-                    .fold(Ok(Config::default()) as Result<_>, |config, (path, ref content)| {
+                    .fold(Ok(Config::default()) as Result<_>, |config, (path, content)| {
                         let mut config = config?;
                         let patches_before_merge = get_patches(&config)?;
 
