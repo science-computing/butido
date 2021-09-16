@@ -87,7 +87,7 @@ impl Repository {
                         let mut config = config?;
                         let patches_before_merge = get_patches(&config)?;
 
-                        config.merge(config::File::from_str(&content, config::FileFormat::Toml))
+                        config.merge(config::File::from_str(content, config::FileFormat::Toml))
                             .with_context(|| anyhow!("Loading contents of {}", path.display()))?;
 
                         // get the patches that are in the `config` object after the merge
