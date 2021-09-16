@@ -43,6 +43,7 @@ use crate::package::Dag;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::package::Shebang;
+use crate::package::condition::ConditionData;
 use crate::repository::Repository;
 use crate::schema;
 use crate::source::SourceCache;
@@ -226,7 +227,12 @@ pub async fn build(
 
     let dag = {
         let bar_tree_building = progressbars.bar();
-        let dag = Dag::for_root_package(package.clone(), &repo, Some(&bar_tree_building))?;
+        let condition_data = ConditionData {
+            image_name: Some(&image_name),
+            env: &additional_env,
+        };
+
+        let dag = Dag::for_root_package(package.clone(), &repo, Some(&bar_tree_building), &condition_data)?;
         bar_tree_building.finish_with_message("Finished loading Dag");
         dag
     };

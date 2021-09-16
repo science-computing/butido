@@ -20,7 +20,10 @@ use resiter::AndThen;
 use crate::package::Dag;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
+use crate::package::condition::ConditionData;
 use crate::repository::Repository;
+use crate::util::EnvironmentVariableName;
+use crate::util::docker::ImageName;
 
 /// Implementation of the "tree_of" subcommand
 pub async fn tree_of(
@@ -36,6 +39,22 @@ pub async fn tree_of(
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
+    let image_name = matches
+        .value_of("image")
+        .map(String::from)
+        .map(ImageName::from);
+
+    let additional_env = matches
+        .values_of("env")
+        .unwrap_or_default()
+        .map(crate::util::env::parse_to_env)
+        .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
+
+    let condition_data = ConditionData {
+        image_name: image_name.as_ref(),
+        env: &additional_env,
+    };
+
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| {
@@ -44,7 +63,7 @@ pub async fn tree_of(
                 .map(|v| v.matches(p.version()))
                 .unwrap_or(true)
         })
-        .map(|package| Dag::for_root_package(package.clone(), &repo, None))
+        .map(|package| Dag::for_root_package(package.clone(), &repo, None, &condition_data))
         .and_then_ok(|tree| {
             let stdout = std::io::stdout();
             let mut outlock = stdout.lock();

@@ -11,9 +11,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use anyhow::Result;
 use getset::Getters;
-use itertools::Itertools;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -21,7 +19,6 @@ use crate::package::dependency::*;
 use crate::package::name::*;
 use crate::package::source::*;
 use crate::package::version::*;
-use crate::package::ParseDependency;
 use crate::package::{Phase, PhaseName};
 use crate::util::docker::ImageName;
 use crate::util::EnvironmentVariableName;
@@ -105,28 +102,6 @@ impl Package {
     #[cfg(test)]
     pub fn set_dependencies(&mut self, dependencies: Dependencies) {
         self.dependencies = dependencies;
-    }
-
-    pub fn get_self_packaged_dependencies(
-        &self,
-    ) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + '_ {
-        let build_iter = self
-            .dependencies()
-            .build()
-            .iter()
-            .cloned()
-            .map(|d| d.parse_as_name_and_version());
-
-        let runtime_iter = self
-            .dependencies()
-            .runtime()
-            .iter()
-            .cloned()
-            .map(|d| d.parse_as_name_and_version());
-
-        build_iter
-            .chain(runtime_iter)
-            .unique_by(|res| res.as_ref().ok().cloned())
     }
 
     /// Get a wrapper object around self which implements a debug interface with all details about

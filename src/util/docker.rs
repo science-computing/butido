@@ -32,6 +32,13 @@ impl From<String> for ImageName {
     }
 }
 
+#[cfg(test)]
+impl From<&str> for ImageName {
+    fn from(s: &str) -> Self {
+        ImageName(String::from(s))
+    }
+}
+
 impl AsRef<str> for ImageName {
     fn as_ref(&self) -> &str {
         self.0.as_ref()

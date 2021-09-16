@@ -1061,6 +1061,35 @@ pub fn cli<'a>() -> App<'a> {
                 .value_name("VERSION_CONSTRAINT")
                 .about("A version constraint to search for (optional), E.G. '=1.0.0'")
             )
+            .arg(Arg::new("image")
+                .required(false)
+                .multiple(false)
+                .takes_value(true)
+                .value_name("IMAGE NAME")
+                .short('I')
+                .long("image")
+                .about("Name of the docker image to use")
+                .long_about(indoc::indoc!(r#"
+                    Name of the docker image to use.
+
+                    Required because tree might look different on different images because of
+                    conditions on dependencies.
+                "#))
+            )
+            .arg(Arg::new("env")
+                .required(false)
+                .multiple(true)
+                .short('E')
+                .long("env")
+                .validator(env_pass_validator)
+                .about("Additional env to be passed when building packages")
+                .long_about(indoc::indoc!(r#"
+                    Additional env to be passed when building packages.
+
+                    Required because tree might look different on different images because of
+                    conditions on dependencies.
+                "#))
+            )
         )
 
         .subcommand(App::new("metrics")
