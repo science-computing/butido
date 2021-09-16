@@ -156,6 +156,7 @@ pub enum OneOrMore<T: Sized> {
     More(Vec<T>),
 }
 
+#[allow(clippy::from_over_into)]
 impl<T: Sized> Into<Vec<T>> for OneOrMore<T> {
     fn into(self) -> Vec<T> {
         match self {
