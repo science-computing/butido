@@ -243,7 +243,7 @@ async fn main() -> Result<()> {
         Some(("metrics", _)) => {
             let repo = load_repo()?;
             let conn = db_connection_config.establish_connection()?;
-            crate::commands::metrics(&repo_path, &config, repo, conn)
+            crate::commands::metrics(repo_path, &config, repo, conn)
                 .await
                 .context("metrics command failed")?
         }
