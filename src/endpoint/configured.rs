@@ -246,6 +246,7 @@ impl Endpoint {
     pub fn utilization(&self) -> f64 {
         let max_jobs = self.num_max_jobs() as f64;
         let run_jobs = self.running_jobs() as f64;
+        trace!("utilization of {}: 100.0 / {} * {}", self.name(), max_jobs, run_jobs);
         100.0 / max_jobs * run_jobs
     }
 
@@ -277,6 +278,24 @@ impl Endpoint {
                     .into_iter()
                     .map(ContainerStat::from)
                     .collect()
+            })
+    }
+
+    pub async fn number_of_running_containers(&self) -> Result<usize> {
+        self.docker
+            .containers()
+            .list({
+                &shiplift::builder::ContainerListOptions::builder()
+                .all()
+                .build()
+            })
+            .await
+            .map_err(Error::from)
+            .map(|list| {
+                list.into_iter()
+                    .inspect(|stat| trace!("stat = {:?}", stat))
+                    .filter(|stat| stat.state == "running")
+                    .count()
             })
     }
 
@@ -401,14 +420,16 @@ pub struct EndpointHandle(Arc<Endpoint>);
 
 impl EndpointHandle {
     pub fn new(ep: Arc<Endpoint>) -> Self {
-        let _ = ep.running_jobs.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let res = ep.running_jobs.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        trace!("Endpoint {} has one job more: {}", ep.name(), res + 1);
         EndpointHandle(ep)
     }
 }
 
 impl Drop for EndpointHandle {
     fn drop(&mut self) {
-        let _ = self.0.running_jobs.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        let res = self.0.running_jobs.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        trace!("Endpoint {} has one job less: {}", self.0.name(), res - 1);
     }
 }
 
