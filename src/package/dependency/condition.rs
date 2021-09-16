@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -27,7 +27,7 @@ use crate::util::docker::ImageName;
 /// build image is used.
 /// All these settings are optional, of course.
 ///
-#[derive(Serialize, Deserialize, Getters, Clone, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Getters, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Condition {
     #[serde(rename = "has_env", skip_serializing_if = "Option::is_none")]
     #[getset(get = "pub")]
@@ -35,7 +35,7 @@ pub struct Condition {
 
     #[serde(rename = "env_eq", skip_serializing_if = "Option::is_none")]
     #[getset(get = "pub")]
-    pub(super) env_eq: Option<HashMap<EnvironmentVariableName, String>>,
+    pub(super) env_eq: Option<BTreeMap<EnvironmentVariableName, String>>,
 
     #[serde(rename = "in_image", skip_serializing_if = "Option::is_none")]
     #[getset(get = "pub")]
@@ -45,7 +45,7 @@ pub struct Condition {
 impl Condition {
     #[cfg(test)]
     pub fn new(has_env: Option<OneOrMore<EnvironmentVariableName>>,
-               env_eq: Option<HashMap<EnvironmentVariableName, String>>,
+               env_eq: Option<BTreeMap<EnvironmentVariableName, String>>,
                in_image: Option<OneOrMore<String>>)
         -> Self
     {
@@ -143,67 +143,6 @@ impl Condition {
         } else {
             Ok(true)
         }
-    }
-}
-
-/// Manual implementation of PartialOrd for Condition
-///
-/// Because HashMap does not implement PartialOrd
-impl PartialOrd for Condition {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        use std::cmp::Ordering as O;
-
-        let cmp_has_env = match (self.has_env.as_ref(), other.has_env.as_ref()) {
-            (Some(a), Some(b)) => a.partial_cmp(b),
-            (Some(_), None)    => Some(O::Greater),
-            (None, Some(_))    => Some(O::Less),
-            (None, None)       => Some(O::Equal),
-        };
-
-        if cmp_has_env.as_ref().map(|o| *o != O::Equal).unwrap_or(false) {
-            return cmp_has_env
-        }
-
-        let cmp_env_eq = match (self.env_eq.as_ref(), other.env_eq.as_ref()) {
-            // TODO: Is this safe? We ignore the HashMaps here and just say they are equal. They are most certainly not.
-            (Some(_), Some(_)) => Some(O::Equal),
-            (Some(_), None)    => Some(O::Greater),
-            (None, Some(_))    => Some(O::Less),
-            (None, None)       => Some(O::Equal),
-        };
-
-        if cmp_env_eq.as_ref().map(|o| *o != O::Equal).unwrap_or(false) {
-            return cmp_env_eq
-        }
-
-        match (self.in_image.as_ref(), other.in_image.as_ref()) {
-            (Some(a), Some(b)) => a.partial_cmp(b),
-            (Some(_), None)    => Some(O::Greater),
-            (None, Some(_))    => Some(O::Less),
-            (None, None)       => Some(O::Equal),
-        }
-    }
-}
-
-/// Manual implementation of Ord for Condition
-///
-/// Because HashMap does not implement Ord
-impl Ord for Condition {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.partial_cmp(other).unwrap_or(std::cmp::Ordering::Equal)
-    }
-}
-
-/// Manual implementation of Hash for Condition
-///
-/// Because HashMap does not implement Hash
-impl std::hash::Hash for Condition {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.has_env.hash(state);
-        if let Some(hm) = self.env_eq.as_ref() {
-            hm.iter().for_each(|(k, v)| (k, v).hash(state));
-        };
-        self.in_image.hash(state);
     }
 }
 
@@ -318,7 +257,7 @@ mod tests {
 
         assert!(c.has_env.is_none());
         assert_eq!(c.env_eq.unwrap(), {
-            let mut hm = HashMap::new();
+            let mut hm = BTreeMap::new();
             hm.insert(EnvironmentVariableName::from("foo"), String::from("bar"));
             hm
         });
@@ -437,7 +376,7 @@ mod tests {
         };
 
         let condition = Condition::new(None, {
-            let mut hm = HashMap::new();
+            let mut hm = BTreeMap::new();
             hm.insert(EnvironmentVariableName::from("A"), String::from("1"));
             Some(hm)
         }, None);
@@ -453,7 +392,7 @@ mod tests {
         };
 
         let condition = Condition::new(None, {
-            let mut hm = HashMap::new();
+            let mut hm = BTreeMap::new();
             hm.insert(EnvironmentVariableName::from("A"), String::from("2"));
             Some(hm)
         }, None);
@@ -469,7 +408,7 @@ mod tests {
         };
 
         let condition = Condition::new(None, {
-            let mut hm = HashMap::new();
+            let mut hm = BTreeMap::new();
             hm.insert(EnvironmentVariableName::from("A"), String::from("1"));
             Some(hm)
         }, None);
