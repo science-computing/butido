@@ -166,6 +166,13 @@ async fn new_release(
                     }
                 }
 
+                if dest_path.exists() {
+                    debug!("Removing {} before writing new file to this path", dest_path.display());
+                    tokio::fs::remove_file(&dest_path)
+                        .await
+                        .with_context(|| anyhow!("Removing {} before writing new file to this path", dest_path.display()))?;
+                }
+
                 // else !dest_path.exists()
                 tokio::fs::copy(&art_path, &dest_path)
                     .await
