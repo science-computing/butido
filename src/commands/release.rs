@@ -14,6 +14,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
@@ -166,8 +167,9 @@ async fn new_release(
                 }
 
                 // else !dest_path.exists()
-                tokio::fs::copy(art_path, &dest_path)
+                tokio::fs::copy(&art_path, &dest_path)
                     .await
+                    .with_context(|| anyhow!("Copying {} to {}", art_path.display(), dest_path.display()))
                     .map_err(Error::from)
                     .map(|_| (art, dest_path))
             }
