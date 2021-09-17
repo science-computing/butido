@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use diesel::prelude::*;
@@ -43,5 +44,13 @@ impl GitHash {
                 .first::<GitHash>(database_connection)
                 .map_err(Error::from)
         })
+    }
+
+    pub fn with_id(database_connection: &PgConnection, git_hash_id: i32) -> Result<GitHash> {
+        dsl::githashes
+            .find(git_hash_id)
+            .first::<_>(database_connection)
+            .context("Loading GitHash")
+            .map_err(Error::from)
     }
 }

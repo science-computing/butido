@@ -258,6 +258,9 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
     let submit = models::Submit::with_id(&conn, &submit_id)
         .with_context(|| anyhow!("Loading submit '{}' from DB", submit_id))?;
 
+    let githash = models::GitHash::with_id(&conn, submit.repo_hash_id)
+        .with_context(|| anyhow!("Loading GitHash '{}' from DB", submit.repo_hash_id))?;
+
     let jobs = schema::submits::table
         .inner_join(schema::jobs::table)
         .filter(schema::submits::uuid.eq(&submit_id))
@@ -288,6 +291,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
     indoc::writedoc!(outlock, r#"
             Submit   {submit_id}
             Date:    {submit_dt}
+            Commit:  {submit_commit}
             Jobs:    {n_jobs}
             Success: {n_jobs_success}
             Unknown: {n_jobs_unknown}
@@ -296,6 +300,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
         "#,
         submit_id = submit.uuid.to_string().cyan(),
         submit_dt = submit.submit_time.to_string().cyan(),
+        submit_commit = githash.hash.cyan(),
         n_jobs = n_jobs.to_string().cyan(),
         n_jobs_success = jobs_success.to_string().green(),
         n_jobs_unknown = jobs_unknown.to_string().red(),
