@@ -5,11 +5,8 @@ This file describes how you can contribute to butido.
 
 ## Reporting issues / Questions
 
-If you have a question regarding butido, feel free to send an email to
-one of the following addresses
-
-* "matthias.beyer@atos.net"
-* or publicly to [the mailinglist]("~matthiasbeyer/butido@lists.sr.ht")
+If you have a question regarding butido, feel free to open an issue or write an
+email to the authors.
 
 
 ## Submitting patches
@@ -57,28 +54,3 @@ By that you agree to the
 >     this project or the open source license(s) involved.
 
 
-You can submit patches using [git send-email](https://git-send-email.io/)
-and send email to the above email addresses.
-
-For the lazy:
-
-```
-git format-patch \
-    --subject-prefix=butido \
-    --to="~matthiasbeyer/butido@lists.sr.ht" \
-    --cc="matthias.beyer@atos.net" \
-    --cover-letter \
-    --numbered \
-    --signoff \
-    master..HEAD
-
-# Edit the cover letter
-$EDITOR ./0000-cover-letter.patch
-
-# And send the patchset
-git send-email \
-    --no-chain-reply-to \
-    --to="~matthiasbeyer/butido@lists.sr.ht" \
-    --cc="matthias.beyer@atos.net" \
-    ./0*patch
-```
