@@ -68,11 +68,9 @@ impl SourceEntry {
     }
 
     pub fn path(&self) -> PathBuf {
-        self.source_file_directory().join(format!(
-            "{}-{}.source",
-            self.package_source_name,
-            self.package_source.hash().value()
-        ))
+        self.source_file_directory().join({
+            (self.package_source_name.as_ref() as &std::path::Path).with_extension("source")
+        })
     }
 
     pub fn url(&self) -> &Url {
