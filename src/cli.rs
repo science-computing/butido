@@ -865,7 +865,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .index(1)
                     .value_name("PKG")
-                    .about("Download the sources of this package (optional, if left out, all packages are downloaded)")
+                    .about("Download the sources of this package")
                 )
                 .arg(Arg::new("package_version")
                     .required(false)
