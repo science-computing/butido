@@ -19,8 +19,9 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use diesel::prelude::*;
-use log::{debug, info, trace};
+use log::{debug, error, info, trace};
 use tokio_stream::StreamExt;
+use resiter::AndThen;
 
 use crate::config::Configuration;
 use crate::db::models as dbmodels;
@@ -140,8 +141,9 @@ async fn new_release(
     let interactive = !matches.is_present("noninteractive");
 
     let now = chrono::offset::Local::now().naive_local();
-    let (_oks, errors): (Vec<_>, Vec<_>) = arts.into_iter()
-        .map(|art| async move {
+    let any_err = arts.into_iter()
+        .map(|art| async {
+            let art = art; // ensure it is moved
             let art_path = staging_base.join(&art.path);
             let dest_path = config.releases_directory().join(release_store_name).join(&art.path);
             debug!(
@@ -174,16 +176,16 @@ async fn new_release(
                 }
 
                 // else !dest_path.exists()
-                let dest_path = tokio::fs::copy(&art_path, &dest_path)
+                tokio::fs::copy(&art_path, &dest_path)
                     .await
                     .with_context(|| anyhow!("Copying {} to {}", art_path.display(), dest_path.display()))
                     .map_err(Error::from)
-                    .map(|_| dest_path);
-
-                debug!("Updating {:?} to set released = true", art);
-                let rel = crate::db::models::Release::create(&conn, &art, &now, &release_store)?;
-                debug!("Release object = {:?}", rel);
-                Ok(dest_path)
+                    .and_then(|_| {
+                        debug!("Updating {:?} to set released = true", art);
+                        let rel = crate::db::models::Release::create(&conn, &art, &now, &release_store)?;
+                        debug!("Release object = {:?}", rel);
+                        Ok(dest_path)
+                    })
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
@@ -197,13 +199,10 @@ async fn new_release(
                 Ok(())
             }
         })
-        .partition(Result::is_ok);
-
-    let mut any_err = false;
-    for error in errors {
-        any_err = true;
-        error!("Error: {}", error);
-    }
+        .filter_map(Result::err)
+        .inspect(|err| error!("Error: {}", err.to_string()))
+        .last()
+        .is_some(); // consume iterator completely, if not empty, there was an error
 
     if any_err {
         Err(anyhow!("Releasing one or more artifacts failed"))
