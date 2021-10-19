@@ -9,7 +9,6 @@
 //
 
 use daggy::Dag as DaggyDag;
-use daggy::NodeIndex;
 use daggy::Walker;
 use getset::Getters;
 use uuid::Uuid;
@@ -25,9 +24,6 @@ use crate::util::docker::ImageName;
 pub struct Dag {
     #[getset(get = "pub")]
     dag: DaggyDag<Job, i8>,
-
-    #[getset(get = "pub")]
-    root_idx: NodeIndex,
 }
 
 impl Dag {
@@ -50,7 +46,6 @@ impl Dag {
 
         Dag {
             dag: dag.dag().map(build_job, |_, e| *e),
-            root_idx: *dag.root_idx(),
         }
     }
 
