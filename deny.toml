@@ -61,3 +61,18 @@ skip = [
 skip-tree = [
 ]
 
+
+[advisories]
+ignore = [
+    # "Potential segfault in the time crate"
+    #
+    # Patches available, but as "time-rs" is not a direct dependency, we cannot
+    # do anything here
+    "RUSTSEC-2020-0071",
+
+    # "Potential segfault in `localtime_r` invocations"
+    #
+    # No patches available yet
+    "RUSTSEC-2020-0159",
+]
+
