@@ -19,8 +19,9 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use diesel::prelude::*;
-use log::{debug, info, trace};
+use log::{debug, error, info, trace};
 use tokio_stream::StreamExt;
+use resiter::AndThen;
 
 use crate::config::Configuration;
 use crate::db::models as dbmodels;
@@ -140,8 +141,9 @@ async fn new_release(
     let interactive = !matches.is_present("noninteractive");
 
     let now = chrono::offset::Local::now().naive_local();
-    arts.into_iter()
-        .map(|art| async move {
+    let any_err = arts.into_iter()
+        .map(|art| async {
+            let art = art; // ensure it is moved
             let art_path = staging_base.join(&art.path);
             let dest_path = config.releases_directory().join(release_store_name).join(&art.path);
             debug!(
@@ -178,24 +180,35 @@ async fn new_release(
                     .await
                     .with_context(|| anyhow!("Copying {} to {}", art_path.display(), dest_path.display()))
                     .map_err(Error::from)
-                    .map(|_| (art, dest_path))
+                    .and_then(|_| {
+                        debug!("Updating {:?} to set released = true", art);
+                        let rel = crate::db::models::Release::create(&conn, &art, &now, &release_store)?;
+                        debug!("Release object = {:?}", rel);
+                        Ok(dest_path)
+                    })
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Result<Vec<_>>>()
-        .await?
+        .collect::<Vec<Result<_>>>()
+        .await
         .into_iter()
-        .try_for_each(|(art, dest_path)| {
-            debug!("Updating {:?} to set released = true", art);
-            let rel = crate::db::models::Release::create(&conn, &art, &now, &release_store)?;
-            debug!("Release object = {:?}", rel);
-
+        .and_then_ok(|dest_path| {
             if print_released_file_pathes {
                 writeln!(std::io::stdout(), "{}", dest_path.display()).map_err(Error::from)
             } else {
                 Ok(())
             }
         })
+        .filter_map(Result::err)
+        .inspect(|err| error!("Error: {}", err.to_string()))
+        .last()
+        .is_some(); // consume iterator completely, if not empty, there was an error
+
+    if any_err {
+        Err(anyhow!("Releasing one or more artifacts failed"))
+    } else {
+        Ok(())
+    }
 }
 
 pub async fn rm_release(
