@@ -1,5 +1,131 @@
 # Changelog
 
+## v0.3.0
+
+The v0.3.0 release of butido is considered incompatible with the v0.2.x
+releases. The v0.2.x branch is now unmaintained and no further bugfixes for
+butido v0.2.0 will be released.
+
+There are a lot of changes over the complete source tree. A lot of things
+changed and were improved. For details, have a look at the individual commits.
+
+The v0.3.0 release contains all fixes from the v0.2.x bugfix releases.
+
+
+### Crate maintenance and Community
+
+* From now on (starting with the 0.3.0 release), the crate is in
+  "passively-maintained" mode.
+    * 9c3cb04e93dff404143b9c731b62d3a2a2e1092d
+
+* The github repository got templates for issues and PRs as well as a COC. The
+  notes on submitting patches via mail were removed
+    * 56a22ff903df0d881bce88bf68cdb4de8bab06c1
+
+* Github actions were enabled
+    * 67918eea3594a2c100465820e59d2341c18aa2f3
+
+
+### Major/Breaking changes
+
+* The filename of the downloaded source does no longer contain the hash of the
+  file
+    * a7d5de071e0d7bc0adc8303caf592c344cb6939a
+
+* Optional dependencies are now supported
+    * 555734ea066d11d0b3efb96bff84563847f0757d
+
+
+### General improvements
+
+* The scheduling was altered to schedule new jobs to endpoints with fewer
+  running containers
+    * 63566cccba0c2c42af2e38d7ec0a922a60cf128d
+
+* The "find-artifact" subcommand implementation was rewritten
+    * 7fa55210e54e49e419d9e0bcff3ca7f144aac597
+
+* The repository loading algorithm was rewritten for speed
+    * ce01861e6ef3b652eeafbef5b87c293b3a971d89
+
+
+### New CLI features
+
+* The "db submits" command now lists the commit a submit was started from
+    * 812fe038c3fccf9d3b14d399dc6287828b60837b
+
+* The "db submits" command now outputs information about package and version
+    * 9f021c020ada7403bec2a0dbff0f1b052b916b70
+
+* An option was added to get all submits submitted for a specific image
+    * 800ec41fadf58762ec30d864622806087cadc09c
+
+* An option was added to get the submits for a specific commit
+    * 9138cbd334115c2e649355bfef497b08c055948b
+
+* An option was added to verify multiple packages at once
+    * 7b32e20b96758f9e65cf78443520890214fdc2cb
+
+* An option was added to download multiple packages at once
+    * 7b32e20b96758f9e65cf78443520890214fdc2cb
+
+* A subcommand for getting the images on each endpoint was added
+    * 69d2334a5121edbbaa7356428e2d6e8fbd5d3443
+
+
+### Fixes and other noteworthy changes
+
+* The log output path was fixed
+    * 3922865ad3950564e96ca2e4be974564fd798aef
+
+* Fix a punctuation parsing bug in the dependency string parsing algorithm
+    * 76e6562ead14963c77117f750305db5a74cf3958
+
+* If a download URL redirects, it is followed (max 10 hops) now
+    * fdd75f7ae660441db47733bac200cea4a99ba4fe
+
+* The printing of packages was got a speedup
+    * 76375ea75f7e782eaa326f63cae079847e1d5efb
+
+* The loading-bar for DAG building is now removed from the tree-of subcommand
+    * 45cda0f70ab0f1d717c3dc2b481ad84a4ff0f00f
+
+* Rewrite of the default package print format
+    * a1e759348fe9184ec6f234a91d1d6d80468cdcfa
+
+* Fix a bug where butido did not rebuild a package if one of its dependencies
+  was rebuild
+    * 507aeeb8899a714fe794814615b61eeef91c7ed2
+
+* The "release" subcommand should report errors late now, not as soon as
+  they occur
+    * 5b99282ba23e1002a576934a371c8b9fe7755963
+
+* Fix CLI about text for "source download" subcommand
+    * 764d693d542bf2dd2c1ae9667c2e2fedfdc13e46
+
+* Remove a release artifact before overwriting it
+    * 72c20619999beb623f762a294c252d81c8f54081
+
+* Fix: do not require --commit flag in submits subcommand
+    * e8249b10d2b41d9400d7e63fa69876d1afffc34d
+
+* Clearify progress-bar error message
+    * 9b0c6cb3253798d3eb6aa12ffddb66eda0bcb847
+
+* Add builder options in error message
+    * 544b4348c4073e63635e08a1758f947d0c8099f6
+
+* Fix: Remove indention from after_help() text
+    * d51fad98de71f90ac62883346d0f707fef89ab89
+
+* Make sure error is printed outside of progress bars
+    * 97356294acbe01a8b17486dff42ecc76726edf0a
+
+Misc changes and fixes are not added here, as there were too many for listing
+them all in the changelog.
+
+
 ## v0.2.1
 
 Bugfix release. Fixes:
@@ -239,4 +365,3 @@ Bugfix release. Fixes:
 ## v0.1.0
 
 * MVP release
-
