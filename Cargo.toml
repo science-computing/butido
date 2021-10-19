@@ -51,7 +51,7 @@ lazy_static    = "1.4"
 log            = "0.4"
 parse-display  = "0.5"
 pom            = "3"
-ptree          = { git = "https://github.com/matthiasbeyer/ptree", branch = "maint" }
+ptree          = "0.3"
 rayon          = "1.5"
 regex          = "1"
 reqwest        = { version = "0.11", features = [ "stream" ] }
