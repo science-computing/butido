@@ -213,7 +213,7 @@ impl JobHandle {
         let (run_container, logres) = tokio::join!(running_container, logres);
         let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", endpoint_name))?;
         let run_container = run_container
-            .with_context(|| anyhow!("Running container {} failed"))
+            .with_context(|| anyhow!("Running container {} failed", container_id))
             .with_context(|| {
                 Self::create_job_run_error(
                     &job_id,
