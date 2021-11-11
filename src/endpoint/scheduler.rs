@@ -310,7 +310,9 @@ impl JobHandle {
 
             {docker_connect_string}
 
-        to debug.
+        or, to use butido to show the log of the job, run:
+
+            butido db log-of {job_id} | less -SR +G
         "#,
             job_id = job_id.to_string().red(),
             package_name = package_name.to_string().red(),
