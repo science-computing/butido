@@ -524,7 +524,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
             Ok(vec![
                 submit.uuid.to_string(),
                 job.uuid.to_string(),
-                submit.submit_time.to_string(),
+                submit.submit_time.format("%Y-%m-%d %H:%M:%S").to_string(),
                 ep.name,
                 success,
                 package.name,
