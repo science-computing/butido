@@ -298,15 +298,11 @@ impl JobHandle {
     /// Helper to create an error object with a nice message.
     fn create_job_run_error(job_id: &Uuid, package_name: &str, package_version: &str, endpoint_uri: &str, container_id: &str) -> Error {
         anyhow!(indoc::formatdoc!(
-            r#"Error while running job
+            r#"Error while running job for {package_name} {package_version} with id:
 
             {job_id}
 
-        for package
-
-            {package_name} {package_version}
-
-        Connect to docker using
+        To debug, connect to docker using:
 
             {docker_connect_string}
 
