@@ -13,6 +13,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 use std::convert::TryFrom;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -223,7 +224,7 @@ pub async fn download(
     repo: Repository,
     progressbars: ProgressBars,
 ) -> Result<()> {
-    async fn perform_download(source: &SourceEntry, bar: &indicatif::ProgressBar) -> Result<()> {
+    async fn perform_download(source: &SourceEntry, bar: &indicatif::ProgressBar, timeout: Option<u64>) -> Result<()> {
         trace!("Creating: {:?}", source);
         let file = source.create().await.with_context(|| {
             anyhow!(
@@ -233,10 +234,16 @@ pub async fn download(
         })?;
 
         let mut file = tokio::io::BufWriter::new(file);
-        let client = reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::limited(10))
-            .build()
-            .context("Building HTTP client failed")?;
+        let client_builder = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::limited(10));
+
+        let client_builder = if let Some(to) = timeout {
+            client_builder.timeout(std::time::Duration::from_secs(to))
+        } else {
+            client_builder
+        };
+
+        let client = client_builder.build().context("Building HTTP client failed")?;
 
         let request = client.get(source.url().as_ref())
             .build()
@@ -276,6 +283,10 @@ pub async fn download(
     }
 
     let force = matches.is_present("force");
+    let timeout = matches.value_of("timeout")
+        .map(u64::from_str)
+        .transpose()
+        .context("Parsing timeout argument to integer")?;
     let cache = PathBuf::from(config.source_cache_root());
     let sc = SourceCache::new(cache);
     let pname = matches
@@ -338,7 +349,7 @@ pub async fn download(
                         }
 
 
-                        if let Err(e) = perform_download(&source, &bar).await {
+                        if let Err(e) = perform_download(&source, &bar, timeout).await {
                             bar.finish_with_message(format!("Failed: {}", source.url()));
                             Err(e)
                         } else {
