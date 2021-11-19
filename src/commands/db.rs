@@ -85,10 +85,10 @@ fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Re
                 .map_err(Error::from)
                 .and_then(|out| {
                     if out.status.success() {
-                        info!("pgcli exited successfully");
+                        info!("psql exited successfully");
                         Ok(())
                     } else {
-                        Err(anyhow!("gpcli did not exit successfully"))
+                        Err(anyhow!("psql did not exit successfully"))
                             .with_context(|| match String::from_utf8(out.stderr) {
                                 Ok(log) => anyhow!("{}", log),
                                 Err(e) => anyhow!("Cannot parse log into valid UTF-8: {}", e),
@@ -120,7 +120,7 @@ fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Re
                         info!("pgcli exited successfully");
                         Ok(())
                     } else {
-                        Err(anyhow!("gpcli did not exit successfully"))
+                        Err(anyhow!("pgcli did not exit successfully"))
                             .with_context(|| match String::from_utf8(out.stderr) {
                                 Ok(log) => anyhow!("{}", log),
                                 Err(e) => anyhow!("Cannot parse log into valid UTF-8: {}", e),
