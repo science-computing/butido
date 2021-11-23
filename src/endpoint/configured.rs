@@ -522,6 +522,13 @@ impl<'a> PreparedContainer<'a> {
 
         let builder_opts = {
             let mut builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref());
+            let container_name = format!("butido-{package}-{version}-{id}",
+                package = job.package().name().as_ref(),
+                version = job.package().version().as_ref(),
+                id = job.uuid()
+            );
+            trace!("container name = {}", container_name);
+            builder_opts.name(&container_name);
             builder_opts.env(envs.iter().map(AsRef::as_ref).collect::<Vec<&str>>());
             builder_opts.cmd(vec!["/bin/bash"]); // we start the container with /bin/bash, but exec() the script in it later
             builder_opts.attach_stdin(true); // we have to attach, otherwise bash exits
