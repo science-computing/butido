@@ -218,18 +218,13 @@ pub async fn download(
                     if source_path_exists && !force {
                         Err(anyhow!("Source exists: {}", source.path().display()))
                     } else {
-                        progressbar.lock()
-                            .await
-                            .inc_download_count()
-                            .await;
-
                         if source_path_exists /* && force is implied by 'if' above*/ {
                             if let Err(e) = source.remove_file().await {
-                                progressbar.lock().await.finish_one_download().await;
                                 return Err(e)
                             }
                         }
 
+                        progressbar.lock().await.inc_download_count().await;
                         perform_download(&source, progressbar.clone(), timeout).await?;
                         progressbar.lock().await.finish_one_download().await;
                         Ok(())
