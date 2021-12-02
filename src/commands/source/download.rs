@@ -147,7 +147,6 @@ async fn perform_download(source: &SourceEntry, progress: Arc<Mutex<ProgressWrap
             .await
     }
 
-    progress.lock().await.finish_one_download().await;
     file.flush()
         .await
         .map_err(Error::from)
