@@ -84,7 +84,7 @@ impl ProgressWrapper {
 
     async fn set_message(&self) {
         let bar = self.bar.lock().await;
-        bar.set_message(format!("Downloading ({current_bytes}/{sum_bytes} bytes, {dlfinished}/{dlsum} downloads finished",
+        bar.set_message(format!("Downloading ({current_bytes}/{sum_bytes} bytes, {dlfinished}/{dlsum} downloads finished)",
                 current_bytes = self.current_bytes,
                 sum_bytes = self.sum_bytes,
                 dlfinished = self.finished_downloads,
