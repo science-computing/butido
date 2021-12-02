@@ -64,6 +64,8 @@ impl ProgressWrapper {
     async fn inc_download_count(&mut self) {
         self.download_count += 1;
         self.set_message().await;
+        let bar = self.bar.lock().await;
+        bar.set_length(bar.length() + 1);
     }
 
     async fn inc_download_bytes(&mut self, bytes: u64) {
