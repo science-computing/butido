@@ -15,13 +15,15 @@ use std::path::PathBuf;
 use std::convert::TryFrom;
 use std::str::FromStr;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::ArgMatches;
 use colored::Colorize;
 use log::{info, trace};
+use result_inspect::ResultInspect;
+use result_inspect::ResultInspectErr;
 use tokio::io::AsyncWriteExt;
 use tokio_stream::StreamExt;
 
@@ -224,7 +226,7 @@ pub async fn download(
     repo: Repository,
     progressbars: ProgressBars,
 ) -> Result<()> {
-    async fn perform_download(source: &SourceEntry, bar: &indicatif::ProgressBar, timeout: Option<u64>) -> Result<()> {
+    async fn perform_download(source: &SourceEntry, timeout: Option<u64>) -> Result<()> {
         trace!("Creating: {:?}", source);
         let file = source.create().await.with_context(|| {
             anyhow!(
@@ -252,29 +254,13 @@ pub async fn download(
         let response = match client.execute(request).await {
             Ok(resp) => resp,
             Err(e) => {
-                bar.finish_with_message(format!("Failed: {}", source.url()));
                 return Err(e).with_context(|| anyhow!("Downloading '{}'", source.url()))
             }
         };
 
-        if let Some(len) = response.content_length() {
-            bar.set_length(len);
-        }
-
-        let content_length = response.content_length();
         let mut stream = response.bytes_stream();
-        let mut bytes_written = 0;
         while let Some(bytes) = stream.next().await {
-            let bytes = bytes?;
-            file.write_all(bytes.as_ref()).await?;
-            bytes_written += bytes.len();
-
-            bar.inc(bytes.len() as u64);
-            if let Some(len) = content_length {
-                bar.set_message(format!("Downloading {} ({}/{} bytes)", source.url(), bytes_written, len));
-            } else {
-                bar.set_message(format!("Downloading {} ({} bytes)", source.url(), bytes_written));
-            }
+            file.write_all(bytes?.as_ref()).await?;
         }
 
         file.flush()
@@ -298,20 +284,14 @@ pub async fn download(
         .value_of("package_version")
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
-    let multi = {
-        let mp = indicatif::MultiProgress::new();
-        if progressbars.hide() {
-            mp.set_draw_target(indicatif::ProgressDrawTarget::hidden());
-        }
-        mp
-    };
 
     let matching_regexp = matches.value_of("matching")
         .map(crate::commands::util::mk_package_name_regex)
         .transpose()?;
 
-    let r = repo
-        .packages()
+    let progressbar = progressbars.bar();
+
+    repo.packages()
         .filter(|p| {
             match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
                 (None, None, None)              => true,
@@ -326,8 +306,7 @@ pub async fn download(
         })
         .map(|p| {
             sc.sources_for(p).into_iter().map(|source| {
-                let bar = multi.add(progressbars.spinner());
-                bar.set_message(format!("Downloading {}", source.url()));
+                let progressbar = progressbar.clone();
                 async move {
                     let source_path_exists = source.path().exists();
                     if !source_path_exists && source.download_manually() {
@@ -344,30 +323,33 @@ pub async fn download(
                     } else {
                         if source_path_exists /* && force is implied by 'if' above*/ {
                             if let Err(e) = source.remove_file().await {
-                                bar.finish_with_message(format!("Failed to remove existing file: {}", source.path().display()));
+                                progressbar.inc(1);
                                 return Err(e)
                             }
                         }
 
 
-                        if let Err(e) = perform_download(&source, &bar, timeout).await {
-                            bar.finish_with_message(format!("Failed: {}", source.url()));
-                            Err(e)
-                        } else {
-                            bar.finish_with_message(format!("Finished: {}", source.url()));
-                            Ok(())
-                        }
+                        perform_download(&source, timeout)
+                            .await
+                            .inspect(|_| {
+                                progressbar.inc(1);
+                            })
                     }
                 }
             })
         })
         .flatten()
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Vec<Result<()>>>();
-
-    let multibar_block = tokio::task::spawn_blocking(move || multi.join());
-    let (r, _) = tokio::join!(r, multibar_block);
-    r.into_iter().collect()
+        .collect::<Vec<Result<()>>>()
+        .await
+        .into_iter()
+        .collect::<Result<()>>()
+        .inspect_err(|_| {
+            progressbar.finish_with_message("At least one package failed");
+        })
+        .inspect(|_| {
+            progressbar.finish_with_message("Succeeded");
+        })
 }
 
 async fn of(
