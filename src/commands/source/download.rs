@@ -30,7 +30,15 @@ use crate::repository::Repository;
 use crate::source::*;
 use crate::util::progress::ProgressBars;
 
-
+/// A wrapper around the indicatif::ProgressBar
+///
+/// A wrapper around the indicatif::ProgressBar that is used to synchronize status information from
+/// the individual download jobs to the progress bar that is used to display download progress to
+/// the user.
+///
+/// The problem this helper solves is that we only have one status bar for all downloads, and all
+/// download tasks must be able to increase the number of bytes received, for example, (that is
+/// displayed in the status message) but in a sync way.
 #[derive(Clone)]
 struct ProgressWrapper {
     download_count: u64,
