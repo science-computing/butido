@@ -261,7 +261,8 @@ pub async fn download(
             bar.set_length(len);
         }
 
-        let mut stream = reqwest::get(source.url().as_ref()).await?.bytes_stream();
+        let content_length = response.content_length();
+        let mut stream = response.bytes_stream();
         let mut bytes_written = 0;
         while let Some(bytes) = stream.next().await {
             let bytes = bytes?;
@@ -269,7 +270,7 @@ pub async fn download(
             bytes_written += bytes.len();
 
             bar.inc(bytes.len() as u64);
-            if let Some(len) = response.content_length() {
+            if let Some(len) = content_length {
                 bar.set_message(format!("Downloading {} ({}/{} bytes)", source.url(), bytes_written, len));
             } else {
                 bar.set_message(format!("Downloading {} ({} bytes)", source.url(), bytes_written));
