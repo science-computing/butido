@@ -30,6 +30,8 @@ use crate::repository::Repository;
 use crate::source::*;
 use crate::util::progress::ProgressBars;
 
+const NUMBER_OF_MAX_CONCURRENT_DOWNLOADS: usize = 100;
+
 /// A wrapper around the indicatif::ProgressBar
 ///
 /// A wrapper around the indicatif::ProgressBar that is used to synchronize status information from
@@ -188,6 +190,8 @@ pub async fn download(
 
     let progressbar = Arc::new(Mutex::new(ProgressWrapper::new(progressbars.bar())));
 
+    let download_sema = Arc::new(tokio::sync::Semaphore::new(NUMBER_OF_MAX_CONCURRENT_DOWNLOADS));
+
     let r = repo.packages()
         .filter(|p| {
             match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
@@ -203,6 +207,7 @@ pub async fn download(
         })
         .map(|p| {
             sc.sources_for(p).into_iter().map(|source| {
+                let download_sema = download_sema.clone();
                 let progressbar = progressbar.clone();
                 async move {
                     let source_path_exists = source.path().exists();
@@ -225,7 +230,11 @@ pub async fn download(
                         }
 
                         progressbar.lock().await.inc_download_count().await;
-                        perform_download(&source, progressbar.clone(), timeout).await?;
+                        {
+                            let permit = download_sema.acquire_owned().await?;
+                            perform_download(&source, progressbar.clone(), timeout).await?;
+                            drop(permit);
+                        }
                         progressbar.lock().await.finish_one_download().await;
                         Ok(())
                     }
