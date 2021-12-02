@@ -139,7 +139,6 @@ async fn main() -> Result<()> {
     let hide_bars = cli.is_present("hide_bars") || crate::util::stdout_is_pipe();
     let progressbars = ProgressBars::setup(
         config.progress_format().clone(),
-        config.spinner_format().clone(),
         hide_bars,
     );
 

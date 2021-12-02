@@ -14,17 +14,15 @@ use getset::CopyGetters;
 #[derive(Clone, Debug, CopyGetters)]
 pub struct ProgressBars {
     bar_template: String,
-    spinner_template: String,
 
     #[getset(get_copy = "pub")]
     hide: bool,
 }
 
 impl ProgressBars {
-    pub fn setup(bar_template: String, spinner_template: String, hide: bool) -> Self {
+    pub fn setup(bar_template: String, hide: bool) -> Self {
         ProgressBars {
             bar_template,
-            spinner_template,
             hide,
         }
     }
@@ -36,16 +34,6 @@ impl ProgressBars {
             let b = ProgressBar::new(1);
             b.set_style(ProgressStyle::default_bar().template(&self.bar_template));
             b
-        }
-    }
-
-    pub fn spinner(&self) -> ProgressBar {
-        if self.hide {
-            ProgressBar::hidden()
-        } else {
-            let bar = ProgressBar::new_spinner();
-            bar.set_style(ProgressStyle::default_spinner().template(&self.spinner_template));
-            bar
         }
     }
 }
