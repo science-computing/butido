@@ -140,11 +140,16 @@ async fn perform_download(source: &SourceEntry, progress: Arc<Mutex<ProgressWrap
     let mut stream = response.bytes_stream();
     while let Some(bytes) = stream.next().await {
         let bytes = bytes?;
-        file.write_all(bytes.as_ref()).await?;
-        progress.lock()
-            .await
-            .add_bytes(bytes.len())
-            .await
+        tokio::try_join!(
+            file.write_all(bytes.as_ref()),
+            async {
+                progress.lock()
+                    .await
+                    .add_bytes(bytes.len())
+                    .await;
+                Ok(())
+            }
+        )?;
     }
 
     file.flush()
