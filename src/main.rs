@@ -90,7 +90,7 @@ async fn main() -> Result<()> {
     human_panic::setup_panic!(Metadata {
         name: env!("CARGO_PKG_NAME").into(),
         version: env!("CARGO_PKG_VERSION").into(),
-        authors: "Matthias Beyer <matthias.beyer@atos.net>".into(),
+        authors: "science-computing ag, opensoftware <opensoftware@science-computing.de>".into(),
         homepage: "atos.net/de/deutschland/sc".into(),
     });
 
