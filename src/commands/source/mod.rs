@@ -45,6 +45,7 @@ pub async fn source(
         Some(("list-missing", matches)) => list_missing(matches, config, repo).await,
         Some(("url", matches)) => url(matches, repo).await,
         Some(("download", matches)) => crate::commands::source::download::download(matches, config, repo, progressbars).await,
+        Some(("link-check", matches)) => link_check(matches, config, repo).await,
         Some(("of", matches)) => of(matches, config, repo).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
@@ -214,6 +215,97 @@ pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
                 )
                 .map_err(Error::from)
             })
+        })
+}
+
+async fn link_check(
+    matches: &ArgMatches,
+    config: &Configuration,
+    repo: Repository,
+) -> Result<()> {
+    let sc = SourceCache::new(config.source_cache_root().clone());
+
+    let pname = matches
+        .value_of("package_name")
+        .map(String::from)
+        .map(PackageName::from);
+    let pvers = matches
+        .value_of("package_version")
+        .map(PackageVersionConstraint::try_from)
+        .transpose()?;
+
+    let matching_regexp = matches.value_of("matching")
+        .map(crate::commands::util::mk_package_name_regex)
+        .transpose()?;
+
+    let lychee_client = lychee_lib::ClientBuilder::default().client()?;
+
+    repo.packages()
+        .filter(|p| {
+            match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
+                (None, None, None)              => true,
+                (Some(pname), None, None)       => p.name() == pname,
+                (Some(pname), Some(vers), None) => p.name() == pname && vers.matches(p.version()),
+                (None, None, Some(regex))       => regex.is_match(p.name()),
+
+                (_, _, _) => {
+                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
+                },
+            }
+        })
+        .inspect(|p| trace!("Found for link check: {} {}", p.name(), p.version()))
+        .map(|p| {
+            sc.sources_for(p)
+                .into_iter()
+                .filter(|src| !src.download_manually())
+                .map(|source| {
+                    (p.name().clone(), p.version().clone(), source.url().clone())
+                })
+                .collect::<Vec<_>>() // because of lifetimes, we have to collect here
+                .into_iter()
+        })
+        .flatten()
+        .map(|(pname, pvers, source_url)| async {
+            use lychee_lib::Status;
+
+            let uri = lychee_lib::Uri::from(source_url.clone());
+            match lychee_client.check_file(&uri).await {
+                Status::Ok(code) if code.is_success() => {
+                    Ok(())
+                }
+                Status::Ok(code) => {
+                    Err(anyhow!("HTTP Error {}", code))
+                }
+
+                Status::Redirected(code) if code.is_success() => {
+                    Ok(())
+                }
+                Status::Redirected(code) => {
+                    Err(anyhow!("HTTP Error {}", code))
+                }
+
+                Status::Error(e) => Err(anyhow!("Error: {:?}", e)),
+                Status::Timeout(_) => Err(anyhow!("Timeout")),
+                Status::UnknownStatusCode(code) => {
+                    Err(anyhow!("HTTP Error {}", code))
+                },
+
+                Status::Excluded => {
+                    Err(anyhow!("Resource not checked"))
+                },
+                Status::Unsupported(e) => {
+                    Err(anyhow!("Resource could not be checked (unsupported): {:?}", e))
+                },
+            }.map_err(|e| (pname, pvers, source_url, e))
+        })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<Vec<std::result::Result<(), (_, _, _, anyhow::Error)>>>()
+        .await
+        .into_iter()
+        .filter_map(Result::err)
+        .fold(Ok(()), |_, (name, version, url, err)| { // trick: If no error was in the iterator, the default Ok(()) is returned
+            log::error!("Failed: {n} {v} -> {u}: {e}", n = name, v = version, u = url, e = err);
+            Err(anyhow::anyhow!("At least one package URL failed the check"))
         })
 }
 
