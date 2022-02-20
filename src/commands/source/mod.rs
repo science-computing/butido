@@ -59,35 +59,7 @@ pub async fn verify(
     progressbars: ProgressBars,
 ) -> Result<()> {
     let sc = SourceCache::new(config.source_cache_root().clone());
-    let pname = matches
-        .value_of("package_name")
-        .map(String::from)
-        .map(PackageName::from);
-    let pvers = matches
-        .value_of("package_version")
-        .map(PackageVersionConstraint::try_from)
-        .transpose()?;
-
-    let matching_regexp = matches.value_of("matching")
-        .map(crate::commands::util::mk_package_name_regex)
-        .transpose()?;
-
-    let packages = repo
-        .packages()
-        .filter(|p| {
-            match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
-                (None, None, None)              => true,
-                (Some(pname), None, None)       => p.name() == pname,
-                (Some(pname), Some(vers), None) => p.name() == pname && vers.matches(p.version()),
-                (None, None, Some(regex))       => regex.is_match(p.name()),
-
-                (_, _, _) => {
-                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
-                },
-            }
-        })
-        .inspect(|p| trace!("Found for verification: {} {}", p.name(), p.version()));
-
+    let packages = packages_for_name_and_version_or_regex(&repo, matches, "package_name", "package_version", "matching")?;
     verify_impl(packages, &sc, &progressbars).await
 }
 
@@ -224,36 +196,9 @@ async fn link_check(
     repo: Repository,
 ) -> Result<()> {
     let sc = SourceCache::new(config.source_cache_root().clone());
-
-    let pname = matches
-        .value_of("package_name")
-        .map(String::from)
-        .map(PackageName::from);
-    let pvers = matches
-        .value_of("package_version")
-        .map(PackageVersionConstraint::try_from)
-        .transpose()?;
-
-    let matching_regexp = matches.value_of("matching")
-        .map(crate::commands::util::mk_package_name_regex)
-        .transpose()?;
-
     let lychee_client = lychee_lib::ClientBuilder::default().client()?;
 
-    repo.packages()
-        .filter(|p| {
-            match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
-                (None, None, None)              => true,
-                (Some(pname), None, None)       => p.name() == pname,
-                (Some(pname), Some(vers), None) => p.name() == pname && vers.matches(p.version()),
-                (None, None, Some(regex))       => regex.is_match(p.name()),
-
-                (_, _, _) => {
-                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
-                },
-            }
-        })
-        .inspect(|p| trace!("Found for link check: {} {}", p.name(), p.version()))
+    packages_for_name_and_version_or_regex(&repo, matches, "package_name", "package_version", "matching")?
         .map(|p| {
             sc.sources_for(p)
                 .into_iter()
@@ -352,4 +297,45 @@ async fn of(
             })
         })
         .map(|_| ())
+}
+
+/// Very ugly helper function to get an iterator of packages from the repository based on the
+/// packagename+packageversion or search-regex passed on CLI
+fn packages_for_name_and_version_or_regex<'a>(
+    repo: &'a Repository,
+    matches: &ArgMatches,
+    name_setting: &'static str,
+    version_setting: &'static str,
+    regex_setting: &'static str)
+    -> Result<impl Iterator<Item = &'a Package>>
+{
+    let pname = matches
+        .value_of(name_setting)
+        .map(String::from)
+        .map(PackageName::from);
+    let pvers = matches
+        .value_of(version_setting)
+        .map(PackageVersionConstraint::try_from)
+        .transpose()?;
+
+    let matching_regexp = matches.value_of(regex_setting)
+        .map(crate::commands::util::mk_package_name_regex)
+        .transpose()?;
+
+    let iter = repo.packages()
+        .filter(move |p| {
+            match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
+                (None, None, None)              => true,
+                (Some(pname), None, None)       => p.name() == pname,
+                (Some(pname), Some(vers), None) => p.name() == pname && vers.matches(p.version()),
+                (None, None, Some(regex))       => regex.is_match(p.name()),
+
+                (_, _, _) => {
+                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
+                },
+            }
+        })
+        .inspect(|p| trace!("Found package: {} {}", p.name(), p.version()));
+
+    Ok(iter)
 }
