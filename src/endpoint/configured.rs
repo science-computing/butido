@@ -655,7 +655,7 @@ impl<'a> PreparedContainer<'a> {
         staging_store: Arc<RwLock<StagingStore>>,
         release_stores: &[Arc<ReleaseStore>],
     ) -> Result<()> {
-        job.resources()
+        let stream = job.resources()
             .iter()
             .filter_map(JobResource::artifact)
             .cloned()
@@ -725,8 +725,14 @@ impl<'a> PreparedContainer<'a> {
                     .map_err(Error::from);
                 drop(art); // ensure `art` is moved into closure
                 r
-            })
-            .collect::<futures::stream::FuturesUnordered<_>>()
+            });
+
+        let stream = {
+            use futures::stream::StreamExt;
+            futures::stream::iter(stream).buffer_unordered(100)
+        };
+
+        stream
             .collect::<Result<Vec<_>>>()
             .await
             .inspect(|_| trace!("Successfully copied all artifacts to the container {}", container.id()))
