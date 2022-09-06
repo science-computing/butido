@@ -87,3 +87,19 @@ jobs:
       - name: cargo clippy
         run: cargo clippy --all --all-targets --all-features -- -D warnings
 
+  # We need some "accummulation" job here because bors fails (timeouts) to
+  # listen on matrix builds.
+  # Hence, we have some kind of dummy here that bors can listen on
+  ci-success:
+    name: CI
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    needs:
+      - cargo-deny
+      - check
+      - test
+      - lint
+    steps:
+      - name: CI succeeded
+        run: exit 0
+
