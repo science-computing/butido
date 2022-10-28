@@ -99,8 +99,7 @@ where
     I: Iterator<Item = &'a Package> + 'a,
 {
     let sources = packages
-        .map(|p| sc.sources_for(p).into_iter())
-        .flatten()
+        .flat_map(|p| sc.sources_for(p).into_iter())
         .collect::<Vec<_>>();
 
     let bar = progressbars.bar();
