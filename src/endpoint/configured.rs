@@ -469,7 +469,7 @@ impl<'a> PreparedContainer<'a> {
             Self::copy_script_to_container(&container, &script)
         );
 
-        let _ = cpysrc.with_context(|| {
+        cpysrc.with_context(|| {
             anyhow!(
                 "Copying the sources to container {} on '{}'",
                 create_info.id,
@@ -477,7 +477,7 @@ impl<'a> PreparedContainer<'a> {
             )
         })?;
 
-        let _ = cpypch.with_context(|| {
+        cpypch.with_context(|| {
             anyhow!(
                 "Copying the patches to container {} on '{}'",
                 create_info.id,
@@ -485,7 +485,7 @@ impl<'a> PreparedContainer<'a> {
             )
         })?;
 
-        let _ = cpyart.with_context(|| {
+        cpyart.with_context(|| {
             anyhow!(
                 "Copying the artifacts to container {} on '{}'",
                 create_info.id,
@@ -493,7 +493,7 @@ impl<'a> PreparedContainer<'a> {
             )
         })?;
 
-        let _ = cpyscr.with_context(|| {
+        cpyscr.with_context(|| {
             anyhow!(
                 "Copying the script to container {} on '{}'",
                 create_info.id,
