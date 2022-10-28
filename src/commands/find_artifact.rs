@@ -80,7 +80,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         let bar_staging_loading = progressbars.bar();
 
         if !p.is_dir() {
-            let _ = tokio::fs::create_dir_all(&p).await?;
+            tokio::fs::create_dir_all(&p).await?;
         }
 
         debug!("Loading staging directory: {}", p.display());
