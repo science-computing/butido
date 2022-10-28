@@ -226,9 +226,7 @@ pub async fn download(
                         Err(anyhow!("Source exists: {}", source.path().display()))
                     } else {
                         if source_path_exists /* && force is implied by 'if' above*/ {
-                            if let Err(e) = source.remove_file().await {
-                                return Err(e)
-                            }
+                            source.remove_file().await?;
                         }
 
                         progressbar.lock().await.inc_download_count().await;
