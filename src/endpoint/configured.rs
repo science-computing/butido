@@ -201,14 +201,13 @@ impl Endpoint {
             .await
             .with_context(|| anyhow!("Listing images on endpoint: {}", ep.name))?
             .into_iter()
-            .map(|image_rep| {
+            .flat_map(|image_rep| {
                 image_rep
                     .repo_tags
                     .unwrap_or_default()
                     .into_iter()
                     .map(ImageName::from)
             })
-            .flatten()
             .collect::<Vec<ImageName>>();
 
         trace!("Available images = {:?}", available_names);
