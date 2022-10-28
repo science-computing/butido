@@ -239,7 +239,7 @@ impl JobHandle {
 
         trace!("DB: Job entry for job {} created: {}", job.uuid, job.id);
         for env in envs {
-            let _ = dbmodels::JobEnv::create(&self.db, &job, &env)
+            dbmodels::JobEnv::create(&self.db, &job, &env)
                 .with_context(|| format!("Creating Environment Variable mapping for Job: {}", job.uuid))?;
         }
 
