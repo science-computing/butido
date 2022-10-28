@@ -921,16 +921,16 @@ dependencies = [
 
 [[package]]
 name = "handlebars"
-version = "4.3.5"
+version = "4.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "433e4ab33f1213cdc25b5fa45c76881240cfe79284cf2b395e8b9e312a30a2fd"
+checksum = "2060119114dd8a8bc87facce6384751af8280a7adc8e203c023c95cbb11f5663"
 dependencies = [
  "log",
  "pest",
  "pest_derive",
+ "quick-error",
  "serde 1.0.147",
  "serde_json",
- "thiserror",
 ]
 
 [[package]]
@@ -1825,6 +1825,12 @@ dependencies = [
  "serde-value",
  "tint",
 ]
+
+[[package]]
+name = "quick-error"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
 name = "quote"
