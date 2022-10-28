@@ -461,7 +461,7 @@ impl<'a> LogReceiver<'a> {
         self.bar.finish_with_message(finish_msg);
 
         if let Some(mut lf) = logfile {
-            let _ = lf.flush().await?;
+            lf.flush().await?;
         }
 
         Ok({
