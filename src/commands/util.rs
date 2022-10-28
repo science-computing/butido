@@ -58,7 +58,7 @@ where
             let bar = bar.clone();
             async move {
                 trace!("Linting script of {} {} with '{}'", pkg.name(), pkg.version(), linter.display());
-                let _ = all_phases_available(pkg, config.available_phases())?;
+                all_phases_available(pkg, config.available_phases())?;
 
                 let cmd = tokio::process::Command::new(linter);
                 let script = ScriptBuilder::new(&shebang)
