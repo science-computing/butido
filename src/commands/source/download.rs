@@ -207,7 +207,7 @@ pub async fn download(
                 },
             }
         })
-        .map(|p| {
+        .flat_map(|p| {
             sc.sources_for(p).into_iter().map(|source| {
                 let download_sema = download_sema.clone();
                 let progressbar = progressbar.clone();
@@ -241,7 +241,6 @@ pub async fn download(
                 }
             })
         })
-        .flatten()
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Vec<Result<()>>>()
         .await
