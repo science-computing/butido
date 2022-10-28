@@ -49,7 +49,7 @@ impl Dag {
         }
     }
 
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = JobDefinition> + 'a {
+    pub fn iter(&'_ self) -> impl Iterator<Item = JobDefinition> + '_ {
         self.dag
             .graph()
             .node_indices()
