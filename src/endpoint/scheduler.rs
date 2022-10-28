@@ -475,7 +475,7 @@ impl<'a> LogReceiver<'a> {
     async fn get_logfile(&self) -> Option<Result<tokio::io::BufWriter<tokio::fs::File>>> {
         if let Some(log_dir) = self.log_dir.as_ref() {
             Some({
-                let path = log_dir.join(format!("{}.log", self.job_id.to_string()));
+                let path = log_dir.join(format!("{}.log", self.job_id));
                 tokio::fs::OpenOptions::new()
                     .create(true)
                     .create_new(true)
