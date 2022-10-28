@@ -653,7 +653,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
             script_len = format!("{:<4}", data.0.script_text.lines().count()).cyan(),
             log_len = format!("{:<4}", data.0.log_text.lines().count()).cyan(),
         );
-        let _ = writeln!(out, "{}", s)?;
+        writeln!(out, "{}", s)?;
 
         if let Some(envs) = env_vars {
             let s = indoc::formatdoc!(
@@ -665,7 +665,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
             "#,
                 envs = envs
             );
-            let _ = writeln!(out, "{}", s)?;
+            writeln!(out, "{}", s)?;
         }
 
         if show_script {
@@ -689,7 +689,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
             "#,
                 script = script
             );
-            let _ = writeln!(out, "{}", s)?;
+            writeln!(out, "{}", s)?;
         }
 
         if show_log {
@@ -709,7 +709,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
             "#,
                 log = log
             );
-            let _ = writeln!(out, "{}", s)?;
+            writeln!(out, "{}", s)?;
         }
 
         Ok(())
