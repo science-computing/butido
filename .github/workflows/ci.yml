@@ -3,27 +3,7 @@ on: [push, pull_request]
 name: CI
 
 jobs:
-  cargo-deny:
-    name: cargo-deny
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        checks:
-          - advisories
-          - bans licenses sources
-
-    # Prevent sudden announcement of a new advisory from failing ci:
-    continue-on-error: ${{ matrix.checks == 'advisories' }}
-
-    steps:
-    - uses: actions/checkout@v2
-    - uses: swatinem/rust-cache@v1
-    - uses: EmbarkStudios/cargo-deny-action@v1
-      with:
-        command: check ${{ matrix.checks }}
-
   check:
-    needs: [cargo-deny]
     name: Check
     runs-on: ubuntu-latest
     strategy:
@@ -77,6 +57,26 @@ jobs:
         with:
           command: test
           args: --all --all-features
+
+  cargo-deny:
+    needs: [check]
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+
+    # Prevent sudden announcement of a new advisory from failing ci:
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: swatinem/rust-cache@v1
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check ${{ matrix.checks }}
 
   lint:
     needs: [check]
