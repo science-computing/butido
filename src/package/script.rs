@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+// TODO: Is this really necessary?
+#![allow(clippy::format_push_string)]
+
 use std::process::ExitStatus;
 
 use anyhow::anyhow;
