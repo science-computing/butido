@@ -43,6 +43,7 @@
     while_true,
 )]
 #![allow(macro_use_extern_crate)]
+#![allow(unstable_name_collisions)] // TODO: Remove me with the next rustc update (probably)
 
 extern crate log as logcrate;
 #[macro_use]
@@ -95,7 +96,7 @@ async fn main() -> Result<()> {
         homepage: "atos.net/de/deutschland/sc".into(),
     });
 
-    let _ = env_logger::try_init()?;
+    env_logger::try_init()?;
     debug!("Debugging enabled");
 
     let app = cli::cli();

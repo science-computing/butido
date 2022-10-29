@@ -46,7 +46,7 @@ pub async fn source(
         Some(("url", matches)) => url(matches, repo).await,
         Some(("download", matches)) => crate::commands::source::download::download(matches, config, repo, progressbars).await,
         Some(("of", matches)) => of(matches, config, repo).await,
-        Some((other, _)) => return Err(anyhow!("Unknown subcommand: {}", other)),
+        Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
 }
@@ -99,8 +99,7 @@ where
     I: Iterator<Item = &'a Package> + 'a,
 {
     let sources = packages
-        .map(|p| sc.sources_for(p).into_iter())
-        .flatten()
+        .flat_map(|p| sc.sources_for(p).into_iter())
         .collect::<Vec<_>>();
 
     let bar = progressbars.bar();

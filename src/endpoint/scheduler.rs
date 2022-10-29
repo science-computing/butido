@@ -239,7 +239,7 @@ impl JobHandle {
 
         trace!("DB: Job entry for job {} created: {}", job.uuid, job.id);
         for env in envs {
-            let _ = dbmodels::JobEnv::create(&self.db, &job, &env)
+            dbmodels::JobEnv::create(&self.db, &job, &env)
                 .with_context(|| format!("Creating Environment Variable mapping for Job: {}", job.uuid))?;
         }
 
@@ -461,7 +461,7 @@ impl<'a> LogReceiver<'a> {
         self.bar.finish_with_message(finish_msg);
 
         if let Some(mut lf) = logfile {
-            let _ = lf.flush().await?;
+            lf.flush().await?;
         }
 
         Ok({
@@ -475,7 +475,7 @@ impl<'a> LogReceiver<'a> {
     async fn get_logfile(&self) -> Option<Result<tokio::io::BufWriter<tokio::fs::File>>> {
         if let Some(log_dir) = self.log_dir.as_ref() {
             Some({
-                let path = log_dir.join(format!("{}.log", self.job_id.to_string()));
+                let path = log_dir.join(format!("{}.log", self.job_id));
                 tokio::fs::OpenOptions::new()
                     .create(true)
                     .create_new(true)

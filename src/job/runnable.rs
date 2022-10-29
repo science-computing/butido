@@ -61,7 +61,7 @@ impl RunnableJob {
     ) -> Result<Self> {
         if config.containers().check_env_names() {
             debug!("Checking environment if all variables are allowed!");
-            let _ = job.resources()
+            job.resources()
                 .iter()
                 .filter_map(|r| r.env())
                 .chain({

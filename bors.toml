@@ -1,0 +1,9 @@
+# Must pass on the merge with the master branch
+status = [
+    "CI"
+]
+
+delete_merged_branches = true
+
+cut_body_after = "<details>"
+

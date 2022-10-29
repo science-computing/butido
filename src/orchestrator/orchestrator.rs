@@ -423,14 +423,13 @@ impl<'a> Orchestrator<'a> {
 
         let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
         let (_, jobs_result) = tokio::join!(multibar_block, running_jobs.collect::<Result<()>>());
-        let _ = jobs_result?;
+        jobs_result?;
         trace!("All jobs finished");
         match root_receiver.recv().await {
             None                     => Err(anyhow!("No result received...")),
             Some(Ok(results)) => {
                 let results = results.into_iter()
-                    .map(|tpl| tpl.1.into_iter())
-                    .flatten()
+                    .flat_map(|tpl| tpl.1.into_iter())
                     .map(ProducedArtifact::unpack)
                     .collect();
                 Ok((results, HashMap::with_capacity(0)))
@@ -618,8 +617,7 @@ impl<'a> JobTask<'a> {
         // Check if any of the received dependencies was built (and not reused).
         // If any dependency was built, we need to build as well.
         let any_dependency_was_built = received_dependencies.values()
-            .map(|v| v.iter())
-            .flatten()
+            .flat_map(|v| v.iter())
             .any(ProducedArtifact::was_build);
 
         // If no dependency was built, we can check for replacements for this job as well, so
@@ -730,8 +728,7 @@ impl<'a> JobTask<'a> {
         //      Vec<ArtifactPath>
         let dependency_artifacts = received_dependencies
             .values()
-            .map(|v| v.iter())
-            .flatten()
+            .flat_map(|v| v.iter())
             .map(ProducedArtifact::borrow)
             .cloned()
             .collect::<Vec<ArtifactPath>>();
@@ -845,7 +842,7 @@ impl<'a> JobTask<'a> {
                 // ... if there are any, error
                 if !missing_deps.is_empty() {
                     let missing: Vec<String> = missing_deps.iter().map(|u| u.to_string()).collect();
-                    return Err(anyhow!("Childs finished, but dependencies still missing: {:?}", missing))
+                    Err(anyhow!("Childs finished, but dependencies still missing: {:?}", missing))
                 } else {
                     // all dependencies are received
                    Ok(false)

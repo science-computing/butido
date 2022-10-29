@@ -205,7 +205,7 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
         .collect::<Result<Vec<(_, _)>>>()
         .await?
         .into_iter()
-        .map(|tpl| {
+        .flat_map(|tpl| {
             let endpoint_name = tpl.0;
             tpl.1
                 .into_iter()
@@ -224,7 +224,6 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
                 })
                 .collect::<Vec<Vec<String>>>()
         })
-        .flatten()
         .collect::<Vec<Vec<String>>>();
 
     crate::commands::util::display_data(hdr, data, csv)
@@ -261,8 +260,7 @@ async fn containers_prune(endpoint_names: Vec<EndpointName>,
     }
 
     stats.into_iter()
-        .map(Vec::into_iter)
-        .flatten()
+        .flat_map(Vec::into_iter)
         .map(|(ep, stat)| async move {
             ep.get_container_by_id(&stat.id)
                 .await?
@@ -305,8 +303,7 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
         .collect::<Result<Vec<_>>>()
         .await?
         .into_iter()
-        .map(Vec::into_iter)
-        .flatten()
+        .flat_map(Vec::into_iter)
         .inspect(|(_ep, stat)| trace!("Fetching container: {}", stat.id))
         .map(|(ep, stat)| async move {
             ep.get_container_by_id(&stat.id)
@@ -342,8 +339,7 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
         std::iter::once("Container ID")
             .chain({
                 data.values()
-                    .map(|hm| hm.keys())
-                    .flatten()
+                    .flat_map(|hm| hm.keys())
                     .map(|s| s.deref())
             })
             .collect::<Vec<&str>>()
@@ -353,12 +349,11 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
     });
 
     let data = data.into_iter()
-        .map(|(container_id, top_hm)| {
+        .flat_map(|(container_id, top_hm)| {
             top_hm.values()
                 .map(|t| std::iter::once(container_id.clone()).chain(t.iter().map(String::clone)).collect())
                 .collect::<Vec<Vec<String>>>()
         })
-        .flatten()
 
         // ugly hack to bring order to the galaxy
         .sorted_by(|v1, v2| if let (Some(f1), Some(f2)) = (v1.iter().next(), v2.iter().next()) {
@@ -408,8 +403,7 @@ async fn containers_stop(endpoint_names: Vec<EndpointName>,
     }
 
     stats.into_iter()
-        .map(Vec::into_iter)
-        .flatten()
+        .flat_map(Vec::into_iter)
         .map(|(ep, stat)| async move {
             ep.get_container_by_id(&stat.id)
                 .await?

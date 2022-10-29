@@ -67,7 +67,7 @@ pub async fn build(
     let git_repo = git2::Repository::open(repo_path)
         .with_context(|| anyhow!("Opening repository at {}", repo_path.display()))?;
 
-    let _ = crate::ui::package_repo_cleanness_check(&git_repo)?;
+    crate::ui::package_repo_cleanness_check(&git_repo)?;
     let now = chrono::offset::Local::now().naive_local();
 
     let shebang = Shebang::from({
@@ -212,7 +212,7 @@ pub async fn build(
         };
 
         if !p.is_dir() {
-            let _ = tokio::fs::create_dir_all(&p).await?;
+            tokio::fs::create_dir_all(&p).await?;
         }
 
         debug!("Loading staging directory: {}", p.display());
@@ -260,7 +260,7 @@ pub async fn build(
         bar.set_message("Linting package scripts...");
 
         let iter = all_packages.into_iter();
-        let _ = crate::commands::util::lint_packages(iter, &linter, config, bar).await?;
+        crate::commands::util::lint_packages(iter, &linter, config, bar).await?;
     } else {
         warn!("No linter set in configuration, no script linting will be performed!");
     } // linting

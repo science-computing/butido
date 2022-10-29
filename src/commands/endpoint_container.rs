@@ -359,7 +359,7 @@ async fn inspect(container: Container<'_>) -> Result<()> {
                             .collect::<Vec<_>>()
                             .join("\n");
 
-                        format!("{:ind$}{k}: {v}", "", ind = 8, k = k, v = format!("\n{}", v))
+                        format!("{:ind$}{k}: \n{v}", "", ind = 8, k = k, v = v)
                     })
                     .collect::<Vec<_>>()
                     .join("\n");
@@ -402,7 +402,7 @@ async fn inspect(container: Container<'_>) -> Result<()> {
                                 .join("\n")
                         }).unwrap_or_else(|| String::from("None"));
 
-                        format!("{:ind$}{k}: {v}", "", ind = 8, k = k, v = format!("\n{}", v))
+                        format!("{:ind$}{k}: \n{v}", "", ind = 8, k = k, v = v)
                     })
                     .collect::<Vec<_>>()
                     .join("\n");

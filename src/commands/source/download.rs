@@ -207,7 +207,7 @@ pub async fn download(
                 },
             }
         })
-        .map(|p| {
+        .flat_map(|p| {
             sc.sources_for(p).into_iter().map(|source| {
                 let download_sema = download_sema.clone();
                 let progressbar = progressbar.clone();
@@ -226,9 +226,7 @@ pub async fn download(
                         Err(anyhow!("Source exists: {}", source.path().display()))
                     } else {
                         if source_path_exists /* && force is implied by 'if' above*/ {
-                            if let Err(e) = source.remove_file().await {
-                                return Err(e)
-                            }
+                            source.remove_file().await?;
                         }
 
                         progressbar.lock().await.inc_download_count().await;
@@ -243,7 +241,6 @@ pub async fn download(
                 }
             })
         })
-        .flatten()
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Vec<Result<()>>>()
         .await

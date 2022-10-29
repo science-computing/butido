@@ -201,14 +201,13 @@ impl Endpoint {
             .await
             .with_context(|| anyhow!("Listing images on endpoint: {}", ep.name))?
             .into_iter()
-            .map(|image_rep| {
+            .flat_map(|image_rep| {
                 image_rep
                     .repo_tags
                     .unwrap_or_default()
                     .into_iter()
                     .map(ImageName::from)
             })
-            .flatten()
             .collect::<Vec<ImageName>>();
 
         trace!("Available images = {:?}", available_names);
@@ -469,7 +468,7 @@ impl<'a> PreparedContainer<'a> {
             Self::copy_script_to_container(&container, &script)
         );
 
-        let _ = cpysrc.with_context(|| {
+        cpysrc.with_context(|| {
             anyhow!(
                 "Copying the sources to container {} on '{}'",
                 create_info.id,
@@ -477,7 +476,7 @@ impl<'a> PreparedContainer<'a> {
             )
         })?;
 
-        let _ = cpypch.with_context(|| {
+        cpypch.with_context(|| {
             anyhow!(
                 "Copying the patches to container {} on '{}'",
                 create_info.id,
@@ -485,7 +484,7 @@ impl<'a> PreparedContainer<'a> {
             )
         })?;
 
-        let _ = cpyart.with_context(|| {
+        cpyart.with_context(|| {
             anyhow!(
                 "Copying the artifacts to container {} on '{}'",
                 create_info.id,
@@ -493,7 +492,7 @@ impl<'a> PreparedContainer<'a> {
             )
         })?;
 
-        let _ = cpyscr.with_context(|| {
+        cpyscr.with_context(|| {
             anyhow!(
                 "Copying the script to container {} on '{}'",
                 create_info.id,

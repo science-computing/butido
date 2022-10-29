@@ -70,7 +70,7 @@ impl FileSystemRepresentation {
             .same_file_system(true)
             .into_iter()
             .filter_entry(|e| !is_hidden(e) && (is_pkgtoml(e) || is_dir(e)))
-            .filter_ok(|e| is_pkgtoml(e))
+            .filter_ok(is_pkgtoml)
             .inspect(|el| log::trace!("Loading: {:?}", el))
             .map_err(Error::from)
             .and_then_ok(|de| {

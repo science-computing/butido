@@ -28,7 +28,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.56.0
+          - 1.64.0
           - stable
           - beta
 
@@ -54,7 +54,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.56.0
+          - 1.64.0
           - stable
           - beta
     steps:
@@ -81,9 +81,25 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.56.0
+          toolchain: 1.64.0
           override: true
       - run: rustup component add clippy
       - name: cargo clippy
         run: cargo clippy --all --all-targets --all-features -- -D warnings
+
+  # We need some "accummulation" job here because bors fails (timeouts) to
+  # listen on matrix builds.
+  # Hence, we have some kind of dummy here that bors can listen on
+  ci-success:
+    name: CI
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    needs:
+      - cargo-deny
+      - check
+      - test
+      - lint
+    steps:
+      - name: CI succeeded
+        run: exit 0
 

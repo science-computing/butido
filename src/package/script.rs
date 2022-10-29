@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+// TODO: Is this really necessary?
+#![allow(clippy::format_push_string)]
+
 use std::process::ExitStatus;
 
 use anyhow::anyhow;
@@ -70,12 +73,12 @@ impl Script {
         {
             let stdin = child.stdin.take().ok_or_else(|| anyhow!("No stdin"))?;
             let mut writer = BufWriter::new(stdin);
-            let _ = writer
+            writer
                 .write_all(self.0.as_bytes())
                 .await
                 .context("Writing package script to STDIN of subprocess")?;
 
-            let _ = writer
+            writer
                 .flush()
                 .await
                 .context("Flushing STDIN of subprocess")?;
