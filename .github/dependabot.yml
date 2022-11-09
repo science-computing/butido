@@ -3,10 +3,10 @@ updates:
 - package-ecosystem: cargo
   directory: "/"
   schedule:
-    interval: monthly
+    interval: daily
   # Disable the pull request limit for dependabot
   open-pull-requests-limit: 0
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
-    interval: monthly
+    interval: daily
