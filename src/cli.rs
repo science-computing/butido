@@ -17,6 +17,7 @@ use clap::Command;
 use clap::Arg;
 use clap::ArgGroup;
 use clap::builder::PossibleValuesParser;
+use clap::builder::ValueParser;
 
 // Helper types to ship around stringly typed clap API.
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
@@ -451,8 +452,7 @@ pub fn cli<'a>() -> Command {
                 .long("staging-dir")
                 .num_args(1)
                 .value_name("PATH")
-                .value_parser(clap::value_parser!(PathBuf))
-                .validator(dir_exists_validator)
+                .value_parser(ValueParser::new(dir_exists_validator))
                 .help("Do not throw dice on staging directory name, but hardcode for this run.")
             )
 
@@ -623,7 +623,7 @@ pub fn cli<'a>() -> Command {
                 .num_args(1)
                 .long("staging-dir")
                 .value_name("PATH")
-                .validator(dir_exists_validator)
+                .value_parser(ValueParser::new(dir_exists_validator))
                 .help("Also consider this staging dir when searching for artifacts")
             )
             .arg(Arg::new("env_filter")
@@ -1358,9 +1358,10 @@ fn env_pass_validator(s: &str) -> Result<(), String> {
     }
 }
 
-fn dir_exists_validator(s: &str) -> Result<(), String> {
-    if PathBuf::from(&s).is_dir() {
-        Ok(())
+fn dir_exists_validator(s: &str) -> Result<PathBuf, String> {
+    let pb = PathBuf::from(s);
+    if pb.is_dir() {
+        Ok(pb)
     } else {
         Err(format!("Directory does not exist: {}", s))
     }
