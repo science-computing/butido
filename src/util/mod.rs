@@ -33,6 +33,12 @@ impl From<&str> for EnvironmentVariableName {
     }
 }
 
+impl From<String> for EnvironmentVariableName {
+    fn from(s: String) -> EnvironmentVariableName {
+        EnvironmentVariableName(s)
+    }
+}
+
 impl AsRef<str> for EnvironmentVariableName {
     fn as_ref(&self) -> &str {
         self.0.as_ref()

@@ -36,23 +36,27 @@ use crate::util::docker::ImageName;
 /// Implementation of the "find_artifact" subcommand
 pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progressbars: ProgressBars, repo: Repository, database_connection: PgConnection) -> Result<()> {
     let package_name_regex = crate::commands::util::mk_package_name_regex({
-        matches.value_of("package_name_regex").unwrap() // safe by clap
+        matches.get_one::<String>("package_name_regex").unwrap() // safe by clap
     })?;
 
     let package_version_constraint = matches
-        .value_of("package_version_constraint")
+        .get_one::<String>("package_version_constraint")
+        .map(AsRef::as_ref)
         .map(PackageVersionConstraint::try_from)
         .transpose()
         .context("Parsing package version constraint")
         .context("A valid package version constraint looks like this: '=1.0.0'")?;
 
-    let env_filter = matches.values_of("env_filter")
-        .map(|vals| vals.map(crate::util::env::parse_to_env).collect::<Result<Vec<_>>>())
+    let env_filter = matches.get_many::<String>("env_filter")
+        .map(|vals| {
+            vals.map(|s| crate::util::env::parse_to_env(s))
+                .collect::<Result<Vec<_>>>()
+        })
         .transpose()?
         .unwrap_or_default();
 
-    let image_name = matches.value_of("image")
-        .map(String::from)
+    let image_name = matches.get_one::<String>("image")
+        .map(String::clone)
         .map(ImageName::from);
 
     log::debug!("Finding artifacts for '{:?}' '{:?}'", package_name_regex, package_version_constraint);
@@ -76,7 +80,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let staging_store = if let Some(p) = matches.value_of("staging_dir").map(PathBuf::from) {
+    let staging_store = if let Some(p) = matches.get_one::<PathBuf>("staging_dir").map(PathBuf::from) {
         let bar_staging_loading = progressbars.bar();
 
         if !p.is_dir() {
@@ -106,7 +110,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         })
         .inspect(|pkg| trace!("Found package: {:?}", pkg))
         .map(|pkg| {
-            let script_filter = !matches.is_present("no_script_filter");
+            let script_filter = !matches.get_flag("no_script_filter");
             let pathes = crate::db::FindArtifacts::builder()
                 .config(config)
                 .release_stores(&release_stores)

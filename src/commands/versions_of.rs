@@ -25,8 +25,8 @@ pub async fn versions_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
 
     let package_filter = {
         let name = matches
-            .value_of("package_name")
-            .map(String::from)
+            .get_one::<String>("package_name")
+            .map(String::clone)
             .map(PackageName::from)
             .unwrap();
         trace!("Checking for package with name = {}", name);

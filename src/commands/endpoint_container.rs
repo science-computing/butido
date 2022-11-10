@@ -11,7 +11,6 @@
 //! Implementation of the 'endpoint container' subcommand
 
 use std::borrow::Cow;
-use std::str::FromStr;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -27,11 +26,11 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let container_id = matches.value_of("container_id").unwrap();
+    let container_id = matches.get_one::<String>("container_id").unwrap();
     let endpoints = crate::commands::endpoint::connect_to_endpoints(config, &endpoint_names).await?;
     let relevant_endpoints = endpoints.into_iter()
         .map(|ep| async {
-            ep.has_container_with_id(container_id)
+            ep.has_container_with_id(container_id.as_ref())
                 .await
                 .map(|b| (ep, b))
         })
@@ -66,7 +65,7 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
         Some(("top", matches))  => top(matches, container).await,
         Some(("kill", matches)) => {
             confirm({
-                if let Some(sig) = matches.value_of("signal").as_ref() {
+                if let Some(sig) = matches.get_one::<String>("signal") {
                     format!("Really kill {} with {}?", container_id, sig)
                 } else {
                     format!("Really kill {}?", container_id)
@@ -97,7 +96,7 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
             }
         },
         Some(("exec", matches)) => {
-            let commands = matches.values_of("commands").unwrap().collect::<Vec<&str>>();
+            let commands = matches.get_many::<String>("commands").unwrap().cloned().collect::<Vec<String>>();
             if confirm(format!("Really run '{}' in {}?", commands.join(" "), container_id))? {
                 exec(matches, container).await
             } else {
@@ -113,12 +112,12 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
 async fn top(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     let top = container.top(None).await?;
     let hdr = crate::commands::util::mk_header(top.titles.iter().map(|s| s.as_ref()).collect());
-    crate::commands::util::display_data(hdr, top.processes, matches.is_present("csv"))
+    crate::commands::util::display_data(hdr, top.processes, matches.get_flag("csv"))
 }
 
 async fn kill(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
-    let signal = matches.value_of("signal");
-    container.kill(signal).await.map_err(Error::from)
+    let signal = matches.get_one::<String>("signal");
+    container.kill(signal.map(AsRef::as_ref)).await.map_err(Error::from)
 }
 
 async fn delete(container: Container<'_>) -> Result<()> {
@@ -132,9 +131,8 @@ async fn start(container: Container<'_>) -> Result<()> {
 async fn stop(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     container.stop({
         matches
-            .value_of("timeout")
-            .map(u64::from_str)
-            .transpose()?
+            .get_one::<u64>("timeout")
+            .copied()
             .map(std::time::Duration::from_secs)
     })
     .await
@@ -147,7 +145,7 @@ async fn exec(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
 
     let execopts = shiplift::builder::ExecContainerOptions::builder()
         .cmd({
-            matches.values_of("commands").unwrap().collect::<Vec<&str>>()
+            matches.get_many::<String>("commands").unwrap().map(AsRef::as_ref).collect::<Vec<&str>>()
         })
         .attach_stdout(true)
         .attach_stderr(true)

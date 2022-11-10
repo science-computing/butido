@@ -8,21 +8,28 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use anyhow::anyhow;
 use anyhow::Result;
 
 use crate::util::EnvironmentVariableName;
 
 pub fn parse_to_env(s: &str) -> Result<(EnvironmentVariableName, String)> {
-    let v = s.split('=').collect::<Vec<_>>();
-    Ok((
-        EnvironmentVariableName::from(
-            *v.first()
-                .ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?,
-        ),
-        String::from(
-            *v.get(1)
-                .ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?,
-        ),
-    ))
+    use crate::util::parser::*;
+    let parser = {
+        let key = (letters() + ((letters() | numbers() | under()).repeat(0..)))
+            .collect()
+            .convert(|b| String::from_utf8(b.to_vec()));
+
+        let val = nonempty_string_with_optional_quotes()
+            .collect()
+            .convert(|b| String::from_utf8(b.to_vec()));
+
+        (key + equal() + val).map(|((k, _), v)| (k, v))
+    };
+
+    match parser.parse(s.as_bytes()).map_err(|e| e.to_string()) {
+        Err(s) => anyhow::bail!("Error during validation: '{}' is not a key-value pair", s),
+        Ok((k, v)) => {
+            Ok((EnvironmentVariableName::from(k), v))
+        }
+    }
 }

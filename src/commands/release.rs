@@ -47,8 +47,8 @@ async fn new_release(
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
-    let print_released_file_pathes = !matches.is_present("quiet");
-    let release_store_name = matches.value_of("release_store_name").unwrap(); // safe by clap
+    let print_released_file_pathes = !matches.get_flag("quiet");
+    let release_store_name = matches.get_one::<String>("release_store_name").unwrap(); // safe by clap
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
         return Err(anyhow!(
             "Release directory does not exist or does not point to directory: {}",
@@ -56,17 +56,15 @@ async fn new_release(
         ));
     }
 
-    let pname = matches.value_of("package_name").map(String::from);
+    let pname = matches.get_one::<String>("package_name");
 
-    let pvers = matches.value_of("package_version").map(String::from);
+    let pvers = matches.get_one::<String>("package_version");
 
     debug!("Release called for: {:?} {:?}", pname, pvers);
 
     let conn = db_connection_config.establish_connection()?;
     let submit_uuid = matches
-        .value_of("submit_uuid")
-        .map(uuid::Uuid::parse_str)
-        .transpose()?
+        .get_one::<uuid::Uuid>("submit_uuid")
         .unwrap(); // safe by clap
     debug!("Release called for submit: {:?}", submit_uuid);
 
@@ -137,8 +135,8 @@ async fn new_release(
     let staging_base: &PathBuf = &config.staging_directory().join(submit.uuid.to_string());
 
     let release_store = crate::db::models::ReleaseStore::create(&conn, release_store_name)?;
-    let do_update = matches.is_present("package_do_update");
-    let interactive = !matches.is_present("noninteractive");
+    let do_update = matches.get_flag("package_do_update");
+    let interactive = !matches.get_flag("noninteractive");
 
     let now = chrono::offset::Local::now().naive_local();
     let any_err = arts.into_iter()
@@ -216,19 +214,19 @@ pub async fn rm_release(
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
-    let release_store_name = matches.value_of("release_store_name").map(String::from).unwrap(); // safe by clap
+    let release_store_name = matches.get_one::<String>("release_store_name").unwrap(); // safe by clap
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
         return Err(anyhow!(
             "Release directory does not exist or does not point to directory: {}",
             config.releases_directory().display()
         ));
     }
-    if !config.release_stores().contains(&release_store_name) {
+    if !config.release_stores().contains(release_store_name) {
         return Err(anyhow!("Unknown release store name: {}", release_store_name))
     }
 
-    let pname = matches.value_of("package_name").map(String::from).unwrap(); // safe by clap
-    let pvers = matches.value_of("package_version").map(String::from).unwrap(); // safe by clap
+    let pname = matches.get_one::<String>("package_name").unwrap(); // safe by clap
+    let pvers = matches.get_one::<String>("package_version").unwrap(); // safe by clap
     debug!("Remove Release called for: {:?} {:?}", pname, pvers);
 
     let conn = db_connection_config.establish_connection()?;

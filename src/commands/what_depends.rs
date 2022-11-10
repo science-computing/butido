@@ -47,8 +47,8 @@ pub async fn what_depends(
 
     let package_filter = {
         let name = matches
-            .value_of("package_name")
-            .map(String::from)
+            .get_one::<String>("package_name")
+            .map(String::clone)
             .map(PackageName::from)
             .unwrap();
 
