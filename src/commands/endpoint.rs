@@ -181,11 +181,11 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let list_stopped = matches.is_present("list_stopped");
+    let list_stopped = matches.get_flag("list_stopped");
     let filter_image = matches.get_one::<String>("filter_image");
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
-    let csv = matches.is_present("csv");
+    let csv = matches.get_flag("csv");
     let hdr = crate::commands::util::mk_header([
         "Endpoint",
         "Container id",
@@ -280,7 +280,7 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
     let limit = matches.get_one::<usize>("limit");
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
-    let csv = matches.is_present("csv");
+    let csv = matches.get_flag("csv");
 
     let data = connect_to_endpoints(config, &endpoint_names)
         .await?
