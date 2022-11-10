@@ -49,7 +49,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
 
     let env_filter = matches.get_many::<String>("env_filter")
         .map(|vals| {
-            vals.map(|s| crate::util::env::parse_to_env(&*s))
+            vals.map(|s| crate::util::env::parse_to_env(s))
                 .collect::<Result<Vec<_>>>()
         })
         .transpose()?
