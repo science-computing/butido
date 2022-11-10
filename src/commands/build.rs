@@ -138,11 +138,10 @@ pub async fn build(
     info!("We want {} ({:?})", pname, pvers);
 
     let additional_env = matches
-        .get_many::<String>("env")
+        .get_many::<(EnvironmentVariableName, String)>("env")
         .unwrap_or_default()
-        .map(AsRef::as_ref)
-        .map(crate::util::env::parse_to_env)
-        .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
+        .map(Clone::clone)
+        .collect::<Vec<(EnvironmentVariableName, String)>>();
 
     let packages = if let Some(pvers) = pvers {
         debug!("Searching for package with version: '{}' '{}'", pname, pvers);
