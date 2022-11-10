@@ -186,7 +186,7 @@ impl<'a> FindArtifacts<'a> {
                 Ok((_, bl)) => *bl,
             })
             .and_then_ok(|(art, _)| {
-                if let Some(release) = art.get_release(&*self.database_connection)? {
+                if let Some(release) = art.get_release(&self.database_connection)? {
                     Ok((art, Some(release.release_date)))
                 } else {
                     Ok((art, None))
