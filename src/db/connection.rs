@@ -57,7 +57,7 @@ impl<'a> DbConnectionConfig<'a> {
             database_host: cli.get_one("database_host").unwrap_or_else(|| config.database_host()),
             database_port: {
                 cli.get_one("database_port")
-                    .map(|n| *n)
+                    .copied()
                     .unwrap_or_else(|| *config.database_port())
             },
             database_user: cli.get_one::<String>("database_user").unwrap_or_else(|| config.database_user()),
@@ -65,7 +65,7 @@ impl<'a> DbConnectionConfig<'a> {
             database_name: cli.get_one::<String>("database_name").unwrap_or_else(|| config.database_name()),
             database_connection_timeout: {
                 cli.get_one("database_connection_timeout")
-                    .map(|n| *n)
+                    .copied()
                     .unwrap_or_else( || {
                         // hardcoded default of 30 seconds database timeout
                         config.database_connection_timeout().unwrap_or(30)
