@@ -1,7 +1,7 @@
 # Example configuration file for butido
 
 # Configuration and package definition compatibility
-compatibility = "0.1.0"
+compatibility = "0.3.0"
 
 # Format of the progress bars used.
 # See https://docs.rs/indicatif/0.15.0/indicatif/#templates
