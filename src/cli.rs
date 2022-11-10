@@ -9,7 +9,6 @@
 //
 
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use clap::crate_authors;
 use clap::crate_version;
