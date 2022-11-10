@@ -519,7 +519,7 @@ pub fn cli<'a>() -> Command {
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ]))
-                .default_values(&[
+                .default_values([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
@@ -554,7 +554,7 @@ pub fn cli<'a>() -> Command {
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ]))
-                .default_values(&[
+                .default_values([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
@@ -704,7 +704,7 @@ pub fn cli<'a>() -> Command {
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ]))
-                .default_values(&[
+                .default_values([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
