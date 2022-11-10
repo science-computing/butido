@@ -21,7 +21,7 @@ use clap::ArgGroup;
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
 pub const IDENT_DEPENDENCY_TYPE_RUNTIME: &str = "runtime";
 
-pub fn cli<'a>() -> Command<'a> {
+pub fn cli<'a>() -> Command {
     Command::new("butido")
         .author(crate_authors!())
         .version(crate_version!())
@@ -1334,7 +1334,7 @@ pub fn cli<'a>() -> Command<'a> {
         )
 }
 
-fn script_arg_line_numbers<'a>() -> clap::Arg<'a> {
+fn script_arg_line_numbers<'a>() -> clap::Arg {
     Arg::new("script_line_numbers")
         .required(false)
         .multiple_values(false)
@@ -1343,7 +1343,7 @@ fn script_arg_line_numbers<'a>() -> clap::Arg<'a> {
         .conflicts_with("no_script_line_numbers")
 }
 
-fn script_arg_no_line_numbers<'a>() -> clap::Arg<'a> {
+fn script_arg_no_line_numbers<'a>() -> clap::Arg {
     Arg::new("no_script_line_numbers")
         .required(false)
         .multiple_values(false)
@@ -1352,7 +1352,7 @@ fn script_arg_no_line_numbers<'a>() -> clap::Arg<'a> {
         .conflicts_with("script_line_numbers")
 }
 
-fn script_arg_highlight<'a>() -> clap::Arg<'a> {
+fn script_arg_highlight<'a>() -> clap::Arg {
     Arg::new("script_highlight")
         .required(false)
         .multiple_values(false)
@@ -1362,7 +1362,7 @@ fn script_arg_highlight<'a>() -> clap::Arg<'a> {
         .conflicts_with("no_script_highlight")
 }
 
-fn script_arg_no_highlight<'a>() -> clap::Arg<'a> {
+fn script_arg_no_highlight<'a>() -> clap::Arg {
     Arg::new("no_script_highlight")
         .required(false)
         .multiple_values(false)
@@ -1409,7 +1409,7 @@ fn dir_exists_validator(s: &str) -> Result<(), String> {
     }
 }
 
-fn arg_older_than_date(about: &str) -> Arg<'_> {
+fn arg_older_than_date(about: &str) -> Arg {
     Arg::new("older_than")
         .required(false)
         .multiple_values(false)
@@ -1439,7 +1439,7 @@ fn arg_older_than_date(about: &str) -> Arg<'_> {
         .validator(parse_date_from_string)
 }
 
-fn arg_newer_than_date(about: &str) -> Arg<'_> {
+fn arg_newer_than_date(about: &str) -> Arg {
     Arg::new("newer_than")
         .required(false)
         .multiple_values(false)
