@@ -2,8 +2,12 @@ use std::process::Command;  // Run programs
 use assert_cmd::prelude::*; // Add methods on commands
 use predicates::prelude::*; // Used for writing assertions
 
+mod common;
+
 #[test]
 fn test_cli_build() -> Result<(), Box<dyn std::error::Error>> {
+    let tmpdir = tempdir::TempDir::new("butido")?;
+    common::setup_cwd(&tmpdir)?;
     let mut cmd = Command::cargo_bin("butido")?;
 
     cmd.current_dir(tmpdir.as_ref())
