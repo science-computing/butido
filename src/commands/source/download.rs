@@ -10,7 +10,6 @@
 
 use std::convert::TryFrom;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -171,22 +170,21 @@ pub async fn download(
     progressbars: ProgressBars,
 ) -> Result<()> {
     let force = matches.is_present("force");
-    let timeout = matches.value_of("timeout")
-        .map(u64::from_str)
-        .transpose()
-        .context("Parsing timeout argument to integer")?;
+    let timeout = matches.get_one::<u64>("timeout");
     let cache = PathBuf::from(config.source_cache_root());
     let sc = SourceCache::new(cache);
     let pname = matches
-        .value_of("package_name")
-        .map(String::from)
+        .get_one::<String>("package_name")
+        .map(String::clone)
         .map(PackageName::from);
     let pvers = matches
-        .value_of("package_version")
+        .get_one::<String>("package_version")
+        .map(AsRef::as_ref)
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
-    let matching_regexp = matches.value_of("matching")
+    let matching_regexp = matches.get_one::<String>("matching")
+        .map(AsRef::as_ref)
         .map(crate::commands::util::mk_package_name_regex)
         .transpose()?;
 
@@ -232,7 +230,7 @@ pub async fn download(
                         progressbar.lock().await.inc_download_count().await;
                         {
                             let permit = download_sema.acquire_owned().await?;
-                            perform_download(&source, progressbar.clone(), timeout).await?;
+                            perform_download(&source, progressbar.clone(), timeout.copied()).await?;
                             drop(permit);
                         }
                         progressbar.lock().await.finish_one_download().await;

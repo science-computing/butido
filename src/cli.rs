@@ -16,7 +16,7 @@ use clap::crate_version;
 use clap::Command;
 use clap::Arg;
 use clap::ArgGroup;
-use clap::builder::PossibleValueParser;
+use clap::builder::PossibleValuesParser;
 
 // Helper types to ship around stringly typed clap API.
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
@@ -112,7 +112,7 @@ pub fn cli<'a>() -> Command {
             .version(crate_version!())
             .about("Generate and print commandline completions")
             .arg(Arg::new("shell")
-                .value_parser(PossibleValueParser::new(["bash", "elvish", "fish", "zsh"]))
+                .value_parser(PossibleValuesParser::new(["bash", "elvish", "fish", "zsh"]))
                 .default_value("bash")
                 .required(true)
                 .num_args(1)
@@ -140,7 +140,7 @@ pub fn cli<'a>() -> Command {
                     .num_args(1)
                     .long("tool")
                     .value_name("TOOL")
-                    .value_parser(PossibleValueParser::new(["psql", "pgcli"]))
+                    .value_parser(PossibleValuesParser::new(["psql", "pgcli"]))
                     .help("Use a specific tool")
                 )
             )
@@ -168,6 +168,7 @@ pub fn cli<'a>() -> Command {
                     .short('J')
                     .num_args(1)
                     .value_name("JOB UUID")
+                    .value_parser(clap::value_parser!(uuid::Uuid))
                     .help("Print only artifacts for a certain job")
                 )
             )
@@ -202,6 +203,7 @@ pub fn cli<'a>() -> Command {
                     .num_args(1)
                     .index(1)
                     .value_name("SUBMIT")
+                    .value_parser(clap::value_parser!(uuid::Uuid))
                     .help("The Submit to show details about")
                 )
             )
@@ -236,6 +238,7 @@ pub fn cli<'a>() -> Command {
                     .long("limit")
                     .num_args(1)
                     .value_name("LIMIT")
+                    .value_parser(clap::value_parser!(i64))
                     .help("Only list LIMIT submits")
                 )
                 .arg(Arg::new("for-commit")
@@ -270,6 +273,7 @@ pub fn cli<'a>() -> Command {
                     .short('S')
                     .num_args(1)
                     .value_name("UUID")
+                    .value_parser(clap::value_parser!(uuid::Uuid))
                     .help("Only list jobs of a certain submit")
                 )
 
@@ -288,6 +292,7 @@ pub fn cli<'a>() -> Command {
                     .short('L')
                     .num_args(1)
                     .value_name("LIMIT")
+                    .value_parser(clap::value_parser!(usize))
                     .help("Only list newest LIMIT jobs instead of all")
                 )
 
@@ -446,6 +451,7 @@ pub fn cli<'a>() -> Command {
                 .long("staging-dir")
                 .num_args(1)
                 .value_name("PATH")
+                .value_parser(clap::value_parser!(PathBuf))
                 .validator(dir_exists_validator)
                 .help("Do not throw dice on staging directory name, but hardcode for this run.")
             )
@@ -510,7 +516,7 @@ pub fn cli<'a>() -> Command {
                 .short('t')
                 .long("type")
                 .value_name("DEPENDENCY_TYPE")
-                .value_parser(PossibleValueParser::new([
+                .value_parser(PossibleValuesParser::new([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ]))
@@ -545,7 +551,7 @@ pub fn cli<'a>() -> Command {
                 .short('t')
                 .long("type")
                 .value_name("DEPENDENCY_TYPE")
-                .value_parser(PossibleValueParser::new([
+                .value_parser(PossibleValuesParser::new([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ]))
@@ -695,7 +701,7 @@ pub fn cli<'a>() -> Command {
                 .num_args(1..)
                 .long("dependency-type")
                 .value_name("DEPENDENCY_TYPE")
-                .value_parser(PossibleValueParser::new([
+                .value_parser(PossibleValuesParser::new([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ]))
@@ -863,6 +869,7 @@ pub fn cli<'a>() -> Command {
                     .num_args(1)
                     .long("timeout")
                     .value_name("TIMEOUT")
+                    .value_parser(clap::value_parser!(u64))
                     .help("Set timeout for download in seconds")
                 )
             )
@@ -933,6 +940,7 @@ pub fn cli<'a>() -> Command {
                     .num_args(1)
                     .index(1)
                     .value_name("SUBMIT")
+                    .value_parser(clap::value_parser!(uuid::Uuid))
                     .help("The submit uuid from which to release a package")
                 )
                 .arg(Arg::new("release_store_name")
@@ -1087,6 +1095,7 @@ pub fn cli<'a>() -> Command {
                     .long("times")
                     .short('n')
                     .value_name("N")
+                    .value_parser(clap::value_parser!(u64))
                     .default_value("10")
                     .help("How often to ping")
                 )
@@ -1095,6 +1104,7 @@ pub fn cli<'a>() -> Command {
                     .num_args(1)
                     .long("sleep")
                     .value_name("N")
+                    .value_parser(clap::value_parser!(u64))
                     .default_value("1")
                     .help("How long to sleep between pings")
                 )

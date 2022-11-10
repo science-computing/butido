@@ -13,7 +13,6 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::ops::Deref;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -32,8 +31,8 @@ use crate::endpoint::Endpoint;
 
 pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_generator: ProgressBars) -> Result<()> {
     let endpoint_names = matches
-        .value_of("endpoint_name")
-        .map(String::from)
+        .get_one::<String>("endpoint_name")
+        .map(String::clone)
         .map(EndpointName::from)
         .map(|ep| vec![ep])
         .unwrap_or_else(|| {
@@ -61,8 +60,8 @@ async fn ping(endpoint_names: Vec<EndpointName>,
     config: &Configuration,
     progress_generator: ProgressBars
 ) -> Result<()> {
-    let n_pings = matches.value_of("ping_n").map(u64::from_str).transpose()?.unwrap(); // safe by clap
-    let sleep = matches.value_of("ping_sleep").map(u64::from_str).transpose()?.unwrap(); // safe by clap
+    let n_pings = matches.get_one::<u64>("ping_n").unwrap(); // safe by clap
+    let sleep = matches.get_one::<u64>("ping_sleep").unwrap(); // safe by clap
     let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
     let multibar = Arc::new({
         let mp = indicatif::MultiProgress::new();
@@ -76,7 +75,7 @@ async fn ping(endpoint_names: Vec<EndpointName>,
         .iter()
         .map(|endpoint| {
             let bar = multibar.add(progress_generator.bar());
-            bar.set_length(n_pings);
+            bar.set_length(*n_pings);
             bar.set_message(format!("Pinging {}", endpoint.name()));
 
             async move {
@@ -89,7 +88,7 @@ async fn ping(endpoint_names: Vec<EndpointName>,
                         return Err(e)
                     }
 
-                    tokio::time::sleep(tokio::time::Duration::from_secs(sleep)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_secs(*sleep)).await;
                 }
 
                 bar.finish_with_message(format!("Pinging {} successful", endpoint.name()));
@@ -108,7 +107,7 @@ async fn stats(endpoint_names: Vec<EndpointName>,
     config: &Configuration,
     progress_generator: ProgressBars
 ) -> Result<()> {
-    let csv = matches.is_present("csv");
+    let csv = matches.get_flag("csv");
     let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
     let bar = progress_generator.bar();
     bar.set_length(endpoint_names.len() as u64);
@@ -183,7 +182,7 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
     config: &Configuration,
 ) -> Result<()> {
     let list_stopped = matches.is_present("list_stopped");
-    let filter_image = matches.value_of("filter_image");
+    let filter_image = matches.get_one::<String>("filter_image");
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.is_present("csv");
@@ -210,7 +209,7 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
             tpl.1
                 .into_iter()
                 .filter(|stat| list_stopped || stat.state != "exited")
-                .filter(|stat| filter_image.map(|fim| fim == stat.image).unwrap_or(true))
+                .filter(|stat| filter_image.map(|fim| *fim == stat.image).unwrap_or(true))
                 .filter(|stat| older_than_filter.as_ref().map(|time| time > &stat.created).unwrap_or(true))
                 .filter(|stat| newer_than_filter.as_ref().map(|time| time < &stat.created).unwrap_or(true))
                 .map(|stat| {
@@ -278,7 +277,7 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let limit = matches.value_of("limit").map(usize::from_str).transpose()?;
+    let limit = matches.get_one::<usize>("limit");
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.is_present("csv");
@@ -322,7 +321,7 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
         .inspect(|(cid, _top)| trace!("Processing top of container: {}", cid))
         .map(|(container_id, top)| {
             let processes = if let Some(limit) = limit {
-                top.processes.into_iter().take(limit).collect()
+                top.processes.into_iter().take(*limit).collect()
             } else {
                 top.processes
             };
@@ -374,9 +373,8 @@ async fn containers_stop(endpoint_names: Vec<EndpointName>,
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
 
-    let stop_timeout = matches.value_of("timeout")
-        .map(u64::from_str)
-        .transpose()?
+    let stop_timeout = matches.get_one::<u64>("timeout")
+        .map(|u| *u)
         .map(std::time::Duration::from_secs);
 
     let stats = connect_to_endpoints(config, &endpoint_names)

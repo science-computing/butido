@@ -138,7 +138,7 @@ async fn main() -> Result<()> {
         .validate()
         .context("Failed to validate configuration")?;
 
-    let hide_bars = cli.is_present("hide_bars") || crate::util::stdout_is_pipe();
+    let hide_bars = cli.get_flag("hide_bars") || crate::util::stdout_is_pipe();
     let progressbars = ProgressBars::setup(
         config.progress_format().clone(),
         hide_bars,
@@ -276,7 +276,9 @@ fn generate_completions(matches: &ArgMatches) {
     use clap_complete::shells::{Bash, Elvish, Fish, Zsh};
 
     let appname = "butido";
-    match matches.value_of("shell").unwrap() { // unwrap safe by clap
+    let shell = matches.get_one::<String>("shell").unwrap(); // unwrap safe by clap
+                                                             //
+    match shell.as_ref() { // unwrap safe by clap
         "bash"   => generate(Bash, &mut cli::cli(), appname, &mut std::io::stdout()),
         "elvish" => generate(Elvish, &mut cli::cli(), appname, &mut std::io::stdout()),
         "fish"   => generate(Fish, &mut cli::cli(), appname, &mut std::io::stdout()),
