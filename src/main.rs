@@ -272,15 +272,15 @@ async fn main() -> Result<()> {
 }
 
 fn generate_completions(matches: &ArgMatches) {
-    use clap_generate::generate;
-    use clap_generate::generators::{Bash, Elvish, Fish, Zsh};
+    use clap_complete::generate;
+    use clap_complete::shells::{Bash, Elvish, Fish, Zsh};
 
     let appname = "butido";
     match matches.value_of("shell").unwrap() { // unwrap safe by clap
-        "bash"   => generate::<Bash, _>(&mut cli::cli(), appname, &mut std::io::stdout()),
-        "elvish" => generate::<Elvish, _>(&mut cli::cli(), appname, &mut std::io::stdout()),
-        "fish"   => generate::<Fish, _>(&mut cli::cli(), appname, &mut std::io::stdout()),
-        "zsh"    => generate::<Zsh, _>(&mut cli::cli(), appname, &mut std::io::stdout()),
+        "bash"   => generate(Bash, &mut cli::cli(), appname, &mut std::io::stdout()),
+        "elvish" => generate(Elvish, &mut cli::cli(), appname, &mut std::io::stdout()),
+        "fish"   => generate(Fish, &mut cli::cli(), appname, &mut std::io::stdout()),
+        "zsh"    => generate(Zsh, &mut cli::cli(), appname, &mut std::io::stdout()),
         _ => unreachable!(),
     }
 }
