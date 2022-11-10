@@ -106,7 +106,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         })
         .inspect(|pkg| trace!("Found package: {:?}", pkg))
         .map(|pkg| {
-            let script_filter = !matches.is_present("no_script_filter");
+            let script_filter = !matches.get_flag("no_script_filter");
             let pathes = crate::db::FindArtifacts::builder()
                 .config(config)
                 .release_stores(&release_stores)

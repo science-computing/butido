@@ -169,7 +169,7 @@ pub async fn download(
     repo: Repository,
     progressbars: ProgressBars,
 ) -> Result<()> {
-    let force = matches.is_present("force");
+    let force = matches.get_flag("force");
     let timeout = matches.get_one::<String>("timeout")
         .map(|s| s.parse::<u64>())
         .transpose()

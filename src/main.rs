@@ -111,7 +111,7 @@ async fn main() -> Result<()> {
     let cli = app.get_matches();
 
     // check if the version flag is set
-    if cli.is_present("version") {
+    if cli.get_flag("version") {
         println!("{}", VERSION_LONG);
         std::process::exit(0);
     }
@@ -152,7 +152,7 @@ async fn main() -> Result<()> {
         .validate()
         .context("Failed to validate configuration")?;
 
-    let hide_bars = cli.is_present("hide_bars") || crate::util::stdout_is_pipe();
+    let hide_bars = cli.get_flag("hide_bars") || crate::util::stdout_is_pipe();
     let progressbars = ProgressBars::setup(
         config.progress_format().clone(),
         hide_bars,

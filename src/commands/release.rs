@@ -47,7 +47,7 @@ async fn new_release(
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
-    let print_released_file_pathes = !matches.is_present("quiet");
+    let print_released_file_pathes = !matches.get_flag("quiet");
     let release_store_name = matches.get_one::<String>("release_store_name").unwrap(); // safe by clap
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
         return Err(anyhow!(
@@ -137,8 +137,8 @@ async fn new_release(
     let staging_base: &PathBuf = &config.staging_directory().join(submit.uuid.to_string());
 
     let release_store = crate::db::models::ReleaseStore::create(&conn, release_store_name)?;
-    let do_update = matches.is_present("package_do_update");
-    let interactive = !matches.is_present("noninteractive");
+    let do_update = matches.get_flag("package_do_update");
+    let interactive = !matches.get_flag("noninteractive");
 
     let now = chrono::offset::Local::now().naive_local();
     let any_err = arts.into_iter()

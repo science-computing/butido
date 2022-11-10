@@ -156,7 +156,7 @@ fn setup(conn_cfg: DbConnectionConfig<'_>) -> Result<()> {
 fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     use crate::schema::artifacts::dsl;
 
-    let csv = matches.is_present("csv");
+    let csv = matches.get_flag("csv");
     let hdrs = crate::commands::util::mk_header(vec!["Path", "Released", "Job"]);
     let conn = conn_cfg.establish_connection()?;
     let data = matches
@@ -205,7 +205,7 @@ fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<(
 fn envvars(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     use crate::schema::envvars::dsl;
 
-    let csv = matches.is_present("csv");
+    let csv = matches.get_flag("csv");
     let hdrs = crate::commands::util::mk_header(vec!["Name", "Value"]);
     let conn = conn_cfg.establish_connection()?;
     let data = dsl::envvars
@@ -227,7 +227,7 @@ fn envvars(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
 fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     use crate::schema::images::dsl;
 
-    let csv = matches.is_present("csv");
+    let csv = matches.get_flag("csv");
     let hdrs = crate::commands::util::mk_header(vec!["Name"]);
     let conn = conn_cfg.establish_connection()?;
     let data = dsl::images
@@ -336,7 +336,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 
 /// Implementation of the "db submits" subcommand
 fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
-    let csv = matches.is_present("csv");
+    let csv = matches.get_flag("csv");
     let limit = matches.get_one::<String>("limit").map(|s| s.parse::<i64>()).transpose()?;
     let hdrs = crate::commands::util::mk_header(vec!["Time", "UUID", "For Package", "For Package Version"]);
     let conn = conn_cfg.establish_connection()?;
@@ -444,7 +444,7 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
 
 /// Implementation of the "db jobs" subcommand
 fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
-    let csv = matches.is_present("csv");
+    let csv = matches.get_flag("csv");
     let hdrs = crate::commands::util::mk_header(vec![
         "Submit",
         "Job",
@@ -551,12 +551,12 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
 
 /// Implementation of the "db job" subcommand
 fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
-    let script_highlight = !matches.is_present("no_script_highlight");
-    let script_line_numbers = !matches.is_present("no_script_line_numbers");
+    let script_highlight = !matches.get_flag("no_script_highlight");
+    let script_line_numbers = !matches.get_flag("no_script_line_numbers");
     let configured_theme = config.script_highlight_theme();
-    let show_log = matches.is_present("show_log");
-    let show_script = matches.is_present("show_script");
-    let csv = matches.is_present("csv");
+    let show_log = matches.get_flag("show_log");
+    let show_script = matches.get_flag("show_script");
+    let csv = matches.get_flag("csv");
     let conn = conn_cfg.establish_connection()?;
     let job_uuid = matches
         .get_one::<String>("job_uuid")
@@ -610,7 +610,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
         ]];
         crate::commands::util::display_data(hdrs, data, csv)
     } else {
-        let env_vars = if matches.is_present("show_env") {
+        let env_vars = if matches.get_flag("show_env") {
             Some({
                 models::JobEnv::belonging_to(&data.0)
                     .inner_join(schema::envvars::table)
@@ -748,7 +748,7 @@ fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 
 /// Implementation of the "db releases" subcommand
 fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
-    let csv    = matches.is_present("csv");
+    let csv = matches.get_flag("csv");
     let conn   = conn_cfg.establish_connection()?;
     let header = crate::commands::util::mk_header(["Package", "Version", "Date", "Path"].to_vec());
     let mut query = schema::jobs::table
