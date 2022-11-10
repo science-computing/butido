@@ -246,7 +246,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
     let conn = conn_cfg.establish_connection()?;
     let submit_id = matches.get_one::<uuid::Uuid>("submit").unwrap(); // safe by clap
 
-    let submit = models::Submit::with_id(&conn, &submit_id)
+    let submit = models::Submit::with_id(&conn, submit_id)
         .with_context(|| anyhow!("Loading submit '{}' from DB", submit_id))?;
 
     let githash = models::GitHash::with_id(&conn, submit.repo_hash_id)
