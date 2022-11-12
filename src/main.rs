@@ -11,7 +11,6 @@
 #![deny(
     anonymous_parameters,
     bad_style,
-    const_err,
     dead_code,
     deprecated_in_future,
     explicit_outlives_requirements,
