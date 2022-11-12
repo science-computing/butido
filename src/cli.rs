@@ -14,6 +14,7 @@ use clap::crate_authors;
 use clap::crate_version;
 use clap::Command;
 use clap::Arg;
+use clap::ArgAction;
 use clap::ArgGroup;
 use clap::builder::PossibleValuesParser;
 use clap::builder::ValueParser;
@@ -467,6 +468,7 @@ pub fn cli() -> Command {
                 .required(false)
                 .num_args(1)
                 .short('E')
+                .action(ArgAction::Set)
                 .long("env")
                 .value_parser(ValueParser::new(env_pass_validator))
                 .help("Pass environment variable to all build jobs")
