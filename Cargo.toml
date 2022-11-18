@@ -91,7 +91,7 @@ xdg            = "2"
 # to update "rand" in uuid 0.6.
 #
 # Upstream issue: https://github.com/rust-random/rand/issues/1071
-rand = "=0.4.3"
+rand = "=0.8.5"
 
 # See https://github.com/bitvecto-rs/bitvec/issues/105#issuecomment-778570981
 funty = "=1.1.0"
