@@ -22,7 +22,7 @@ use clap::builder::ValueParser;
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
 pub const IDENT_DEPENDENCY_TYPE_RUNTIME: &str = "runtime";
 
-pub fn cli() -> Command {
+pub fn cli<'a>() -> Command {
     Command::new("butido")
         .author(crate_authors!())
         .version(crate_version!())
@@ -1290,7 +1290,7 @@ pub fn cli() -> Command {
         )
 }
 
-fn script_arg_line_numbers() -> clap::Arg {
+fn script_arg_line_numbers<'a>() -> clap::Arg {
     Arg::new("script_line_numbers")
         .required(false)
         .num_args(0)
@@ -1299,7 +1299,7 @@ fn script_arg_line_numbers() -> clap::Arg {
         .conflicts_with("no_script_line_numbers")
 }
 
-fn script_arg_no_line_numbers() -> clap::Arg {
+fn script_arg_no_line_numbers<'a>() -> clap::Arg {
     Arg::new("no_script_line_numbers")
         .required(false)
         .num_args(0)
@@ -1308,7 +1308,7 @@ fn script_arg_no_line_numbers() -> clap::Arg {
         .conflicts_with("script_line_numbers")
 }
 
-fn script_arg_highlight() -> clap::Arg {
+fn script_arg_highlight<'a>() -> clap::Arg {
     Arg::new("script_highlight")
         .required(false)
         .num_args(0)
@@ -1318,7 +1318,7 @@ fn script_arg_highlight() -> clap::Arg {
         .conflicts_with("no_script_highlight")
 }
 
-fn script_arg_no_highlight() -> clap::Arg {
+fn script_arg_no_highlight<'a>() -> clap::Arg {
     Arg::new("no_script_highlight")
         .required(false)
         .num_args(0)
