@@ -23,7 +23,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
 
-      - uses: swatinem/rust-cache@v1
+      - uses: swatinem/rust-cache@v2
 
       - name: Run cargo check
         uses: actions-rs/cargo@v1
@@ -50,7 +50,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
 
-      - uses: swatinem/rust-cache@v1
+      - uses: swatinem/rust-cache@v2
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
@@ -73,7 +73,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3.1.0
-      - uses: swatinem/rust-cache@v1
+      - uses: swatinem/rust-cache@v2
       - uses: EmbarkStudios/cargo-deny-action@v1
         with:
           command: check ${{ matrix.checks }}
@@ -88,7 +88,7 @@ jobs:
         with:
           toolchain: 1.64.0
           override: true
-      - uses: swatinem/rust-cache@v1
+      - uses: swatinem/rust-cache@v2
       - run: rustup component add clippy
       - name: cargo clippy
         run: cargo clippy --all --all-targets --all-features -- -D warnings
