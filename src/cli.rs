@@ -465,7 +465,7 @@ pub fn cli() -> Command {
 
             .arg(Arg::new("env")
                 .required(false)
-                .num_args(0)
+                .num_args(1)
                 .short('E')
                 .long("env")
                 .value_parser(ValueParser::new(env_pass_validator))

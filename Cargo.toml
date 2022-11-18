@@ -109,4 +109,6 @@ encoding_rs = ">=0.8.0, <=0.8.29"
 
 [dev-dependencies]
 toml = "0.5"
-
+assert_cmd = "2"
+predicates = "2.1"
+tempdir = "0.3"
