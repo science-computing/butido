@@ -800,7 +800,7 @@ pub fn cli<'a>() -> Command {
                 )
 
                 .group(ArgGroup::new("verify-one-or-many")
-                    .args(["package_name", "matching"])
+                    .args(&["package_name", "matching"])
                     .required(true)
                 )
             )
@@ -859,7 +859,7 @@ pub fn cli<'a>() -> Command {
                 )
 
                 .group(ArgGroup::new("download-one-or-many")
-                    .args(["package_name", "matching"])
+                    .args(&["package_name", "matching"])
                     .required(true)
                 )
 
@@ -969,7 +969,7 @@ pub fn cli<'a>() -> Command {
                     .conflicts_with("package_name")
                 )
                 .group(ArgGroup::new("package")
-                    .args(["package_name", "all-packages"])
+                    .args(&["package_name", "all-packages"])
                     .required(true) // one of these is required
                 )
                 .arg(Arg::new("package_version")
