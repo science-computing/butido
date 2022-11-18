@@ -94,7 +94,7 @@ xdg            = "2"
 rand = "=0.4.3"
 
 # See https://github.com/bitvecto-rs/bitvec/issues/105#issuecomment-778570981
-funty = "=1.1.0"
+funty = "=2.0.0"
 
 # Pin, because dialoguer pulls it in, but 1.4.x and newer has MSRV 1.51.0. With
 # the pin here, we enforce the build to not use 1.4.0 or newer.
