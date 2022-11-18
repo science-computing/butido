@@ -374,7 +374,7 @@ async fn containers_stop(endpoint_names: Vec<EndpointName>,
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
 
     let stop_timeout = matches.get_one::<u64>("timeout")
-        .copied()
+        .map(|u| *u)
         .map(std::time::Duration::from_secs);
 
     let stats = connect_to_endpoints(config, &endpoint_names)

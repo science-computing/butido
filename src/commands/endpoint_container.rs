@@ -132,7 +132,7 @@ async fn stop(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     container.stop({
         matches
             .get_one::<u64>("timeout")
-            .copied()
+            .map(|u| *u)
             .map(std::time::Duration::from_secs)
     })
     .await
