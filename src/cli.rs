@@ -1366,7 +1366,7 @@ fn dir_exists_validator(s: &str) -> Result<(), String> {
     }
 }
 
-fn arg_older_than_date(about: &'static str) -> Arg {
+fn arg_older_than_date(about: &str) -> Arg {
     Arg::new("older_than")
         .required(false)
         .long("older-than")
@@ -1395,7 +1395,7 @@ fn arg_older_than_date(about: &'static str) -> Arg {
         .validator(parse_date_from_string)
 }
 
-fn arg_newer_than_date(about: &'static str) -> Arg {
+fn arg_newer_than_date(about: &str) -> Arg {
     Arg::new("newer_than")
         .required(false)
         .long("newer-than")
