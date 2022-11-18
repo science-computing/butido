@@ -34,12 +34,11 @@ pub async fn lint(
     let linter = crate::ui::find_linter_command(repo_path, config)?
         .ok_or_else(|| anyhow!("No linter command found"))?;
     let pname = matches
-        .get_one::<String>("package_name")
-        .map(String::clone)
+        .value_of("package_name")
+        .map(String::from)
         .map(PackageName::from);
     let pvers = matches
-        .get_one::<String>("package_version")
-        .map(AsRef::as_ref)
+        .value_of("package_version")
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 

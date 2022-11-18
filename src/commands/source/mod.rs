@@ -59,17 +59,15 @@ pub async fn verify(
 ) -> Result<()> {
     let sc = SourceCache::new(config.source_cache_root().clone());
     let pname = matches
-        .get_one::<String>("package_name")
-        .map(String::clone)
+        .value_of("package_name")
+        .map(String::from)
         .map(PackageName::from);
     let pvers = matches
-        .get_one::<String>("package_version")
-        .map(AsRef::as_ref)
+        .value_of("package_version")
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
-    let matching_regexp = matches.get_one::<String>("matching")
-        .map(AsRef::as_ref)
+    let matching_regexp = matches.value_of("matching")
         .map(crate::commands::util::mk_package_name_regex)
         .transpose()?;
 
@@ -188,12 +186,11 @@ pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
     let mut outlock = out.lock();
 
     let pname = matches
-        .get_one::<String>("package_name")
-        .map(String::clone)
+        .value_of("package_name")
+        .map(String::from)
         .map(PackageName::from);
     let pvers = matches
-        .get_one::<String>("package_version")
-        .map(AsRef::as_ref)
+        .value_of("package_version")
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
@@ -228,12 +225,11 @@ async fn of(
     let cache = PathBuf::from(config.source_cache_root());
     let sc = SourceCache::new(cache);
     let pname = matches
-        .get_one::<String>("package_name")
-        .map(String::clone)
+        .value_of("package_name")
+        .map(String::from)
         .map(PackageName::from);
     let pvers = matches
-        .get_one::<String>("package_version")
-        .map(AsRef::as_ref)
+        .value_of("package_version")
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 

@@ -31,25 +31,24 @@ pub async fn tree_of(
     repo: Repository,
 ) -> Result<()> {
     let pname = matches
-        .get_one::<String>("package_name")
-        .map(String::clone)
+        .value_of("package_name")
+        .map(String::from)
         .map(PackageName::from);
     let pvers = matches
-        .get_one::<String>("package_version")
-        .map(String::clone)
+        .value_of("package_version")
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
     let image_name = matches
-        .get_one::<String>("image")
-        .map(String::clone)
+        .value_of("image")
+        .map(String::from)
         .map(ImageName::from);
 
     let additional_env = matches
-        .get_many::<(EnvironmentVariableName, String)>("env")
+        .values_of("env")
         .unwrap_or_default()
-        .map(Clone::clone)
-        .collect::<Vec<(EnvironmentVariableName, String)>>();
+        .map(crate::util::env::parse_to_env)
+        .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
 
     let condition_data = ConditionData {
         image_name: image_name.as_ref(),
