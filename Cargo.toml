@@ -57,7 +57,7 @@ regex          = "1"
 reqwest        = { version = "0.11", features = [ "stream" ] }
 resiter        = "0.4"
 result-inspect = "0.2"
-rlimit         = "0.7"
+rlimit         = "0.8"
 semver		   = { version = "1.0", features = [ "serde" ] }
 serde          = "1"
 serde_json     = "1"
