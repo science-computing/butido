@@ -57,14 +57,14 @@ pub async fn find_pkg(
 
     let out = std::io::stdout();
     let mut outlock = out.lock();
-    if matches.get_flag("terse") {
+    if matches.is_present("terse") {
         for p in iter {
             writeln!(outlock, "{} {}", p.name(), p.version())?;
         }
         Ok(())
     } else {
         let flags = crate::ui::PackagePrintFlags {
-            print_all: matches.get_flag("show_all"),
+            print_all: matches.is_present("show_all"),
             print_runtime_deps: crate::commands::util::getbool(
                 matches,
                 "dependency_type",
@@ -75,17 +75,17 @@ pub async fn find_pkg(
                 "dependency_type",
                 crate::cli::IDENT_DEPENDENCY_TYPE_BUILD,
             ),
-            print_sources: matches.get_flag("show_sources"),
-            print_dependencies: matches.get_flag("show_dependencies"),
-            print_patches: matches.get_flag("show_patches"),
-            print_env: matches.get_flag("show_env"),
-            print_flags: matches.get_flag("show_flags"),
-            print_allowed_images: matches.get_flag("show_allowed_images"),
-            print_denied_images: matches.get_flag("show_denied_images"),
-            print_phases: matches.get_flag("show_phases"),
-            print_script: matches.get_flag("show_script"),
-            script_line_numbers: !matches.get_flag("no_script_line_numbers"),
-            script_highlighting: !matches.get_flag("no_script_highlight"),
+            print_sources: matches.is_present("show_sources"),
+            print_dependencies: matches.is_present("show_dependencies"),
+            print_patches: matches.is_present("show_patches"),
+            print_env: matches.is_present("show_env"),
+            print_flags: matches.is_present("show_flags"),
+            print_allowed_images: matches.is_present("show_allowed_images"),
+            print_denied_images: matches.is_present("show_denied_images"),
+            print_phases: matches.is_present("show_phases"),
+            print_script: matches.is_present("show_script"),
+            script_line_numbers: !matches.is_present("no_script_line_numbers"),
+            script_highlighting: !matches.is_present("no_script_highlight"),
         };
 
         let format = config.package_print_format();

@@ -112,7 +112,7 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
 async fn top(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     let top = container.top(None).await?;
     let hdr = crate::commands::util::mk_header(top.titles.iter().map(|s| s.as_ref()).collect());
-    crate::commands::util::display_data(hdr, top.processes, matches.get_flag("csv"))
+    crate::commands::util::display_data(hdr, top.processes, matches.is_present("csv"))
 }
 
 async fn kill(matches: &ArgMatches, container: Container<'_>) -> Result<()> {

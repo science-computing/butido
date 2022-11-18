@@ -169,7 +169,7 @@ pub async fn download(
     repo: Repository,
     progressbars: ProgressBars,
 ) -> Result<()> {
-    let force = matches.get_flag("force");
+    let force = matches.is_present("force");
     let timeout = matches.get_one::<u64>("timeout");
     let cache = PathBuf::from(config.source_cache_root());
     let sc = SourceCache::new(cache);

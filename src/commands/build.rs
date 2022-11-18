@@ -240,7 +240,7 @@ pub async fn build(
 
     let source_cache = SourceCache::new(config.source_cache_root().clone());
 
-    if matches.get_flag("no_verification") {
+    if matches.is_present("no_verification") {
         warn!("No hash verification will be performed");
     } else {
         crate::commands::source::verify_impl(
@@ -252,7 +252,7 @@ pub async fn build(
     }
 
     // linting the package scripts
-    if matches.get_flag("no_lint") {
+    if matches.is_present("no_lint") {
         warn!("No script linting will be performed!");
     } else if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
         let all_packages = dag.all_packages();
@@ -367,7 +367,7 @@ pub async fn build(
         .database(database_connection.clone())
         .source_cache(source_cache)
         .submit(submit)
-        .log_dir(if matches.get_flag("write-log-file") {
+        .log_dir(if matches.is_present("write-log-file") {
             Some(config.log_dir().clone())
         } else {
             None
