@@ -16,7 +16,6 @@ use clap::crate_version;
 use clap::Command;
 use clap::Arg;
 use clap::ArgGroup;
-use clap::builder::PossibleValueParser;
 
 // Helper types to ship around stringly typed clap API.
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
@@ -112,7 +111,7 @@ pub fn cli<'a>() -> Command {
             .version(crate_version!())
             .about("Generate and print commandline completions")
             .arg(Arg::new("shell")
-                .value_parser(PossibleValueParser::new(["bash", "elvish", "fish", "zsh"]))
+                .possible_values(&["bash", "elvish", "fish", "zsh"])
                 .default_value("bash")
                 .required(true)
                 .num_args(1)
@@ -140,7 +139,7 @@ pub fn cli<'a>() -> Command {
                     .num_args(1)
                     .long("tool")
                     .value_name("TOOL")
-                    .value_parser(PossibleValueParser::new(["psql", "pgcli"]))
+                    .possible_values(&["psql", "pgcli"])
                     .help("Use a specific tool")
                 )
             )
@@ -510,10 +509,10 @@ pub fn cli<'a>() -> Command {
                 .short('t')
                 .long("type")
                 .value_name("DEPENDENCY_TYPE")
-                .value_parser(PossibleValueParser::new([
+                .possible_values(&[
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
-                ]))
+                ])
                 .default_values(&[
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
@@ -545,10 +544,10 @@ pub fn cli<'a>() -> Command {
                 .short('t')
                 .long("type")
                 .value_name("DEPENDENCY_TYPE")
-                .value_parser(PossibleValueParser::new([
+                .possible_values(&[
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
-                ]))
+                ])
                 .default_values(&[
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
@@ -695,10 +694,10 @@ pub fn cli<'a>() -> Command {
                 .num_args(1..)
                 .long("dependency-type")
                 .value_name("DEPENDENCY_TYPE")
-                .value_parser(PossibleValueParser::new([
+                .possible_values(&[
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
-                ]))
+                ])
                 .default_values(&[
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
