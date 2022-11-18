@@ -102,7 +102,7 @@ where
         .flat_map(|p| sc.sources_for(p).into_iter())
         .collect::<Vec<_>>();
 
-    let bar = progressbars.bar();
+    let bar = progressbars.bar()?;
     bar.set_message("Verifying sources");
     bar.set_length(sources.len() as u64);
 

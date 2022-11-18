@@ -65,7 +65,7 @@ impl ProgressWrapper {
         self.download_count += 1;
         self.set_message().await;
         let bar = self.bar.lock().await;
-        bar.set_length(bar.length() + 1);
+        bar.inc_length(1);
     }
 
     async fn inc_download_bytes(&mut self, bytes: u64) {
@@ -190,7 +190,7 @@ pub async fn download(
         .map(crate::commands::util::mk_package_name_regex)
         .transpose()?;
 
-    let progressbar = Arc::new(Mutex::new(ProgressWrapper::new(progressbars.bar())));
+    let progressbar = Arc::new(Mutex::new(ProgressWrapper::new(progressbars.bar()?)));
 
     let download_sema = Arc::new(tokio::sync::Semaphore::new(NUMBER_OF_MAX_CONCURRENT_DOWNLOADS));
 

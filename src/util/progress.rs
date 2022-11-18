@@ -27,13 +27,13 @@ impl ProgressBars {
         }
     }
 
-    pub fn bar(&self) -> ProgressBar {
+    pub fn bar(&self) -> anyhow::Result<ProgressBar> {
         if self.hide {
-            ProgressBar::hidden()
+            Ok(ProgressBar::hidden())
         } else {
             let b = ProgressBar::new(1);
-            b.set_style(ProgressStyle::default_bar().template(&self.bar_template));
-            b
+            b.set_style(ProgressStyle::default_bar().template(&self.bar_template)?);
+            Ok(b)
         }
     }
 }

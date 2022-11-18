@@ -72,14 +72,18 @@ async fn ping(endpoint_names: Vec<EndpointName>,
         mp
     });
 
-    let ping_process = endpoints
+    endpoints
         .iter()
         .map(|endpoint| {
-            let bar = multibar.add(progress_generator.bar());
-            bar.set_length(n_pings);
-            bar.set_message(format!("Pinging {}", endpoint.name()));
+            let bar = progress_generator.bar().map(|bar| {
+                bar.set_length(n_pings);
+                bar.set_message(format!("Pinging {}", endpoint.name()));
+                multibar.add(bar.clone());
+                bar
+            });
 
             async move {
+                let bar = bar?;
                 for i in 1..(n_pings + 1) {
                     debug!("Pinging {} for the {} time", endpoint.name(), i);
                     let r = endpoint.ping().await;
@@ -97,10 +101,8 @@ async fn ping(endpoint_names: Vec<EndpointName>,
             }
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Result<()>>();
-
-    let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
-    tokio::join!(ping_process, multibar_block).0
+        .collect::<Result<()>>()
+        .await
 }
 
 async fn stats(endpoint_names: Vec<EndpointName>,
@@ -110,7 +112,7 @@ async fn stats(endpoint_names: Vec<EndpointName>,
 ) -> Result<()> {
     let csv = matches.is_present("csv");
     let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
-    let bar = progress_generator.bar();
+    let bar = progress_generator.bar()?;
     bar.set_length(endpoint_names.len() as u64);
     bar.set_message("Fetching stats");
 

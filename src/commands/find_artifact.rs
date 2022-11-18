@@ -61,7 +61,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .release_stores()
         .iter()
         .map(|storename| {
-            let bar_release_loading = progressbars.bar();
+            let bar_release_loading = progressbars.bar()?;
 
             let p = config.releases_directory().join(storename);
             debug!("Loading release directory: {}", p.display());
@@ -77,7 +77,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .collect::<Result<Vec<_>>>()?;
 
     let staging_store = if let Some(p) = matches.value_of("staging_dir").map(PathBuf::from) {
-        let bar_staging_loading = progressbars.bar();
+        let bar_staging_loading = progressbars.bar()?;
 
         if !p.is_dir() {
             tokio::fs::create_dir_all(&p).await?;
