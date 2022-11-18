@@ -221,7 +221,7 @@ pub async fn rm_release(
             config.releases_directory().display()
         ));
     }
-    if !config.release_stores().contains(release_store_name) {
+    if !config.release_stores().contains(&release_store_name) {
         return Err(anyhow!("Unknown release store name: {}", release_store_name))
     }
 
