@@ -44,7 +44,7 @@ git2           = "0.13"
 handlebars     = { version = "~4.3.5", features = ["no_logging"] }
 human-panic    = "1"
 humantime      = "2.1"
-indicatif      = "~0.16.1"
+indicatif      = "~0.17.2"
 indoc          = "1"
 itertools      = "0.10"
 lazy_static    = "1.4"
