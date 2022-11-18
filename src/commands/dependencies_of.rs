@@ -34,8 +34,8 @@ pub async fn dependencies_of(
 
     let package_filter = {
         let name = matches
-            .get_one::<String>("package_name")
-            .map(String::clone)
+            .value_of("package_name")
+            .map(String::from)
             .map(PackageName::from)
             .unwrap();
         trace!("Checking for package with name = {}", name);

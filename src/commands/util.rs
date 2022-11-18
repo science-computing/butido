@@ -33,7 +33,7 @@ use crate::package::Shebang;
 /// Helper for getting a boolean value by name form the argument object
 pub fn getbool(m: &ArgMatches, name: &str, cmp: &str) -> bool {
     // unwrap is safe here because clap is configured with default values
-    m.get_many::<String>(name).unwrap().any(|v| v == cmp)
+    m.values_of(name).unwrap().any(|v| v == cmp)
 }
 
 /// Helper function to lint all packages in an interator
@@ -226,7 +226,7 @@ pub fn display_data<D: Display>(
 }
 
 pub fn get_date_filter(name: &str, matches: &ArgMatches) -> Result<Option<chrono::DateTime::<chrono::Local>>> {
-    matches.get_one::<String>(name)
+    matches.value_of(name)
         .map(|s| {
             trace!("Parsing duration: '{}'", s);
             humantime::parse_duration(s)

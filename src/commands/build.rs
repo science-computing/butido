@@ -72,14 +72,14 @@ pub async fn build(
 
     let shebang = Shebang::from({
         matches
-            .get_one::<String>("shebang")
-            .map(String::clone)
+            .value_of("shebang")
+            .map(String::from)
             .unwrap_or_else(|| config.shebang().clone())
     });
 
     let image_name = matches
-        .get_one::<String>("image")
-        .map(String::clone)
+        .value_of("image")
+        .map(String::from)
         .map(ImageName::from)
         .unwrap(); // safe by clap
     if config.docker().verify_images_present()
@@ -126,21 +126,20 @@ pub async fn build(
     info!("Endpoint config build");
 
     let pname = matches
-        .get_one::<String>("package_name")
-        .map(String::clone)
+        .value_of("package_name")
+        .map(String::from)
         .map(PackageName::from)
         .unwrap(); // safe by clap
 
     let pvers = matches
-        .get_one::<String>("package_version")
-        .map(String::clone)
+        .value_of("package_version")
+        .map(String::from)
         .map(PackageVersion::from);
     info!("We want {} ({:?})", pname, pvers);
 
     let additional_env = matches
-        .get_many::<String>("env")
+        .values_of("env")
         .unwrap_or_default()
-        .map(AsRef::as_ref)
         .map(crate::util::env::parse_to_env)
         .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
 
@@ -186,7 +185,7 @@ pub async fn build(
     let (staging_store, staging_dir, submit_id) = {
         let bar_staging_loading = progressbars.bar();
 
-        let (submit_id, p) = if let Some(staging_dir) = matches.get_one::<PathBuf>("staging_dir") {
+        let (submit_id, p) = if let Some(staging_dir) = matches.value_of("staging_dir").map(PathBuf::from) {
             info!(
                 "Setting staging dir to {} for this run",
                 staging_dir.display()
@@ -202,7 +201,7 @@ pub async fn build(
                 .context("Parsing directory name as UUID")
                 .with_context(|| anyhow!("Seems not to be a submit UUID: {}", uuid))?;
 
-            (uuid, staging_dir.to_path_buf())
+            (uuid, staging_dir)
         } else {
             let submit_id = uuid::Uuid::new_v4();
             let staging_dir = config
