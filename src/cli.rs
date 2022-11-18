@@ -1139,8 +1139,8 @@ pub fn cli<'a>() -> Command {
                         .long("timeout")
                         .short('t')
                         .value_name("TIMEOUT")
-                        .value_parser(clap::value_parser!(u64))
                         .help("Timeout in seconds")
+                        .validator(parse_u64)
                     )
                 )
                 .subcommand(Command::new("list")
@@ -1185,8 +1185,8 @@ pub fn cli<'a>() -> Command {
                         .long("limit")
                         .num_args(1)
                         .value_name("LIMIT")
-                        .value_parser(clap::value_parser!(usize))
                         .help("Only list LIMIT processes for each container")
+                        .validator(parse_usize)
                     )
                 )
             )
@@ -1418,6 +1418,14 @@ fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
                 .map_err(|e| e.to_string())
                 .map(|_| ())
         })
+}
+
+fn parse_usize(s: &str) -> std::result::Result<(), String> {
+    usize::from_str(s) .map_err(|e| e.to_string()).map(|_| ())
+}
+
+fn parse_u64(s: &str) -> std::result::Result<(), String> {
+    u64::from_str(s).map_err(|e| e.to_string()).map(|_| ())
 }
 
 #[cfg(test)]
