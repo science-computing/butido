@@ -1371,7 +1371,7 @@ fn arg_older_than_date(about: &'static str) -> Arg {
                 years, year, y -- defined as 365.25 days
 
         "#)
-        .value_parser(ValueParser::new(parse_date_from_string))
+        .validator(parse_date_from_string)
 }
 
 fn arg_newer_than_date(about: &'static str) -> Arg {
@@ -1400,21 +1400,23 @@ fn arg_newer_than_date(about: &'static str) -> Arg {
                 years, year, y -- defined as 365.25 days
 
         "#)
-        .value_parser(ValueParser::new(parse_date_from_string))
+        .validator(parse_date_from_string)
 }
 
-fn parse_date_from_string(s: &str) -> std::result::Result<std::time::Duration, String> {
+fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
     humantime::parse_duration(s)
+        .map_err(|e| e.to_string())
+        .map(|_| ())
         .or_else(|_| {
-            let time = humantime::parse_rfc3339_weak(s).map_err(|e| e.to_string())?;
-            time.duration_since(std::time::SystemTime::now())
+            humantime::parse_rfc3339_weak(s)
                 .map_err(|e| e.to_string())
+                .map(|_| ())
         })
         .or_else(|_| {
             let s = format!("{} 00:00:00", s);
-            let time = humantime::parse_rfc3339_weak(&s).map_err(|e| e.to_string())?;
-            time.duration_since(std::time::SystemTime::now())
+            humantime::parse_rfc3339_weak(&s)
                 .map_err(|e| e.to_string())
+                .map(|_| ())
         })
 }
 
