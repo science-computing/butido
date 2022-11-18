@@ -46,10 +46,11 @@ pub async fn tree_of(
         .map(ImageName::from);
 
     let additional_env = matches
-        .get_many::<(EnvironmentVariableName, String)>("env")
+        .get_many::<String>("env")
         .unwrap_or_default()
-        .map(Clone::clone)
-        .collect::<Vec<(EnvironmentVariableName, String)>>();
+        .map(AsRef::as_ref)
+        .map(crate::util::env::parse_to_env)
+        .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
 
     let condition_data = ConditionData {
         image_name: image_name.as_ref(),

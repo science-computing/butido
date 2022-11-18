@@ -469,7 +469,7 @@ pub fn cli<'a>() -> Command {
                 .num_args(0)
                 .short('E')
                 .long("env")
-                .value_parser(ValueParser::new(env_pass_validator))
+                .validator(env_pass_validator)
                 .help("Pass environment variable to all build jobs")
                 .long_help(indoc::indoc!(r#"
                     Pass these variables to each build job.
@@ -632,7 +632,7 @@ pub fn cli<'a>() -> Command {
                 .long("env")
                 .short('E')
                 .value_name("KV")
-                .value_parser(ValueParser::new(env_pass_validator))
+                .validator(env_pass_validator)
                 .help("Filter for this \"key=value\" environment variable")
             )
             .arg(Arg::new("image")
@@ -1059,7 +1059,7 @@ pub fn cli<'a>() -> Command {
                 .num_args(1)
                 .short('E')
                 .long("env")
-                .value_parser(ValueParser::new(env_pass_validator))
+                .validator(env_pass_validator)
                 .help("Additional env to be passed when building packages")
                 .long_help(indoc::indoc!(r#"
                     Additional env to be passed when building packages.
@@ -1332,8 +1332,30 @@ fn script_arg_no_highlight<'a>() -> clap::Arg {
 /// Naive check whether 's' is a 'key=value' pair or an existing environment variable
 ///
 /// TODO: Clean up this spaghetti code
-fn env_pass_validator(s: &str) -> Result<(crate::util::EnvironmentVariableName, String), String> {
-    crate::util::env::parse_to_env(s).map_err(|e| e.to_string())
+fn env_pass_validator(s: &str) -> Result<(), String> {
+    use crate::util::parser::*;
+    let parser = {
+        let key = (letters() + ((letters() | numbers() | under()).repeat(0..)))
+            .collect()
+            .convert(|b| String::from_utf8(b.to_vec()));
+
+        let val = nonempty_string_with_optional_quotes()
+            .collect()
+            .convert(|b| String::from_utf8(b.to_vec()));
+
+        (key + equal() + val).map(|((k, _), v)| (k, v))
+    };
+
+    match parser.parse(s.as_bytes()).map_err(|e| e.to_string()) {
+        Err(s) => {
+            log::error!("Error during validation: '{}' is not a key-value pair", s);
+            Err(s)
+        }
+        Ok((k, v)) => {
+            log::debug!("Env pass valiation: '{}={}'", k, v);
+            Ok(())
+        }
+    }
 }
 
 fn dir_exists_validator(s: &str) -> Result<PathBuf, String> {
