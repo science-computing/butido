@@ -98,7 +98,7 @@ funty = "=1.1.0"
 
 # Pin, because dialoguer pulls it in, but 1.4.x and newer has MSRV 1.51.0. With
 # the pin here, we enforce the build to not use 1.4.0 or newer.
-zeroize = ">=1.3.0, <1.4.0"
+zeroize = ">=1.3.0, <1.6.0"
 
 # In 0.8.30 of encoding_rs, they messed up the license information in the crate
 # metadata. Thus, `cargo deny check licenses` fails.
