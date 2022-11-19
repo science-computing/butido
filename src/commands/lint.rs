@@ -42,7 +42,7 @@ pub async fn lint(
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
-    let bar = progressbars.bar();
+    let bar = progressbars.bar()?;
     bar.set_message("Linting package scripts...");
 
     let iter = repo

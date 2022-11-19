@@ -318,7 +318,7 @@ impl<'a> Orchestrator<'a> {
                 let (sender, receiver) = tokio::sync::mpsc::channel(100);
 
                 trace!("Creating TaskPreparation object for job {}", jobdef.job.uuid());
-                let bar = self.progress_generator.bar();
+                let bar = self.progress_generator.bar()?;
                 let bar = multibar.add(bar);
                 bar.set_length(100);
                 let tp = TaskPreparation {
@@ -335,9 +335,9 @@ impl<'a> Orchestrator<'a> {
                     database: self.database.clone(),
                 };
 
-                (receiver, tp, sender, std::cell::RefCell::new(None as Option<Vec<Sender<JobResult>>>))
+                Ok((receiver, tp, sender, std::cell::RefCell::new(None as Option<Vec<Sender<JobResult>>>)))
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
         // Associate tasks with their appropriate sender
         //
@@ -421,9 +421,7 @@ impl<'a> Orchestrator<'a> {
             .collect::<futures::stream::FuturesUnordered<_>>();
         debug!("Built {} jobs", running_jobs.len());
 
-        let multibar_block = tokio::task::spawn_blocking(move || multibar.join());
-        let (_, jobs_result) = tokio::join!(multibar_block, running_jobs.collect::<Result<()>>());
-        jobs_result?;
+        running_jobs.collect::<Result<()>>().await?;
         trace!("All jobs finished");
         match root_receiver.recv().await {
             None                     => Err(anyhow!("No result received...")),

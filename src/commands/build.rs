@@ -168,7 +168,7 @@ pub async fn build(
         .release_stores()
         .iter()
         .map(|storename| {
-            let bar_release_loading = progressbars.bar();
+            let bar_release_loading = progressbars.bar()?;
 
             let p = config.releases_directory().join(storename);
             debug!("Loading release directory: {}", p.display());
@@ -183,7 +183,7 @@ pub async fn build(
         .collect::<Result<Vec<_>>>()?;
 
     let (staging_store, staging_dir, submit_id) = {
-        let bar_staging_loading = progressbars.bar();
+        let bar_staging_loading = progressbars.bar()?;
 
         let (submit_id, p) = if let Some(staging_dir) = matches.value_of("staging_dir").map(PathBuf::from) {
             info!(
@@ -226,7 +226,7 @@ pub async fn build(
     };
 
     let dag = {
-        let bar_tree_building = progressbars.bar();
+        let bar_tree_building = progressbars.bar()?;
         let condition_data = ConditionData {
             image_name: Some(&image_name),
             env: &additional_env,
@@ -255,7 +255,7 @@ pub async fn build(
         warn!("No script linting will be performed!");
     } else if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
         let all_packages = dag.all_packages();
-        let bar = progressbars.bar();
+        let bar = progressbars.bar()?;
         bar.set_length(all_packages.len() as u64);
         bar.set_message("Linting package scripts...");
 
