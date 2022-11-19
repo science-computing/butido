@@ -52,7 +52,7 @@ log            = "0.4"
 parse-display  = "0.6"
 pom            = "3"
 ptree          = "0.4"
-rayon          = "1.5"
+rayon          = "1.6"
 regex          = "1"
 reqwest        = { version = "0.11", features = [ "stream" ] }
 resiter        = "0.4"
@@ -67,7 +67,7 @@ shiplift       = "0.7"
 syntect        = "4.4"
 tar            = "0.4.16"
 terminal_size  = "0.2"
-tokio          = { version = "1.0", features = ["macros", "fs", "process", "io-util", "time"] }
+tokio          = { version = "1.22", features = ["macros", "fs", "process", "io-util", "time"] }
 tokio-stream   = "0.1"
 typed-builder  = "0.11"
 unindent       = "0.1"
