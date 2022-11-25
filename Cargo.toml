@@ -35,7 +35,7 @@ csv            = "1.1"
 daggy          = { version = "0.8", features = [ "serde" ] }
 dialoguer      = "0.10"
 diesel         = { version = "~1.4.6", features = ["postgres", "chrono", "uuid", "serde_json"] }
-diesel_migrations = "~1.4"
+diesel_migrations = "~2.0"
 env_logger     = "0.10"
 filters        = "0.4.0"
 futures        = "0.3"
