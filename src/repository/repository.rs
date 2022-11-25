@@ -136,7 +136,8 @@ impl Repository {
                         config.set_once("patches", config::Value::from(patches))?;
                         Ok(config)
                     })
-                    .and_then(|c| c.try_into::<Package>().map_err(Error::from))
+                    .and_then(|c| c.try_into::<Package>().map_err(Error::from)
+                        .with_context(|| anyhow!("Could not load package configuration: {}", path.display())))
                     .map(|pkg| ((pkg.name().clone(), pkg.version().clone()), pkg))
             })
             .collect::<Result<BTreeMap<_, _>>>()
