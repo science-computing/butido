@@ -119,7 +119,7 @@ version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
 dependencies = [
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
@@ -146,7 +146,7 @@ dependencies = [
  "lazy_static 1.4.0",
  "memchr",
  "regex-automata",
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
@@ -200,7 +200,7 @@ dependencies = [
  "result-inspect",
  "rlimit",
  "semver",
- "serde 1.0.147",
+ "serde 1.0.148",
  "serde_json",
  "sha-1",
  "sha2",
@@ -276,7 +276,7 @@ dependencies = [
  "js-sys",
  "num-integer",
  "num-traits 0.2.15",
- "serde 1.0.147",
+ "serde 1.0.148",
  "time 0.1.44",
  "wasm-bindgen",
  "winapi",
@@ -353,7 +353,7 @@ dependencies = [
  "lazy_static 1.4.0",
  "nom",
  "rust-ini",
- "serde 1.0.147",
+ "serde 1.0.148",
  "serde-hjson",
  "serde_json",
  "toml",
@@ -471,7 +471,7 @@ dependencies = [
  "csv-core",
  "itoa 0.4.8",
  "ryu",
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
@@ -534,7 +534,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91a9304e55e9d601a39ae4deaba85406d5c0980e106f65afcf0460e9af1e7602"
 dependencies = [
  "petgraph",
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
@@ -956,7 +956,7 @@ dependencies = [
  "log",
  "pest",
  "pest_derive",
- "serde 1.0.147",
+ "serde 1.0.148",
  "serde_json",
  "thiserror",
 ]
@@ -1039,7 +1039,7 @@ checksum = "39f357a500abcbd7c5f967c1d45c8838585b36743823b9d43488f24850534e36"
 dependencies = [
  "backtrace",
  "os_type",
- "serde 1.0.147",
+ "serde 1.0.148",
  "serde_derive",
  "termcolor",
  "toml",
@@ -1832,7 +1832,7 @@ dependencies = [
  "base64",
  "indexmap",
  "line-wrap",
- "serde 1.0.147",
+ "serde 1.0.148",
  "time 0.3.17",
  "xml-rs",
 ]
@@ -1902,7 +1902,7 @@ dependencies = [
  "config",
  "directories",
  "petgraph",
- "serde 1.0.147",
+ "serde 1.0.148",
  "serde-value",
  "tint",
 ]
@@ -2026,7 +2026,7 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
- "serde 1.0.147",
+ "serde 1.0.148",
  "serde_json",
  "serde_urlencoded",
  "tokio",
@@ -2173,7 +2173,7 @@ version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e25dfac463d778e353db5be2449d1cce89bd6fd23c9f1ea21310ce6e5a1b29c4"
 dependencies = [
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
@@ -2184,9 +2184,9 @@ checksum = "9dad3f759919b92c3068c696c15c3d17238234498bbdcc80f2c469606f948ac8"
 
 [[package]]
 name = "serde"
-version = "1.0.147"
+version = "1.0.148"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d193d69bae983fc11a79df82342761dfbf28a99fc8d203dca4c3c1b590948965"
+checksum = "e53f64bb4ba0191d6d0676e1b141ca55047d83b74f5607e6d8eb88126c52c2dc"
 dependencies = [
  "serde_derive",
 ]
@@ -2210,14 +2210,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
 dependencies = [
  "ordered-float",
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.147"
+version = "1.0.148"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f1d362ca8fc9c3e3a7484440752472d68a6caa98f1ab81d99b5dfe517cec852"
+checksum = "a55492425aa53521babf6137309e7d34c20bbfbbfcfe2c7f3a047fd1f6b92c0c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2232,7 +2232,7 @@ checksum = "020ff22c755c2ed3f8cf162dbb41a7268d934702f3ed3631656ea597e08fc3db"
 dependencies = [
  "itoa 1.0.4",
  "ryu",
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
@@ -2244,7 +2244,7 @@ dependencies = [
  "form_urlencoded",
  "itoa 1.0.4",
  "ryu",
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
@@ -2300,7 +2300,7 @@ dependencies = [
  "mime",
  "openssl",
  "pin-project 1.0.12",
- "serde 1.0.147",
+ "serde 1.0.148",
  "serde_json",
  "tar",
  "tokio",
@@ -2378,9 +2378,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.103"
+version = "1.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a864042229133ada95abf3b54fdc62ef5ccabe9515b64717bcb9a1919e59445d"
+checksum = "4ae548ec36cf198c0ef7710d3c230987c2d6d7bd98ad6edc0274462724c585ce"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2402,7 +2402,7 @@ dependencies = [
  "onig",
  "plist",
  "regex-syntax",
- "serde 1.0.147",
+ "serde 1.0.148",
  "serde_derive",
  "serde_json",
  "walkdir",
@@ -2510,7 +2510,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a561bf4617eebd33bca6434b988f39ed798e527f51a1e797d0ee4f61c0a38376"
 dependencies = [
  "itoa 1.0.4",
- "serde 1.0.147",
+ "serde 1.0.148",
  "time-core",
  "time-macros",
 ]
@@ -2637,7 +2637,7 @@ version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d82e1a7758622a465f8cee077614c73484dac5b836c02ff6a40d5d1010324d7"
 dependencies = [
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
@@ -2743,7 +2743,7 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
@@ -2754,7 +2754,7 @@ checksum = "e1436e58182935dcd9ce0add9ea0b558e8a87befe01c1a301e6020aeb0876363"
 dependencies = [
  "cfg-if 0.1.10",
  "rand",
- "serde 1.0.147",
+ "serde 1.0.148",
 ]
 
 [[package]]
