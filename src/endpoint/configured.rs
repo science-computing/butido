@@ -230,7 +230,7 @@ impl Endpoint {
 
     pub async fn prepare_container(
         &self,
-        job: RunnableJob,
+        job: &RunnableJob,
         staging_store: Arc<RwLock<StagingStore>>,
         release_stores: Vec<Arc<ReleaseStore>>,
     ) -> Result<PreparedContainer<'_>> {
@@ -453,18 +453,18 @@ pub struct PreparedContainer<'a> {
 impl<'a> PreparedContainer<'a> {
     async fn new(
         endpoint: &'a Endpoint,
-        job: RunnableJob,
+        job: &RunnableJob,
         staging_store: Arc<RwLock<StagingStore>>,
         release_stores: Vec<Arc<ReleaseStore>>,
     ) -> Result<PreparedContainer<'a>> {
         let script = job.script().clone();
-        let create_info = Self::build_container(endpoint, &job).await?;
+        let create_info = Self::build_container(endpoint, job).await?;
         let container = endpoint.docker.containers().get(&create_info.id);
 
         let (cpysrc, cpypch, cpyart, cpyscr) = tokio::join!(
-            Self::copy_source_to_container(&container, &job),
-            Self::copy_patches_to_container(&container, &job),
-            Self::copy_artifacts_to_container(&container, &job, staging_store, &release_stores),
+            Self::copy_source_to_container(&container, job),
+            Self::copy_patches_to_container(&container, job),
+            Self::copy_artifacts_to_container(&container, job, staging_store, &release_stores),
             Self::copy_script_to_container(&container, &script)
         );
 
