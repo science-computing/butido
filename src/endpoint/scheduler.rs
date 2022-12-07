@@ -180,7 +180,7 @@ impl JobHandle {
         let job_id = *self.job.uuid();
         trace!("Running on Job {} on Endpoint {}", job_id, self.endpoint.name());
         let prepared_container = self.endpoint
-            .prepare_container(self.job, self.staging_store.clone(), self.release_stores.clone())
+            .prepare_container(&self.job, self.staging_store.clone(), self.release_stores.clone())
             .await?;
         let container_id = prepared_container.create_info().id.clone();
         let running_container = prepared_container
@@ -203,7 +203,7 @@ impl JobHandle {
             package_name: &package.name,
             package_version: &package.version,
             log_dir: self.log_dir.as_ref(),
-            job_id,
+            job: self.job,
             log_receiver,
             bar: self.bar.clone(),
         }
@@ -361,7 +361,7 @@ struct LogReceiver<'a> {
     package_name: &'a str,
     package_version: &'a str,
     log_dir: Option<&'a PathBuf>,
-    job_id: Uuid,
+    job: RunnableJob,
     log_receiver: UnboundedReceiver<LogItem>,
     bar: ProgressBar,
 }
@@ -420,14 +420,14 @@ impl<'a> LogReceiver<'a> {
                     trace!("Setting bar phase to {}", phasename);
                     self.bar.set_message(format!(
                         "[{}/{} {} {} {}]: Phase: {}",
-                        self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version, phasename
+                        self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version, phasename
                     ));
                 }
                 LogItem::State(Ok(())) => {
                     trace!("Setting bar state to Ok");
                     self.bar.set_message(format!(
                         "[{}/{} {} {} {}]: State Ok",
-                        self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version
+                        self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version
                     ));
                     success = Some(true);
                 }
@@ -435,7 +435,7 @@ impl<'a> LogReceiver<'a> {
                     trace!("Setting bar state to Err: {}", e);
                     self.bar.set_message(format!(
                         "[{}/{} {} {} {}]: State Err: {}",
-                        self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version, e
+                        self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version, e
                     ));
                     success = Some(false);
                 }
@@ -447,15 +447,15 @@ impl<'a> LogReceiver<'a> {
         let finish_msg = match success {
             Some(true) => format!(
                 "[{}/{} {} {} {}]: finished successfully",
-                self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version
+                self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version
             ),
             Some(false) => format!(
                 "[{}/{} {} {} {}]: finished with error",
-                self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version
+                self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version
             ),
             None => format!(
                 "[{}/{} {} {} {}]: finished",
-                self.endpoint_name, self.container_id_chrs, self.job_id, self.package_name, self.package_version
+                self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version
             ),
         };
         self.bar.finish_with_message(finish_msg);
@@ -476,8 +476,8 @@ impl<'a> LogReceiver<'a> {
         if let Some(log_dir) = self.log_dir.as_ref() {
             Some({
                 let path = log_dir.join(format!(
-                    "{}-{}-{}.log",
-                    self.package_name, self.package_version, self.job_id
+                    "{}-{}-{}-{}.log",
+                    self.package_name, self.package_version, self.job.image(), self.job.uuid()
                 ));
                 tokio::fs::OpenOptions::new()
                     .create(true)

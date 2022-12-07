@@ -136,7 +136,7 @@ fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Re
         .map(|s| vec![s])
         .unwrap_or_else(|| vec!["psql", "pgcli"])
         .into_iter()
-        .filter_map(|s| which::which(&s).ok().map(|path| (path, s)))
+        .filter_map(|s| which::which(s).ok().map(|path| (path, s)))
         .map(|(path, s)| match s {
             "psql" => Ok(Box::new(Psql(path)) as Box<dyn PgCliCommand>),
             "pgcli" => Ok(Box::new(PgCli(path)) as Box<dyn PgCliCommand>),
