@@ -25,7 +25,7 @@ use log::trace;
 use serde::Deserialize;
 use serde::Serialize;
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Style, ThemeSet};
+use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 use tokio::process::Command;
@@ -133,12 +133,15 @@ impl<'a> HighlightedScript<'a> {
 
         let mut h = HighlightLines::new(syntax, theme);
 
-        Ok({
-            LinesWithEndings::from(&self.script.0).map(move |line| {
-                let ranges: Vec<(Style, &str)> = h.highlight(line, &self.ps);
-                as_24_bit_terminal_escaped(&ranges[..], true)
+        LinesWithEndings::from(&self.script.0)
+            .map(move |line| -> Result<String> {
+                h
+                    .highlight_line(line, &self.ps)
+                    .with_context(|| anyhow!("Could not highlight the following line: {}", line))
+                    .map(|r| as_24_bit_terminal_escaped(&r[..], true))
             })
-        })
+            .collect::<Result<Vec<String>>>()
+            .map(|v| v.into_iter())
     }
 
     pub fn lines_numbered(&'a self) -> Result<impl Iterator<Item = (usize, String)> + 'a> {
