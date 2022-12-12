@@ -451,8 +451,8 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
         "Submit",
         "Job",
         "Time",
-        "Endpoint",
-        "Success",
+        "Host",
+        "Ok?",
         "Package",
         "Version",
     ]);
