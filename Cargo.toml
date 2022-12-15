@@ -6,6 +6,7 @@ authors = [
            "Matthias Beyer <mail@beyermatthias.de>",
           ]
 edition = "2018"
+rust-version = "1.64.0" # MSRV
 license = "EPL-2.0"
 
 description = "Linux package tool utilizing docker, postgres and toml"

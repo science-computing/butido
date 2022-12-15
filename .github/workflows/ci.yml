@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.64.0
+          - 1.64.0 # MSRV
           - stable
           - beta
 
@@ -37,7 +37,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.64.0
+          - 1.64.0 # MSRV
           - stable
           - beta
     steps:
@@ -86,7 +86,7 @@ jobs:
       - uses: actions/checkout@v3.1.0
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.64.0
+          toolchain: 1.64.0 # MSRV
           override: true
       - uses: swatinem/rust-cache@v2
       - run: rustup component add clippy

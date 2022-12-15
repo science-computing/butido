@@ -63,4 +63,6 @@ By that you agree to the
 >     maintained indefinitely and may be redistributed consistent with
 >     this project or the open source license(s) involved.
 
+## Bumping the MSRV
 
+Use `git grep -E '[0-9]+(\.[0-9]+){2}.+MSRV'` and update all matches.
