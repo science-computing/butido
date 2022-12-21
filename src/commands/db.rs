@@ -783,7 +783,7 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
         .load::<(models::Artifact, models::Package, models::Release, models::ReleaseStore)>(&conn)?
         .into_iter()
         .filter_map(|(art, pack, rel, rstore)| {
-            let p = config.releases_directory().join(rstore.store_name).join(&art.path);
+            let p = config.releases_directory().join(rstore.store_name).join(art.path);
 
             if p.is_file() {
                 Some(vec![
