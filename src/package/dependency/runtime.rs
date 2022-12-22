@@ -83,7 +83,7 @@ mod tests {
 
         match s.setting {
             Dependency::Simple(name) => assert_eq!(name, "foo", "Expected 'foo', got {name}"),
-            other => panic!("Unexpected deserialization to other variant: {:?}", other),
+            other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
 
@@ -97,7 +97,7 @@ mod tests {
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
             },
-            other => panic!("Unexpected deserialization to other variant: {:?}", other),
+            other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
 
@@ -119,7 +119,7 @@ mod tests {
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
             },
-            other => panic!("Unexpected deserialization to other variant: {:?}", other),
+            other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
 
@@ -140,7 +140,7 @@ mod tests {
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
             },
-            other => panic!("Unexpected deserialization to other variant: {:?}", other),
+            other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
 
@@ -161,7 +161,7 @@ mod tests {
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
             },
-            other => panic!("Unexpected deserialization to other variant: {:?}", other),
+            other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
 
@@ -182,7 +182,7 @@ mod tests {
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
             },
-            other => panic!("Unexpected deserialization to other variant: {:?}", other),
+            other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
 
@@ -207,7 +207,7 @@ mod tests {
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
             },
-            other => panic!("Unexpected deserialization to other variant: {:?}", other),
+            other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
 
         match s.settings.get(1).expect("Has not two dependencies") {
@@ -217,7 +217,7 @@ mod tests {
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("boogie"))));
             },
-            other => panic!("Unexpected deserialization to other variant: {:?}", other),
+            other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
 }
