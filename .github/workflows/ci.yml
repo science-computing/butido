@@ -82,14 +82,24 @@ jobs:
     needs: [check]
     name: Lint
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.optional }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - beta
+        optional: [true]
+        include:
+          - rust: 1.64.0 # MSRV
+            optional: false
     steps:
       - uses: actions/checkout@v3.2.0
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.64.0 # MSRV
+          toolchain: ${{ matrix.rust }}
           override: true
+          components: clippy
       - uses: swatinem/rust-cache@v2
-      - run: rustup component add clippy
       - name: cargo clippy
         run: cargo clippy --all --all-targets --all-features -- -D warnings
 
