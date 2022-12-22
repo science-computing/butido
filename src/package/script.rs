@@ -189,7 +189,7 @@ impl<'a> ScriptBuilder<'a> {
                         name.as_str(),
                         // whack hack: insert empty line on top because unindent ignores the
                         // indentation of the first line, see commit message for more info
-                        format!("\n{}", text).unindent(),
+                        format!("\n{text}").unindent(),
                         name.as_str(),
                     ));
 
@@ -305,8 +305,7 @@ impl HelperDef for StateHelper {
                     Ok(())
                 }
                 other => Err(RenderError::new(format!(
-                    "Parameter must bei either 'OK' or 'ERR', '{}' is invalid",
-                    other
+                    "Parameter must bei either 'OK' or 'ERR', '{other}' is invalid"
                 ))),
             })
     }

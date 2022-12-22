@@ -653,7 +653,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
             script_len = format!("{:<4}", data.0.script_text.lines().count()).cyan(),
             log_len = format!("{:<4}", data.0.log_text.lines().count()).cyan(),
         );
-        writeln!(out, "{}", s)?;
+        writeln!(out, "{s}")?;
 
         if let Some(envs) = env_vars {
             let s = indoc::formatdoc!(
@@ -665,7 +665,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
             "#,
                 envs = envs
             );
-            writeln!(out, "{}", s)?;
+            writeln!(out, "{s}")?;
         }
 
         if show_script {
@@ -689,7 +689,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
             "#,
                 script = script
             );
-            writeln!(out, "{}", s)?;
+            writeln!(out, "{s}")?;
         }
 
         if show_log {
@@ -709,7 +709,7 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
             "#,
                 log = log
             );
-            writeln!(out, "{}", s)?;
+            writeln!(out, "{s}")?;
         }
 
         Ok(())
@@ -734,7 +734,7 @@ fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
         .map_err(Error::from)
         .and_then(|s| crate::log::ParsedLog::from_str(&s))?
         .into_iter()
-        .map(|line| line.display().and_then(|d| writeln!(lock, "{}", d).map_err(Error::from)))
+        .map(|line| line.display().and_then(|d| writeln!(lock, "{d}").map_err(Error::from)))
         .collect::<Result<Vec<()>>>()
         .map(|_| ())
 }

@@ -45,12 +45,12 @@ impl std::fmt::Debug for ParsedLog {
             match line {
                 LogItem::Line(l)         => {
                     let s = std::str::from_utf8(l).unwrap_or("ERROR UTF8 ENCODING");
-                    writeln!(f, "[{}] Line('{}')", i, s)?
+                    writeln!(f, "[{i}] Line('{s}')")?
                 },
-                LogItem::Progress(u)     => writeln!(f, "[{}] Progress({})", i, u)?,
-                LogItem::CurrentPhase(s) => writeln!(f, "[{}] Phase({})", i, s)?,
-                LogItem::State(Ok(_))    => writeln!(f, "[{}] State::OK", i)?,
-                LogItem::State(Err(_))   => writeln!(f, "[{}] State::Err", i)?,
+                LogItem::Progress(u)     => writeln!(f, "[{i}] Progress({u})")?,
+                LogItem::CurrentPhase(s) => writeln!(f, "[{i}] Phase({s})")?,
+                LogItem::State(Ok(_))    => writeln!(f, "[{i}] State::OK")?,
+                LogItem::State(Err(_))   => writeln!(f, "[{i}] State::Err")?,
             }
         }
 
@@ -153,9 +153,9 @@ mod tests {
         match e {
             LogItem::Line(buf) => {
                 let line = String::from_utf8(buf.to_vec()).unwrap();
-                format!("LogItem::Line({})", line)
+                format!("LogItem::Line({line})")
             }
-            other => format!("{:?}", other),
+            other => format!("{other:?}"),
         }
     }
 
@@ -165,7 +165,7 @@ mod tests {
         let p = parser();
         let r = p.parse(s.as_bytes());
 
-        assert!(r.is_ok(), "Not ok: {:?}", r);
+        assert!(r.is_ok(), "Not ok: {r:?}");
         let r = r.unwrap();
         assert_eq!(r, LogItem::Line("foo bar".bytes().collect()));
     }
@@ -176,7 +176,7 @@ mod tests {
         let p = parser();
         let r = p.parse(s.as_bytes());
 
-        assert!(r.is_ok(), "Not ok: {:?}", r);
+        assert!(r.is_ok(), "Not ok: {r:?}");
         let r = r.unwrap();
         assert_eq!(r, LogItem::Progress(1));
     }
@@ -187,7 +187,7 @@ mod tests {
         let p = parser();
         let r = p.parse(s.as_bytes());
 
-        assert!(r.is_ok(), "Not ok: {:?}", r);
+        assert!(r.is_ok(), "Not ok: {r:?}");
         let r = r.unwrap();
         assert_eq!(r, LogItem::Progress(100));
     }
@@ -198,7 +198,7 @@ mod tests {
         let p = parser();
         let r = p.parse(s.as_bytes());
 
-        assert!(r.is_ok(), "Not ok: {:?}", r);
+        assert!(r.is_ok(), "Not ok: {r:?}");
         let r = r.unwrap();
         assert_eq!(r, LogItem::Line("#BUTIDO:PROGRESS:-1".bytes().collect()));
     }
@@ -209,7 +209,7 @@ mod tests {
         let p = parser();
         let r = p.parse(s.as_bytes());
 
-        assert!(r.is_ok(), "Not ok: {:?}", r);
+        assert!(r.is_ok(), "Not ok: {r:?}");
         let r = r.unwrap();
         assert_eq!(
             r,
@@ -227,7 +227,7 @@ mod tests {
         let p = parser();
         let r = p.parse(s.as_bytes());
 
-        assert!(r.is_ok(), "Not ok: {:?}", r);
+        assert!(r.is_ok(), "Not ok: {r:?}");
         let r = r.unwrap();
         assert_eq!(
             r,

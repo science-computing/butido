@@ -96,7 +96,7 @@ pub async fn find_pkg(
         })
         .map(|pp| pp.into_displayable())
         .try_for_each(|p| {
-            let r = writeln!(&mut outlock, "{}", p).map_err(anyhow::Error::from);
+            let r = writeln!(&mut outlock, "{p}").map_err(anyhow::Error::from);
             futures::future::ready(r)
         })
         .await

@@ -95,7 +95,7 @@ pub async fn what_depends(
     tokio_stream::iter(iter)
         .map(|pp| pp.and_then(|p| p.into_displayable()))
         .try_for_each(|p| {
-            let r = writeln!(&mut outlock, "{}", p).map_err(anyhow::Error::from);
+            let r = writeln!(&mut outlock, "{p}").map_err(anyhow::Error::from);
             futures::future::ready(r)
         })
         .await

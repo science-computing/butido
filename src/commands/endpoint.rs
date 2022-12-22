@@ -497,9 +497,9 @@ async fn images_present(endpoint_names: Vec<EndpointName>,
                 .map(|config_img| (ep_imgs.contains(config_img), config_img))
                 .try_for_each(|(found, img_name)| {
                     if found {
-                        writeln!(lock, "found {img} in {ep}", img = img_name, ep = ep_name).map_err(Error::from)
+                        writeln!(lock, "found {img_name} in {ep_name}").map_err(Error::from)
                     } else {
-                        writeln!(lock, "{img} not found", img = img_name).map_err(Error::from)
+                        writeln!(lock, "{img_name} not found").map_err(Error::from)
                     }
                 })
         })

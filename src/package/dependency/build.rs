@@ -68,7 +68,7 @@ mod tests {
     fn test_parse_dependency() {
         let s: TestSetting = toml::from_str(r#"setting = "foo""#).expect("Parsing TestSetting failed");
         match s.setting {
-            BuildDependency::Simple(name) => assert_eq!(name, "foo", "Expected 'foo', got {}", name),
+            BuildDependency::Simple(name) => assert_eq!(name, "foo", "Expected 'foo', got {name}"),
             other => panic!("Unexpected deserialization to other variant: {:?}", other),
         }
     }
@@ -78,7 +78,7 @@ mod tests {
         let s: TestSetting = toml::from_str(r#"setting = { name = "foo", condition = { in_image = "bar"} }"#).expect("Parsing TestSetting failed");
         match s.setting {
             BuildDependency::Conditional { name, condition } => {
-                assert_eq!(name, "foo", "Expected 'foo', got {}", name);
+                assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
@@ -100,7 +100,7 @@ mod tests {
 
         match s.setting {
             BuildDependency::Conditional { name, condition } => {
-                assert_eq!(name, "foo", "Expected 'foo', got {}", name);
+                assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
@@ -121,7 +121,7 @@ mod tests {
         let s: TestSettings = toml::from_str(r#"settings = [{ name = "foo", condition = { in_image = "bar"} }]"#).expect("Parsing TestSetting failed");
         match s.settings.get(0).expect("Has not one dependency") {
             BuildDependency::Conditional { name, condition } => {
-                assert_eq!(name, "foo", "Expected 'foo', got {}", name);
+                assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
@@ -142,7 +142,7 @@ mod tests {
 
         match s.settings.get(0).expect("Has not one dependency") {
             BuildDependency::Conditional { name, condition } => {
-                assert_eq!(name, "foo", "Expected 'foo', got {}", name);
+                assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
@@ -163,7 +163,7 @@ mod tests {
 
         match s.settings.get(0).expect("Has not one dependency") {
             BuildDependency::Conditional { name, condition } => {
-                assert_eq!(name, "foo", "Expected 'foo', got {}", name);
+                assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
                 assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));

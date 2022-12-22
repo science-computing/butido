@@ -200,7 +200,7 @@ pub fn display_data<D: Display>(
         wtr.into_inner()
             .map_err(Error::from)
             .and_then(|t| String::from_utf8(t).map_err(Error::from))
-            .and_then(|text| writeln!(lock, "{}", text).map_err(Error::from))
+            .and_then(|text| writeln!(lock, "{text}").map_err(Error::from))
     } else if atty::is(atty::Stream::Stdout) {
         let mut ascii_table = ascii_table::AsciiTable {
             columns: Default::default(),
@@ -238,7 +238,7 @@ pub fn get_date_filter(name: &str, matches: &ArgMatches) -> Result<Option<chrono
                         .and_then(|d| d.elapsed().map_err(Error::from))
                 })
                 .or_else(|_| {
-                    let s = format!("{} 00:00:00", s);
+                    let s = format!("{s} 00:00:00");
                     trace!("Parsing time: '{}'", s);
                     humantime::parse_rfc3339_weak(&s)
                         .map_err(Error::from)

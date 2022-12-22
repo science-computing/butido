@@ -67,30 +67,30 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
         Some(("kill", matches)) => {
             confirm({
                 if let Some(sig) = matches.value_of("signal").as_ref() {
-                    format!("Really kill {} with {}?", container_id, sig)
+                    format!("Really kill {container_id} with {sig}?")
                 } else {
-                    format!("Really kill {}?", container_id)
+                    format!("Really kill {container_id}?")
                 }
             })?;
 
             kill(matches, container).await
         },
         Some(("delete", _)) => {
-            if confirm(format!("Really delete {}?", container_id))? {
+            if confirm(format!("Really delete {container_id}?"))? {
                 delete(container).await
             } else {
                 Ok(())
             }
         },
         Some(("start", _))      => {
-            if confirm(format!("Really start {}?", container_id))? {
+            if confirm(format!("Really start {container_id}?"))? {
                 start(container).await
             } else {
                 Ok(())
             }
         },
         Some(("stop", matches)) => {
-            if confirm(format!("Really stop {}?", container_id))? {
+            if confirm(format!("Really stop {container_id}?"))? {
                 stop(matches, container).await
             } else {
                 Ok(())
@@ -196,7 +196,7 @@ async fn inspect(container: Container<'_>) -> Result<()> {
                 .map(|s| format!("{:ind$}{s}", "", ind = ind, s = s))
                 .join("\n")
         })
-        .map(|s| format!("\n{}", s))
+        .map(|s| format!("\n{s}"))
         .map(Cow::from)
         .unwrap_or_else(|| Cow::from("None"))
     }
@@ -307,7 +307,7 @@ async fn inspect(container: Container<'_>) -> Result<()> {
                 .collect::<Vec<_>>()
                 .join("\n");
 
-            format!("\n{s}", s = s)
+            format!("\n{s}")
         })
         .unwrap_or_else(|| String::from("None"))
     },
@@ -320,7 +320,7 @@ async fn inspect(container: Container<'_>) -> Result<()> {
                     .map(|(k, v)| format!("{:ind$}{k}: {v}", "", ind = 8, k = k, v = v))
                     .collect::<Vec<_>>()
                     .join("\n");
-                format!("\n{s}", s = s)
+                format!("\n{s}")
             })
             .unwrap_or_else(|| String::from("None"))
     },
@@ -363,7 +363,7 @@ async fn inspect(container: Container<'_>) -> Result<()> {
                     })
                     .collect::<Vec<_>>()
                     .join("\n");
-                format!("\n{s}", s = s)
+                format!("\n{s}")
             })
             .unwrap_or_else(|| String::from("None"))
     },
@@ -396,7 +396,7 @@ async fn inspect(container: Container<'_>) -> Result<()> {
                                         .map(|(k, v)| format!("{:ind$}{k}: {v}", "", ind = 12, k = k, v = v))
                                         .collect::<Vec<_>>()
                                         .join("\n");
-                                    format!("\n{s}", s = s)
+                                    format!("\n{s}")
                                 })
                                 .collect::<Vec<_>>()
                                 .join("\n")
@@ -406,7 +406,7 @@ async fn inspect(container: Container<'_>) -> Result<()> {
                     })
                     .collect::<Vec<_>>()
                     .join("\n");
-                format!("\n{s}", s = s)
+                format!("\n{s}")
             })
             .unwrap_or_else(|| String::from("None"))
     },
@@ -442,7 +442,7 @@ async fn inspect(container: Container<'_>) -> Result<()> {
         .collect::<Vec<_>>()
         .join("\n");
 
-        format!("\n{}", s)
+        format!("\n{s}")
     },
 
     path = d.path,
@@ -483,7 +483,7 @@ async fn inspect(container: Container<'_>) -> Result<()> {
             .collect::<Vec<_>>()
             .join("\n");
 
-        format!("\n{}", s)
+        format!("\n{s}")
     }
     )).map_err(Error::from)
 }
