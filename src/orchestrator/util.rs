@@ -32,7 +32,7 @@ pub struct ReceivedErrorDisplay<'a>(&'a HashMap<Uuid, Error>);
 
 impl<'a> std::fmt::Display for ReceivedErrorDisplay<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.iter().try_for_each(|(uuid, err)| writeln!(f, "{}: {}", uuid, err))
+        self.0.iter().try_for_each(|(uuid, err)| writeln!(f, "{uuid}: {err}"))
     }
 }
 

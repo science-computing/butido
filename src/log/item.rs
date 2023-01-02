@@ -32,20 +32,20 @@ impl LogItem {
     pub fn display(&self) -> Result<Display> {
         match self {
             LogItem::Line(s) => Ok(Display(String::from_utf8(s.to_vec())?.normal())),
-            LogItem::Progress(u) => Ok(Display(format!("#BUTIDO:PROGRESS:{}", u).cyan())),
-            LogItem::CurrentPhase(p) => Ok(Display(format!("#BUTIDO:PHASE:{}", p).cyan())),
+            LogItem::Progress(u) => Ok(Display(format!("#BUTIDO:PROGRESS:{u}").cyan())),
+            LogItem::CurrentPhase(p) => Ok(Display(format!("#BUTIDO:PHASE:{p}").cyan())),
             LogItem::State(Ok(())) => Ok(Display("#BUTIDO:STATE:OK".to_string().green())),
-            LogItem::State(Err(s)) => Ok(Display(format!("#BUTIDO:STATE:ERR:{}", s).red())),
+            LogItem::State(Err(s)) => Ok(Display(format!("#BUTIDO:STATE:ERR:{s}").red())),
         }
     }
 
     pub fn raw(&self) -> Result<String> {
         match self {
             LogItem::Line(s) => String::from_utf8(s.to_vec()).map_err(Error::from),
-            LogItem::Progress(u) => Ok(format!("#BUTIDO:PROGRESS:{}", u)),
-            LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{}", p)),
+            LogItem::Progress(u) => Ok(format!("#BUTIDO:PROGRESS:{u}")),
+            LogItem::CurrentPhase(p) => Ok(format!("#BUTIDO:PHASE:{p}")),
             LogItem::State(Ok(())) => Ok("#BUTIDO:STATE:OK".to_string()),
-            LogItem::State(Err(s)) => Ok(format!("#BUTIDO:STATE:ERR:{}", s)),
+            LogItem::State(Err(s)) => Ok(format!("#BUTIDO:STATE:ERR:{s}")),
         }
     }
 }

@@ -91,7 +91,7 @@ impl Job {
             dsl::jobs
                 .filter(uuid.eq(job_uuid))
                 .first::<Job>(database_connection)
-                .with_context(|| format!("Finding created job in database: {}", job_uuid))
+                .with_context(|| format!("Finding created job in database: {job_uuid}"))
                 .map_err(Error::from)
         })
     }

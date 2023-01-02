@@ -52,7 +52,7 @@ pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
         .try_for_each(|pkg| {
             if let Some(hm) = pkg.environment() {
                 for (key, value) in hm {
-                    writeln!(stdout, "{} = '{}'", key, value)?;
+                    writeln!(stdout, "{key} = '{value}'")?;
                 }
             } else {
                 writeln!(stdout, "No environment")?;

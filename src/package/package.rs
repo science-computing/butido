@@ -150,10 +150,10 @@ impl<'a> std::fmt::Debug for DebugPackage<'a> {
         ))?;
 
         writeln!(f, "\tBuild Dependencies = ")?;
-        self.0.dependencies.build.iter().try_for_each(|d| writeln!(f, "\t\t{:?}", d))?;
+        self.0.dependencies.build.iter().try_for_each(|d| writeln!(f, "\t\t{d:?}"))?;
 
         writeln!(f, "\tRuntime Dependencies = ")?;
-        self.0.dependencies.runtime.iter().try_for_each(|r| writeln!(f, "\t\t{:?}", r))?;
+        self.0.dependencies.runtime.iter().try_for_each(|r| writeln!(f, "\t\t{r:?}"))?;
 
         writeln!(f, "\tPatches = ")?;
         self.0.patches.iter().try_for_each(|p| writeln!(f, "\t\t{}", p.display()))?;
@@ -161,26 +161,26 @@ impl<'a> std::fmt::Debug for DebugPackage<'a> {
         writeln!(f, "\tEnvironment = ")?;
         self.0.environment
             .as_ref()
-            .map(|hm| hm.iter().try_for_each(|(k, v)| writeln!(f, "\t\t{:?} = {}", k, v)))
+            .map(|hm| hm.iter().try_for_each(|(k, v)| writeln!(f, "\t\t{k:?} = {v}")))
             .transpose()?;
 
         writeln!(f, "\tAllowed Images = ")?;
 
         self.0.allowed_images
             .as_ref()
-            .map(|v| v.iter().try_for_each(|i| writeln!(f, "\t\t{:?}", i)))
+            .map(|v| v.iter().try_for_each(|i| writeln!(f, "\t\t{i:?}")))
             .transpose()?;
 
         writeln!(f, "\tDenied Images = ")?;
         self.0.denied_images
             .as_ref()
-            .map(|v| v.iter().try_for_each(|i| writeln!(f, "\t\t{:?}", i)))
+            .map(|v| v.iter().try_for_each(|i| writeln!(f, "\t\t{i:?}")))
             .transpose()?;
 
         writeln!(f, "\tPhases = ")?;
         self.0.phases
             .iter()
-            .try_for_each(|(k, _)| writeln!(f, "\t\t{:?} = ...", k))?;
+            .try_for_each(|(k, _)| writeln!(f, "\t\t{k:?} = ..."))?;
 
         Ok(())
     }

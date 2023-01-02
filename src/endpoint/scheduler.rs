@@ -314,9 +314,7 @@ impl JobHandle {
             package_name = package_name.to_string().red(),
             package_version = package_version.to_string().red(),
 
-            docker_connect_string = format!("docker --host {endpoint_uri} exec -it {container_id} /bin/bash",
-                endpoint_uri = endpoint_uri,
-                container_id = container_id
+            docker_connect_string = format!("docker --host {endpoint_uri} exec -it {container_id} /bin/bash"
             ).yellow().bold(),
         ))
     }

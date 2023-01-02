@@ -5,7 +5,7 @@ authors = [
            "Christoph Prokop <christoph.prokop@atos.net>",
            "Matthias Beyer <mail@beyermatthias.de>",
           ]
-edition = "2018"
+edition = "2021"
 rust-version = "1.64.0" # MSRV
 license = "EPL-2.0"
 

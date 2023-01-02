@@ -447,14 +447,14 @@ pub async fn build(
                 }
             })
             .try_for_each(|(i, line)| {
-                let lineno = format!("{:>4} | ", i).bright_black();
-                writeln!(outlock, "{}{}", lineno, line).map_err(Error::from)
+                let lineno = format!("{i:>4} | ").bright_black();
+                writeln!(outlock, "{lineno}{line}").map_err(Error::from)
             })?;
 
         writeln!(outlock, "\n\n")?;
         if error_catched {
             if let Some(last_phase) = last_phase {
-                writeln!(outlock, "\tJob errored in Phase '{}'", last_phase)?;
+                writeln!(outlock, "\tJob errored in Phase '{last_phase}'")?;
             }
             writeln!(outlock, "\n\n")?;
         } else {

@@ -50,7 +50,7 @@ pub fn script_to_printable(
         if line_numbers {
             script
                 .lines_numbered()?
-                .map(|(i, s)| format!("{:>4} | {}", i, s))
+                .map(|(i, s)| format!("{i:>4} | {s}"))
                 .join("")
         } else {
             script.lines()?.join("")
@@ -58,7 +58,7 @@ pub fn script_to_printable(
     } else if line_numbers {
         script
             .lines_numbered()
-            .map(|(i, s)| format!("{:>4} | {}", i, s))
+            .map(|(i, s)| format!("{i:>4} | {s}"))
             .join("")
     } else {
         script.to_string()

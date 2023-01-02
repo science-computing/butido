@@ -1405,7 +1405,7 @@ fn dir_exists_validator(s: &str) -> Result<(), String> {
     if PathBuf::from(&s).is_dir() {
         Ok(())
     } else {
-        Err(format!("Directory does not exist: {}", s))
+        Err(format!("Directory does not exist: {s}"))
     }
 }
 
@@ -1479,7 +1479,7 @@ fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
                 .map(|_| ())
         })
         .or_else(|_| {
-            let s = format!("{} 00:00:00", s);
+            let s = format!("{s} 00:00:00");
             humantime::parse_rfc3339_weak(&s)
                 .map_err(|e| e.to_string())
                 .map(|_| ())

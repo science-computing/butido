@@ -712,8 +712,8 @@ mod tests {
         assert!(ps.iter().any(|p| *p.version() == pversion("1")));
 
         // Not in the tree:
-        assert!(!ps.iter().any(|p| *p.name() == pname("b")), "'b' should not be in tree, but is: {:?}", ps);
-        assert!(!ps.iter().any(|p| *p.version() == pversion("2")), "'2' should not be in tree, but is: {:?}", ps);
+        assert!(!ps.iter().any(|p| *p.name() == pname("b")), "'b' should not be in tree, but is: {ps:?}");
+        assert!(!ps.iter().any(|p| *p.version() == pversion("2")), "'2' should not be in tree, but is: {ps:?}");
     }
 
     // Test whether the dependency DAG is correctly build if a image is used, but not the one
