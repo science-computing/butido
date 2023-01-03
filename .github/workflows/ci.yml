@@ -23,6 +23,8 @@ jobs:
           toolchain: ${{ matrix.rust }}
 
       - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "ci"
 
       - name: Run cargo check
         run: cargo check
@@ -47,6 +49,8 @@ jobs:
           toolchain: ${{ matrix.rust }}
 
       - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "ci"
 
       - name: Run cargo test
         run: cargo test --all --all-features
@@ -67,6 +71,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3.2.0
       - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "ci"
       - uses: EmbarkStudios/cargo-deny-action@v1
         with:
           command: check ${{ matrix.checks }}
@@ -92,6 +98,8 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: clippy
       - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "ci"
       - name: cargo clippy
         run: cargo clippy --all --all-targets --all-features -- -D warnings
 
