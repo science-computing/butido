@@ -42,7 +42,7 @@ filters        = "0.4.0"
 futures        = "0.3"
 getset         = "0.1"
 git2           = "0.15"
-handlebars     = { version = "~4.3.5", features = ["no_logging"] }
+handlebars     = { version = "~4.3.6", features = ["no_logging"] }
 human-panic    = "1"
 humantime      = "2.1"
 indicatif      = "~0.17.2"
@@ -58,7 +58,7 @@ regex          = "1"
 reqwest        = { version = "0.11", features = [ "stream" ] }
 resiter        = "0.4"
 result-inspect = "0.2"
-rlimit         = "0.8"
+rlimit         = "0.9"
 semver		   = { version = "1.0", features = [ "serde" ] }
 serde          = "1"
 serde_json     = "1"
