@@ -164,10 +164,11 @@ pub fn mk_package_name_regex(regex: &str) -> Result<Regex> {
 /// Make a header column for the ascii_table crate
 pub fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
     vec.into_iter()
-        .map(|name| ascii_table::Column {
-            header: name.into(),
-            align: ascii_table::Align::Left,
-            ..Default::default()
+        .map(|name| {
+            let mut column = ascii_table::Column::default();
+            column.set_header::<String>(name.into());
+            column.set_align(ascii_table::Align::Left);
+            column
         })
         .collect()
 }
@@ -202,15 +203,14 @@ pub fn display_data<D: Display>(
             .and_then(|t| String::from_utf8(t).map_err(Error::from))
             .and_then(|text| writeln!(lock, "{text}").map_err(Error::from))
     } else if atty::is(atty::Stream::Stdout) {
-        let mut ascii_table = ascii_table::AsciiTable {
-            columns: Default::default(),
-            max_width: terminal_size::terminal_size()
-                .map(|tpl| tpl.0 .0 as usize) // an ugly interface indeed!
-                .unwrap_or(80),
-        };
+        let mut ascii_table = ascii_table::AsciiTable::default();
+        ascii_table.set_max_width(terminal_size::terminal_size()
+            .map(|tpl| tpl.0 .0 as usize) // an ugly interface indeed!
+            .unwrap_or(80)
+        );
 
         headers.into_iter().enumerate().for_each(|(i, c)| {
-            ascii_table.columns.insert(i, c);
+            *ascii_table.column(i) = c;
         });
 
         ascii_table.print(data);

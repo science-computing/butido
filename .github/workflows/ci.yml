@@ -23,9 +23,11 @@ jobs:
           toolchain: ${{ matrix.rust }}
 
       - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "ci"
 
       - name: Run cargo check
-        run: cargo check
+        run: cargo check --all-targets
 
   test:
     needs: [check]
@@ -47,12 +49,13 @@ jobs:
           toolchain: ${{ matrix.rust }}
 
       - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "ci"
 
       - name: Run cargo test
-        run: cargo test --all --all-features
+        run: cargo test
 
   cargo-deny:
-    needs: [check]
     name: cargo-deny
     runs-on: ubuntu-latest
     strategy:
@@ -66,7 +69,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3.2.0
-      - uses: swatinem/rust-cache@v2
       - uses: EmbarkStudios/cargo-deny-action@v1
         with:
           command: check ${{ matrix.checks }}
@@ -92,8 +94,10 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: clippy
       - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "ci"
       - name: cargo clippy
-        run: cargo clippy --all --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
   # We need some "accummulation" job here because bors fails (timeouts) to
   # listen on matrix builds.
@@ -110,4 +114,3 @@ jobs:
     steps:
       - name: CI succeeded
         run: exit 0
-

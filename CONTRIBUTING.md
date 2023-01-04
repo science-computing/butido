@@ -9,9 +9,9 @@ checklist before submitting a PR to avoid unnecessary PR/CI iteration cycles:
 
 * [ ] All commits are signed off (`--signoff` - Why? See below)
 * [ ] No `!fixup` (etc.) commits
-* [ ] I ran `cargo check --all --tests`
+* [ ] I ran `cargo check --all-targets`
 * [ ] I ran `cargo test`
-* [ ] I ran `cargo clippy`
+* [ ] I ran `cargo clippy --all-targets`
 
 ## Reporting issues / Questions
 
