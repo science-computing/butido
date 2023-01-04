@@ -24,29 +24,29 @@ pub struct GitHash {
 }
 
 #[derive(Insertable)]
-#[table_name = "githashes"]
+#[diesel(table_name = githashes)]
 struct NewGitHash<'a> {
     pub hash: &'a str,
 }
 
 impl GitHash {
-    pub fn create_or_fetch(database_connection: &PgConnection, githash: &str) -> Result<GitHash> {
+    pub fn create_or_fetch(database_connection: &mut PgConnection, githash: &str) -> Result<GitHash> {
         let new_hash = NewGitHash { hash: githash };
 
-        database_connection.transaction::<_, Error, _>(|| {
+        database_connection.transaction::<_, Error, _>(|conn| {
             diesel::insert_into(githashes::table)
                 .values(&new_hash)
                 .on_conflict_do_nothing()
-                .execute(database_connection)?;
+                .execute(conn)?;
 
             dsl::githashes
                 .filter(hash.eq(githash))
-                .first::<GitHash>(database_connection)
+                .first::<GitHash>(conn)
                 .map_err(Error::from)
         })
     }
 
-    pub fn with_id(database_connection: &PgConnection, git_hash_id: i32) -> Result<GitHash> {
+    pub fn with_id(database_connection: &mut PgConnection, git_hash_id: i32) -> Result<GitHash> {
         dsl::githashes
             .find(git_hash_id)
             .first::<_>(database_connection)

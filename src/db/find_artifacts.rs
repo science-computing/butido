@@ -11,6 +11,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::Result;
 use chrono::NaiveDateTime;
@@ -52,7 +53,7 @@ use crate::util::docker::ImageName;
 #[derive(typed_builder::TypedBuilder)]
 pub struct FindArtifacts<'a> {
     config: &'a Configuration,
-    database_connection: Arc<PgConnection>,
+    database_connection: Arc<Mutex<PgConnection>>,
 
     /// The release stores to search in
     release_stores: &'a [Arc<ReleaseStore>],
@@ -152,7 +153,7 @@ impl<'a> FindArtifacts<'a> {
 
                 (arts, jobs)
             })
-            .load::<(dbmodels::Artifact, dbmodels::Job)>(&*self.database_connection)?
+            .load::<(dbmodels::Artifact, dbmodels::Job)>(&mut *self.database_connection.as_ref().lock().unwrap())?
             .into_iter()
             .inspect(|(art, job)| debug!("Filtering further: {:?}, job {:?}", art, job.id))
             //
@@ -171,7 +172,7 @@ impl<'a> FindArtifacts<'a> {
 
                 let job = tpl.1;
                 let job_env: Vec<(String, String)> = job
-                    .env(&self.database_connection)?
+                    .env(&mut self.database_connection.as_ref().lock().unwrap())?
                     .into_iter()
                     .map(|var: dbmodels::EnvVar| (var.name, var.value))
                     .collect();
@@ -186,7 +187,7 @@ impl<'a> FindArtifacts<'a> {
                 Ok((_, bl)) => *bl,
             })
             .and_then_ok(|(art, _)| {
-                if let Some(release) = art.get_release(&self.database_connection)? {
+                if let Some(release) = art.get_release(&mut self.database_connection.as_ref().lock().unwrap())? {
                     Ok((art, Some(release.release_date)))
                 } else {
                     Ok((art, None))

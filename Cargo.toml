@@ -37,8 +37,8 @@ config         = { version = "0.11", default-features = false, features = [ "tom
 csv            = "1"
 daggy          = { version = "0.8", features = [ "serde" ] }
 dialoguer      = "0.10"
-diesel         = { version = "1", features = ["postgres", "chrono", "uuid", "serde_json"] }
-diesel_migrations = "1"
+diesel         = { version = "2", features = ["postgres", "chrono", "uuid", "serde_json"] }
+diesel_migrations = "2"
 filters        = "0.4"
 futures        = "0.3"
 getset         = "0.1"
@@ -74,7 +74,7 @@ tokio-stream   = "0.1"
 typed-builder  = "0.14"
 unindent       = "0.2"
 url            = { version = "2", features = ["serde"] }
-uuid           = { version = "0.6", features = ["serde", "v4"] }
+uuid           = { version = "1", features = ["serde", "v4"] }
 walkdir        = "2"
 which          = "4"
 xdg            = "2"

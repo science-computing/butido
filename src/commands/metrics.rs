@@ -12,6 +12,8 @@
 
 use std::path::Path;
 use std::io::Write;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -44,16 +46,18 @@ pub async fn metrics(
         })
         .count();
 
-    let n_artifacts     = async { crate::schema::artifacts::table.count().get_result::<i64>(&conn) };
-    let n_endpoints     = async { crate::schema::endpoints::table.count().get_result::<i64>(&conn) };
-    let n_envvars       = async { crate::schema::envvars::table.count().get_result::<i64>(&conn) };
-    let n_githashes     = async { crate::schema::githashes::table.count().get_result::<i64>(&conn) };
-    let n_images        = async { crate::schema::images::table.count().get_result::<i64>(&conn) };
-    let n_jobs          = async { crate::schema::jobs::table.count().get_result::<i64>(&conn) };
-    let n_packages      = async { crate::schema::packages::table.count().get_result::<i64>(&conn) };
-    let n_releasestores = async { crate::schema::release_stores::table.count().get_result::<i64>(&conn) };
-    let n_releases      = async { crate::schema::releases::table.count().get_result::<i64>(&conn) };
-    let n_submits       = async { crate::schema::submits::table.count().get_result::<i64>(&conn) };
+    let conn = Arc::new(Mutex::new(conn));
+    // TODO: Avoid the locking here (makes async pointless)!:
+    let n_artifacts     = async { crate::schema::artifacts::table.count().get_result::<i64>(&mut *conn.clone().lock().unwrap()) };
+    let n_endpoints     = async { crate::schema::endpoints::table.count().get_result::<i64>(&mut *conn.clone().lock().unwrap()) };
+    let n_envvars       = async { crate::schema::envvars::table.count().get_result::<i64>(&mut *conn.clone().lock().unwrap()) };
+    let n_githashes     = async { crate::schema::githashes::table.count().get_result::<i64>(&mut *conn.clone().lock().unwrap()) };
+    let n_images        = async { crate::schema::images::table.count().get_result::<i64>(&mut *conn.clone().lock().unwrap()) };
+    let n_jobs          = async { crate::schema::jobs::table.count().get_result::<i64>(&mut *conn.clone().lock().unwrap()) };
+    let n_packages      = async { crate::schema::packages::table.count().get_result::<i64>(&mut *conn.clone().lock().unwrap()) };
+    let n_releasestores = async { crate::schema::release_stores::table.count().get_result::<i64>(&mut *conn.clone().lock().unwrap()) };
+    let n_releases      = async { crate::schema::releases::table.count().get_result::<i64>(&mut *conn.clone().lock().unwrap()) };
+    let n_submits       = async { crate::schema::submits::table.count().get_result::<i64>(&mut *conn.clone().lock().unwrap()) };
 
     let (
         n_artifacts,

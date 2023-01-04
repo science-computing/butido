@@ -10,6 +10,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -42,7 +43,7 @@ pub struct EndpointScheduler {
 
     staging_store: Arc<RwLock<StagingStore>>,
     release_stores: Vec<Arc<ReleaseStore>>,
-    db: Arc<PgConnection>,
+    db: Arc<Mutex<PgConnection>>,
     submit: crate::db::models::Submit,
 }
 
@@ -51,7 +52,7 @@ impl EndpointScheduler {
         endpoints: Vec<EndpointConfiguration>,
         staging_store: Arc<RwLock<StagingStore>>,
         release_stores: Vec<Arc<ReleaseStore>>,
-        db: Arc<PgConnection>,
+        db: Arc<Mutex<PgConnection>>,
         submit: crate::db::models::Submit,
         log_dir: Option<PathBuf>,
     ) -> Result<Self> {
@@ -117,7 +118,7 @@ pub struct JobHandle {
     endpoint: EndpointHandle,
     job: RunnableJob,
     bar: ProgressBar,
-    db: Arc<PgConnection>,
+    db: Arc<Mutex<PgConnection>>,
     staging_store: Arc<RwLock<StagingStore>>,
     release_stores: Vec<Arc<ReleaseStore>>,
     submit: crate::db::models::Submit,
@@ -134,9 +135,9 @@ impl JobHandle {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let endpoint_uri = self.endpoint.uri().clone();
         let endpoint_name = self.endpoint.name().clone();
-        let endpoint = dbmodels::Endpoint::create_or_fetch(&self.db, self.endpoint.name())?;
-        let package = dbmodels::Package::create_or_fetch(&self.db, self.job.package())?;
-        let image = dbmodels::Image::create_or_fetch(&self.db, self.job.image())?;
+        let endpoint = dbmodels::Endpoint::create_or_fetch(&mut self.db.as_ref().lock().unwrap(), self.endpoint.name())?;
+        let package = dbmodels::Package::create_or_fetch(&mut self.db.as_ref().lock().unwrap(), self.job.package())?;
+        let image = dbmodels::Image::create_or_fetch(&mut self.db.as_ref().lock().unwrap(), self.job.image())?;
         let envs = self.create_env_in_db()?;
         let job_id = *self.job.uuid();
         trace!("Running on Job {} on Endpoint {}", job_id, self.endpoint.name());
@@ -186,7 +187,7 @@ impl JobHandle {
             })?;
 
         let job = dbmodels::Job::create(
-            &self.db,
+            &mut self.db.as_ref().lock().unwrap(),
             &job_id,
             &self.submit,
             &endpoint,
@@ -200,7 +201,7 @@ impl JobHandle {
 
         trace!("DB: Job entry for job {} created: {}", job.uuid, job.id);
         for env in envs {
-            dbmodels::JobEnv::create(&self.db, &job, &env)
+            dbmodels::JobEnv::create(&mut self.db.as_ref().lock().unwrap(), &job, &env)
                 .with_context(|| format!("Creating Environment Variable mapping for Job: {}", job.uuid))?;
         }
 
@@ -245,7 +246,7 @@ impl JobHandle {
         let staging_read = self.staging_store.read().await;
         for p in paths.iter() {
             trace!("DB: Creating artifact entry for path: {}", p.display());
-            let _ = dbmodels::Artifact::create(&self.db, p, &job)?;
+            let _ = dbmodels::Artifact::create(&mut self.db.as_ref().lock().unwrap(), p, &job)?;
             r.push({
                 staging_read
                     .get(p)
@@ -293,7 +294,7 @@ impl JobHandle {
                     .inspect(|(k, v)| {
                         trace!("Creating environment variable in database: {} = {}", k, v)
                     })
-                    .map(|(k, v)| dbmodels::EnvVar::create_or_fetch(&self.db, k, v))
+                    .map(|(k, v)| dbmodels::EnvVar::create_or_fetch(&mut self.db.as_ref().lock().unwrap(), k, v))
                     .collect::<Result<Vec<_>>>()
             })
             .transpose()?
@@ -308,7 +309,7 @@ impl JobHandle {
                     .inspect(|(k, v)| {
                         trace!("Creating environment variable in database: {} = {}", k, v)
                     })
-                    .map(|(k, v)| dbmodels::EnvVar::create_or_fetch(&self.db, k, v))
+                    .map(|(k, v)| dbmodels::EnvVar::create_or_fetch(&mut self.db.as_ref().lock().unwrap(), k, v))
             })
             .collect()
     }

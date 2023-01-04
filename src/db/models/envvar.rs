@@ -18,7 +18,7 @@ use crate::schema::envvars::*;
 use crate::util::EnvironmentVariableName;
 
 #[derive(Debug, Identifiable, Queryable)]
-#[table_name = "envvars"]
+#[diesel(table_name = envvars)]
 pub struct EnvVar {
     pub id: i32,
     pub name: String,
@@ -26,7 +26,7 @@ pub struct EnvVar {
 }
 
 #[derive(Insertable)]
-#[table_name = "envvars"]
+#[diesel(table_name = envvars)]
 struct NewEnvVar<'a> {
     pub name: &'a str,
     pub value: &'a str,
@@ -34,7 +34,7 @@ struct NewEnvVar<'a> {
 
 impl EnvVar {
     pub fn create_or_fetch(
-        database_connection: &PgConnection,
+        database_connection: &mut PgConnection,
         k: &EnvironmentVariableName,
         v: &str,
     ) -> Result<EnvVar> {
@@ -43,15 +43,15 @@ impl EnvVar {
             value: v,
         };
 
-        database_connection.transaction::<_, Error, _>(|| {
+        database_connection.transaction::<_, Error, _>(|conn| {
             diesel::insert_into(envvars::table)
                 .values(&new_envvar)
                 .on_conflict_do_nothing()
-                .execute(database_connection)?;
+                .execute(conn)?;
 
             dsl::envvars
                 .filter(name.eq(k.as_ref()).and(value.eq(v)))
-                .first::<EnvVar>(database_connection)
+                .first::<EnvVar>(conn)
                 .map_err(Error::from)
         })
     }

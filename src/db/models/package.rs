@@ -26,7 +26,7 @@ pub struct Package {
 }
 
 #[derive(Insertable)]
-#[table_name = "packages"]
+#[diesel(table_name = packages)]
 struct NewPackage<'a> {
     pub name: &'a str,
     pub version: &'a str,
@@ -34,7 +34,7 @@ struct NewPackage<'a> {
 
 impl Package {
     pub fn create_or_fetch(
-        database_connection: &PgConnection,
+        database_connection: &mut PgConnection,
         p: &crate::package::Package,
     ) -> Result<Package> {
         let new_package = NewPackage {
@@ -42,11 +42,11 @@ impl Package {
             version: p.version().deref(),
         };
 
-        database_connection.transaction::<_, Error, _>(|| {
+        database_connection.transaction::<_, Error, _>(|conn| {
             diesel::insert_into(packages::table)
                 .values(&new_package)
                 .on_conflict_do_nothing()
-                .execute(database_connection)?;
+                .execute(conn)?;
 
             dsl::packages
                 .filter({
@@ -55,16 +55,16 @@ impl Package {
 
                     name.eq(p_name).and(version.eq(p_vers))
                 })
-                .first::<Package>(database_connection)
+                .first::<Package>(conn)
                 .map_err(Error::from)
         })
     }
 
-    pub fn fetch_for_job(database_connection: &PgConnection, j: &crate::db::models::Job) -> Result<Option<Package>> {
+    pub fn fetch_for_job(database_connection: &mut PgConnection, j: &crate::db::models::Job) -> Result<Option<Package>> {
         Self::fetch_by_id(database_connection, j.package_id)
     }
 
-    pub fn fetch_by_id(database_connection: &PgConnection, pid: i32) -> Result<Option<Package>> {
+    pub fn fetch_by_id(database_connection: &mut PgConnection, pid: i32) -> Result<Option<Package>> {
         match dsl::packages.filter(id.eq(pid)).first::<Package>(database_connection) {
             Err(diesel::result::Error::NotFound) => Ok(None),
             Err(e) => Err(Error::from(e)),

@@ -15,6 +15,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -296,9 +297,11 @@ pub async fn build(
         .collect::<Result<Vec<()>>>()?;
 
     trace!("Setting up database jobs for Package, GitHash, Image");
-    let db_package = async { Package::create_or_fetch(&database_connection, package) };
-    let db_githash = async { GitHash::create_or_fetch(&database_connection, &hash_str) };
-    let db_image = async { Image::create_or_fetch(&database_connection, &image_name) };
+    let database_connection = Arc::new(Mutex::new(database_connection));
+    // TODO: Avoid the locking here!:
+    let db_package = async { Package::create_or_fetch(&mut database_connection.clone().lock().unwrap(), package) };
+    let db_githash = async { GitHash::create_or_fetch(&mut database_connection.clone().lock().unwrap(), &hash_str) };
+    let db_image = async { Image::create_or_fetch(&mut database_connection.clone().lock().unwrap(), &image_name) };
     let db_envs = async {
         additional_env
             .clone()
@@ -306,7 +309,7 @@ pub async fn build(
             .map(|(k, v)| async {
                 let k: EnvironmentVariableName = k; // hack to work around move semantics
                 let v: String = v; // hack to work around move semantics
-                EnvVar::create_or_fetch(&database_connection, &k, &v)
+                EnvVar::create_or_fetch(&mut database_connection.clone().lock().unwrap(), &k, &v)
             })
             .collect::<futures::stream::FuturesUnordered<_>>()
             .collect::<Result<Vec<EnvVar>>>()
@@ -322,7 +325,7 @@ pub async fn build(
     trace!("Database jobs for Package, GitHash, Image finished successfully");
     trace!("Creating Submit in database");
     let submit = Submit::create(
-        &database_connection,
+        &mut database_connection.clone().lock().unwrap(),
         &now,
         &submit_id,
         &db_image,
@@ -358,7 +361,6 @@ pub async fn build(
     trace!("Setting up job sets finished successfully");
 
     trace!("Setting up Orchestrator");
-    let database_connection = Arc::new(database_connection);
     let orch = OrchestratorSetup::builder()
         .progress_generator(progressbars)
         .endpoint_config(endpoint_configurations)
@@ -402,7 +404,7 @@ pub async fn build(
         let data = schema::jobs::table
             .filter(schema::jobs::dsl::uuid.eq(job_uuid))
             .inner_join(schema::packages::table)
-            .first::<(Job, Package)>(database_connection.as_ref())?;
+            .first::<(Job, Package)>(&mut *database_connection.as_ref().lock().unwrap())?;
 
         let number_log_lines = *config.build_error_lines();
         writeln!(

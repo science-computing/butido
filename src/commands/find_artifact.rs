@@ -13,6 +13,7 @@
 use std::path::PathBuf;
 use std::io::Write;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::convert::TryFrom;
 
 use anyhow::Context;
@@ -96,7 +97,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         None
     };
 
-    let database = Arc::new(database_connection);
+    let database = Arc::new(Mutex::new(database_connection));
     repo.packages()
         .filter(|p| package_name_regex.captures(p.name()).is_some())
         .filter(|p| {
