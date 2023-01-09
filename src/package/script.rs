@@ -133,12 +133,15 @@ impl<'a> HighlightedScript<'a> {
 
         let mut h = HighlightLines::new(syntax, theme);
 
+        // To reset all (display) attributes (styles, colors, etc.) to their defaults:
+        let reset_all_attributes = "\x1b[0m";
+
         LinesWithEndings::from(&self.script.0)
             .map(move |line| -> Result<String> {
                 h
                     .highlight_line(line, &self.ps)
                     .with_context(|| anyhow!("Could not highlight the following line: {}", line))
-                    .map(|r| as_24_bit_terminal_escaped(&r[..], true))
+                    .map(|r| as_24_bit_terminal_escaped(&r[..], true) + reset_all_attributes)
             })
             .collect::<Result<Vec<String>>>()
             .map(|v| v.into_iter())
