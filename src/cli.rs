@@ -45,7 +45,7 @@ pub fn cli<'a>() -> App<'a> {
             .required(false)
             .multiple(false)
             .long("hide-bars")
-            .about("Hide all progress bars")
+            .help("Hide all progress bars")
         )
 
         .arg(Arg::new("database_host")
@@ -53,8 +53,8 @@ pub fn cli<'a>() -> App<'a> {
             .multiple(false)
             .long("db-url")
             .value_name("HOST")
-            .about("Override the database host")
-            .long_about(indoc::indoc!(r#"
+            .help("Override the database host")
+            .long_help(indoc::indoc!(r#"
                 Override the database host set via configuration.
                 Can also be overriden via environment variable 'BUTIDO_DATABASE_HOST', but this setting has precedence.
             "#))
@@ -64,8 +64,8 @@ pub fn cli<'a>() -> App<'a> {
             .multiple(false)
             .long("db-port")
             .value_name("PORT")
-            .about("Override the database port")
-            .long_about(indoc::indoc!(r#"
+            .help("Override the database port")
+            .long_help(indoc::indoc!(r#"
                 Override the database port set via configuration.
                 Can also be overriden via environment 'BUTIDO_DATABASE_PORT', but this setting has precedence.
             "#))
@@ -75,8 +75,8 @@ pub fn cli<'a>() -> App<'a> {
             .multiple(false)
             .long("db-user")
             .value_name("USER")
-            .about("Override the database user")
-            .long_about(indoc::indoc!(r#"
+            .help("Override the database user")
+            .long_help(indoc::indoc!(r#"
                 Override the database user set via configuration.
                 Can also be overriden via environment 'BUTIDO_DATABASE_USER', but this setting has precedence.
             "#))
@@ -87,8 +87,8 @@ pub fn cli<'a>() -> App<'a> {
             .long("db-password")
             .alias("db-pw")
             .value_name("PASSWORD")
-            .about("Override the database password")
-            .long_about(indoc::indoc!(r#"
+            .help("Override the database password")
+            .long_help(indoc::indoc!(r#"
                 Override the database password set via configuration.
                 Can also be overriden via environment 'BUTIDO_DATABASE_PASSWORD', but this setting has precedence.
             "#))
@@ -98,8 +98,8 @@ pub fn cli<'a>() -> App<'a> {
             .multiple(false)
             .long("db-name")
             .value_name("NAME")
-            .about("Override the database name")
-            .long_about(indoc::indoc!(r#"
+            .help("Override the database name")
+            .long_help(indoc::indoc!(r#"
                 Override the database name set via configuration.
                 Can also be overriden via environment 'BUTIDO_DATABASE_NAME', but this setting has precedence.
             "#))
@@ -109,8 +109,8 @@ pub fn cli<'a>() -> App<'a> {
             .multiple(false)
             .long("db-timeout")
             .value_name("TIMEOUT")
-            .about("Override the database connection timeout")
-            .long_about(indoc::indoc!(r#"
+            .help("Override the database connection timeout")
+            .long_help(indoc::indoc!(r#"
                 Override the database connection timeout set via configuration.
                 Can also be overriden via environment 'BUTIDO_DATABASE_CONNECTION_TIMEOUT', but this setting has precedence.
             "#))
@@ -124,7 +124,7 @@ pub fn cli<'a>() -> App<'a> {
                 .default_value("bash")
                 .required(true)
                 .multiple(false)
-                .about("Shell to generate completions for")
+                .help("Shell to generate completions for")
             )
         )
 
@@ -149,7 +149,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("tool")
                     .value_name("TOOL")
                     .possible_values(&["psql", "pgcli"])
-                    .about("Use a specific tool")
+                    .help("Use a specific tool")
                 )
             )
 
@@ -169,7 +169,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("csv")
                     .takes_value(false)
-                    .about("Format output as CSV")
+                    .help("Format output as CSV")
                 )
                 .arg(Arg::new("job_uuid")
                     .required(false)
@@ -178,7 +178,7 @@ pub fn cli<'a>() -> App<'a> {
                     .short('J')
                     .takes_value(true)
                     .value_name("JOB UUID")
-                    .about("Print only artifacts for a certain job")
+                    .help("Print only artifacts for a certain job")
                 )
             )
 
@@ -190,7 +190,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("csv")
                     .takes_value(false)
-                    .about("Format output as CSV")
+                    .help("Format output as CSV")
                 )
             )
 
@@ -202,7 +202,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("csv")
                     .takes_value(false)
-                    .about("Format output as CSV")
+                    .help("Format output as CSV")
                 )
             )
 
@@ -215,7 +215,7 @@ pub fn cli<'a>() -> App<'a> {
                     .index(1)
                     .takes_value(true)
                     .value_name("SUBMIT")
-                    .about("The Submit to show details about")
+                    .help("The Submit to show details about")
                 )
             )
 
@@ -227,7 +227,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("csv")
                     .takes_value(false)
-                    .about("Format output as CSV")
+                    .help("Format output as CSV")
                 )
                 .arg(Arg::new("with_pkg")
                     .required(false)
@@ -235,7 +235,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("with-pkg")
                     .takes_value(true)
                     .value_name("PKG")
-                    .about("Only list submits that contained package PKG")
+                    .help("Only list submits that contained package PKG")
                     .conflicts_with("for_pkg")
                 )
                 .arg(Arg::new("for_pkg")
@@ -244,7 +244,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("for-pkg")
                     .takes_value(true)
                     .value_name("PKG")
-                    .about("Only list submits that had the root package PKG")
+                    .help("Only list submits that had the root package PKG")
                     .conflicts_with("with_pkg")
                 )
                 .arg(Arg::new("limit")
@@ -253,7 +253,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("limit")
                     .takes_value(true)
                     .value_name("LIMIT")
-                    .about("Only list LIMIT submits")
+                    .help("Only list LIMIT submits")
                 )
                 .arg(Arg::new("for-commit")
                     .required(false)
@@ -261,7 +261,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("commit")
                     .takes_value(true)
                     .value_name("HASH")
-                    .about("Limit listed submits to one commit hash")
+                    .help("Limit listed submits to one commit hash")
                 )
                 .arg(Arg::new("image")
                     .required(false)
@@ -269,7 +269,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("image")
                     .takes_value(true)
                     .value_name("IMAGE")
-                    .about("Limit listed submits to submits on IMAGE")
+                    .help("Limit listed submits to submits on IMAGE")
                 )
             )
 
@@ -281,7 +281,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("csv")
                     .takes_value(false)
-                    .about("Format output as CSV")
+                    .help("Format output as CSV")
                 )
 
                 .arg(Arg::new("submit_uuid")
@@ -291,7 +291,7 @@ pub fn cli<'a>() -> App<'a> {
                     .short('S')
                     .takes_value(true)
                     .value_name("UUID")
-                    .about("Only list jobs of a certain submit")
+                    .help("Only list jobs of a certain submit")
                 )
 
                 .arg(Arg::new("env_filter")
@@ -301,7 +301,7 @@ pub fn cli<'a>() -> App<'a> {
                     .short('E')
                     .takes_value(true)
                     .value_name("KV")
-                    .about("Filter for this \"key=value\" environment variable")
+                    .help("Filter for this \"key=value\" environment variable")
                 )
 
                 .arg(Arg::new("limit")
@@ -311,7 +311,7 @@ pub fn cli<'a>() -> App<'a> {
                     .short('L')
                     .takes_value(true)
                     .value_name("LIMIT")
-                    .about("Only list newest LIMIT jobs instead of all")
+                    .help("Only list newest LIMIT jobs instead of all")
                 )
 
                 .arg(arg_older_than_date("List only jobs older than DATE"))
@@ -324,7 +324,7 @@ pub fn cli<'a>() -> App<'a> {
                     .short('e')
                     .takes_value(true)
                     .value_name("ENDPOINT")
-                    .about("Only show jobs from ENDPOINT")
+                    .help("Only show jobs from ENDPOINT")
                 )
 
                 .arg(Arg::new("package")
@@ -334,7 +334,7 @@ pub fn cli<'a>() -> App<'a> {
                     .short('p')
                     .takes_value(true)
                     .value_name("PKG")
-                    .about("Only show jobs for PKG")
+                    .help("Only show jobs for PKG")
                 )
 
             )
@@ -347,7 +347,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("csv")
                     .takes_value(false)
-                    .about("Format output as CSV")
+                    .help("Format output as CSV")
                 )
 
                 .arg(Arg::new("job_uuid")
@@ -356,7 +356,7 @@ pub fn cli<'a>() -> App<'a> {
                     .index(1)
                     .takes_value(true)
                     .value_name("UUID")
-                    .about("The job to show")
+                    .help("The job to show")
                 )
 
                 .arg(Arg::new("show_log")
@@ -364,7 +364,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("log")
                     .short('L')
-                    .about("Show the log")
+                    .help("Show the log")
                 )
 
                 .arg(Arg::new("show_script")
@@ -372,7 +372,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("script")
                     .short('s')
-                    .about("Show the script")
+                    .help("Show the script")
                 )
 
                 .arg(Arg::new("show_env")
@@ -380,7 +380,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("env")
                     .short('E')
-                    .about("Show the environment of the job")
+                    .help("Show the environment of the job")
                 )
 
                 .arg(script_arg_line_numbers())
@@ -397,7 +397,7 @@ pub fn cli<'a>() -> App<'a> {
                     .index(1)
                     .takes_value(true)
                     .value_name("UUID")
-                    .about("The id of the Job")
+                    .help("The id of the Job")
                 )
             )
             .subcommand(App::new("releases")
@@ -408,7 +408,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("csv")
                     .takes_value(false)
-                    .about("Format output as CSV")
+                    .help("Format output as CSV")
                 )
 
                 .arg(arg_older_than_date("List only releases older than DATE"))
@@ -420,7 +420,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("to")
                     .takes_value(true)
                     .value_name("STORE")
-                    .about("List only releases to STORE")
+                    .help("List only releases to STORE")
                 )
 
                 .arg(Arg::new("package")
@@ -430,7 +430,7 @@ pub fn cli<'a>() -> App<'a> {
                     .short('p')
                     .takes_value(true)
                     .value_name("PKG")
-                    .about("Only list releases for package PKG")
+                    .help("Only list releases for package PKG")
                 )
             )
         )
@@ -450,7 +450,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .index(2)
                 .value_name("VERSION")
-                .about("Exact package version to build (string match)")
+                .help("Exact package version to build (string match)")
             )
 
             .arg(Arg::new("no_verification")
@@ -458,8 +458,8 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .takes_value(false)
                 .long("no-verify")
-                .about("Skip hashsum check")
-                .long_about(indoc::indoc!(r#"
+                .help("Skip hashsum check")
+                .long_help(indoc::indoc!(r#"
                     Do not perform a hash sum check on all packages in the dependency tree before starting the build.
                 "#))
             )
@@ -468,8 +468,8 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .takes_value(false)
                 .long("no-lint")
-                .about("Skip linting")
-                .long_about(indoc::indoc!(r#"
+                .help("Skip linting")
+                .long_help(indoc::indoc!(r#"
                     Do not perform script linting before starting the build.
                 "#))
             )
@@ -481,7 +481,7 @@ pub fn cli<'a>() -> App<'a> {
                 .takes_value(true)
                 .value_name("PATH")
                 .validator(dir_exists_validator)
-                .about("Do not throw dice on staging directory name, but hardcode for this run.")
+                .help("Do not throw dice on staging directory name, but hardcode for this run.")
             )
 
             .arg(Arg::new("shebang")
@@ -490,7 +490,7 @@ pub fn cli<'a>() -> App<'a> {
                 .long("shebang")
                 .takes_value(true)
                 .value_name("BANG")
-                .about("Overwrite the configured shebang line")
+                .help("Overwrite the configured shebang line")
             )
 
             .arg(Arg::new("env")
@@ -499,8 +499,8 @@ pub fn cli<'a>() -> App<'a> {
                 .short('E')
                 .long("env")
                 .validator(env_pass_validator)
-                .about("Pass environment variable to all build jobs")
-                .long_about(indoc::indoc!(r#"
+                .help("Pass environment variable to all build jobs")
+                .long_help(indoc::indoc!(r#"
                     Pass these variables to each build job.
                     This argument expects \"key=value\" or name of variable available in ENV
                 "#))
@@ -513,7 +513,7 @@ pub fn cli<'a>() -> App<'a> {
                 .value_name("IMAGE NAME")
                 .short('I')
                 .long("image")
-                .about("Name of the docker image to use")
+                .help("Name of the docker image to use")
             )
 
             .arg(Arg::new("write-log-file")
@@ -521,8 +521,8 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .long("write-log")
                 .short('L')
-                .about("Write log to disk as well")
-                .long_about(indoc::indoc!(r#"
+                .help("Write log to disk as well")
+                .long_help(indoc::indoc!(r#"
                     With this flag set, butido does not only write the build logs to database, but also to the configured
                     log directory.
 
@@ -538,7 +538,7 @@ pub fn cli<'a>() -> App<'a> {
                 .required(true)
                 .multiple(false)
                 .index(1)
-                .about("The name of the package")
+                .help("The name of the package")
             )
             .arg(Arg::new("dependency_type")
                 .required(false)
@@ -555,7 +555,7 @@ pub fn cli<'a>() -> App<'a> {
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
-                .about("Specify which dependency types are to be checked. By default, all are checked")
+                .help("Specify which dependency types are to be checked. By default, all are checked")
             )
         )
         .subcommand(App::new("dependencies-of")
@@ -567,14 +567,14 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .index(1)
                 .value_name("PACKAGE_NAME")
-                .about("The name of the package")
+                .help("The name of the package")
             )
             .arg(Arg::new("package_version_constraint")
                 .required(false)
                 .multiple(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .about("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
             )
             .arg(Arg::new("dependency_type")
                 .required(false)
@@ -591,7 +591,7 @@ pub fn cli<'a>() -> App<'a> {
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
-                .about("Specify which dependency types are to be printed. By default, all are checked")
+                .help("Specify which dependency types are to be printed. By default, all are checked")
             )
         )
         .subcommand(App::new("versions-of")
@@ -603,7 +603,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .index(1)
                 .value_name("PACKAGE_NAME")
-                .about("The name of the package")
+                .help("The name of the package")
             )
         )
         .subcommand(App::new("env-of")
@@ -615,14 +615,14 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .index(1)
                 .value_name("PACKAGE_NAME")
-                .about("The name of the package")
+                .help("The name of the package")
             )
             .arg(Arg::new("package_version_constraint")
                 .required(true)
                 .multiple(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .about("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
             )
         )
 
@@ -634,14 +634,14 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .index(1)
                 .value_name("REGEX")
-                .about("The regex to match the package name against")
+                .help("The regex to match the package name against")
             )
             .arg(Arg::new("package_version_constraint")
                 .required(false)
                 .multiple(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .about("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
             )
             .arg(Arg::new("no_script_filter")
                 .long("no-script-filter")
@@ -649,7 +649,7 @@ pub fn cli<'a>() -> App<'a> {
                 .required(false)
                 .multiple(false)
                 .takes_value(false)
-                .about("Don't check for script equality. Can cause unexact results.")
+                .help("Don't check for script equality. Can cause unexact results.")
             )
             .arg(Arg::new("staging_dir")
                 .required(false)
@@ -658,7 +658,7 @@ pub fn cli<'a>() -> App<'a> {
                 .takes_value(true)
                 .value_name("PATH")
                 .validator(dir_exists_validator)
-                .about("Also consider this staging dir when searching for artifacts")
+                .help("Also consider this staging dir when searching for artifacts")
             )
             .arg(Arg::new("env_filter")
                 .required(false)
@@ -668,7 +668,7 @@ pub fn cli<'a>() -> App<'a> {
                 .takes_value(true)
                 .value_name("KV")
                 .validator(env_pass_validator)
-                .about("Filter for this \"key=value\" environment variable")
+                .help("Filter for this \"key=value\" environment variable")
             )
             .arg(Arg::new("image")
                 .required(false)
@@ -677,7 +677,7 @@ pub fn cli<'a>() -> App<'a> {
                 .short('I')
                 .takes_value(true)
                 .value_name("IMAGE")
-                .about("Only list artifacts that were built on IMAGE")
+                .help("Only list artifacts that were built on IMAGE")
             )
         )
 
@@ -689,14 +689,14 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .index(1)
                 .value_name("REGEX")
-                .about("The regex to match the package name against")
+                .help("The regex to match the package name against")
             )
             .arg(Arg::new("package_version_constraint")
                 .required(false)
                 .multiple(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .about("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
             )
 
             .arg(Arg::new("terse")
@@ -704,7 +704,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .long("terse")
                 .short('t')
-                .about("Do not use the fancy format, but simply <name> <version>")
+                .help("Do not use the fancy format, but simply <name> <version>")
             )
 
             .arg(Arg::new("show_all")
@@ -712,7 +712,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .long("all")
                 .short('A')
-                .about("Same as: -SDpEFPs --denied-images --allowed-images (all flags enabled)")
+                .help("Same as: -SDpEFPs --denied-images --allowed-images (all flags enabled)")
             )
 
             .arg(Arg::new("show_sources")
@@ -721,7 +721,7 @@ pub fn cli<'a>() -> App<'a> {
                 .long("source")
                 .alias("sources")
                 .short('S')
-                .about("Show the sources of the package")
+                .help("Show the sources of the package")
             )
 
             .arg(Arg::new("show_dependencies")
@@ -730,7 +730,7 @@ pub fn cli<'a>() -> App<'a> {
                 .long("dependencies")
                 .alias("deps")
                 .short('D')
-                .about("Show the dependencies of the package")
+                .help("Show the dependencies of the package")
             )
             .arg(Arg::new("dependency_type")
                 .required(false)
@@ -746,7 +746,7 @@ pub fn cli<'a>() -> App<'a> {
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
-                .about("Specify which dependency types are to print.")
+                .help("Specify which dependency types are to print.")
             )
 
             .arg(Arg::new("show_patches")
@@ -754,7 +754,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .long("patches")
                 .short('p')
-                .about("Show the patches of the package")
+                .help("Show the patches of the package")
             )
 
             .arg(Arg::new("show_env")
@@ -762,7 +762,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .long("env")
                 .short('E')
-                .about("Show the environment of the package")
+                .help("Show the environment of the package")
             )
 
             .arg(Arg::new("show_flags")
@@ -770,21 +770,21 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .long("flags")
                 .short('F')
-                .about("Show the flags of the package")
+                .help("Show the flags of the package")
             )
 
             .arg(Arg::new("show_allowed_images")
                 .required(false)
                 .multiple(false)
                 .long("allowed-images")
-                .about("Show the images on which the package is only allowed to be built")
+                .help("Show the images on which the package is only allowed to be built")
             )
 
             .arg(Arg::new("show_denied_images")
                 .required(false)
                 .multiple(false)
                 .long("denied-images")
-                .about("Show the images on which the package is not allowed to be built")
+                .help("Show the images on which the package is not allowed to be built")
             )
 
             .arg(Arg::new("show_phases")
@@ -792,7 +792,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .long("phases")
                 .short('P')
-                .about("Show the phases of the script of the package")
+                .help("Show the phases of the script of the package")
             )
 
             .arg(Arg::new("show_script")
@@ -800,7 +800,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .long("script")
                 .short('s')
-                .about("Show the script of the package")
+                .help("Show the script of the package")
             )
             .arg(script_arg_line_numbers())
             .arg(script_arg_no_line_numbers())
@@ -819,14 +819,14 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .index(1)
                     .value_name("PKG")
-                    .about("Verify the sources of this package (optional, if left out, all packages are checked)")
+                    .help("Verify the sources of this package (optional, if left out, all packages are checked)")
                 )
                 .arg(Arg::new("package_version")
                     .required(false)
                     .multiple(false)
                     .index(2)
                     .value_name("VERSION")
-                    .about("Verify the sources of this package version (optional, if left out, all packages are checked)")
+                    .help("Verify the sources of this package version (optional, if left out, all packages are checked)")
                 )
 
                 .arg(Arg::new("matching")
@@ -835,7 +835,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("matching")
                     .takes_value(true)
                     .value_name("REGEX")
-                    .about("Verify all packages where the package name matches REGEX")
+                    .help("Verify all packages where the package name matches REGEX")
                 )
 
                 .group(ArgGroup::new("verify-one-or-many")
@@ -855,14 +855,14 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .index(1)
                     .value_name("PKG")
-                    .about("Verify the sources of this package (optional, if left out, all packages are checked)")
+                    .help("Verify the sources of this package (optional, if left out, all packages are checked)")
                 )
                 .arg(Arg::new("package_version")
                     .required(false)
                     .multiple(false)
                     .index(2)
                     .value_name("VERSION")
-                    .about("Verify the sources of this package version (optional, if left out, all packages are checked)")
+                    .help("Verify the sources of this package version (optional, if left out, all packages are checked)")
                 )
             )
             .subcommand(App::new("download")
@@ -873,20 +873,20 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .index(1)
                     .value_name("PKG")
-                    .about("Download the sources of this package")
+                    .help("Download the sources of this package")
                 )
                 .arg(Arg::new("package_version")
                     .required(false)
                     .multiple(false)
                     .index(2)
                     .value_name("VERSION_CONSTRAINT")
-                    .about("Download the sources of this package version (optional, if left out, all packages are downloaded)")
+                    .help("Download the sources of this package version (optional, if left out, all packages are downloaded)")
                 )
                 .arg(Arg::new("force")
                     .required(false)
                     .multiple(false)
                     .long("force")
-                    .about("Overwrite existing cache entry")
+                    .help("Overwrite existing cache entry")
                 )
 
                 .arg(Arg::new("matching")
@@ -895,7 +895,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("matching")
                     .takes_value(true)
                     .value_name("REGEX")
-                    .about("Download all packages matching a regex with their name")
+                    .help("Download all packages matching a regex with their name")
                 )
 
                 .group(ArgGroup::new("download-one-or-many")
@@ -909,7 +909,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("timeout")
                     .takes_value(true)
                     .value_name("TIMEOUT")
-                    .about("Set timeout for download in seconds")
+                    .help("Set timeout for download in seconds")
                 )
             )
             .subcommand(App::new("of")
@@ -920,14 +920,14 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .index(1)
                     .value_name("PKG")
-                    .about("Get the source file pathes for this package")
+                    .help("Get the source file pathes for this package")
                 )
                 .arg(Arg::new("package_version")
                     .required(false)
                     .multiple(false)
                     .index(2)
                     .value_name("VERSION")
-                    .about("Get the source file pathes for the package in this version")
+                    .help("Get the source file pathes for the package in this version")
                 )
             )
         )
@@ -949,7 +949,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("from")
                     .value_name("RELEASE_STORE_NAME")
-                    .about("Release store name to remove release from")
+                    .help("Release store name to remove release from")
                 )
 
                 .arg(Arg::new("package_name")
@@ -957,7 +957,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .index(1)
                     .value_name("PKG")
-                    .about("The name of the package")
+                    .help("The name of the package")
                     .requires("package_version")
                 )
 
@@ -966,7 +966,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .index(2)
                     .value_name("VERSION")
-                    .about("The exact version of the package (string match)")
+                    .help("The exact version of the package (string match)")
                     .requires("package_name")
                 )
             )
@@ -979,15 +979,15 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .index(1)
                     .value_name("SUBMIT")
-                    .about("The submit uuid from which to release a package")
+                    .help("The submit uuid from which to release a package")
                 )
                 .arg(Arg::new("release_store_name")
                     .required(true)
                     .multiple(false)
                     .long("to")
                     .value_name("RELEASE_STORE_NAME")
-                    .about("Release store name to release to")
-                    .long_about(indoc::indoc!(r#"
+                    .help("Release store name to release to")
+                    .long_help(indoc::indoc!(r#"
                         Butido can release to different release stores, based on this CLI flag.
                         The release stores that are available must be listed in the configuration.
                     "#))
@@ -997,14 +997,14 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .index(2)
                     .value_name("PKG")
-                    .about("The name of the package")
+                    .help("The name of the package")
                     .conflicts_with("all-packages")
                 )
                 .arg(Arg::new("all-packages")
                     .required(false)
                     .multiple(false)
                     .long("all")
-                    .about("Release all packages")
+                    .help("Release all packages")
                     .conflicts_with("package_name")
                 )
                 .group(ArgGroup::new("package")
@@ -1016,19 +1016,19 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .index(3)
                     .value_name("VERSION")
-                    .about("The exact version of the package (string match)")
+                    .help("The exact version of the package (string match)")
                 )
                 .arg(Arg::new("package_do_update")
                     .required(false)
                     .multiple(false)
                     .long("update")
-                    .about("Do update a package if it already exists in the release store")
+                    .help("Do update a package if it already exists in the release store")
                 )
                 .arg(Arg::new("noninteractive")
                     .required(false)
                     .multiple(false)
                     .long("non-interactive")
-                    .about("Dont be interactive (only with --update at the moment)")
+                    .help("Dont be interactive (only with --update at the moment)")
                     .requires("package_do_update")
                 )
                 .arg(Arg::new("quiet")
@@ -1036,7 +1036,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("quiet")
                     .short('q')
-                    .about("Don't print pathes to released filesfiles  after releases are complete")
+                    .help("Don't print pathes to released filesfiles  after releases are complete")
                 )
             )
 
@@ -1050,14 +1050,14 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .index(1)
                 .value_name("NAME")
-                .about("Package name to lint (if not present, every package will be linted")
+                .help("Package name to lint (if not present, every package will be linted")
             )
             .arg(Arg::new("package_version")
                 .required(false)
                 .multiple(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .about("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
             )
         )
 
@@ -1069,14 +1069,14 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .index(1)
                 .value_name("NAME")
-                .about("Package name to lint (if not present, every package will be linted")
+                .help("Package name to lint (if not present, every package will be linted")
             )
             .arg(Arg::new("package_version")
                 .required(false)
                 .multiple(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .about("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
             )
             .arg(Arg::new("image")
                 .required(false)
@@ -1085,8 +1085,8 @@ pub fn cli<'a>() -> App<'a> {
                 .value_name("IMAGE NAME")
                 .short('I')
                 .long("image")
-                .about("Name of the docker image to use")
-                .long_about(indoc::indoc!(r#"
+                .help("Name of the docker image to use")
+                .long_help(indoc::indoc!(r#"
                     Name of the docker image to use.
 
                     Required because tree might look different on different images because of
@@ -1099,8 +1099,8 @@ pub fn cli<'a>() -> App<'a> {
                 .short('E')
                 .long("env")
                 .validator(env_pass_validator)
-                .about("Additional env to be passed when building packages")
-                .long_about(indoc::indoc!(r#"
+                .help("Additional env to be passed when building packages")
+                .long_help(indoc::indoc!(r#"
                     Additional env to be passed when building packages.
 
                     Required because tree might look different on different images because of
@@ -1122,7 +1122,7 @@ pub fn cli<'a>() -> App<'a> {
                 .multiple(false)
                 .index(1)
                 .value_name("ENDPOINT_NAME")
-                .about("Endpoint to talk to, or all if not given")
+                .help("Endpoint to talk to, or all if not given")
             )
 
             .subcommand(App::new("ping")
@@ -1135,7 +1135,7 @@ pub fn cli<'a>() -> App<'a> {
                     .short('n')
                     .value_name("N")
                     .default_value("10")
-                    .about("How often to ping")
+                    .help("How often to ping")
                 )
                 .arg(Arg::new("ping_sleep")
                     .required(false)
@@ -1143,7 +1143,7 @@ pub fn cli<'a>() -> App<'a> {
                     .long("sleep")
                     .value_name("N")
                     .default_value("1")
-                    .about("How long to sleep between pings")
+                    .help("How long to sleep between pings")
                 )
             )
             .subcommand(App::new("stats")
@@ -1154,7 +1154,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("csv")
                     .takes_value(false)
-                    .about("Format output as CSV")
+                    .help("Format output as CSV")
                 )
             )
             .subcommand(App::new("containers")
@@ -1178,7 +1178,7 @@ pub fn cli<'a>() -> App<'a> {
                         .short('t')
                         .takes_value(true)
                         .value_name("TIMEOUT")
-                        .about("Timeout in seconds")
+                        .help("Timeout in seconds")
                         .validator(parse_u64)
                     )
                 )
@@ -1190,7 +1190,7 @@ pub fn cli<'a>() -> App<'a> {
                         .multiple(false)
                         .long("csv")
                         .takes_value(false)
-                        .about("Format output as CSV")
+                        .help("Format output as CSV")
                     )
 
                     .arg(Arg::new("list_stopped")
@@ -1198,7 +1198,7 @@ pub fn cli<'a>() -> App<'a> {
                         .multiple(false)
                         .long("list-stopped")
                         .takes_value(false)
-                        .about("List stopped containers too")
+                        .help("List stopped containers too")
                     )
 
                     .arg(Arg::new("filter_image")
@@ -1207,7 +1207,7 @@ pub fn cli<'a>() -> App<'a> {
                         .long("image")
                         .takes_value(true)
                         .value_name("IMAGE")
-                        .about("List only containers of IMAGE")
+                        .help("List only containers of IMAGE")
                     )
 
                     .arg(arg_older_than_date("List only containers older than DATE"))
@@ -1221,7 +1221,7 @@ pub fn cli<'a>() -> App<'a> {
                         .multiple(false)
                         .long("csv")
                         .takes_value(false)
-                        .about("List top output as CSV")
+                        .help("List top output as CSV")
                     )
                     .arg(Arg::new("limit")
                         .required(false)
@@ -1229,7 +1229,7 @@ pub fn cli<'a>() -> App<'a> {
                         .long("limit")
                         .takes_value(true)
                         .value_name("LIMIT")
-                        .about("Only list LIMIT processes for each container")
+                        .help("Only list LIMIT processes for each container")
                         .validator(parse_usize)
                     )
                 )
@@ -1243,7 +1243,7 @@ pub fn cli<'a>() -> App<'a> {
                     .index(1)
                     .takes_value(true)
                     .value_name("CONTAINER_ID")
-                    .about("Work with container CONTAINER_ID")
+                    .help("Work with container CONTAINER_ID")
                 )
                 .subcommand(App::new("top")
                     .version(VERSION)
@@ -1253,7 +1253,7 @@ pub fn cli<'a>() -> App<'a> {
                         .multiple(false)
                         .long("csv")
                         .takes_value(false)
-                        .about("List top output as CSV")
+                        .help("List top output as CSV")
                     )
                 )
                 .subcommand(App::new("kill")
@@ -1265,7 +1265,7 @@ pub fn cli<'a>() -> App<'a> {
                         .index(1)
                         .takes_value(true)
                         .value_name("SIGNAL")
-                        .about("Kill container with this signal")
+                        .help("Kill container with this signal")
                     )
                 )
                 .subcommand(App::new("delete")
@@ -1285,7 +1285,7 @@ pub fn cli<'a>() -> App<'a> {
                         .long("timeout")
                         .takes_value(true)
                         .value_name("DURATION")
-                        .about("Timeout")
+                        .help("Timeout")
                     )
                 )
                 .subcommand(App::new("exec")
@@ -1297,8 +1297,8 @@ pub fn cli<'a>() -> App<'a> {
                         .index(1)
                         .takes_value(true)
                         .value_name("CMD")
-                        .about("Commands to execute in the container")
-                        .long_about(indoc::indoc!(r#"
+                        .help("Commands to execute in the container")
+                        .long_help(indoc::indoc!(r#"
                             Execute a command in the container.
 
                             This does not handle TTY forwarding, so you cannot execute interactive commands in the container (e.g. htop).
@@ -1324,7 +1324,7 @@ pub fn cli<'a>() -> App<'a> {
                         .multiple(false)
                         .long("csv")
                         .takes_value(false)
-                        .about("List top output as CSV")
+                        .help("List top output as CSV")
                     )
                 )
                 .subcommand(App::new("verify-present")
@@ -1335,7 +1335,7 @@ pub fn cli<'a>() -> App<'a> {
                         .multiple(false)
                         .long("csv")
                         .takes_value(false)
-                        .about("List top output as CSV")
+                        .help("List top output as CSV")
                     )
                 )
             )
@@ -1347,7 +1347,7 @@ fn script_arg_line_numbers<'a>() -> clap::Arg<'a> {
         .required(false)
         .multiple(false)
         .long("line-numbers")
-        .about("Print script with line numbers (default)")
+        .help("Print script with line numbers (default)")
         .conflicts_with("no_script_line_numbers")
 }
 
@@ -1356,7 +1356,7 @@ fn script_arg_no_line_numbers<'a>() -> clap::Arg<'a> {
         .required(false)
         .multiple(false)
         .long("no-line-numbers")
-        .about("Print script without line numbers")
+        .help("Print script without line numbers")
         .conflicts_with("script_line_numbers")
 }
 
@@ -1366,7 +1366,7 @@ fn script_arg_highlight<'a>() -> clap::Arg<'a> {
         .multiple(false)
         .long("highlighting")
         .alias("highlight")
-        .about("Print script with highlighting (default)")
+        .help("Print script with highlighting (default)")
         .conflicts_with("no_script_highlight")
 }
 
@@ -1376,7 +1376,7 @@ fn script_arg_no_highlight<'a>() -> clap::Arg<'a> {
         .multiple(false)
         .long("no-highlighting")
         .alias("no-highlight")
-        .about("Print script without highlighting")
+        .help("Print script without highlighting")
         .conflicts_with("script_highlight")
 }
 
@@ -1424,8 +1424,8 @@ fn arg_older_than_date(about: &str) -> Arg<'_> {
         .long("older-than")
         .takes_value(true)
         .value_name("DATE")
-        .about(about)
-        .long_about(r#"
+        .help(about)
+        .long_help(r#"
             DATE can be a freeform date, for example '2h'
             It can also be a exact date: '2020-01-01 00:12:45'
             If the hour-minute-second part is omitted, " 00:00:00" is appended automatically.
@@ -1454,8 +1454,8 @@ fn arg_newer_than_date(about: &str) -> Arg<'_> {
         .long("newer-than")
         .takes_value(true)
         .value_name("DATE")
-        .about(about)
-        .long_about(r#"
+        .help(about)
+        .long_help(r#"
             DATE can be a freeform date, for example '2h'
             It can also be a exact date: '2020-01-01 00:12:45'
             If the hour-minute-second part is omitted, " 00:00:00" is appended automatically.
