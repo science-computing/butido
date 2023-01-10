@@ -7,10 +7,15 @@ ignore=body-is-missing
 # enabled by default in the future. We already enable it here to avoid a
 # warning message (our regular expressions are compatible with re.search()):
 regex-style-search=true
+# Don't ignore temporary commits (they can be useful for drafts but we shall
+# not accidentally merge them (this is mainly important for our CI checks)):
+ignore-fixup-commits=false
+ignore-fixup-amend-commits=false
+ignore-squash-commits=false
 
 # Enable community contributed rules
 # See http://jorisroovers.github.io/gitlint/contrib_rules for details
-contrib=contrib-body-requires-signed-off-by
+contrib=contrib-body-requires-signed-off-by,contrib-disallow-cleanup-commits
 
 [ignore-by-author-name]
 # Ignore certain rules for commits of which the author name matches a regex
