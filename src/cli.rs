@@ -122,7 +122,7 @@ pub fn cli<'a>() -> App<'a> {
             .arg(Arg::new("shell")
                 .possible_values(&["bash", "elvish", "fish", "zsh"])
                 .default_value("bash")
-                .required(true)
+                .required(false)
                 .multiple(false)
                 .help("Shell to generate completions for")
             )
