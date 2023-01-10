@@ -3,6 +3,10 @@
 [general]
 # Make body messages optional:
 ignore=body-is-missing
+# At this time, regex-style-search is disabled by default, but it will be
+# enabled by default in the future. We already enable it here to avoid a
+# warning message (our regular expressions are compatible with re.search()):
+regex-style-search=true
 
 # Enable community contributed rules
 # See http://jorisroovers.github.io/gitlint/contrib_rules for details
