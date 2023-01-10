@@ -120,7 +120,7 @@ pub fn cli<'a>() -> App<'a> {
             .version(VERSION)
             .about("Generate and print commandline completions")
             .arg(Arg::new("shell")
-                .possible_values(&["bash", "elvish", "fish", "zsh"])
+                .possible_values(["bash", "elvish", "fish", "zsh"])
                 .default_value("bash")
                 .required(false)
                 .multiple(false)
@@ -148,7 +148,7 @@ pub fn cli<'a>() -> App<'a> {
                     .multiple(false)
                     .long("tool")
                     .value_name("TOOL")
-                    .possible_values(&["psql", "pgcli"])
+                    .possible_values(["psql", "pgcli"])
                     .help("Use a specific tool")
                 )
             )
@@ -548,7 +548,7 @@ pub fn cli<'a>() -> App<'a> {
                 .short('t')
                 .long("type")
                 .value_name("DEPENDENCY_TYPE")
-                .possible_values(&[
+                .possible_values([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
@@ -584,7 +584,7 @@ pub fn cli<'a>() -> App<'a> {
                 .short('t')
                 .long("type")
                 .value_name("DEPENDENCY_TYPE")
-                .possible_values(&[
+                .possible_values([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
@@ -740,7 +740,7 @@ pub fn cli<'a>() -> App<'a> {
                 .takes_value(true)
                 .long("dependency-type")
                 .value_name("DEPENDENCY_TYPE")
-                .possible_values(&[
+                .possible_values([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
