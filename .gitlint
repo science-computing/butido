@@ -21,3 +21,8 @@ contrib=contrib-body-requires-signed-off-by,contrib-disallow-cleanup-commits
 # Ignore certain rules for commits of which the author name matches a regex
 # Match commits made by dependabot:
 regex=(.*)dependabot(.*)
+
+[ignore-body-lines]
+# Ignore long hyperlinks (http and https). The URLs must start at the beginning
+# of a line or use the Markdown format (e.g. "[10]: $URL"):
+regex=^(\[[0-9]+\]: )?https?://
