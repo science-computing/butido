@@ -17,8 +17,4 @@ jobs:
       - run: pip install gitlint
       - run: |
           gitlint \
-            -c general.ignore-fixup-commits=false \
-            -c general.ignore-fixup-amend-commits=false \
-            -c general.ignore-squash-commits=false \
-            --contrib contrib-body-requires-signed-off-by,contrib-disallow-cleanup-commits \
             --commits "$(git merge-base origin/master HEAD)..HEAD"
