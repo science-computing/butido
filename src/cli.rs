@@ -12,19 +12,27 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use clap::crate_authors;
-use clap::crate_version;
 use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
+
+use const_format::formatcp;
+
 
 // Helper types to ship around stringly typed clap API.
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
 pub const IDENT_DEPENDENCY_TYPE_RUNTIME: &str = "runtime";
 
+pub const VERSION: &str = formatcp!("{}\nGit SHA:\t\t{}\nBuild Timestamp:\t{}\nCargo Profile:\t\t{}",
+        env!("VERGEN_GIT_SEMVER"),
+        env!("VERGEN_GIT_SHA"),
+        env!("VERGEN_BUILD_TIMESTAMP"),
+        env!("VERGEN_CARGO_PROFILE"));
+
 pub fn cli<'a>() -> App<'a> {
     App::new("butido")
         .author(crate_authors!())
-        .version(crate_version!())
+        .version(VERSION)
         .about("Generic Build Orchestration System for building linux packages with docker")
 
         .after_help(indoc::indoc!(r#"
@@ -109,7 +117,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("generate-completions")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Generate and print commandline completions")
             .arg(Arg::new("shell")
                 .possible_values(&["bash", "elvish", "fish", "zsh"])
@@ -121,10 +129,10 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("db")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Database CLI interface")
             .subcommand(App::new("cli")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Start a database CLI, if installed on the current host")
                 .long_about(indoc::indoc!(r#"
                     Starts a database shell on the configured database using one of the following programs:
@@ -146,7 +154,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("setup")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Run the database setup")
                 .long_about(indoc::indoc!(r#"
                     Run the database setup migrations
@@ -154,7 +162,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("artifacts")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("List artifacts from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -175,7 +183,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("envvars")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("List envvars from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -187,7 +195,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("images")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("List images from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -199,7 +207,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("submit")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Show details about one specific submit")
                 .arg(Arg::new("submit")
                     .required(true)
@@ -212,7 +220,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("submits")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("List submits from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -266,7 +274,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("jobs")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("List jobs from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -332,7 +340,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("job")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Show a specific job from the DB")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -381,7 +389,7 @@ pub fn cli<'a>() -> App<'a> {
                 .arg(script_arg_no_highlight())
             )
             .subcommand(App::new("log-of")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Print log of a job, short version of 'db job --log'")
                 .arg(Arg::new("job_uuid")
                     .required(true)
@@ -393,7 +401,7 @@ pub fn cli<'a>() -> App<'a> {
                 )
             )
             .subcommand(App::new("releases")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("List releases")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -428,7 +436,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("build")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Build packages in containers")
 
             .arg(Arg::new("package_name")
@@ -524,7 +532,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("what-depends")
-            .version(crate_version!())
+            .version(VERSION)
             .about("List all packages that depend on a specific package")
             .arg(Arg::new("package_name")
                 .required(true)
@@ -551,7 +559,7 @@ pub fn cli<'a>() -> App<'a> {
             )
         )
         .subcommand(App::new("dependencies-of")
-            .version(crate_version!())
+            .version(VERSION)
             .alias("depsof")
             .about("List the depenendcies of a package")
             .arg(Arg::new("package_name")
@@ -587,7 +595,7 @@ pub fn cli<'a>() -> App<'a> {
             )
         )
         .subcommand(App::new("versions-of")
-            .version(crate_version!())
+            .version(VERSION)
             .alias("versions")
             .about("List the versions of a package")
             .arg(Arg::new("package_name")
@@ -599,7 +607,7 @@ pub fn cli<'a>() -> App<'a> {
             )
         )
         .subcommand(App::new("env-of")
-            .version(crate_version!())
+            .version(VERSION)
             .alias("env")
             .about("Show the ENV configured for a package")
             .arg(Arg::new("package_name")
@@ -619,7 +627,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("find-artifact")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Find artifacts for packages")
             .arg(Arg::new("package_name_regex")
                 .required(true)
@@ -674,7 +682,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("find-pkg")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Find a package by regex")
             .arg(Arg::new("package_name_regex")
                 .required(true)
@@ -801,10 +809,10 @@ pub fn cli<'a>() -> App<'a> {
 
         )
         .subcommand(App::new("source")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Handle package sources")
             .subcommand(App::new("verify")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Hash-check all source files")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -836,11 +844,11 @@ pub fn cli<'a>() -> App<'a> {
                 )
             )
             .subcommand(App::new("list-missing")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("List packages where the source is missing")
             )
             .subcommand(App::new("url")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Show the URL of the source of a package")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -858,7 +866,7 @@ pub fn cli<'a>() -> App<'a> {
                 )
             )
             .subcommand(App::new("download")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Download the source for one or multiple packages")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -905,7 +913,7 @@ pub fn cli<'a>() -> App<'a> {
                 )
             )
             .subcommand(App::new("of")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Get the pathes of the sources of a package")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -925,10 +933,10 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("release")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Manage artifact releases")
             .subcommand(App::new("rm")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Remove release artifacts")
                 .long_about(indoc::indoc!(r#"
                     Removes a released artifact from the release store and deletes the according database entry.
@@ -964,7 +972,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("new")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Release artifacts")
                 .arg(Arg::new("submit_uuid")
                     .required(true)
@@ -1035,7 +1043,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("lint")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Lint the package script of one or multiple packages")
             .arg(Arg::new("package_name")
                 .required(false)
@@ -1054,7 +1062,7 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("tree-of")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Print the dependency tree of one or multiple packages")
             .arg(Arg::new("package_name")
                 .required(true)
@@ -1102,12 +1110,12 @@ pub fn cli<'a>() -> App<'a> {
         )
 
         .subcommand(App::new("metrics")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Print metrics about butido")
         )
 
         .subcommand(App::new("endpoint")
-            .version(crate_version!())
+            .version(VERSION)
             .about("Endpoint maintentance commands")
             .arg(Arg::new("endpoint_name")
                 .required(false)
@@ -1118,7 +1126,7 @@ pub fn cli<'a>() -> App<'a> {
             )
 
             .subcommand(App::new("ping")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Ping the endpoint(s)")
                 .arg(Arg::new("ping_n")
                     .required(false)
@@ -1139,7 +1147,7 @@ pub fn cli<'a>() -> App<'a> {
                 )
             )
             .subcommand(App::new("stats")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Get stats for the endpoint(s)")
                 .arg(Arg::new("csv")
                     .required(false)
@@ -1150,16 +1158,16 @@ pub fn cli<'a>() -> App<'a> {
                 )
             )
             .subcommand(App::new("containers")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Work with the containers of the endpoint(s)")
                 .subcommand(App::new("prune")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("Remove exited containers")
                     .arg(arg_older_than_date("Prune only containers older than DATE"))
                     .arg(arg_newer_than_date("Prune only containers newer than DATE"))
                 )
                 .subcommand(App::new("stop")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("Stop running containers")
                     .arg(arg_older_than_date("Stop only containers older than DATE"))
                     .arg(arg_newer_than_date("Stop only containers newer than DATE"))
@@ -1175,7 +1183,7 @@ pub fn cli<'a>() -> App<'a> {
                     )
                 )
                 .subcommand(App::new("list")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("List the containers and stats about them")
                     .arg(Arg::new("csv")
                         .required(false)
@@ -1206,7 +1214,7 @@ pub fn cli<'a>() -> App<'a> {
                     .arg(arg_newer_than_date("List only containers newer than DATE"))
                 )
                 .subcommand(App::new("top")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("List the processes of all containers")
                     .arg(Arg::new("csv")
                         .required(false)
@@ -1227,7 +1235,7 @@ pub fn cli<'a>() -> App<'a> {
                 )
             )
             .subcommand(App::new("container")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Work with a specific container")
                 .arg(Arg::new("container_id")
                     .required(true)
@@ -1238,7 +1246,7 @@ pub fn cli<'a>() -> App<'a> {
                     .about("Work with container CONTAINER_ID")
                 )
                 .subcommand(App::new("top")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("List the container processes")
                     .arg(Arg::new("csv")
                         .required(false)
@@ -1249,7 +1257,7 @@ pub fn cli<'a>() -> App<'a> {
                     )
                 )
                 .subcommand(App::new("kill")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("Kill the container")
                     .arg(Arg::new("signal")
                         .required(false)
@@ -1261,15 +1269,15 @@ pub fn cli<'a>() -> App<'a> {
                     )
                 )
                 .subcommand(App::new("delete")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("Delete the container")
                 )
                 .subcommand(App::new("start")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("Start the container")
                 )
                 .subcommand(App::new("stop")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("Stop the container")
                     .arg(Arg::new("timeout")
                         .required(false)
@@ -1281,7 +1289,7 @@ pub fn cli<'a>() -> App<'a> {
                     )
                 )
                 .subcommand(App::new("exec")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("Execute commands in the container")
                     .arg(Arg::new("commands")
                         .required(true)
@@ -1300,16 +1308,16 @@ pub fn cli<'a>() -> App<'a> {
                 )
 
                 .subcommand(App::new("inspect")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("Display details about the container")
                     .long_about("Display details about the container. Do not assume the output format to be stable.")
                 )
             )
             .subcommand(App::new("images")
-                .version(crate_version!())
+                .version(VERSION)
                 .about("Query images on endpoint(s)")
                 .subcommand(App::new("list")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("List images on endpoint(s)")
                     .arg(Arg::new("csv")
                         .required(false)
@@ -1320,7 +1328,7 @@ pub fn cli<'a>() -> App<'a> {
                     )
                 )
                 .subcommand(App::new("verify-present")
-                    .version(crate_version!())
+                    .version(VERSION)
                     .about("Verify that all configured images are present on endpoint(s)")
                     .arg(Arg::new("csv")
                         .required(false)
