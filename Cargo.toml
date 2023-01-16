@@ -107,7 +107,13 @@ zeroize = ">=1.3.0, <1.6.0"
 # dependency is kept below 0.8.30.
 # Make sure to remove this constraint as soon as possible.
 encoding_rs = ">=0.8.0, <=0.8.32"
+const_format = "0.2"
 
 [dev-dependencies]
 toml = "0.5"
+
+[build-dependencies]
+anyhow = "1"
+git_info = "0.1"
+vergen = { version = "7", default-features = false, features = ["git", "build", "cargo"] }
 
