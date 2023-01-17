@@ -388,7 +388,7 @@ pub async fn build(
         writeln!(outlock, "Packages created:")?;
     }
     artifacts.into_iter().try_for_each(|artifact_path| {
-        writeln!(outlock, "-> {}", staging_dir.join(artifact_path).display()).map_err(Error::from)
+        writeln!(outlock, "{}", staging_dir.join(artifact_path).display()).map_err(Error::from)
     })?;
 
     let mut had_error = false;
