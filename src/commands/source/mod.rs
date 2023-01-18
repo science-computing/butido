@@ -134,7 +134,7 @@ where
     if results.iter().any(Result::is_err) {
         bar.finish_with_message("Source verification failed");
     } else {
-        bar.finish_with_message("Source verification successfull");
+        bar.finish_with_message("Source verification successful");
     }
 
     let out = std::io::stdout();
