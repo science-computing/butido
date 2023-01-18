@@ -194,7 +194,7 @@ pub async fn download(
 
     let download_sema = Arc::new(tokio::sync::Semaphore::new(NUMBER_OF_MAX_CONCURRENT_DOWNLOADS));
 
-    let r = repo.packages()
+    let mut r = repo.packages()
         .filter(|p| {
             match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
                 (None, None, None)              => true,
@@ -206,8 +206,26 @@ pub async fn download(
                     panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
                 },
             }
-        })
-        .flat_map(|p| {
+        }).peekable();
+
+        // check if the iterator is empty
+        if r.peek().is_none() {
+            let pname = matches.value_of("package_name");
+            let pvers = matches.value_of("package_version");
+            let matching_regexp = matches.value_of("matching");
+
+            match (pname, pvers, matching_regexp) {
+                (Some(pname), None, None)       => return Err(anyhow!("{} not found", pname)),
+                (Some(pname), Some(vers), None) => return Err(anyhow!("{} {} not found", pname, vers)),
+                (None, None, Some(regex))       => return Err(anyhow!("{} regex not found", regex)),
+
+                (_, _, _) => {
+                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
+                },
+            }
+        }
+
+        let r = r.flat_map(|p| {
             sc.sources_for(p).into_iter().map(|source| {
                 let download_sema = download_sema.clone();
                 let progressbar = progressbar.clone();
