@@ -280,24 +280,6 @@ impl Endpoint {
             })
     }
 
-    pub async fn number_of_running_containers(&self) -> Result<usize> {
-        self.docker
-            .containers()
-            .list({
-                &shiplift::builder::ContainerListOptions::builder()
-                .all()
-                .build()
-            })
-            .await
-            .map_err(Error::from)
-            .map(|list| {
-                list.into_iter()
-                    .inspect(|stat| trace!("stat = {:?}", stat))
-                    .filter(|stat| stat.state == "running")
-                    .count()
-            })
-    }
-
     pub async fn has_container_with_id(&self, id: &str) -> Result<bool> {
         self.container_stats()
             .await?
