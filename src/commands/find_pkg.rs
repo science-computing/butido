@@ -15,7 +15,7 @@ use std::convert::TryFrom;
 use anyhow::Context;
 use anyhow::Result;
 use clap::ArgMatches;
-use log::trace;
+use tracing::trace;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 

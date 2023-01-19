@@ -19,6 +19,7 @@ use anyhow::Result;
 use resiter::AndThen;
 use resiter::Filter;
 use resiter::Map;
+use tracing::trace;
 
 use crate::filestore::staging::StagingStore;
 
@@ -67,17 +68,17 @@ impl StoreRoot {
     pub(in crate::filestore) fn find_artifacts_recursive(
         &self,
     ) -> impl Iterator<Item = Result<ArtifactPath>> {
-        log::trace!("Loading artifacts from directory: {:?}", self.0);
+        trace!("Loading artifacts from directory: {:?}", self.0);
         let root = self.0.clone();
         walkdir::WalkDir::new(&self.0)
             .follow_links(false)
             .into_iter()
             .filter_ok(|e| {
                 let is_file = e.file_type().is_file();
-                log::trace!("{:?} is file = {}", e, is_file);
+                trace!("{:?} is file = {}", e, is_file);
                 is_file
             })
-            .inspect(|p| log::trace!("Loading Artifact from path: {:?}", p))
+            .inspect(|p| trace!("Loading Artifact from path: {:?}", p))
             .map_err(Error::from)
             .and_then_ok(move |de| {
                 de.path()
@@ -108,7 +109,7 @@ impl StoreRoot {
                     .context("Getting path from entry in Archive")?
                     .components()
                     .filter(|comp| {
-                        log::trace!("Filtering path component: '{:?}'", comp);
+                        trace!("Filtering path component: '{:?}'", comp);
                         let osstr = std::ffi::OsStr::new(crate::consts::OUTPUTS_DIR_NAME);
                         match comp {
                             std::path::Component::Normal(s) => *s != osstr,
@@ -117,9 +118,9 @@ impl StoreRoot {
                     })
                     .collect::<PathBuf>();
 
-                log::trace!("Path = '{:?}'", path);
+                trace!("Path = '{:?}'", path);
                 let unpack_dest = self.0.join(&path);
-                log::trace!("Unpack to = '{:?}'", unpack_dest);
+                trace!("Unpack to = '{:?}'", unpack_dest);
 
                 entry.unpack(unpack_dest)
                     .map(|_| path)

@@ -27,9 +27,7 @@ use diesel::JoinOnDsl;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use itertools::Itertools;
-use log::debug;
-use log::info;
-use log::trace;
+use tracing::{debug, info, trace, warn};
 
 use crate::commands::util::get_date_filter;
 use crate::config::Configuration;
@@ -793,7 +791,7 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
                     p.display().to_string(),
                 ])
             } else {
-                log::warn!("Released file for {} {} not found: {}", pack.name, pack.version, p.display());
+                warn!("Released file for {} {} not found: {}", pack.name, pack.version, p.display());
                 None
             }
         })

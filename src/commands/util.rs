@@ -20,7 +20,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
 use itertools::Itertools;
-use log::{error, info, trace};
+use tracing::{error, info, trace};
 use regex::Regex;
 use tokio_stream::StreamExt;
 

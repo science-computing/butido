@@ -21,8 +21,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 use diesel::PgConnection;
 use itertools::Itertools;
-use log::debug;
-use log::trace;
+use tracing::{debug, trace};
 
 use crate::config::Configuration;
 use crate::filestore::ReleaseStore;
@@ -55,7 +54,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .map(String::from)
         .map(ImageName::from);
 
-    log::debug!("Finding artifacts for '{:?}' '{:?}'", package_name_regex, package_version_constraint);
+    debug!("Finding artifacts for '{:?}' '{:?}'", package_name_regex, package_version_constraint);
 
     let release_stores = config
         .release_stores()

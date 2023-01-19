@@ -11,7 +11,7 @@
 use anyhow::Error;
 use anyhow::Result;
 use filters::failable::filter::FailableFilter;
-use log::trace;
+use tracing::trace;
 use resiter::Map;
 
 use crate::package::Package;
@@ -101,7 +101,7 @@ mod tests {
     use crate::repository::Repository;
 
     fn setup_logging() {
-        let _ = env_logger::try_init();
+        let _ = tracing_subscriber::fmt::try_init();
     }
 
     #[test]

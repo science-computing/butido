@@ -23,6 +23,7 @@ use resiter::Filter;
 use resiter::Map;
 use walkdir::DirEntry;
 use walkdir::WalkDir;
+use tracing::trace;
 
 use crate::repository::fs::element::Element;
 use crate::repository::fs::path::PathComponent;
@@ -62,8 +63,8 @@ impl FileSystemRepresentation {
                 .unwrap_or(usize::MAX) // if usize is smaller than u64, usize::MAX will do
         };
 
-        log::trace!("Loading files from filesystem starting at: {}", root.display());
-        log::trace!("Loading with a maximum of {} files open", max_files_open);
+        trace!("Loading files from filesystem starting at: {}", root.display());
+        trace!("Loading with a maximum of {} files open", max_files_open);
         WalkDir::new(root)
             .follow_links(false)
             .max_open(max_files_open)
@@ -71,7 +72,7 @@ impl FileSystemRepresentation {
             .into_iter()
             .filter_entry(|e| !is_hidden(e) && (is_pkgtoml(e) || is_dir(e)))
             .filter_ok(is_pkgtoml)
-            .inspect(|el| log::trace!("Loading: {:?}", el))
+            .inspect(|el| trace!("Loading: {:?}", el))
             .map_err(Error::from)
             .and_then_ok(|de| {
                 let mut curr_hm = &mut fsr.elements;
@@ -196,25 +197,25 @@ impl FileSystemRepresentation {
 
 /// Helper to check whether a DirEntry points to a hidden file
 fn is_hidden(entry: &DirEntry) -> bool {
-    log::trace!("Check {:?} is hidden", entry);
+    trace!("Check {:?} is hidden", entry);
     entry.file_name().to_str().map(|s| s.starts_with('.')).unwrap_or(false)
 }
 
 /// Helper to check whether a DirEntry points to a directory
 fn is_dir(entry: &DirEntry) -> bool {
-    log::trace!("Check {:?} is directory", entry);
+    trace!("Check {:?} is directory", entry);
     entry.file_type().is_dir()
 }
 
 /// Helper to check whether a DirEntry points to a pkg.toml file
 fn is_pkgtoml(entry: &DirEntry) -> bool {
-    log::trace!("Check {:?} == 'pkg.toml'", entry);
+    trace!("Check {:?} == 'pkg.toml'", entry);
     entry.file_name().to_str().map(|s| s == "pkg.toml").unwrap_or(false)
 }
 
 /// Helper fn to load a Path into memory as String
 fn load_file(path: &Path) -> Result<String> {
-    log::trace!("Reading {}", path.display());
+    trace!("Reading {}", path.display());
     std::fs::read_to_string(path)
         .with_context(|| anyhow!("Reading file from filesystem: {}", path.display()))
         .map_err(Error::from)

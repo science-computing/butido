@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use anyhow::anyhow;
 use itertools::Itertools;
-use log::error;
+use tracing::error;
 
 use crate::config::Configuration;
 use crate::package::Script;

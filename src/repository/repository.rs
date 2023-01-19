@@ -16,7 +16,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use log::trace;
+use tracing::trace;
 use resiter::AndThen;
 use resiter::FilterMap;
 use resiter::Map;

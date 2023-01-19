@@ -18,7 +18,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
-use log::{debug, trace};
+use tracing::{debug, trace};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tokio_stream::StreamExt;

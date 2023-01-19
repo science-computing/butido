@@ -13,7 +13,7 @@ use anyhow::Context;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel::PgConnection;
-use log::trace;
+use tracing::trace;
 
 use crate::db::models::{Endpoint, Image, Package, Submit};
 use crate::package::Script;
@@ -81,7 +81,7 @@ impl Job {
             .values(&new_job)
             .on_conflict_do_nothing();
 
-        log::trace!("Query = {}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
+        trace!("Query = {}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
 
         database_connection.transaction::<_, Error, _>(|| {
             query

@@ -13,7 +13,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use git2::Repository;
-use log::trace;
+use tracing::trace;
 
 pub fn repo_is_clean(r: &Repository) -> Result<bool> {
     r.diff_index_to_workdir(None, None)

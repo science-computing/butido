@@ -20,7 +20,7 @@ use diesel::JoinOnDsl;
 use diesel::PgConnection;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
-use log::trace;
+use tracing::{debug, trace};
 use resiter::AndThen;
 use resiter::FilterMap;
 
@@ -154,7 +154,7 @@ impl<'a> FindArtifacts<'a> {
             })
             .load::<(dbmodels::Artifact, dbmodels::Job)>(&*self.database_connection)?
             .into_iter()
-            .inspect(|(art, job)| log::debug!("Filtering further: {:?}, job {:?}", art, job.id))
+            .inspect(|(art, job)| debug!("Filtering further: {:?}, job {:?}", art, job.id))
             //
             // Filter by environment variables
             // All environment variables of the package must be present in the loaded

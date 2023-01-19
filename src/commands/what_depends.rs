@@ -16,7 +16,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use log::trace;
+use tracing::trace;
 use resiter::Filter;
 use resiter::Map;
 

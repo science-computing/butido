@@ -20,7 +20,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
 use colored::Colorize;
-use log::{info, trace};
+use tracing::{info, trace};
 use tokio_stream::StreamExt;
 
 use crate::config::*;

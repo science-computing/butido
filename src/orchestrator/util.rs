@@ -16,7 +16,7 @@ use uuid::Uuid;
 /// Get a `Display`able interface for a Map of errors
 ///
 /// This is a helper trait for be able to display a `HashMap<Uuid, Error>`
-/// in a `log::trace!()` call, for example
+/// in a `tracing::trace!()` call, for example
 pub trait AsReceivedErrorDisplay {
     fn display_error_map(&self) -> ReceivedErrorDisplay<'_>;
 }

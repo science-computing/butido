@@ -20,7 +20,7 @@ use daggy::Walker;
 use getset::Getters;
 use indicatif::ProgressBar;
 use itertools::Itertools;
-use log::trace;
+use tracing::trace;
 use ptree::Style;
 use ptree::TreeItem;
 use resiter::AndThen;

@@ -12,8 +12,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use getset::Getters;
-use log::debug;
-use log::trace;
+use tracing::{debug, trace};
 use uuid::Uuid;
 
 use crate::config::Configuration;

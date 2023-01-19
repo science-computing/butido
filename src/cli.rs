@@ -17,7 +17,7 @@ use clap::Arg;
 use clap::ArgGroup;
 
 use const_format::formatcp;
-
+use tracing::{debug, error};
 
 // Helper types to ship around stringly typed clap API.
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
@@ -1402,11 +1402,11 @@ fn env_pass_validator(s: &str) -> Result<(), String> {
 
     match parser.parse(s.as_bytes()).map_err(|e| e.to_string()) {
         Err(s) => {
-            log::error!("Error during validation: '{}' is not a key-value pair", s);
+            error!("Error during validation: '{}' is not a key-value pair", s);
             Err(s)
         }
         Ok((k, v)) => {
-            log::debug!("Env pass valiation: '{}={}'", k, v);
+            debug!("Env pass valiation: '{}={}'", k, v);
             Ok(())
         }
     }
