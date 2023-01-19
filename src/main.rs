@@ -271,15 +271,22 @@ async fn main() -> Result<()> {
 }
 
 fn generate_completions(matches: &ArgMatches) {
-    use clap_generate::generate;
-    use clap_generate::generators::{Bash, Elvish, Fish, Zsh};
+    use clap_complete::generate;
+    use clap_complete::Generator;
+    use clap_complete::Shell;
 
-    let appname = "butido";
-    match matches.value_of("shell").unwrap() { // unwrap safe by clap
-        "bash"   => generate::<Bash, _>(&mut cli::cli(), appname, &mut std::io::stdout()),
-        "elvish" => generate::<Elvish, _>(&mut cli::cli(), appname, &mut std::io::stdout()),
-        "fish"   => generate::<Fish, _>(&mut cli::cli(), appname, &mut std::io::stdout()),
-        "zsh"    => generate::<Zsh, _>(&mut cli::cli(), appname, &mut std::io::stdout()),
-        _ => unreachable!(),
+    fn print_completions<G: Generator>(gen: G, cmd: &mut clap::Command) {
+        generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
     }
+
+    let generator = match matches.value_of("shell").unwrap() { // unwrap safe by clap
+        "bash"   => Shell::Bash,
+        "elvish" => Shell::Elvish,
+        "fish"   => Shell::Fish,
+        "zsh"    => Shell::Zsh,
+        _ => unreachable!(),
+    };
+
+    eprintln!("Generating shell completions for {generator}...");
+    print_completions(generator, &mut cli::cli());
 }
