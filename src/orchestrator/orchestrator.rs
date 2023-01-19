@@ -563,9 +563,9 @@ impl<'a> Drop for JobTask<'a> {
             // If there are dependencies, the error is probably from another task
             // If there are no dependencies, the error was caused by something else
             let errmsg = if self.jobdef.dependencies.is_empty() {
-                "error occurred"
+                "error occured".red()
             } else {
-                "inherited"
+                "error on other task".red()
             };
 
             let max_endpoint_name_length = self.scheduler.max_endpoint_name_length();
