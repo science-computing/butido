@@ -226,7 +226,7 @@ pub fn display_data<D: Display>(
 }
 
 pub fn get_date_filter(name: &str, matches: &ArgMatches) -> Result<Option<chrono::DateTime::<chrono::Local>>> {
-    matches.value_of(name)
+    matches.get_one::<String>(name)
         .map(|s| {
             trace!("Parsing duration: '{}'", s);
             humantime::parse_duration(s)

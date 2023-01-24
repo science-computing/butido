@@ -11,7 +11,6 @@
 //! Implementation of the 'endpoint container' subcommand
 
 use std::borrow::Cow;
-use std::str::FromStr;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -27,7 +26,7 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let container_id = matches.value_of("container_id").unwrap();
+    let container_id = matches.get_one::<String>("container_id").unwrap();
     let endpoints = crate::commands::endpoint::connect_to_endpoints(config, &endpoint_names).await?;
     let relevant_endpoints = endpoints.into_iter()
         .map(|ep| async {
@@ -66,7 +65,7 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
         Some(("top", matches))  => top(matches, container).await,
         Some(("kill", matches)) => {
             confirm({
-                if let Some(sig) = matches.value_of("signal").as_ref() {
+                if let Some(sig) = matches.get_one::<String>("signal") {
                     format!("Really kill {container_id} with {sig}?")
                 } else {
                     format!("Really kill {container_id}?")
@@ -117,8 +116,8 @@ async fn top(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
 }
 
 async fn kill(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
-    let signal = matches.value_of("signal");
-    container.kill(signal).await.map_err(Error::from)
+    let signal = matches.get_one::<String>("signal");
+    container.kill(signal.map(|s| s.as_ref())).await.map_err(Error::from)
 }
 
 async fn delete(container: Container<'_>) -> Result<()> {
@@ -132,8 +131,8 @@ async fn start(container: Container<'_>) -> Result<()> {
 async fn stop(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     container.stop({
         matches
-            .value_of("timeout")
-            .map(u64::from_str)
+            .get_one::<String>("timeout")
+            .map(|s| s.parse::<u64>())
             .transpose()?
             .map(std::time::Duration::from_secs)
     })

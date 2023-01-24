@@ -32,8 +32,8 @@ use crate::endpoint::Endpoint;
 
 pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_generator: ProgressBars) -> Result<()> {
     let endpoint_names = matches
-        .value_of("endpoint_name")
-        .map(String::from)
+        .get_one::<String>("endpoint_name")
+        .map(|s| s.to_owned())
         .map(EndpointName::from)
         .map(|ep| vec![ep])
         .unwrap_or_else(|| {
@@ -61,8 +61,8 @@ async fn ping(endpoint_names: Vec<EndpointName>,
     config: &Configuration,
     progress_generator: ProgressBars
 ) -> Result<()> {
-    let n_pings = matches.value_of("ping_n").map(u64::from_str).transpose()?.unwrap(); // safe by clap
-    let sleep = matches.value_of("ping_sleep").map(u64::from_str).transpose()?.unwrap(); // safe by clap
+    let n_pings = matches.get_one::<String>("ping_n").map(|s| s.parse::<u64>()).transpose()?.unwrap(); // safe by clap
+    let sleep = matches.get_one::<String>("ping_sleep").map(|s| s.parse::<u64>()).transpose()?.unwrap(); // safe by clap
     let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
     let multibar = Arc::new({
         let mp = indicatif::MultiProgress::new();
@@ -185,7 +185,7 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
     config: &Configuration,
 ) -> Result<()> {
     let list_stopped = matches.is_present("list_stopped");
-    let filter_image = matches.value_of("filter_image");
+    let filter_image = matches.get_one::<String>("filter_image");
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.is_present("csv");
@@ -212,7 +212,7 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
             tpl.1
                 .into_iter()
                 .filter(|stat| list_stopped || stat.state != "exited")
-                .filter(|stat| filter_image.map(|fim| fim == stat.image).unwrap_or(true))
+                .filter(|stat| filter_image.map(|fim| *fim == stat.image).unwrap_or(true))
                 .filter(|stat| older_than_filter.as_ref().map(|time| time > &stat.created).unwrap_or(true))
                 .filter(|stat| newer_than_filter.as_ref().map(|time| time < &stat.created).unwrap_or(true))
                 .map(|stat| {
@@ -280,7 +280,7 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let limit = matches.value_of("limit").map(usize::from_str).transpose()?;
+    let limit = matches.get_one::<String>("limit").map(|s| usize::from_str(s.as_ref())).transpose()?;
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.is_present("csv");
@@ -376,8 +376,8 @@ async fn containers_stop(endpoint_names: Vec<EndpointName>,
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
 
-    let stop_timeout = matches.value_of("timeout")
-        .map(u64::from_str)
+    let stop_timeout = matches.get_one::<String>("timeout")
+        .map(|s| s.parse::<u64>())
         .transpose()?
         .map(std::time::Duration::from_secs);
 

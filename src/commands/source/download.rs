@@ -10,7 +10,6 @@
 
 use std::convert::TryFrom;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -171,23 +170,24 @@ pub async fn download(
     progressbars: ProgressBars,
 ) -> Result<()> {
     let force = matches.is_present("force");
-    let timeout = matches.value_of("timeout")
-        .map(u64::from_str)
+    let timeout = matches.get_one::<String>("timeout")
+        .map(|s| s.parse::<u64>())
         .transpose()
         .context("Parsing timeout argument to integer")?;
     let cache = PathBuf::from(config.source_cache_root());
     let sc = SourceCache::new(cache);
     let pname = matches
-        .value_of("package_name")
-        .map(String::from)
+        .get_one::<String>("package_name")
+        .map(|s| s.to_owned())
         .map(PackageName::from);
     let pvers = matches
-        .value_of("package_version")
+        .get_one::<String>("package_version")
+        .map(|s| s.to_owned())
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
-    let matching_regexp = matches.value_of("matching")
-        .map(crate::commands::util::mk_package_name_regex)
+    let matching_regexp = matches.get_one::<String>("matching")
+        .map(|s| crate::commands::util::mk_package_name_regex(s.as_ref()))
         .transpose()?;
 
     let progressbar = Arc::new(Mutex::new(ProgressWrapper::new(progressbars.bar()?)));
@@ -210,9 +210,9 @@ pub async fn download(
 
         // check if the iterator is empty
         if r.peek().is_none() {
-            let pname = matches.value_of("package_name");
-            let pvers = matches.value_of("package_version");
-            let matching_regexp = matches.value_of("matching");
+            let pname = matches.get_one::<String>("package_name");
+            let pvers = matches.get_one::<String>("package_version");
+            let matching_regexp = matches.get_one::<String>("matching");
 
             match (pname, pvers, matching_regexp) {
                 (Some(pname), None, None)       => return Err(anyhow!("{} not found", pname)),

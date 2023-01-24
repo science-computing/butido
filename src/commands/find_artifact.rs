@@ -35,11 +35,12 @@ use crate::util::docker::ImageName;
 /// Implementation of the "find_artifact" subcommand
 pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progressbars: ProgressBars, repo: Repository, database_connection: PgConnection) -> Result<()> {
     let package_name_regex = crate::commands::util::mk_package_name_regex({
-        matches.value_of("package_name_regex").unwrap() // safe by clap
+        matches.get_one::<String>("package_name_regex").unwrap() // safe by clap
     })?;
 
     let package_version_constraint = matches
-        .value_of("package_version_constraint")
+        .get_one::<String>("package_version_constraint")
+        .map(|s| s.to_owned())
         .map(PackageVersionConstraint::try_from)
         .transpose()
         .context("Parsing package version constraint")
@@ -50,8 +51,8 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .transpose()?
         .unwrap_or_default();
 
-    let image_name = matches.value_of("image")
-        .map(String::from)
+    let image_name = matches.get_one::<String>("image")
+        .map(|s| s.to_owned())
         .map(ImageName::from);
 
     debug!("Finding artifacts for '{:?}' '{:?}'", package_name_regex, package_version_constraint);
@@ -75,7 +76,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let staging_store = if let Some(p) = matches.value_of("staging_dir").map(PathBuf::from) {
+    let staging_store = if let Some(p) = matches.get_one::<String>("staging_dir").map(PathBuf::from) {
         let bar_staging_loading = progressbars.bar()?;
 
         if !p.is_dir() {

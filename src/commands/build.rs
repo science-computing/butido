@@ -72,14 +72,14 @@ pub async fn build(
 
     let shebang = Shebang::from({
         matches
-            .value_of("shebang")
-            .map(String::from)
+            .get_one::<String>("shebang")
+            .map(|s| s.to_owned())
             .unwrap_or_else(|| config.shebang().clone())
     });
 
     let image_name = matches
-        .value_of("image")
-        .map(String::from)
+        .get_one::<String>("image")
+        .map(|s| s.to_owned())
         .map(ImageName::from)
         .unwrap(); // safe by clap
     if config.docker().verify_images_present()
@@ -126,14 +126,14 @@ pub async fn build(
     info!("Endpoint config build");
 
     let pname = matches
-        .value_of("package_name")
-        .map(String::from)
+        .get_one::<String>("package_name")
+        .map(|s| s.to_owned())
         .map(PackageName::from)
         .unwrap(); // safe by clap
 
     let pvers = matches
-        .value_of("package_version")
-        .map(String::from)
+        .get_one::<String>("package_version")
+        .map(|s| s.to_owned())
         .map(PackageVersion::from);
     info!("We want {} ({:?})", pname, pvers);
 
@@ -185,7 +185,7 @@ pub async fn build(
     let (staging_store, staging_dir, submit_id) = {
         let bar_staging_loading = progressbars.bar()?;
 
-        let (submit_id, p) = if let Some(staging_dir) = matches.value_of("staging_dir").map(PathBuf::from) {
+        let (submit_id, p) = if let Some(staging_dir) = matches.get_one::<String>("staging_dir").map(PathBuf::from) {
             info!(
                 "Setting staging dir to {} for this run",
                 staging_dir.display()

@@ -131,8 +131,8 @@ fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Re
     }
 
     matches
-        .value_of("tool")
-        .map(|s| vec![s])
+        .get_one::<String>("tool")
+        .map(|s| vec![s.as_str()])
         .unwrap_or_else(|| vec!["psql", "pgcli"])
         .into_iter()
         .filter_map(|s| which::which(s).ok().map(|path| (path, s)))
@@ -160,8 +160,8 @@ fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<(
     let hdrs = crate::commands::util::mk_header(vec!["Path", "Released", "Job"]);
     let conn = conn_cfg.establish_connection()?;
     let data = matches
-        .value_of("job_uuid")
-        .map(uuid::Uuid::parse_str)
+        .get_one::<String>("job_uuid")
+        .map(|s| uuid::Uuid::parse_str(s.as_ref()))
         .transpose()?
         .map(|job_uuid| -> Result<_> {
             dsl::artifacts
@@ -248,8 +248,8 @@ fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 /// Implementation of the "db submit" subcommand
 fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let conn = conn_cfg.establish_connection()?;
-    let submit_id = matches.value_of("submit")
-        .map(uuid::Uuid::from_str)
+    let submit_id = matches.get_one::<String>("submit")
+        .map(|s| uuid::Uuid::from_str(s.as_ref()))
         .transpose()
         .context("Parsing submit UUID")?
         .unwrap(); // safe by clap
@@ -337,10 +337,9 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 /// Implementation of the "db submits" subcommand
 fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
-    let limit = matches.value_of("limit").map(i64::from_str).transpose()?;
+    let limit = matches.get_one::<String>("limit").map(|s| s.parse::<i64>()).transpose()?;
     let hdrs = crate::commands::util::mk_header(vec!["Time", "UUID", "For Package", "For Package Version"]);
     let conn = conn_cfg.establish_connection()?;
-    let commit = matches.value_of("for-commit");
 
     let query = schema::submits::table
         .order_by(schema::submits::id.desc()) // required for the --limit implementation
@@ -348,19 +347,19 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
         .inner_join(schema::images::table)
         .into_boxed();
 
-    let query = if let Some(commithash) = commit.as_ref() {
+    let query = if let Some(commithash) = matches.get_one::<String>("for-commit") {
         query.filter(schema::githashes::hash.eq(commithash))
     } else {
         query
     };
 
-    let query = if let Some(image) = matches.value_of("image") {
+    let query = if let Some(image) = matches.get_one::<String>("image") {
         query.filter(schema::images::name.eq(image))
     } else {
         query
     };
 
-    let submits = if let Some(pkgname) = matches.value_of("with_pkg").map(String::from) {
+    let submits = if let Some(pkgname) = matches.get_one::<String>("with_pkg") {
         // In the case of a with_pkg command, we must execute two queries on the database, as the
         // diesel framework does not yet support aliases for queries (see
         // https://github.com/diesel-rs/diesel/pull/2254).
@@ -391,7 +390,7 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
             .filter(schema::submits::id.eq_any(submit_ids))
             .select((schema::submits::all_columns, schema::packages::all_columns))
             .load::<(models::Submit, models::Package)>(&conn)?
-    } else if let Some(pkgname) = matches.value_of("for_pkg") {
+    } else if let Some(pkgname) = matches.get_one::<String>("for_pkg") {
         // Get all submits _for_ the package
         let query = query
             .inner_join({
@@ -467,7 +466,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
         .inner_join(schema::images::table)
         .into_boxed();
 
-    if let Some(submit_uuid) = matches.value_of("submit_uuid").map(uuid::Uuid::parse_str).transpose()? {
+    if let Some(submit_uuid) = matches.get_one::<String>("submit_uuid").map(|s| uuid::Uuid::parse_str(s.as_ref())).transpose()? {
         sel = sel.filter(schema::submits::uuid.eq(submit_uuid))
     }
 
@@ -475,7 +474,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
     //
     // If we get a filter for environment on CLI, we fetch all job ids that are associated with the
     // passed environment variables and make `sel` filter for those.
-    if let Some((name, val)) = matches.value_of("env_filter").map(crate::util::env::parse_to_env).transpose()? {
+    if let Some((name, val)) = matches.get_one::<String>("env_filter").map(|s| crate::util::env::parse_to_env(s.as_ref())).transpose()? {
         debug!("Filtering for ENV: {} = {}", name, val);
         let jids = schema::envvars::table
             .filter({
@@ -499,15 +498,15 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
         sel = sel.filter(schema::submits::dsl::submit_time.gt(datetime))
     }
 
-    if let Some(limit) = matches.value_of("limit").map(i64::from_str).transpose()? {
+    if let Some(limit) = matches.get_one::<String>("limit").map(|s| s.parse::<i64>()).transpose()? {
         sel = sel.limit(limit)
     }
 
-    if let Some(ep_name) = matches.value_of("endpoint") {
+    if let Some(ep_name) = matches.get_one::<String>("endpoint") {
         sel = sel.filter(schema::endpoints::name.eq(ep_name))
     }
 
-    if let Some(pkg_name) = matches.value_of("package") {
+    if let Some(pkg_name) = matches.get_one::<String>("package") {
         sel = sel.filter(schema::packages::name.eq(pkg_name))
     }
 
@@ -560,8 +559,8 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
     let csv = matches.is_present("csv");
     let conn = conn_cfg.establish_connection()?;
     let job_uuid = matches
-        .value_of("job_uuid")
-        .map(uuid::Uuid::parse_str)
+        .get_one::<String>("job_uuid")
+        .map(|s| uuid::Uuid::parse_str(s.as_ref()))
         .transpose()?
         .unwrap();
 
@@ -728,8 +727,8 @@ fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMa
 fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let conn   = conn_cfg.establish_connection()?;
     let job_uuid = matches
-        .value_of("job_uuid")
-        .map(uuid::Uuid::parse_str)
+        .get_one::<String>("job_uuid")
+        .map(|s| uuid::Uuid::parse_str(s.as_ref()))
         .transpose()?
         .unwrap();
     let out = std::io::stdout();
@@ -772,11 +771,11 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
         query = query.filter(schema::releases::release_date.gt(date));
     }
 
-    if let Some(store) = matches.value_of("store") {
+    if let Some(store) = matches.get_one::<String>("store") {
         query = query.filter(schema::release_stores::dsl::store_name.eq(store));
     }
 
-    if let Some(pkg) = matches.value_of("package") {
+    if let Some(pkg) = matches.get_one::<String>("package") {
         query = query.filter(schema::packages::dsl::name.eq(pkg));
     }
 

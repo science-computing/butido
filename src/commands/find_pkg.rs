@@ -33,11 +33,12 @@ pub async fn find_pkg(
     use std::io::Write;
 
     let package_name_regex = crate::commands::util::mk_package_name_regex({
-        matches.value_of("package_name_regex").unwrap() // safe by clap
+        matches.get_one::<String>("package_name_regex").unwrap() // safe by clap
     })?;
 
     let package_version_constraint = matches
-        .value_of("package_version_constraint")
+        .get_one::<String>("package_version_constraint")
+        .map(|s| s.to_owned())
         .map(PackageVersionConstraint::try_from)
         .transpose()
         .context("Parsing package version constraint")
