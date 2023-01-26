@@ -23,23 +23,27 @@ use tracing::{debug, error};
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
 pub const IDENT_DEPENDENCY_TYPE_RUNTIME: &str = "runtime";
 
-pub const VERSION: &str = formatcp!("{}\nGit SHA:\t\t{}\nBuild Timestamp:\t{}\nCargo Profile:\t\t{}",
-        env!("VERGEN_GIT_SEMVER"),
-        env!("VERGEN_GIT_SHA"),
-        env!("VERGEN_BUILD_TIMESTAMP"),
-        env!("VERGEN_CARGO_PROFILE"));
+pub const VERSION: &str = formatcp!("{}", env!("VERGEN_GIT_SEMVER"));
 
 pub fn cli<'a>() -> App<'a> {
     App::new("butido")
         .author(crate_authors!())
         .version(VERSION)
+        .disable_version_flag(true)
         .about("Generic Build Orchestration System for building linux packages with docker")
-
         .after_help(indoc::indoc!(r#"
             The following environment variables can be passed to butido:
 
                 RUST_LOG - to enable logging, for exact usage see the rust cookbook
         "#))
+
+        .arg(Arg::new("version")
+            .required(false)
+            .multiple(false)
+            .short('V')
+            .long("version")
+            .help("Detailed version output with build information")
+        )
 
         .arg(Arg::new("hide_bars")
             .required(false)
