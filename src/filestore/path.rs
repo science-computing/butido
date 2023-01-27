@@ -99,7 +99,6 @@ impl StoreRoot {
         R: std::io::Read,
     {
         ar.entries()?
-            .into_iter()
             .map_err(Error::from)
             .filter_ok(|entry| entry.header().entry_type() == tar::EntryType::Regular)
             .and_then_ok(|mut entry| -> Result<_> {
