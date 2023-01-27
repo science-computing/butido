@@ -64,22 +64,10 @@ skip-tree = [
 
 [advisories]
 ignore = [
-    # "linked-hash-map creates uninitialized NonNull pointer"
-    #
-    # This occours because our dependency "ptree" has old dependencies itself
-    # Patches to update its dependencies were submitted, but are not released
-    # yet.
-    "RUSTSEC-2020-0026",
-
     # "Potential segfault in the time crate"
     #
     # Patches available, but as "time-rs" is not a direct dependency, we cannot
     # do anything here
     "RUSTSEC-2020-0071",
-
-    # "Potential segfault in `localtime_r` invocations"
-    #
-    # No patches available yet
-    "RUSTSEC-2020-0159",
 ]
 
