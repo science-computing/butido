@@ -70,7 +70,7 @@ terminal_size  = "0.2"
 tokio          = { version = "1.25", features = ["macros", "fs", "process", "io-util", "time"] }
 tokio-stream   = "0.1"
 typed-builder  = "0.11"
-unindent       = "0.1"
+unindent       = "0.2"
 url            = { version = "2", features = ["serde"] }
 uuid           = { version = "0.6", features = ["serde", "v4"] }
 walkdir        = "2"
