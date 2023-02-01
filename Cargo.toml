@@ -23,7 +23,7 @@ maintenance = { status = "passively-maintained" }
 
 [dependencies]
 anyhow         = "1"
-aquamarine     = "0.1"
+aquamarine     = "0.2"
 ascii_table    = "^4.0.2"
 atty           = "0.2"
 bytesize       = "1"
@@ -45,7 +45,7 @@ handlebars     = { version = "~4.3.6", features = ["no_logging"] }
 human-panic    = "1"
 humantime      = "2.1"
 indicatif      = "~0.17.3"
-indoc          = "1"
+indoc          = "2"
 itertools      = "0.10"
 lazy_static    = "1.4"
 log            = "0.4"
