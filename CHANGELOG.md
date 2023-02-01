@@ -2,8 +2,22 @@
 
 ## v0.4.0
 
+This release contains breaking changes. The relevant changes are listed in the
+corresponding section below.
+
 Details are in the individual commit messages. An overview of the changes since
 the last release can be obtained via `git shortlog v0.3.0..v0.4.0`.
+
+### Major/Breaking changes
+
+* The format of the `images` configuration setting has changed from a list of
+  container image names to a list of `ContainerImage` objects. When using a
+  TOML configuration file, the array of strings needs to be replaced with an
+  array of (inline) tables. An example:
+    * Old: `images = [ "local:rh7-default" ]`
+    * New: `images = [ { name = "local:rh7-default", short_name = "rh7d" } ]`
+* The `compatibility` setting needs to be updated to `0.4.0` after addressing
+  the breaking configuration change above.
 
 ## v0.3.0
 

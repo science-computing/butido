@@ -45,6 +45,12 @@ impl AsRef<str> for ImageName {
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ContainerImage {
+    pub name: ImageName,
+    pub short_name: ImageName,
+}
+
 #[derive(
     parse_display::Display,
     Serialize,

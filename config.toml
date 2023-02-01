@@ -1,7 +1,7 @@
 # Example configuration file for butido
 
 # Configuration and package definition compatibility
-compatibility = "0.3.0"
+compatibility = "0.4.0"
 
 # Format of the progress bars used.
 # See https://docs.rs/indicatif/0.15.0/indicatif/#templates
@@ -153,7 +153,9 @@ available_phases = [ "unpack", "patch", "configure", "build", "fixup", "pack" ]
 
 # Images which can be used to build
 # images not listed here are automatically rejected
-images = [ "debian:bullseye" ]
+images = [
+    { name = "debian:bullseye", shortname = "deb11" },
+]
 
 #
 # Verify whether the requested images are present
