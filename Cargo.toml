@@ -23,7 +23,7 @@ maintenance = { status = "passively-maintained" }
 
 [dependencies]
 anyhow         = "1"
-aquamarine     = "0.1"
+aquamarine     = "0.2"
 ascii_table    = "^4.0.2"
 atty           = "0.2"
 bytesize       = "1"
