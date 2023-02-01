@@ -44,7 +44,7 @@ git2           = "0.15"
 handlebars     = { version = "~4.3.6", features = ["no_logging"] }
 human-panic    = "1"
 humantime      = "2.1"
-indicatif      = "~0.17.2"
+indicatif      = "~0.17.3"
 indoc          = "1"
 itertools      = "0.10"
 lazy_static    = "1.4"
@@ -67,7 +67,7 @@ shiplift       = "0.7"
 syntect        = "5.0"
 tar            = "0.4.16"
 terminal_size  = "0.2"
-tokio          = { version = "1.23", features = ["macros", "fs", "process", "io-util", "time"] }
+tokio          = { version = "1.25", features = ["macros", "fs", "process", "io-util", "time"] }
 tokio-stream   = "0.1"
 typed-builder  = "0.11"
 unindent       = "0.1"
