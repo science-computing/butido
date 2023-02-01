@@ -16,7 +16,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
-use log::trace;
+use tracing::trace;
 use result_inspect::ResultInspect;
 
 use crate::filestore::path::ArtifactPath;

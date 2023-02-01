@@ -19,7 +19,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use futures::FutureExt;
 use getset::{CopyGetters, Getters};
-use log::trace;
+use tracing::{trace, debug};
 use result_inspect::ResultInspect;
 use shiplift::Container;
 use shiplift::Docker;
@@ -592,7 +592,7 @@ impl<'a> PreparedContainer<'a> {
     ) -> Result<()> {
         use tokio::io::AsyncReadExt;
 
-        log::debug!("Copying patches to container: {:?}", job.package().patches());
+        debug!("Copying patches to container: {:?}", job.package().patches());
         job.package()
             .patches()
             .iter()

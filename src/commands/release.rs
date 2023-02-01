@@ -19,7 +19,7 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use diesel::prelude::*;
-use log::{debug, error, info, trace};
+use tracing::{debug, error, info, trace};
 use tokio_stream::StreamExt;
 use resiter::AndThen;
 

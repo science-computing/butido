@@ -19,7 +19,7 @@ use colored::Colorize;
 use diesel::PgConnection;
 use indicatif::ProgressBar;
 use itertools::Itertools;
-use log::trace;
+use tracing::trace;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver;

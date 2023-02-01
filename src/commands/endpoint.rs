@@ -21,7 +21,7 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use clap::ArgMatches;
-use log::{debug, info, trace};
+use tracing::{debug, info, trace};
 use itertools::Itertools;
 use tokio_stream::StreamExt;
 

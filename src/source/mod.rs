@@ -14,7 +14,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use log::trace;
+use tracing::trace;
 use url::Url;
 
 use crate::package::Package;

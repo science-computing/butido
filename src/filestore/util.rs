@@ -15,6 +15,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use indicatif::ProgressBar;
+use tracing::trace;
 
 use crate::filestore::path::ArtifactPath;
 use crate::filestore::path::StoreRoot;
@@ -38,7 +39,7 @@ impl FileStoreImpl {
         let store = root_path
             .find_artifacts_recursive()
             .inspect(|path| {
-                log::trace!("Found artifact path: {:?}", path);
+                trace!("Found artifact path: {:?}", path);
                 progress.tick();
             })
             .collect::<Result<HashSet<ArtifactPath>>>()?;

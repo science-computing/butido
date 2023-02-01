@@ -12,7 +12,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use getset::Getters;
-use log::trace;
+use tracing::trace;
 use serde::Deserialize;
 use serde::Serialize;
 use url::Url;

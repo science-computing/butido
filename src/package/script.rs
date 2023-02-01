@@ -21,7 +21,7 @@ use handlebars::{
     Context, Handlebars, Helper, HelperDef, HelperResult, JsonRender, Output, PathAndJson,
     RenderContext, RenderError,
 };
-use log::trace;
+use tracing::trace;
 use serde::Deserialize;
 use serde::Serialize;
 use syntect::easy::HighlightLines;

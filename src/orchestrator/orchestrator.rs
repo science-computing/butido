@@ -23,8 +23,7 @@ use diesel::PgConnection;
 use git2::Repository;
 use indicatif::ProgressBar;
 use itertools::Itertools;
-use log::debug;
-use log::trace;
+use tracing::{debug, trace, error};
 use resiter::FilterMap;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::Receiver;
@@ -596,7 +595,7 @@ impl<'a> JobTask<'a> {
                 //
                 // We only send to one parent, because it doesn't matter
                 // And we know that we have at least one sender
-                log::error!("[{}]: Received errors = {}", self.jobdef.job.uuid(), received_errors.display_error_map());
+                error!("[{}]: Received errors = {}", self.jobdef.job.uuid(), received_errors.display_error_map());
                 self.sender[0].send(Err(received_errors)).await;
 
                 // ... and stop operation, because the whole tree will fail anyways.

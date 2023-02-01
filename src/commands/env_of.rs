@@ -14,7 +14,7 @@ use std::convert::TryFrom;
 
 use anyhow::Result;
 use clap::ArgMatches;
-use log::trace;
+use tracing::trace;
 
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
