@@ -24,7 +24,7 @@ maintenance = { status = "passively-maintained" }
 [dependencies]
 anyhow         = "1"
 aquamarine     = "0.2"
-ascii_table    = "^4.0.2"
+ascii_table    = "4"
 atty           = "0.2"
 bytesize       = "1"
 chrono         = "0.4"
@@ -32,42 +32,42 @@ clap           = { version = "3", features = [ "cargo" ] }
 clap_complete  = "3"
 colored        = "2"
 config         = { version = "0.11", default-features = false, features = [ "toml" ] }
-csv            = "1.1"
+csv            = "1"
 daggy          = { version = "0.8", features = [ "serde" ] }
 dialoguer      = "0.10"
-diesel         = { version = "~1.4.6", features = ["postgres", "chrono", "uuid", "serde_json"] }
-diesel_migrations = "~1.4"
-filters        = "0.4.0"
+diesel         = { version = "1", features = ["postgres", "chrono", "uuid", "serde_json"] }
+diesel_migrations = "1"
+filters        = "0.4"
 futures        = "0.3"
 getset         = "0.1"
 git2           = "0.16"
-handlebars     = { version = "~4.3.6", features = ["no_logging"] }
+handlebars     = { version = "4", features = ["no_logging"] }
 human-panic    = "1"
-humantime      = "2.1"
-indicatif      = "~0.17.3"
+humantime      = "2"
+indicatif      = "0.17"
 indoc          = "2"
 itertools      = "0.10"
-lazy_static    = "1.4"
+lazy_static    = "1"
 log            = "0.4"
 parse-display  = "0.8"
 pom            = "3"
 ptree          = "0.4"
-rayon          = "1.6"
+rayon          = "1"
 regex          = "1"
 reqwest        = { version = "0.11", features = [ "stream" ] }
 resiter        = "0.4"
 result-inspect = "0.2"
 rlimit         = "0.9"
-semver		   = { version = "1.0", features = [ "serde" ] }
+semver         = { version = "1", features = [ "serde" ] }
 serde          = "1"
 serde_json     = "1"
 sha-1          = "0.10"
 sha2           = "0.10"
 shiplift       = "0.7"
-syntect        = "5.0"
-tar            = "0.4.16"
+syntect        = "5"
+tar            = "0.4"
 terminal_size  = "0.2"
-tokio          = { version = "1.25", features = ["macros", "fs", "process", "io-util", "time"] }
+tokio          = { version = "1", features = ["macros", "fs", "process", "io-util", "time"] }
 tokio-stream   = "0.1"
 typed-builder  = "0.12"
 unindent       = "0.2"
@@ -117,4 +117,3 @@ toml = "0.7"
 anyhow = "1"
 git_info = "0.1"
 vergen = { version = "7", default-features = false, features = ["git", "build", "cargo"] }
-
