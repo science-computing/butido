@@ -101,10 +101,10 @@ async fn main() -> Result<()> {
     let app = cli::cli();
     let cli = app.get_matches();
 
-    let repo = git2::Repository::discover(PathBuf::from("."))
+    let repo = git2::Repository::open(PathBuf::from("."))
         .map_err(|e| match e.code() {
             git2::ErrorCode::NotFound => {
-                eprintln!("Butido must be executed within the package repository");
+                eprintln!("Butido must be executed in the top-level of the git repository");
                 std::process::exit(1)
             },
             _ => Error::from(e),
