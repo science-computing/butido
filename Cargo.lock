@@ -52,11 +52,11 @@ checksum = "224afbd727c3d6e4b90103ece64b8d1b67fbb1973b1046c2281eed3f3803f800"
 
 [[package]]
 name = "aquamarine"
-version = "0.2.2"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5bf310f0dd77f453bc43ec61506ead8283ab49423686244e474d0cc16226400c"
+checksum = "759d98a5db12e9c9d98ef2b92f794ae5c7ded6ec18d21c3fa485c9c65bec237d"
 dependencies = [
- "itertools 0.9.0",
+ "itertools",
  "proc-macro-error",
  "proc-macro2",
  "quote",
@@ -181,7 +181,7 @@ dependencies = [
  "humantime",
  "indicatif",
  "indoc",
- "itertools 0.10.5",
+ "itertools",
  "lazy_static 1.4.0",
  "log",
  "parse-display",
@@ -1258,15 +1258,6 @@ dependencies = [
  "io-lifetimes",
  "rustix",
  "windows-sys 0.45.0",
-]
-
-[[package]]
-name = "itertools"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
-dependencies = [
- "either",
 ]
 
 [[package]]
