@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.0
+
+Details are in the individual commit messages. An overview of the changes since
+the last release can be obtained via `git shortlog v0.3.0..v0.4.0`.
+
 ## v0.3.0
 
 The v0.3.0 release of butido is considered incompatible with the v0.2.x
