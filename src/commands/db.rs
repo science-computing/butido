@@ -10,6 +10,7 @@
 
 //! Implementation of the 'db' subcommand
 
+use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
@@ -53,7 +54,7 @@ pub fn db(
         Some(("images", matches)) => images(db_connection_config, matches),
         Some(("submit", matches)) => submit(db_connection_config, matches),
         Some(("submits", matches)) => submits(db_connection_config, matches),
-        Some(("jobs", matches)) => jobs(db_connection_config, matches),
+        Some(("jobs", matches)) => jobs(db_connection_config, config, matches),
         Some(("job", matches)) => job(db_connection_config, config, matches),
         Some(("log-of", matches)) => log_of(db_connection_config, matches),
         Some(("releases", matches)) => releases(db_connection_config, config, matches),
@@ -443,7 +444,7 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
 }
 
 /// Implementation of the "db jobs" subcommand
-fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
+fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
     let csv = matches.is_present("csv");
     let hdrs = crate::commands::util::mk_header(vec![
         "Submit",
@@ -453,6 +454,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
         "Ok?",
         "Package",
         "Version",
+        "Distro",
     ]);
     let conn = conn_cfg.establish_connection()?;
     let older_than_filter = get_date_filter("older_than", matches)?;
@@ -462,6 +464,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
         .inner_join(schema::submits::table)
         .inner_join(schema::endpoints::table)
         .inner_join(schema::packages::table)
+        .inner_join(schema::images::table)
         .into_boxed();
 
     if let Some(submit_uuid) = matches.value_of("submit_uuid").map(uuid::Uuid::parse_str).transpose()? {
@@ -508,16 +511,22 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
         sel = sel.filter(schema::packages::name.eq(pkg_name))
     }
 
+    let mut image_short_name_map = HashMap::new();
+    for image in config.docker().images() {
+        image_short_name_map.insert(image.name.clone(), image.short_name.clone());
+    }
+
     let data = sel
         .order_by(schema::jobs::id.desc()) // required for the --limit implementation
-        .load::<(models::Job, models::Submit, models::Endpoint, models::Package)>(&conn)?
+        .load::<(models::Job, models::Submit, models::Endpoint, models::Package, models::Image)>(&conn)?
         .into_iter()
         .rev() // required for the --limit implementation
-        .map(|(job, submit, ep, package)| {
+        .map(|(job, submit, ep, package, image)| {
             let success = is_job_successfull(&job)?
                 .map(|b| if b { "yes" } else { "no" })
                 .map(String::from)
                 .unwrap_or_else(|| String::from("unknown"));
+            let image_name = crate::util::docker::ImageName::from(image.name);
 
             Ok(vec![
                 submit.uuid.to_string(),
@@ -527,6 +536,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
                 success,
                 package.name,
                 package.version,
+                image_short_name_map.get(&image_name).unwrap_or(&image_name).to_string(),
             ])
         })
         .collect::<Result<Vec<_>>>()?;
