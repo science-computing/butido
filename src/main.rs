@@ -85,6 +85,15 @@ mod util;
 use crate::config::*;
 use crate::repository::Repository;
 use crate::util::progress::ProgressBars;
+use indoc::concatdoc;
+
+pub const VERSION_LONG: &str = concatdoc!{"
+    butido ", env!("VERGEN_GIT_SEMVER"), "
+    Git SHA:              ", env!("VERGEN_GIT_SHA"), "
+    Git Commit Timestamp: ", env!("VERGEN_GIT_COMMIT_TIMESTAMP"), "
+    Build Timestamp:      ", env!("VERGEN_BUILD_TIMESTAMP"), "
+    Cargo Profile:        ", env!("VERGEN_CARGO_PROFILE")
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -100,6 +109,12 @@ async fn main() -> Result<()> {
 
     let app = cli::cli();
     let cli = app.get_matches();
+
+    // check if the version flag is set
+    if cli.is_present("version") {
+        println!("{}", VERSION_LONG);
+        std::process::exit(0);
+    }
 
     let repo = git2::Repository::open(PathBuf::from("."))
         .map_err(|e| match e.code() {
