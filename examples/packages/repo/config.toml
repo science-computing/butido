@@ -37,7 +37,9 @@ available_phases = [
 
 # Images which can be used to build
 # images not listed here are automatically rejected
-images = [ "debian:bullseye" ]
+images = [
+    { name = "debian:bullseye", shortname = "deb11" },
+]
 verify_images_present = true
 
 #

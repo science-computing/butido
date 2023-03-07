@@ -15,7 +15,7 @@ use serde::Deserialize;
 
 use crate::config::Endpoint;
 use crate::config::EndpointName;
-use crate::util::docker::ImageName;
+use crate::util::docker::ContainerImage;
 
 /// Configuration of the docker daemon interfacing functionality
 #[derive(Debug, Getters, CopyGetters, Deserialize)]
@@ -48,7 +48,7 @@ pub struct DockerConfig {
     verify_images_present: bool,
 
     #[getset(get = "pub")]
-    images: Vec<ImageName>,
+    images: Vec<ContainerImage>,
 
     #[getset(get = "pub")]
     endpoints: HashMap<EndpointName, Endpoint>,

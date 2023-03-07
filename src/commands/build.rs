@@ -87,12 +87,12 @@ pub async fn build(
             .docker()
             .images()
             .iter()
-            .any(|img| image_name == *img)
+            .any(|img| image_name == img.name)
     {
         return Err(anyhow!(
             "Requested build image {} is not in the configured images", image_name
         ))
-        .with_context(|| anyhow!("Available images: {}", config.docker().images().iter().join(", ")))
+        .with_context(|| anyhow!("Available images: {}", config.docker().images().iter().map(|img| img.name.clone()).join(", ")))
         .with_context(|| anyhow!("Image present verification failed"))
         .map_err(Error::from);
     }
@@ -110,7 +110,7 @@ pub async fn build(
             crate::endpoint::EndpointConfiguration::builder()
                 .endpoint_name(ep_name.clone())
                 .endpoint(ep_cfg.clone())
-                .required_images(config.docker().images().clone())
+                .required_images(config.docker().images().iter().map(|img| img.name.clone()).collect::<Vec<_>>())
                 .required_docker_versions(config.docker().docker_versions().clone())
                 .required_docker_api_versions(config.docker().docker_api_versions().clone())
                 .build()

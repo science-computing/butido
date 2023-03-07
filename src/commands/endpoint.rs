@@ -494,7 +494,7 @@ async fn images_present(endpoint_names: Vec<EndpointName>,
             config.docker()
                 .images()
                 .iter()
-                .map(|config_img| (ep_imgs.contains(config_img), config_img))
+                .map(|config_img| (ep_imgs.contains(&config_img.name), &config_img.name))
                 .try_for_each(|(found, img_name)| {
                     if found {
                         writeln!(lock, "found {img_name} in {ep_name}").map_err(Error::from)
@@ -517,7 +517,7 @@ pub(super) async fn connect_to_endpoints(config: &Configuration, endpoint_names:
             crate::endpoint::EndpointConfiguration::builder()
                 .endpoint_name(ep_name.clone())
                 .endpoint(ep_cfg.clone())
-                .required_images(config.docker().images().clone())
+                .required_images(config.docker().images().iter().map(|img| img.name.clone()).collect::<Vec<_>>())
                 .required_docker_versions(config.docker().docker_versions().clone())
                 .required_docker_api_versions(config.docker().docker_api_versions().clone())
                 .build()
