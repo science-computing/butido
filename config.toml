@@ -154,7 +154,7 @@ available_phases = [ "unpack", "patch", "configure", "build", "fixup", "pack" ]
 # Images which can be used to build
 # images not listed here are automatically rejected
 images = [
-    { name = "debian:bullseye", shortname = "deb11" },
+    { name = "debian:bullseye", short_name = "deb11" },
 ]
 
 #
