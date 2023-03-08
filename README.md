@@ -91,9 +91,18 @@ cd /tmp/butido-test-repo
 | tree        | The tree structure that is computed before a packages is built to find out all (transitive) dependencies         |
 
 
+# Authors
+
+<!-- Note: The author lists should be sorted alphabetically by surname. -->
+- Original author: Matthias Beyer <mail@beyermatthias.de> @matthiasbeyer
+- Active maintainers: See `authors` in Cargo.toml
+- Passive maintainers
+  - Erdmut Pfeifer <erdmut.pfeifer@atos.net> @ErdmutPfeifer
+  - Christoph Prokop <christoph.prokop@atos.net> @christophprokop
+
+
 # License
 
 butido was developed for science+computing ag (an Atos company).
 
 License: EPL-2.0
-
