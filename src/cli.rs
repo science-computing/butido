@@ -124,7 +124,7 @@ pub fn cli<'a>() -> App<'a> {
             .version(VERSION)
             .about("Generate and print commandline completions")
             .arg(Arg::new("shell")
-                .possible_values(["bash", "elvish", "fish", "zsh"])
+                .value_parser(clap::value_parser!(clap_complete::Shell))
                 .default_value("bash")
                 .required(false)
                 .multiple(false)

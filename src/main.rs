@@ -287,21 +287,15 @@ async fn main() -> Result<()> {
 
 fn generate_completions(matches: &ArgMatches) {
     use clap_complete::generate;
-    use clap_complete::Generator;
     use clap_complete::Shell;
 
-    fn print_completions<G: Generator>(gen: G, cmd: &mut clap::Command) {
-        generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
+    fn print_completions(shell: Shell, cmd: &mut clap::Command) {
+        eprintln!("Generating shell completions for {shell}...");
+        generate(shell, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
     }
 
-    let generator = match matches.value_of("shell").unwrap() { // unwrap safe by clap
-        "bash"   => Shell::Bash,
-        "elvish" => Shell::Elvish,
-        "fish"   => Shell::Fish,
-        "zsh"    => Shell::Zsh,
-        _ => unreachable!(),
-    };
-
-    eprintln!("Generating shell completions for {generator}...");
-    print_completions(generator, &mut cli::cli());
+    // src/cli.rs enforces that `shell` is set to a valid `Shell` so this is always true:
+    if let Some(shell) = matches.get_one::<Shell>("shell").copied() {
+        print_completions(shell, &mut cli::cli());
+    }
 }
