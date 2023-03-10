@@ -14,6 +14,7 @@ use std::str::FromStr;
 use clap::crate_authors;
 use clap::Command;
 use clap::Arg;
+use clap::ArgAction;
 use clap::ArgGroup;
 
 use const_format::formatcp;
@@ -38,6 +39,7 @@ pub fn cli<'a>() -> Command<'a> {
         "#))
 
         .arg(Arg::new("version")
+            .action(ArgAction::SetTrue)
             .required(false)
             .multiple(false)
             .short('V')
@@ -46,6 +48,7 @@ pub fn cli<'a>() -> Command<'a> {
         )
 
         .arg(Arg::new("hide_bars")
+            .action(ArgAction::SetTrue)
             .required(false)
             .multiple(false)
             .long("hide-bars")
@@ -169,6 +172,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .version(VERSION)
                 .about("List artifacts from the DB")
                 .arg(Arg::new("csv")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("csv")
@@ -190,6 +194,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .version(VERSION)
                 .about("List envvars from the DB")
                 .arg(Arg::new("csv")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("csv")
@@ -202,6 +207,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .version(VERSION)
                 .about("List images from the DB")
                 .arg(Arg::new("csv")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("csv")
@@ -227,6 +233,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .version(VERSION)
                 .about("List submits from the DB")
                 .arg(Arg::new("csv")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("csv")
@@ -281,6 +288,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .version(VERSION)
                 .about("List jobs from the DB")
                 .arg(Arg::new("csv")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("csv")
@@ -347,6 +355,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .version(VERSION)
                 .about("Show a specific job from the DB")
                 .arg(Arg::new("csv")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("csv")
@@ -364,6 +373,7 @@ pub fn cli<'a>() -> Command<'a> {
                 )
 
                 .arg(Arg::new("show_log")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("log")
@@ -372,6 +382,7 @@ pub fn cli<'a>() -> Command<'a> {
                 )
 
                 .arg(Arg::new("show_script")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("script")
@@ -380,6 +391,7 @@ pub fn cli<'a>() -> Command<'a> {
                 )
 
                 .arg(Arg::new("show_env")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("env")
@@ -408,6 +420,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .version(VERSION)
                 .about("List releases")
                 .arg(Arg::new("csv")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("csv")
@@ -458,6 +471,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("no_verification")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .takes_value(false)
@@ -468,6 +482,7 @@ pub fn cli<'a>() -> Command<'a> {
                 "#))
             )
             .arg(Arg::new("no_lint")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .takes_value(false)
@@ -522,6 +537,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("write-log-file")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("write-log")
@@ -649,6 +665,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .help("A version constraint to search for (optional), E.G. '=1.0.0'")
             )
             .arg(Arg::new("no_script_filter")
+                .action(ArgAction::SetTrue)
                 .long("no-script-filter")
                 .short('S')
                 .required(false)
@@ -706,6 +723,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("terse")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("terse")
@@ -714,6 +732,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("show_all")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("all")
@@ -722,6 +741,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("show_sources")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("source")
@@ -731,6 +751,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("show_dependencies")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("dependencies")
@@ -756,6 +777,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("show_patches")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("patches")
@@ -764,6 +786,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("show_env")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("env")
@@ -772,6 +795,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("show_flags")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("flags")
@@ -780,6 +804,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("show_allowed_images")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("allowed-images")
@@ -787,6 +812,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("show_denied_images")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("denied-images")
@@ -794,6 +820,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("show_phases")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("phases")
@@ -802,6 +829,7 @@ pub fn cli<'a>() -> Command<'a> {
             )
 
             .arg(Arg::new("show_script")
+                .action(ArgAction::SetTrue)
                 .required(false)
                 .multiple(false)
                 .long("script")
@@ -889,6 +917,7 @@ pub fn cli<'a>() -> Command<'a> {
                     .help("Download the sources of this package version (optional, if left out, all packages are downloaded)")
                 )
                 .arg(Arg::new("force")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("force")
@@ -1025,12 +1054,14 @@ pub fn cli<'a>() -> Command<'a> {
                     .help("The exact version of the package (string match)")
                 )
                 .arg(Arg::new("package_do_update")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("update")
                     .help("Do update a package if it already exists in the release store")
                 )
                 .arg(Arg::new("noninteractive")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("non-interactive")
@@ -1038,6 +1069,7 @@ pub fn cli<'a>() -> Command<'a> {
                     .requires("package_do_update")
                 )
                 .arg(Arg::new("quiet")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("quiet")
@@ -1157,6 +1189,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .version(VERSION)
                 .about("Get stats for the endpoint(s)")
                 .arg(Arg::new("csv")
+                    .action(ArgAction::SetTrue)
                     .required(false)
                     .multiple(false)
                     .long("csv")
@@ -1193,6 +1226,7 @@ pub fn cli<'a>() -> Command<'a> {
                     .version(VERSION)
                     .about("List the containers and stats about them")
                     .arg(Arg::new("csv")
+                        .action(ArgAction::SetTrue)
                         .required(false)
                         .multiple(false)
                         .long("csv")
@@ -1201,6 +1235,7 @@ pub fn cli<'a>() -> Command<'a> {
                     )
 
                     .arg(Arg::new("list_stopped")
+                        .action(ArgAction::SetTrue)
                         .required(false)
                         .multiple(false)
                         .long("list-stopped")
@@ -1224,6 +1259,7 @@ pub fn cli<'a>() -> Command<'a> {
                     .version(VERSION)
                     .about("List the processes of all containers")
                     .arg(Arg::new("csv")
+                        .action(ArgAction::SetTrue)
                         .required(false)
                         .multiple(false)
                         .long("csv")
@@ -1256,6 +1292,7 @@ pub fn cli<'a>() -> Command<'a> {
                     .version(VERSION)
                     .about("List the container processes")
                     .arg(Arg::new("csv")
+                        .action(ArgAction::SetTrue)
                         .required(false)
                         .multiple(false)
                         .long("csv")
@@ -1327,6 +1364,7 @@ pub fn cli<'a>() -> Command<'a> {
                     .version(VERSION)
                     .about("List images on endpoint(s)")
                     .arg(Arg::new("csv")
+                        .action(ArgAction::SetTrue)
                         .required(false)
                         .multiple(false)
                         .long("csv")
@@ -1338,6 +1376,7 @@ pub fn cli<'a>() -> Command<'a> {
                     .version(VERSION)
                     .about("Verify that all configured images are present on endpoint(s)")
                     .arg(Arg::new("csv")
+                        .action(ArgAction::SetTrue)
                         .required(false)
                         .multiple(false)
                         .long("csv")
@@ -1360,6 +1399,7 @@ fn script_arg_line_numbers<'a>() -> clap::Arg<'a> {
 
 fn script_arg_no_line_numbers<'a>() -> clap::Arg<'a> {
     Arg::new("no_script_line_numbers")
+        .action(ArgAction::SetTrue)
         .required(false)
         .multiple(false)
         .long("no-line-numbers")
@@ -1379,6 +1419,7 @@ fn script_arg_highlight<'a>() -> clap::Arg<'a> {
 
 fn script_arg_no_highlight<'a>() -> clap::Arg<'a> {
     Arg::new("no_script_highlight")
+        .action(ArgAction::SetTrue)
         .required(false)
         .multiple(false)
         .long("no-highlighting")
