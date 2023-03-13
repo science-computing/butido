@@ -96,7 +96,7 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
             }
         },
         Some(("exec", matches)) => {
-            let commands = matches.values_of("commands").unwrap().collect::<Vec<&str>>();
+            let commands = matches.get_many::<String>("commands").unwrap().map(AsRef::as_ref).collect::<Vec<&str>>();
             if confirm(format!("Really run '{}' in {}?", commands.join(" "), container_id))? {
                 exec(matches, container).await
             } else {
@@ -146,7 +146,7 @@ async fn exec(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
 
     let execopts = shiplift::builder::ExecContainerOptions::builder()
         .cmd({
-            matches.values_of("commands").unwrap().collect::<Vec<&str>>()
+            matches.get_many::<String>("commands").unwrap().map(AsRef::as_ref).collect::<Vec<&str>>()
         })
         .attach_stdout(true)
         .attach_stderr(true)

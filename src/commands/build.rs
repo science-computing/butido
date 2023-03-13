@@ -138,9 +138,9 @@ pub async fn build(
     info!("We want {} ({:?})", pname, pvers);
 
     let additional_env = matches
-        .values_of("env")
+        .get_many::<String>("env")
         .unwrap_or_default()
-        .map(crate::util::env::parse_to_env)
+        .map(|s| crate::util::env::parse_to_env(s.as_ref()))
         .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
 
     let packages = if let Some(pvers) = pvers {

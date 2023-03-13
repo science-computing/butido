@@ -46,8 +46,8 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .context("Parsing package version constraint")
         .context("A valid package version constraint looks like this: '=1.0.0'")?;
 
-    let env_filter = matches.values_of("env_filter")
-        .map(|vals| vals.map(crate::util::env::parse_to_env).collect::<Result<Vec<_>>>())
+    let env_filter = matches.get_many::<String>("env_filter")
+        .map(|vals| vals.map(AsRef::as_ref).map(crate::util::env::parse_to_env).collect::<Result<Vec<_>>>())
         .transpose()?
         .unwrap_or_default();
 
