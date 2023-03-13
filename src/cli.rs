@@ -458,7 +458,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .long("staging-dir")
                 .takes_value(true)
                 .value_name("PATH")
-                .validator(dir_exists_validator)
+                .value_parser(dir_exists_validator)
                 .help("Do not throw dice on staging directory name, but hardcode for this run.")
             )
 
@@ -476,7 +476,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .takes_value(true)
                 .short('E')
                 .long("env")
-                .validator(env_pass_validator)
+                .value_parser(env_pass_validator)
                 .help("Pass environment variable to all build jobs")
                 .long_help(indoc::indoc!(r#"
                     Pass these variables to each build job.
@@ -625,7 +625,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .long("staging-dir")
                 .takes_value(true)
                 .value_name("PATH")
-                .validator(dir_exists_validator)
+                .value_parser(dir_exists_validator)
                 .help("Also consider this staging dir when searching for artifacts")
             )
             .arg(Arg::new("env_filter")
@@ -636,7 +636,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .short('E')
                 .takes_value(true)
                 .value_name("KV")
-                .validator(env_pass_validator)
+                .value_parser(env_pass_validator)
                 .help("Filter for this \"key=value\" environment variable")
             )
             .arg(Arg::new("image")
@@ -1041,7 +1041,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .takes_value(true)
                 .short('E')
                 .long("env")
-                .validator(env_pass_validator)
+                .value_parser(env_pass_validator)
                 .help("Additional env to be passed when building packages")
                 .long_help(indoc::indoc!(r#"
                     Additional env to be passed when building packages.
@@ -1118,7 +1118,7 @@ pub fn cli<'a>() -> Command<'a> {
                         .takes_value(true)
                         .value_name("TIMEOUT")
                         .help("Timeout in seconds")
-                        .validator(parse_u64)
+                        .value_parser(parse_u64)
                     )
                 )
                 .subcommand(Command::new("list")
@@ -1167,7 +1167,7 @@ pub fn cli<'a>() -> Command<'a> {
                         .takes_value(true)
                         .value_name("LIMIT")
                         .help("Only list LIMIT processes for each container")
-                        .validator(parse_usize)
+                        .value_parser(parse_usize)
                     )
                 )
             )
@@ -1375,7 +1375,7 @@ fn arg_older_than_date(about: &str) -> Arg<'_> {
                 years, year, y -- defined as 365.25 days
 
         "#)
-        .validator(parse_date_from_string)
+        .value_parser(parse_date_from_string)
 }
 
 fn arg_newer_than_date(about: &str) -> Arg<'_> {
@@ -1404,7 +1404,7 @@ fn arg_newer_than_date(about: &str) -> Arg<'_> {
                 years, year, y -- defined as 365.25 days
 
         "#)
-        .validator(parse_date_from_string)
+        .value_parser(parse_date_from_string)
 }
 
 fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
