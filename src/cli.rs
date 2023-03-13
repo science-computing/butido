@@ -145,7 +145,7 @@ pub fn cli<'a>() -> Command<'a> {
                     .required(false)
                     .long("tool")
                     .value_name("TOOL")
-                    .possible_values(["psql", "pgcli"])
+                    .value_parser(["psql", "pgcli"])
                     .help("Use a specific tool")
                 )
             )
@@ -523,7 +523,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .short('t')
                 .long("type")
                 .value_name("DEPENDENCY_TYPE")
-                .possible_values([
+                .value_parser([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
@@ -557,7 +557,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .short('t')
                 .long("type")
                 .value_name("DEPENDENCY_TYPE")
-                .possible_values([
+                .value_parser([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
@@ -704,7 +704,7 @@ pub fn cli<'a>() -> Command<'a> {
                 .takes_value(true)
                 .long("dependency-type")
                 .value_name("DEPENDENCY_TYPE")
-                .possible_values([
+                .value_parser([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
