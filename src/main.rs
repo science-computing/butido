@@ -112,7 +112,7 @@ async fn main() -> Result<()> {
 
     // check if the version flag is set
     if cli.get_flag("version") {
-        println!("{}", VERSION_LONG);
+        println!("{VERSION_LONG}");
         std::process::exit(0);
     }
 
