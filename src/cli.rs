@@ -1315,7 +1315,7 @@ fn script_arg_no_highlight<'a>() -> clap::Arg<'a> {
 /// Naive check whether 's' is a 'key=value' pair or an existing environment variable
 ///
 /// TODO: Clean up this spaghetti code
-fn env_pass_validator(s: &str) -> Result<(), String> {
+fn env_pass_validator(s: &str) -> Result<String, String> {
     use crate::util::parser::*;
     let parser = {
         let key = (letters() + ((letters() | numbers() | under()).repeat(0..)))
@@ -1336,14 +1336,14 @@ fn env_pass_validator(s: &str) -> Result<(), String> {
         }
         Ok((k, v)) => {
             debug!("Env pass valiation: '{}={}'", k, v);
-            Ok(())
+            Ok(s.to_owned())
         }
     }
 }
 
-fn dir_exists_validator(s: &str) -> Result<(), String> {
+fn dir_exists_validator(s: &str) -> Result<String, String> {
     if PathBuf::from(&s).is_dir() {
-        Ok(())
+        Ok(s.to_owned())
     } else {
         Err(format!("Directory does not exist: {s}"))
     }
@@ -1407,7 +1407,7 @@ fn arg_newer_than_date(about: &str) -> Arg<'_> {
         .value_parser(parse_date_from_string)
 }
 
-fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
+fn parse_date_from_string(s: &str) -> std::result::Result<String, String> {
     humantime::parse_duration(s)
         .map_err(|e| e.to_string())
         .map(|_| ())
@@ -1422,14 +1422,15 @@ fn parse_date_from_string(s: &str) -> std::result::Result<(), String> {
                 .map_err(|e| e.to_string())
                 .map(|_| ())
         })
+        .map(|_| s.to_owned())
 }
 
-fn parse_usize(s: &str) -> std::result::Result<(), String> {
-    usize::from_str(s) .map_err(|e| e.to_string()).map(|_| ())
+fn parse_usize(s: &str) -> std::result::Result<String, String> {
+    usize::from_str(s) .map_err(|e| e.to_string()).map(|_| s.to_owned())
 }
 
-fn parse_u64(s: &str) -> std::result::Result<(), String> {
-    u64::from_str(s).map_err(|e| e.to_string()).map(|_| ())
+fn parse_u64(s: &str) -> std::result::Result<String, String> {
+    u64::from_str(s).map_err(|e| e.to_string()).map(|_| s.to_owned())
 }
 
 #[cfg(test)]
