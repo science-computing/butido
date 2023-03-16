@@ -72,14 +72,14 @@ pub async fn build(
 
     let shebang = Shebang::from({
         matches
-            .value_of("shebang")
-            .map(String::from)
+            .get_one::<String>("shebang")
+            .map(|s| s.to_owned())
             .unwrap_or_else(|| config.shebang().clone())
     });
 
     let image_name = matches
-        .value_of("image")
-        .map(String::from)
+        .get_one::<String>("image")
+        .map(|s| s.to_owned())
         .map(ImageName::from)
         .unwrap(); // safe by clap
     if config.docker().verify_images_present()
@@ -126,21 +126,21 @@ pub async fn build(
     info!("Endpoint config build");
 
     let pname = matches
-        .value_of("package_name")
-        .map(String::from)
+        .get_one::<String>("package_name")
+        .map(|s| s.to_owned())
         .map(PackageName::from)
         .unwrap(); // safe by clap
 
     let pvers = matches
-        .value_of("package_version")
-        .map(String::from)
+        .get_one::<String>("package_version")
+        .map(|s| s.to_owned())
         .map(PackageVersion::from);
     info!("We want {} ({:?})", pname, pvers);
 
     let additional_env = matches
-        .values_of("env")
+        .get_many::<String>("env")
         .unwrap_or_default()
-        .map(crate::util::env::parse_to_env)
+        .map(|s| crate::util::env::parse_to_env(s.as_ref()))
         .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
 
     let packages = if let Some(pvers) = pvers {
@@ -185,7 +185,7 @@ pub async fn build(
     let (staging_store, staging_dir, submit_id) = {
         let bar_staging_loading = progressbars.bar()?;
 
-        let (submit_id, p) = if let Some(staging_dir) = matches.value_of("staging_dir").map(PathBuf::from) {
+        let (submit_id, p) = if let Some(staging_dir) = matches.get_one::<String>("staging_dir").map(PathBuf::from) {
             info!(
                 "Setting staging dir to {} for this run",
                 staging_dir.display()
@@ -239,7 +239,7 @@ pub async fn build(
 
     let source_cache = SourceCache::new(config.source_cache_root().clone());
 
-    if matches.is_present("no_verification") {
+    if matches.get_flag("no_verification") {
         warn!("No hash verification will be performed");
     } else {
         crate::commands::source::verify_impl(
@@ -251,7 +251,7 @@ pub async fn build(
     }
 
     // linting the package scripts
-    if matches.is_present("no_lint") {
+    if matches.get_flag("no_lint") {
         warn!("No script linting will be performed!");
     } else if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
         let all_packages = dag.all_packages();
@@ -366,7 +366,7 @@ pub async fn build(
         .database(database_connection.clone())
         .source_cache(source_cache)
         .submit(submit)
-        .log_dir(if matches.is_present("write-log-file") {
+        .log_dir(if matches.get_flag("write-log-file") {
             Some(config.log_dir().clone())
         } else {
             None

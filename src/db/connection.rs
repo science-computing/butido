@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::str::FromStr;
-
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
@@ -56,19 +54,19 @@ impl<'a> std::fmt::Debug for DbConnectionConfig<'a> {
 impl<'a> DbConnectionConfig<'a> {
     pub fn parse(config: &'a Configuration, cli: &'a ArgMatches) -> Result<DbConnectionConfig<'a>> {
         Ok(DbConnectionConfig {
-            database_host: cli.value_of("database_host").unwrap_or_else(|| config.database_host()),
+            database_host: cli.get_one::<String>("database_host").unwrap_or_else(|| config.database_host()),
             database_port: {
-                cli.value_of("database_port")
-                    .map(u16::from_str)
+                cli.get_one::<String>("database_port")
+                    .map(|s| s.parse::<u16>())
                     .transpose()?
                     .unwrap_or_else(|| *config.database_port())
             },
-            database_user: cli.value_of("database_user").unwrap_or_else(|| config.database_user()),
-            database_password: cli.value_of("database_password").unwrap_or_else(|| config.database_password()),
-            database_name: cli.value_of("database_name").unwrap_or_else(|| config.database_name()),
+            database_user: cli.get_one::<String>("database_user").unwrap_or_else(|| config.database_user()),
+            database_password: cli.get_one::<String>("database_password").unwrap_or_else(|| config.database_password()),
+            database_name: cli.get_one::<String>("database_name").unwrap_or_else(|| config.database_name()),
             database_connection_timeout: {
-                cli.value_of("database_connection_timeout")
-                    .map(u16::from_str)
+                cli.get_one::<String>("database_connection_timeout")
+                    .map(|s| s.parse::<u16>())
                     .transpose()?
                     .unwrap_or_else( || {
                         // hardcoded default of 30 seconds database timeout

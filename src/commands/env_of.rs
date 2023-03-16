@@ -27,12 +27,13 @@ pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
 
     let package_filter = {
         let name = matches
-            .value_of("package_name")
-            .map(String::from)
+            .get_one::<String>("package_name")
+            .map(|s| s.to_owned())
             .map(PackageName::from)
             .unwrap();
         let constraint = matches
-            .value_of("package_version_constraint")
+            .get_one::<String>("package_version_constraint")
+            .map(|s| s.to_owned())
             .map(PackageVersionConstraint::try_from)
             .unwrap()?;
         trace!(
