@@ -104,7 +104,10 @@ async fn main() -> Result<()> {
         homepage: "atos.net/de/deutschland/sc".into(),
     });
 
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt::fmt()
+        .with_max_level(tracing::Level::WARN)
+        .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
+        .init();
     debug!("Debugging enabled");
 
     let app = cli::cli();
