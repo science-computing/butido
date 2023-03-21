@@ -17,14 +17,13 @@ use clap::Arg;
 use clap::ArgAction;
 use clap::ArgGroup;
 
-use const_format::formatcp;
 use tracing::{debug, error};
 
 // Helper types to ship around stringly typed clap API.
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
 pub const IDENT_DEPENDENCY_TYPE_RUNTIME: &str = "runtime";
 
-pub const VERSION: &str = formatcp!("{}", env!("VERGEN_GIT_SEMVER"));
+pub const VERSION: &str = env!("VERGEN_GIT_SEMVER");
 
 pub fn cli<'a>() -> Command<'a> {
     Command::new("butido")
