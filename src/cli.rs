@@ -27,7 +27,7 @@ pub fn cli() -> Command {
     Command::new("butido")
         .author(crate_authors!())
         .disable_version_flag(true)
-        .about("Generic Build Orchestration System for building linux packages with docker")
+        .about("Generic Build Orchestration System for building Linux packages with Docker")
         .after_help(indoc::indoc!(r#"
             The following environment variables can be passed to butido:
 
@@ -443,7 +443,7 @@ pub fn cli() -> Command {
                 .value_name("IMAGE NAME")
                 .short('I')
                 .long("image")
-                .help("Name of the docker image to use")
+                .help("Name of the Docker image to use")
             )
 
             .arg(Arg::new("write-log-file")
@@ -951,9 +951,9 @@ pub fn cli() -> Command {
                 .value_name("IMAGE NAME")
                 .short('I')
                 .long("image")
-                .help("Name of the docker image to use")
+                .help("Name of the Docker image to use")
                 .long_help(indoc::indoc!(r#"
-                    Name of the docker image to use.
+                    Name of the Docker image to use.
 
                     Required because tree might look different on different images because of
                     conditions on dependencies.

@@ -158,7 +158,7 @@ impl Endpoint {
 
                 if !v.contains(&avail.version) {
                     Err(anyhow!(
-                        "Incompatible docker version on endpoint {}: Expected: {}, Available: [{}]",
+                        "Incompatible Docker version on endpoint {}: Expected: {}, Available: [{}]",
                         ep.name(),
                         avail.version,
                         v.join(", ")
@@ -181,7 +181,7 @@ impl Endpoint {
                     .with_context(|| anyhow!("Getting API version of endpoint: {}", ep.name))?;
 
                 if !v.contains(&avail.api_version) {
-                    Err(anyhow!("Incompatible docker API version on endpoint {}: Exepected: {}, Available: [{}]",
+                    Err(anyhow!("Incompatible Docker API version on endpoint {}: Exepected: {}, Available: [{}]",
                             ep.name(), avail.api_version, v.join(", ")))
                 } else {
                     Ok(())

@@ -17,27 +17,27 @@ use crate::config::Endpoint;
 use crate::config::EndpointName;
 use crate::util::docker::ContainerImage;
 
-/// Configuration of the docker daemon interfacing functionality
+/// Configuration of the Docker daemon interfacing functionality
 #[derive(Debug, Getters, CopyGetters, Deserialize)]
 pub struct DockerConfig {
-    /// The required docker version
+    /// The required Docker version
     ///
     /// If not set, it will not be checked, which might result in weird things?
     ///
     /// # Note
     ///
-    /// Because the docker API returns strings, not a version object, each compatible version must
+    /// Because the Docker API returns strings, not a version object, each compatible version must
     /// be listed.
     #[getset(get = "pub")]
     docker_versions: Option<Vec<String>>,
 
-    /// The required docker api version
+    /// The required Docker API version
     ///
     /// If not set, it will not be checked, which might result in weird things?
     ///
     /// # Note
     ///
-    /// Because the docker API returns strings, not a version object, each compatible version must
+    /// Because the Docker API returns strings, not a version object, each compatible version must
     /// be listed.
     #[getset(get = "pub")]
     docker_api_versions: Option<Vec<String>>,

@@ -263,7 +263,7 @@ impl JobHandle {
 
             {job_id}
 
-        To debug, connect to docker using:
+        To debug, connect to Docker using:
 
             {docker_connect_string}
 

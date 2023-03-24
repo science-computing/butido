@@ -52,7 +52,7 @@ impl FileSystemRepresentation {
             files: vec![],
         };
 
-        // get the number of maximum files open (ulimit -n on linux)
+        // get the number of maximum files open (ulimit -n on Linux)
         let max_files_open = {
             let (soft, _hard) = rlimit::getrlimit(rlimit::Resource::NOFILE)?;
 

@@ -3,7 +3,7 @@
 "butido" could stand for "but i do", "BUild Things In DOcker" or
 "Better Universal Task Instrumentation Docker Observator".
 
-Anyways, it is a tool for building packages for linux distributions in docker
+Anyways, it is a tool for building packages for Linux distributions in Docker
 and it does not make assumptions about the build procedure itself (and thus can
 build .rpm, .deb, or any other package format your scripts can build).
 
@@ -51,7 +51,7 @@ To set up a development infrastructure or a production infrastructure (using the
 examples from the `./examples/packages` directory):
 
 ```bash
-# pull down necessary docker images
+# pull down necessary Docker images
 docker pull debian:bullseye
 docker pull postgres:12
 
@@ -81,7 +81,7 @@ cd /tmp/butido-test-repo
 |-------------|------------------------------------------------------------------------------------------------------------------|
 | build / job | The procedure of transforming a set of sources to a package (or, technically, even to multiple packages)         |
 | dependency  | A "package" that is required during the buildtime or during the runtime of another "package"                     |
-| endpoint    | A docker API endpoint butido can talk to                                                                         |
+| endpoint    | A Docker API endpoint butido can talk to                                                                         |
 | jobset      | A list of jobs that can be run in any order or in parallel                                                       |
 | output      | The results of a butido build job                                                                                |
 | package     | A single (archive) file OR the definition of a job                                                               |
