@@ -23,12 +23,9 @@ use tracing::{debug, error};
 pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
 pub const IDENT_DEPENDENCY_TYPE_RUNTIME: &str = "runtime";
 
-pub const VERSION: &str = env!("VERGEN_GIT_SEMVER");
-
 pub fn cli() -> Command {
     Command::new("butido")
         .author(crate_authors!())
-        .version(VERSION)
         .disable_version_flag(true)
         .about("Generic Build Orchestration System for building linux packages with docker")
         .after_help(indoc::indoc!(r#"
@@ -115,7 +112,6 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("generate-completions")
-            .version(VERSION)
             .about("Generate and print commandline completions")
             .arg(Arg::new("shell")
                 .value_parser(clap::value_parser!(clap_complete::Shell))
@@ -126,10 +122,8 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("db")
-            .version(VERSION)
             .about("Database CLI interface")
             .subcommand(Command::new("cli")
-                .version(VERSION)
                 .about("Start a database CLI, if installed on the current host")
                 .long_about(indoc::indoc!(r#"
                     Starts a database shell on the configured database using one of the following programs:
@@ -150,7 +144,6 @@ pub fn cli() -> Command {
             )
 
             .subcommand(Command::new("setup")
-                .version(VERSION)
                 .about("Run the database setup")
                 .long_about(indoc::indoc!(r#"
                     Run the database setup migrations
@@ -158,7 +151,6 @@ pub fn cli() -> Command {
             )
 
             .subcommand(Command::new("artifacts")
-                .version(VERSION)
                 .about("List artifacts from the DB")
                 .arg(Arg::new("csv")
                     .action(ArgAction::SetTrue)
@@ -176,7 +168,6 @@ pub fn cli() -> Command {
             )
 
             .subcommand(Command::new("envvars")
-                .version(VERSION)
                 .about("List envvars from the DB")
                 .arg(Arg::new("csv")
                     .action(ArgAction::SetTrue)
@@ -187,7 +178,6 @@ pub fn cli() -> Command {
             )
 
             .subcommand(Command::new("images")
-                .version(VERSION)
                 .about("List images from the DB")
                 .arg(Arg::new("csv")
                     .action(ArgAction::SetTrue)
@@ -198,7 +188,6 @@ pub fn cli() -> Command {
             )
 
             .subcommand(Command::new("submit")
-                .version(VERSION)
                 .about("Show details about one specific submit")
                 .arg(Arg::new("submit")
                     .required(true)
@@ -209,7 +198,6 @@ pub fn cli() -> Command {
             )
 
             .subcommand(Command::new("submits")
-                .version(VERSION)
                 .about("List submits from the DB")
                 .arg(Arg::new("csv")
                     .action(ArgAction::SetTrue)
@@ -252,7 +240,6 @@ pub fn cli() -> Command {
             )
 
             .subcommand(Command::new("jobs")
-                .version(VERSION)
                 .about("List jobs from the DB")
                 .arg(Arg::new("csv")
                     .action(ArgAction::SetTrue)
@@ -307,7 +294,6 @@ pub fn cli() -> Command {
             )
 
             .subcommand(Command::new("job")
-                .version(VERSION)
                 .about("Show a specific job from the DB")
                 .arg(Arg::new("csv")
                     .action(ArgAction::SetTrue)
@@ -353,7 +339,6 @@ pub fn cli() -> Command {
                 .arg(script_arg_no_highlight())
             )
             .subcommand(Command::new("log-of")
-                .version(VERSION)
                 .about("Print log of a job, short version of 'db job --log'")
                 .arg(Arg::new("job_uuid")
                     .required(true)
@@ -363,7 +348,6 @@ pub fn cli() -> Command {
                 )
             )
             .subcommand(Command::new("releases")
-                .version(VERSION)
                 .about("List releases")
                 .arg(Arg::new("csv")
                     .action(ArgAction::SetTrue)
@@ -393,7 +377,6 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("build")
-            .version(VERSION)
             .about("Build packages in containers")
 
             .arg(Arg::new("package_name")
@@ -479,7 +462,6 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("what-depends")
-            .version(VERSION)
             .about("List all packages that depend on a specific package")
             .arg(Arg::new("package_name")
                 .required(true)
@@ -504,7 +486,6 @@ pub fn cli() -> Command {
             )
         )
         .subcommand(Command::new("dependencies-of")
-            .version(VERSION)
             .alias("depsof")
             .about("List the depenendcies of a package")
             .arg(Arg::new("package_name")
@@ -537,7 +518,6 @@ pub fn cli() -> Command {
             )
         )
         .subcommand(Command::new("versions-of")
-            .version(VERSION)
             .alias("versions")
             .about("List the versions of a package")
             .arg(Arg::new("package_name")
@@ -548,7 +528,6 @@ pub fn cli() -> Command {
             )
         )
         .subcommand(Command::new("env-of")
-            .version(VERSION)
             .alias("env")
             .about("Show the ENV configured for a package")
             .arg(Arg::new("package_name")
@@ -566,7 +545,6 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("find-artifact")
-            .version(VERSION)
             .about("Find artifacts for packages")
             .arg(Arg::new("package_name_regex")
                 .required(true)
@@ -613,7 +591,6 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("find-pkg")
-            .version(VERSION)
             .about("Find a package by regex")
             .arg(Arg::new("package_name_regex")
                 .required(true)
@@ -737,10 +714,8 @@ pub fn cli() -> Command {
 
         )
         .subcommand(Command::new("source")
-            .version(VERSION)
             .about("Handle package sources")
             .subcommand(Command::new("verify")
-                .version(VERSION)
                 .about("Hash-check all source files")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -768,11 +743,9 @@ pub fn cli() -> Command {
                 )
             )
             .subcommand(Command::new("list-missing")
-                .version(VERSION)
                 .about("List packages where the source is missing")
             )
             .subcommand(Command::new("url")
-                .version(VERSION)
                 .about("Show the URL of the source of a package")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -788,7 +761,6 @@ pub fn cli() -> Command {
                 )
             )
             .subcommand(Command::new("download")
-                .version(VERSION)
                 .about("Download the source for one or multiple packages")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -829,7 +801,6 @@ pub fn cli() -> Command {
                 )
             )
             .subcommand(Command::new("of")
-                .version(VERSION)
                 .about("Get the pathes of the sources of a package")
                 .arg(Arg::new("package_name")
                     .required(false)
@@ -847,10 +818,8 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("release")
-            .version(VERSION)
             .about("Manage artifact releases")
             .subcommand(Command::new("rm")
-                .version(VERSION)
                 .about("Remove release artifacts")
                 .long_about(indoc::indoc!(r#"
                     Removes a released artifact from the release store and deletes the according database entry.
@@ -883,7 +852,6 @@ pub fn cli() -> Command {
             )
 
             .subcommand(Command::new("new")
-                .version(VERSION)
                 .about("Release artifacts")
                 .arg(Arg::new("submit_uuid")
                     .required(true)
@@ -949,7 +917,6 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("lint")
-            .version(VERSION)
             .about("Lint the package script of one or multiple packages")
             .arg(Arg::new("package_name")
                 .required(false)
@@ -966,7 +933,6 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("tree-of")
-            .version(VERSION)
             .about("Print the dependency tree of one or multiple packages")
             .arg(Arg::new("package_name")
                 .required(true)
@@ -1010,12 +976,10 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("metrics")
-            .version(VERSION)
             .about("Print metrics about butido")
         )
 
         .subcommand(Command::new("endpoint")
-            .version(VERSION)
             .about("Endpoint maintentance commands")
             .arg(Arg::new("endpoint_name")
                 .required(false)
@@ -1025,7 +989,6 @@ pub fn cli() -> Command {
             )
 
             .subcommand(Command::new("ping")
-                .version(VERSION)
                 .about("Ping the endpoint(s)")
                 .arg(Arg::new("ping_n")
                     .required(false)
@@ -1044,7 +1007,6 @@ pub fn cli() -> Command {
                 )
             )
             .subcommand(Command::new("stats")
-                .version(VERSION)
                 .about("Get stats for the endpoint(s)")
                 .arg(Arg::new("csv")
                     .action(ArgAction::SetTrue)
@@ -1054,16 +1016,13 @@ pub fn cli() -> Command {
                 )
             )
             .subcommand(Command::new("containers")
-                .version(VERSION)
                 .about("Work with the containers of the endpoint(s)")
                 .subcommand(Command::new("prune")
-                    .version(VERSION)
                     .about("Remove exited containers")
                     .arg(arg_older_than_date("Prune only containers older than DATE"))
                     .arg(arg_newer_than_date("Prune only containers newer than DATE"))
                 )
                 .subcommand(Command::new("stop")
-                    .version(VERSION)
                     .about("Stop running containers")
                     .arg(arg_older_than_date("Stop only containers older than DATE"))
                     .arg(arg_newer_than_date("Stop only containers newer than DATE"))
@@ -1077,7 +1036,6 @@ pub fn cli() -> Command {
                     )
                 )
                 .subcommand(Command::new("list")
-                    .version(VERSION)
                     .about("List the containers and stats about them")
                     .arg(Arg::new("csv")
                         .action(ArgAction::SetTrue)
@@ -1104,7 +1062,6 @@ pub fn cli() -> Command {
                     .arg(arg_newer_than_date("List only containers newer than DATE"))
                 )
                 .subcommand(Command::new("top")
-                    .version(VERSION)
                     .about("List the processes of all containers")
                     .arg(Arg::new("csv")
                         .action(ArgAction::SetTrue)
@@ -1122,7 +1079,6 @@ pub fn cli() -> Command {
                 )
             )
             .subcommand(Command::new("container")
-                .version(VERSION)
                 .about("Work with a specific container")
                 .arg(Arg::new("container_id")
                     .required(true)
@@ -1131,7 +1087,6 @@ pub fn cli() -> Command {
                     .help("Work with container CONTAINER_ID")
                 )
                 .subcommand(Command::new("top")
-                    .version(VERSION)
                     .about("List the container processes")
                     .arg(Arg::new("csv")
                         .action(ArgAction::SetTrue)
@@ -1141,7 +1096,6 @@ pub fn cli() -> Command {
                     )
                 )
                 .subcommand(Command::new("kill")
-                    .version(VERSION)
                     .about("Kill the container")
                     .arg(Arg::new("signal")
                         .required(false)
@@ -1151,15 +1105,12 @@ pub fn cli() -> Command {
                     )
                 )
                 .subcommand(Command::new("delete")
-                    .version(VERSION)
                     .about("Delete the container")
                 )
                 .subcommand(Command::new("start")
-                    .version(VERSION)
                     .about("Start the container")
                 )
                 .subcommand(Command::new("stop")
-                    .version(VERSION)
                     .about("Stop the container")
                     .arg(Arg::new("timeout")
                         .required(false)
@@ -1169,7 +1120,6 @@ pub fn cli() -> Command {
                     )
                 )
                 .subcommand(Command::new("exec")
-                    .version(VERSION)
                     .about("Execute commands in the container")
                     .arg(Arg::new("commands")
                         .required(true)
@@ -1187,16 +1137,13 @@ pub fn cli() -> Command {
                 )
 
                 .subcommand(Command::new("inspect")
-                    .version(VERSION)
                     .about("Display details about the container")
                     .long_about("Display details about the container. Do not assume the output format to be stable.")
                 )
             )
             .subcommand(Command::new("images")
-                .version(VERSION)
                 .about("Query images on endpoint(s)")
                 .subcommand(Command::new("list")
-                    .version(VERSION)
                     .about("List images on endpoint(s)")
                     .arg(Arg::new("csv")
                         .action(ArgAction::SetTrue)
@@ -1206,7 +1153,6 @@ pub fn cli() -> Command {
                     )
                 )
                 .subcommand(Command::new("verify-present")
-                    .version(VERSION)
                     .about("Verify that all configured images are present on endpoint(s)")
                     .arg(Arg::new("csv")
                         .action(ArgAction::SetTrue)
