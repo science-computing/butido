@@ -1277,6 +1277,7 @@ pub fn cli<'a>() -> Command<'a> {
 
 fn script_arg_line_numbers<'a>() -> clap::Arg<'a> {
     Arg::new("script_line_numbers")
+        .action(ArgAction::SetTrue)
         .required(false)
         .long("line-numbers")
         .help("Print script with line numbers (default)")
@@ -1294,6 +1295,7 @@ fn script_arg_no_line_numbers<'a>() -> clap::Arg<'a> {
 
 fn script_arg_highlight<'a>() -> clap::Arg<'a> {
     Arg::new("script_highlight")
+        .action(ArgAction::SetTrue)
         .required(false)
         .long("highlighting")
         .alias("highlight")
