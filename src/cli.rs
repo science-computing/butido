@@ -496,7 +496,7 @@ pub fn cli() -> Command {
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
-                .default_values(&[
+                .default_values([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
@@ -529,7 +529,7 @@ pub fn cli() -> Command {
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
-                .default_values(&[
+                .default_values([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
@@ -670,7 +670,7 @@ pub fn cli() -> Command {
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
-                .default_values(&[
+                .default_values([
                     IDENT_DEPENDENCY_TYPE_BUILD,
                     IDENT_DEPENDENCY_TYPE_RUNTIME,
                 ])
@@ -763,7 +763,7 @@ pub fn cli() -> Command {
                 )
 
                 .group(ArgGroup::new("verify-one-or-many")
-                    .args(&["package_name", "matching"])
+                    .args(["package_name", "matching"])
                     .required(true)
                 )
             )
@@ -817,7 +817,7 @@ pub fn cli() -> Command {
                 )
 
                 .group(ArgGroup::new("download-one-or-many")
-                    .args(&["package_name", "matching"])
+                    .args(["package_name", "matching"])
                     .required(true)
                 )
 
@@ -915,7 +915,7 @@ pub fn cli() -> Command {
                     .conflicts_with("package_name")
                 )
                 .group(ArgGroup::new("package")
-                    .args(&["package_name", "all-packages"])
+                    .args(["package_name", "all-packages"])
                     .required(true) // one of these is required
                 )
                 .arg(Arg::new("package_version")
