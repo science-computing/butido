@@ -79,7 +79,7 @@ walkdir        = "2"
 which          = "4"
 xdg            = "2"
 
-# Hard-code rand to 0.4.4
+# Hard-code rand to 0.4.3
 #
 # Reason for this is this dependency chain:
 # diesel -> uuid (0.6) -> rand (0.4)
