@@ -71,7 +71,7 @@ tar            = "0.4"
 terminal_size  = "0.2"
 tokio          = { version = "1", features = ["macros", "fs", "process", "io-util", "time"] }
 tokio-stream   = "0.1"
-typed-builder  = "0.12"
+typed-builder  = "0.14"
 unindent       = "0.2"
 url            = { version = "2", features = ["serde"] }
 uuid           = { version = "0.6", features = ["serde", "v4"] }
