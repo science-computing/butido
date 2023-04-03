@@ -173,7 +173,7 @@ verify_images_present = true
 
 
 #
-# List of docker endpoints
+# List of Docker endpoints
 #
 
 [docker.endpoints.testhostname]

@@ -126,7 +126,7 @@ pub struct NotValidatedConfiguration {
     #[serde(rename = "database_name")]
     database_name: String,
 
-    /// The configuration for the docker endpoints
+    /// The configuration for the Docker endpoints
     #[getset(get = "pub")]
     #[serde(rename = "database_connection_timeout")]
     database_connection_timeout: Option<u16>,
