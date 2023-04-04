@@ -95,9 +95,6 @@ xdg            = "2"
 # Upstream issue: https://github.com/rust-random/rand/issues/1071
 rand = "=0.4.3"
 
-# See https://github.com/bitvecto-rs/bitvec/issues/105#issuecomment-778570981
-funty = "=1.1.0"
-
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
