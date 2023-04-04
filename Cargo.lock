@@ -168,7 +168,6 @@ dependencies = [
  "dialoguer",
  "diesel",
  "diesel_migrations",
- "encoding_rs",
  "filters",
  "funty",
  "futures",
