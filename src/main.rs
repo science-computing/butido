@@ -61,9 +61,6 @@ use logcrate::debug;
 use logcrate::error;
 use rand as _; // Required to make lints happy
 use aquamarine as _; // doc-helper crate
-use funty as _; // doc-helper crate
-use zeroize as _; // Required to make lints happy
-use encoding_rs as _; // Required to make lints happy
 
 mod cli;
 mod commands;
