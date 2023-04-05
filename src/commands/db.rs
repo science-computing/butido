@@ -524,7 +524,7 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
             let success = is_job_successfull(&job)?
                 .map(|b| if b { "yes" } else { "no" })
                 .map(String::from)
-                .unwrap_or_else(|| String::from("unknown"));
+                .unwrap_or_else(|| String::from("?"));
             let image_name = crate::util::docker::ImageName::from(image.name);
 
             Ok(vec![
