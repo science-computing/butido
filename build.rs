@@ -1,15 +1,15 @@
 use anyhow::Result;
-use vergen::{Config, vergen};
+use vergen::EmitBuilder;
+use std::error::Error;
 
 
-fn main() -> Result<()> {
-    let info = git_info::get();
-    let mut config = Config::default();
-
-    *config.git_mut().semver_dirty_mut() = match info.dirty {
-        Some(true) => Some("-dirty"),
-        _ => None,
-    };
-
-    vergen(config)
+fn main() -> Result<(), Box<dyn Error>> {
+    EmitBuilder::builder()
+          .build_timestamp()
+          .cargo_debug()
+          .git_sha(false)
+          .git_commit_timestamp()
+          .git_describe(true, true, None)
+          .emit()?;
+    Ok(())
 }

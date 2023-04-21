@@ -85,11 +85,11 @@ use crate::util::progress::ProgressBars;
 use indoc::concatdoc;
 
 pub const VERSION_LONG: &str = concatdoc!{"
-    butido ", env!("VERGEN_GIT_SEMVER"), "
+    butido ", env!("VERGEN_GIT_DESCRIBE"), "
     Git SHA:              ", env!("VERGEN_GIT_SHA"), "
     Git Commit Timestamp: ", env!("VERGEN_GIT_COMMIT_TIMESTAMP"), "
     Build Timestamp:      ", env!("VERGEN_BUILD_TIMESTAMP"), "
-    Cargo Profile:        ", env!("VERGEN_CARGO_PROFILE")
+    Debug Build:          ", env!("VERGEN_CARGO_DEBUG")
 };
 
 #[tokio::main]

@@ -104,4 +104,4 @@ toml = "0.7"
 [build-dependencies]
 anyhow = "1"
 git_info = "0.1"
-vergen = { version = "7", default-features = false, features = ["git", "build", "cargo"] }
+vergen = { version = "8", features = ["build", "cargo", "git", "gitcl"] }
