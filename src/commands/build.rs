@@ -69,7 +69,6 @@ pub async fn build(
     let git_repo = git2::Repository::open(repo_path)
         .with_context(|| anyhow!("Opening repository at {}", repo_path.display()))?;
 
-    crate::ui::package_repo_cleanness_check(&git_repo)?;
     let now = chrono::offset::Local::now().naive_local();
 
     let shebang = Shebang::from({

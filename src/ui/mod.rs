@@ -16,28 +16,12 @@ use std::path::PathBuf;
 use anyhow::Result;
 use anyhow::anyhow;
 use itertools::Itertools;
-use tracing::error;
 
 use crate::config::Configuration;
 use crate::package::Script;
 
 mod package;
 pub use crate::ui::package::*;
-
-pub fn package_repo_cleanness_check(repo: &git2::Repository) -> Result<()> {
-    if !crate::util::git::repo_is_clean(repo)? {
-        error!(
-            "Repository not clean, refusing to go on: {}",
-            repo.path().display()
-        );
-        Err(anyhow!(
-            "Repository not clean, refusing to go on: {}",
-            repo.path().display()
-        ))
-    } else {
-        Ok(())
-    }
-}
 
 pub fn script_to_printable(
     script: &Script,
