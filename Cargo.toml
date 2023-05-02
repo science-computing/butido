@@ -58,7 +58,7 @@ rayon          = "1"
 regex          = "1"
 reqwest        = { version = "0.11", features = [ "stream" ] }
 resiter        = "0.4"
-result-inspect = "0.2"
+result-inspect = "0.3"
 rlimit         = "0.9"
 semver         = { version = "1", features = [ "serde" ] }
 serde          = "1"
