@@ -57,7 +57,7 @@ ptree          = "0.4"
 rayon          = "1"
 regex          = "1"
 reqwest        = { version = "0.11", features = [ "stream" ] }
-resiter        = "0.4"
+resiter        = "0.5"
 result-inspect = "0.3"
 rlimit         = "0.9"
 semver         = { version = "1", features = [ "serde" ] }
