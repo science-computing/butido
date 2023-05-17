@@ -13,7 +13,6 @@
 use std::path::PathBuf;
 use std::io::Write;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::convert::TryFrom;
 
 use anyhow::Context;
@@ -21,6 +20,8 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use diesel::PgConnection;
+use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::Pool;
 use itertools::Itertools;
 use tracing::{debug, trace};
 
@@ -34,7 +35,7 @@ use crate::util::progress::ProgressBars;
 use crate::util::docker::ImageName;
 
 /// Implementation of the "find_artifact" subcommand
-pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progressbars: ProgressBars, repo: Repository, database_connection: PgConnection) -> Result<()> {
+pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progressbars: ProgressBars, repo: Repository, database_pool: Pool<ConnectionManager<PgConnection>>) -> Result<()> {
     let package_name_regex = crate::commands::util::mk_package_name_regex({
         matches.get_one::<String>("package_name_regex").unwrap() // safe by clap
     })?;
@@ -97,7 +98,6 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         None
     };
 
-    let database = Arc::new(Mutex::new(database_connection));
     repo.packages()
         .filter(|p| package_name_regex.captures(p.name()).is_some())
         .filter(|p| {
@@ -113,7 +113,7 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
                 .config(config)
                 .release_stores(&release_stores)
                 .staging_store(staging_store.as_ref())
-                .database_connection(database.clone())
+                .database_pool(database_pool.clone())
                 .env_filter(&env_filter)
                 .script_filter(script_filter)
                 .image_name(image_name.as_ref())

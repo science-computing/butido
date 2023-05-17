@@ -12,8 +12,6 @@
 
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -64,7 +62,7 @@ async fn new_release(
 
     debug!("Release called for: {:?} {:?}", pname, pvers);
 
-    let mut conn = db_connection_config.establish_connection()?;
+    let pool = db_connection_config.establish_pool()?;
     let submit_uuid = matches
         .get_one::<String>("submit_uuid")
         .map(|s| uuid::Uuid::parse_str(s.as_ref()))
@@ -74,7 +72,7 @@ async fn new_release(
 
     let submit = crate::schema::submits::dsl::submits
         .filter(crate::schema::submits::dsl::uuid.eq(submit_uuid))
-        .first::<dbmodels::Submit>(&mut conn)?;
+        .first::<dbmodels::Submit>(&mut pool.get().unwrap())?;
     debug!("Found Submit: {:?}", submit_uuid);
 
     let arts = {
@@ -93,7 +91,7 @@ async fn new_release(
                     "Query: {:?}",
                     diesel::debug_query::<diesel::pg::Pg, _>(&query)
                 );
-                query.load::<dbmodels::Artifact>(&mut conn)?
+                query.load::<dbmodels::Artifact>(&mut pool.get().unwrap())?
             }
             (Some(name), None) => {
                 let query = sel.filter(crate::schema::packages::name.eq(name));
@@ -101,7 +99,7 @@ async fn new_release(
                     "Query: {:?}",
                     diesel::debug_query::<diesel::pg::Pg, _>(&query)
                 );
-                query.load::<dbmodels::Artifact>(&mut conn)?
+                query.load::<dbmodels::Artifact>(&mut pool.get().unwrap())?
             }
             (None, Some(vers)) => {
                 let query = sel.filter(crate::schema::packages::version.like(vers));
@@ -109,14 +107,14 @@ async fn new_release(
                     "Query: {:?}",
                     diesel::debug_query::<diesel::pg::Pg, _>(&query)
                 );
-                query.load::<dbmodels::Artifact>(&mut conn)?
+                query.load::<dbmodels::Artifact>(&mut pool.get().unwrap())?
             }
             (None, None) => {
                 debug!(
                     "Query: {:?}",
                     diesel::debug_query::<diesel::pg::Pg, _>(&sel)
                 );
-                sel.load::<dbmodels::Artifact>(&mut conn)?
+                sel.load::<dbmodels::Artifact>(&mut pool.get().unwrap())?
             }
         }
     };
@@ -138,13 +136,11 @@ async fn new_release(
 
     let staging_base: &PathBuf = &config.staging_directory().join(submit.uuid.to_string());
 
-    let release_store = crate::db::models::ReleaseStore::create(&mut conn, release_store_name)?;
+    let release_store = crate::db::models::ReleaseStore::create(&mut pool.get().unwrap(), release_store_name)?;
     let do_update = matches.get_flag("package_do_update");
     let interactive = !matches.get_flag("noninteractive");
 
     let now = chrono::offset::Local::now().naive_local();
-    // TODO: Find a proper solution to resolve: `error: captured variable cannot escape `FnMut` closure body`:
-    let conn = Arc::new(Mutex::new(conn));
     let any_err = arts.into_iter()
         .map(|art| async {
             let art = art; // ensure it is moved
@@ -186,7 +182,7 @@ async fn new_release(
                     .map_err(Error::from)
                     .and_then(|_| {
                         debug!("Updating {:?} to set released = true", art);
-                        let rel = crate::db::models::Release::create(&mut conn.clone().lock().unwrap(), &art, &now, &release_store)?;
+                        let rel = crate::db::models::Release::create(&mut pool.get().unwrap(), &art, &now, &release_store)?;
                         debug!("Release object = {:?}", rel);
                         Ok(dest_path)
                     })

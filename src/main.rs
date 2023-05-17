@@ -168,7 +168,7 @@ async fn main() -> Result<()> {
         Some(("generate-completions", matches)) => generate_completions(matches),
         Some(("db", matches)) => crate::commands::db(db_connection_config, &config, matches)?,
         Some(("build", matches)) => {
-            let conn = db_connection_config.establish_connection()?;
+            let pool = db_connection_config.establish_pool()?;
 
             let repo = load_repo()?;
 
@@ -176,7 +176,7 @@ async fn main() -> Result<()> {
                 repo_path,
                 matches,
                 progressbars,
-                conn,
+                pool,
                 &config,
                 repo,
                 repo_path,
@@ -214,8 +214,8 @@ async fn main() -> Result<()> {
 
         Some(("find-artifact", matches)) => {
             let repo = load_repo()?;
-            let conn = db_connection_config.establish_connection()?;
-            crate::commands::find_artifact(matches, &config, progressbars, repo, conn)
+            let pool = db_connection_config.establish_pool()?;
+            crate::commands::find_artifact(matches, &config, progressbars, repo, pool)
                 .await
                 .context("find-artifact command failed")?
         }
@@ -256,8 +256,8 @@ async fn main() -> Result<()> {
 
         Some(("metrics", _)) => {
             let repo = load_repo()?;
-            let conn = db_connection_config.establish_connection()?;
-            crate::commands::metrics(repo_path, &config, repo, conn)
+            let pool = db_connection_config.establish_pool()?;
+            crate::commands::metrics(repo_path, &config, repo, pool)
                 .await
                 .context("metrics command failed")?
         }

@@ -37,7 +37,7 @@ config         = { version = "0.11", default-features = false, features = [ "tom
 csv            = "1"
 daggy          = { version = "0.8", features = [ "serde" ] }
 dialoguer      = "0.10"
-diesel         = { version = "2", features = ["postgres", "chrono", "uuid", "serde_json"] }
+diesel         = { version = "2", features = ["postgres", "chrono", "uuid", "serde_json", "r2d2"] }
 diesel_migrations = "2"
 filters        = "0.4"
 futures        = "0.3"

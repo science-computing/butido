@@ -13,6 +13,8 @@ use anyhow::Result;
 use clap::ArgMatches;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::Pool;
 use getset::Getters;
 use tracing::debug;
 
@@ -76,9 +78,8 @@ impl<'a> DbConnectionConfig<'a> {
         })
     }
 
-    pub fn establish_connection(self) -> Result<PgConnection> {
-        debug!("Trying to connect to database: {:?}", self);
-        let database_uri: String = format!(
+    fn get_database_uri(self) -> String {
+        format!(
             "postgres://{user}:{password}@{host}:{port}/{name}?connect_timeout={timeout}",
             host = self.database_host,
             port = self.database_port,
@@ -86,8 +87,21 @@ impl<'a> DbConnectionConfig<'a> {
             password = self.database_password,
             name = self.database_name,
             timeout = self.database_connection_timeout,
-        );
-        PgConnection::establish(&database_uri).map_err(Error::from)
+        )
+    }
+
+    pub fn establish_connection(self) -> Result<PgConnection> {
+        debug!("Trying to connect to database: {:?}", self);
+        PgConnection::establish(&self.get_database_uri()).map_err(Error::from)
+    }
+
+    pub fn establish_pool(self) -> Result<Pool<ConnectionManager<PgConnection>>> {
+        debug!("Trying to create a connection pool for database: {:?}", self);
+        let manager = ConnectionManager::<PgConnection>::new(self.get_database_uri());
+        Pool::builder()
+            .min_idle(Some(1))
+            .build(manager)
+            .map_err(Error::from)
     }
 
 }
