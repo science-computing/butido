@@ -64,12 +64,13 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
             let bar_release_loading = progressbars.bar()?;
 
             let p = config.releases_directory().join(storename);
-            debug!("Loading release directory: {}", p.display());
-            let r = ReleaseStore::load(StoreRoot::new(p)?, &bar_release_loading);
+            let p_str = p.to_string_lossy();
+            debug!("Loading release directory: {}", p_str);
+            let r = ReleaseStore::load(StoreRoot::new(p.clone())?, &bar_release_loading);
             if r.is_ok() {
-                bar_release_loading.finish_with_message("Loaded releases successfully");
+                bar_release_loading.finish_with_message(format!("Loaded releases in {p_str} successfully"));
             } else {
-                bar_release_loading.finish_with_message("Failed to load releases");
+                bar_release_loading.finish_with_message(format!("Failed to load releases in {p_str}"));
             }
 
             r.map(Arc::new)

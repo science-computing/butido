@@ -31,9 +31,20 @@ impl StoreRoot {
         if root.is_absolute() {
             if root.is_dir() {
                 Ok(StoreRoot(root))
+            } else if root.parent().map(Path::is_dir).unwrap_or(false) {
+                tracing::info!(
+                    "Creating a missing release store directory: {}",
+                    root.display()
+                );
+                std::fs::create_dir(&root)
+                    .with_context(|| anyhow!(
+                        "Couldn't automatically create the following release store directory: {}",
+                        root.display()
+                    ))?;
+                Ok(StoreRoot(root))
             } else {
                 Err(anyhow!(
-                    "StoreRoot path does not point to directory: {}",
+                    "The following StoreRoot path does not point to a directory: {}",
                     root.display()
                 ))
             }
