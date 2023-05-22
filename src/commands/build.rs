@@ -121,9 +121,9 @@ pub async fn build(
     {
         // Because we're loading always sequencially, to have a bit more spread over the endpoints,
         // shuffle the endpoints here. Not a perfect solution, but a working one.
-        use rand::Rng;
+        use rand::seq::SliceRandom;
         let mut rng = rand::thread_rng();
-        rng.shuffle(&mut endpoint_configurations);
+        endpoint_configurations.shuffle(&mut rng);
     }
     info!("Endpoint config build");
 

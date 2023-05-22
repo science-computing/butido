@@ -78,16 +78,7 @@ uuid           = { version = "1", features = ["serde", "v4"] }
 walkdir        = "2"
 which          = "4"
 xdg            = "2"
-
-# Hard-code rand to 0.4.3:
-# - rand 0.4.5 depends on fuchsia-cprng which has an unclear license
-# - rand 0.4.4 is yanked
-# - rand 0.4.3 does not contain this dependency
-#
-# TODO: Drop or update the direct dependency on rand because of this licensing issue.
-# Upstream issue: https://github.com/rust-random/rand/issues/1071
-rand = "=0.4.3"
-
+rand = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
