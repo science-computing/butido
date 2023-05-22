@@ -57,7 +57,6 @@ use anyhow::Result;
 use clap::ArgMatches;
 use logcrate::debug;
 use logcrate::error;
-use rand as _; // Required to make lints happy
 use aquamarine as _; // doc-helper crate
 
 mod cli;
