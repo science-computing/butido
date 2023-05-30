@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.64.0 # MSRV
+          - 1.65.0 # MSRV
           - stable
           - beta
 
@@ -36,7 +36,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.64.0 # MSRV
+          - 1.65.0 # MSRV
           - stable
           - beta
     steps:
@@ -85,7 +85,7 @@ jobs:
           - beta
         optional: [true]
         include:
-          - rust: 1.64.0 # MSRV
+          - rust: 1.65.0 # MSRV
             optional: false
     steps:
       - uses: actions/checkout@v3.5.2
