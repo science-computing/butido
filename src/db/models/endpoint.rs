@@ -24,33 +24,33 @@ pub struct Endpoint {
 }
 
 #[derive(Insertable)]
-#[table_name = "endpoints"]
+#[diesel(table_name = endpoints)]
 struct NewEndpoint<'a> {
     pub name: &'a str,
 }
 
 impl Endpoint {
-    pub fn create_or_fetch(database_connection: &PgConnection, ep_name: &EndpointName) -> Result<Endpoint> {
+    pub fn create_or_fetch(database_connection: &mut PgConnection, ep_name: &EndpointName) -> Result<Endpoint> {
         let new_ep = NewEndpoint { name: ep_name.as_ref() };
 
-        database_connection.transaction::<_, Error, _>(|| {
+        database_connection.transaction::<_, Error, _>(|conn| {
             diesel::insert_into(endpoints::table)
                 .values(&new_ep)
                 .on_conflict_do_nothing()
-                .execute(database_connection)?;
+                .execute(conn)?;
 
             dsl::endpoints
                 .filter(name.eq(ep_name.as_ref()))
-                .first::<Endpoint>(database_connection)
+                .first::<Endpoint>(conn)
                 .map_err(Error::from)
         })
     }
 
-    pub fn fetch_for_job(database_connection: &PgConnection, j: &crate::db::models::Job) -> Result<Option<Endpoint>> {
+    pub fn fetch_for_job(database_connection: &mut PgConnection, j: &crate::db::models::Job) -> Result<Option<Endpoint>> {
         Self::fetch_by_id(database_connection, j.endpoint_id)
     }
 
-    pub fn fetch_by_id(database_connection: &PgConnection, eid: i32) -> Result<Option<Endpoint>> {
+    pub fn fetch_by_id(database_connection: &mut PgConnection, eid: i32) -> Result<Option<Endpoint>> {
         match dsl::endpoints.filter(id.eq(eid)).first::<Endpoint>(database_connection) {
             Err(diesel::result::Error::NotFound) => Ok(None),
             Err(e) => Err(Error::from(e)),

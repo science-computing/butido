@@ -20,33 +20,33 @@ use crate::schema::release_stores;
 use crate::schema;
 
 #[derive(Debug, Identifiable, Queryable)]
-#[table_name = "release_stores"]
+#[diesel(table_name = release_stores)]
 pub struct ReleaseStore {
     pub id: i32,
     pub store_name: String,
 }
 
 #[derive(Insertable)]
-#[table_name = "release_stores"]
+#[diesel(table_name = release_stores)]
 struct NewReleaseStore<'a> {
     pub store_name : &'a str,
 }
 
 impl ReleaseStore {
-    pub fn create(database_connection: &PgConnection, name: &str) -> Result<ReleaseStore> {
+    pub fn create(database_connection: &mut PgConnection, name: &str) -> Result<ReleaseStore> {
         let new_relstore = NewReleaseStore {
             store_name: name,
         };
 
-        database_connection.transaction::<_, Error, _>(|| {
+        database_connection.transaction::<_, Error, _>(|conn| {
             diesel::insert_into(schema::release_stores::table)
                 .values(&new_relstore)
                 .on_conflict_do_nothing()
-                .execute(database_connection)?;
+                .execute(conn)?;
 
             schema::release_stores::table
                 .filter(schema::release_stores::store_name.eq(name))
-                .first::<ReleaseStore>(database_connection)
+                .first::<ReleaseStore>(conn)
                 .map_err(Error::from)
         })
     }

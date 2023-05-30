@@ -25,7 +25,7 @@ use crate::schema::artifacts;
 use crate::schema::artifacts::*;
 
 #[derive(Debug, Identifiable, Queryable, Associations)]
-#[belongs_to(Job)]
+#[diesel(belongs_to(Job))]
 pub struct Artifact {
     pub id: i32,
     pub path: String,
@@ -33,7 +33,7 @@ pub struct Artifact {
 }
 
 #[derive(Insertable)]
-#[table_name = "artifacts"]
+#[diesel(table_name = artifacts)]
 struct NewArtifact<'a> {
     pub path: &'a str,
     pub job_id: i32,
@@ -46,7 +46,7 @@ impl Artifact {
 
     pub fn released(
         self,
-        database_connection: &PgConnection,
+        database_connection: &mut PgConnection,
         release_date: &NaiveDateTime,
         release_store_name: &str,
     ) -> Result<crate::db::models::Release> {
@@ -54,7 +54,7 @@ impl Artifact {
         crate::db::models::Release::create(database_connection, &self, release_date, &rs)
     }
 
-    pub fn get_release(&self, database_connection: &PgConnection) -> Result<Option<Release>> {
+    pub fn get_release(&self, database_connection: &mut PgConnection) -> Result<Option<Release>> {
         use crate::schema;
 
         schema::artifacts::table
@@ -67,7 +67,7 @@ impl Artifact {
     }
 
     pub fn create(
-        database_connection: &PgConnection,
+        database_connection: &mut PgConnection,
         art_path: &ArtifactPath,
         job: &Job,
     ) -> Result<Artifact> {
@@ -80,14 +80,14 @@ impl Artifact {
             job_id: job.id,
         };
 
-        database_connection.transaction::<_, Error, _>(|| {
+        database_connection.transaction::<_, Error, _>(|conn| {
             diesel::insert_into(artifacts::table)
                 .values(&new_art)
-                .execute(database_connection)?;
+                .execute(conn)?;
 
             dsl::artifacts
                 .filter(path.eq(path_str).and(job_id.eq(job.id)))
-                .first::<Artifact>(database_connection)
+                .first::<Artifact>(conn)
                 .map_err(Error::from)
         })
     }

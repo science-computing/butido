@@ -14,12 +14,15 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::Error;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use diesel::PgConnection;
+use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::Pool;
 use git2::Repository;
 use indicatif::ProgressBar;
 use itertools::Itertools;
@@ -163,7 +166,7 @@ pub struct Orchestrator<'a> {
     jobdag: Dag,
     config: &'a Configuration,
     repository: Repository,
-    database: Arc<PgConnection>,
+    database: Pool<ConnectionManager<PgConnection>>,
 }
 
 #[derive(TypedBuilder)]
@@ -174,7 +177,7 @@ pub struct OrchestratorSetup<'a> {
     release_stores: Vec<Arc<ReleaseStore>>,
     source_cache: SourceCache,
     jobdag: Dag,
-    database: Arc<PgConnection>,
+    database: Pool<ConnectionManager<PgConnection>>,
     submit: dbmodels::Submit,
     log_dir: Option<PathBuf>,
     config: &'a Configuration,
@@ -454,7 +457,7 @@ struct TaskPreparation<'a> {
     scheduler: &'a EndpointScheduler,
     staging_store: Arc<RwLock<StagingStore>>,
     release_stores: Vec<Arc<ReleaseStore>>,
-    database: Arc<PgConnection>,
+    database: Pool<ConnectionManager<PgConnection>>,
 }
 
 /// Helper type for executing one job task
@@ -472,7 +475,7 @@ struct JobTask<'a> {
     scheduler: &'a EndpointScheduler,
     staging_store: Arc<RwLock<StagingStore>>,
     release_stores: Vec<Arc<ReleaseStore>>,
-    database: Arc<PgConnection>,
+    database: Pool<ConnectionManager<PgConnection>>,
 
     /// Channel where the dependencies arrive
     receiver: Receiver<JobResult>,
@@ -637,7 +640,7 @@ impl<'a> JobTask<'a> {
                 .collect::<Vec<_>>();
 
             let replacement_artifacts = crate::db::FindArtifacts::builder()
-                .database_connection(self.database.clone())
+                .database_pool(self.database.clone())
                 .config(self.config)
                 .package(self.jobdef.job.package())
                 .release_stores(&self.release_stores)

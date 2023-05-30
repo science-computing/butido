@@ -8,7 +8,7 @@ authors = [
   "Michael Weiss <michael.weiss@atos.net>", # @primeos-work
 ]
 edition = "2021"
-rust-version = "1.64.0" # MSRV
+rust-version = "1.65.0" # MSRV
 license = "EPL-2.0"
 
 description = "Linux package tool utilizing Docker, PostgreSQL, and TOML"
@@ -37,8 +37,8 @@ config         = { version = "0.11", default-features = false, features = [ "tom
 csv            = "1"
 daggy          = { version = "0.8", features = [ "serde" ] }
 dialoguer      = "0.10"
-diesel         = { version = "1", features = ["postgres", "chrono", "uuid", "serde_json"] }
-diesel_migrations = "1"
+diesel         = { version = "2", features = ["postgres", "chrono", "uuid", "serde_json", "r2d2"] }
+diesel_migrations = "2"
 filters        = "0.4"
 futures        = "0.3"
 getset         = "0.1"
@@ -74,27 +74,11 @@ tokio-stream   = "0.1"
 typed-builder  = "0.14"
 unindent       = "0.2"
 url            = { version = "2", features = ["serde"] }
-uuid           = { version = "0.6", features = ["serde", "v4"] }
+uuid           = { version = "1", features = ["serde", "v4"] }
 walkdir        = "2"
 which          = "4"
 xdg            = "2"
-
-# Hard-code rand to 0.4.3
-#
-# Reason for this is this dependency chain:
-# diesel -> uuid (0.6) -> rand (0.4)
-# but rand 0.4.5 depends on fuchsia-cprng which has an unclear license
-# rand 0.4.4 is yanked, rand 0.4.3 does not contain this dependency.
-#
-# We do not explicitely need this dependency, we just want to force cargo not to
-# link against rand 0.4.5 because of this licensing issue.
-#
-# The proper solution for this would be to update "uuid" in diesel or
-# to update "rand" in uuid 0.6.
-#
-# Upstream issue: https://github.com/rust-random/rand/issues/1071
-rand = "=0.4.3"
-
+rand = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 

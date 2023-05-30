@@ -22,11 +22,11 @@ use crate::schema::jobs::*;
 use crate::util::docker::ContainerHash;
 
 #[derive(Debug, Eq, PartialEq, Identifiable, Queryable, Associations)]
-#[belongs_to(Submit)]
-#[belongs_to(Endpoint)]
-#[belongs_to(Package)]
-#[belongs_to(Image)]
-#[table_name = "jobs"]
+#[diesel(belongs_to(Submit))]
+#[diesel(belongs_to(Endpoint))]
+#[diesel(belongs_to(Package))]
+#[diesel(belongs_to(Image))]
+#[diesel(table_name = jobs)]
 pub struct Job {
     pub id: i32,
     pub submit_id: i32,
@@ -40,7 +40,7 @@ pub struct Job {
 }
 
 #[derive(Debug, Insertable)]
-#[table_name = "jobs"]
+#[diesel(table_name = jobs)]
 struct NewJob<'a> {
     pub submit_id: i32,
     pub endpoint_id: i32,
@@ -55,7 +55,7 @@ struct NewJob<'a> {
 impl Job {
     #[allow(clippy::too_many_arguments)]
     pub fn create(
-        database_connection: &PgConnection,
+        database_connection: &mut PgConnection,
         job_uuid: &::uuid::Uuid,
         submit: &Submit,
         endpoint: &Endpoint,
@@ -83,20 +83,20 @@ impl Job {
 
         trace!("Query = {}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
 
-        database_connection.transaction::<_, Error, _>(|| {
+        database_connection.transaction::<_, Error, _>(|conn| {
             query
-                .execute(database_connection)
+                .execute(conn)
                 .context("Creating job in database")?;
 
             dsl::jobs
                 .filter(uuid.eq(job_uuid))
-                .first::<Job>(database_connection)
+                .first::<Job>(conn)
                 .with_context(|| format!("Finding created job in database: {job_uuid}"))
                 .map_err(Error::from)
         })
     }
 
-    pub fn env(&self, database_connection: &PgConnection) -> Result<Vec<crate::db::models::EnvVar>> {
+    pub fn env(&self, database_connection: &mut PgConnection) -> Result<Vec<crate::db::models::EnvVar>> {
         use crate::schema;
 
         schema::job_envs::table

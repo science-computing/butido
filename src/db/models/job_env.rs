@@ -17,9 +17,9 @@ use crate::db::models::Job;
 use crate::schema::job_envs;
 
 #[derive(Identifiable, Queryable, Associations)]
-#[belongs_to(Job)]
-#[belongs_to(EnvVar, foreign_key = "env_id")]
-#[table_name = "job_envs"]
+#[diesel(belongs_to(Job))]
+#[diesel(belongs_to(EnvVar, foreign_key = env_id))]
+#[diesel(table_name = job_envs)]
 pub struct JobEnv {
     pub id: i32,
     pub job_id: i32,
@@ -27,14 +27,14 @@ pub struct JobEnv {
 }
 
 #[derive(Insertable)]
-#[table_name = "job_envs"]
+#[diesel(table_name = job_envs)]
 struct NewJobEnv {
     pub job_id: i32,
     pub env_id: i32,
 }
 
 impl JobEnv {
-    pub fn create(database_connection: &PgConnection, job: &Job, env: &EnvVar) -> Result<()> {
+    pub fn create(database_connection: &mut PgConnection, job: &Job, env: &EnvVar) -> Result<()> {
         let new_jobenv = NewJobEnv {
             job_id: job.id,
             env_id: env.id,

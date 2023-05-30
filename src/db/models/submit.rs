@@ -22,9 +22,9 @@ use crate::schema::submits;
 use crate::schema::submits::*;
 
 #[derive(Clone, Debug, Eq, PartialEq, Identifiable, Queryable, Associations)]
-#[belongs_to(Package, foreign_key = "requested_package_id")]
-#[belongs_to(Image, foreign_key = "requested_image_id")]
-#[table_name = "submits"]
+#[diesel(belongs_to(Package, foreign_key = requested_package_id))]
+#[diesel(belongs_to(Image, foreign_key = requested_image_id))]
+#[diesel(table_name = submits)]
 pub struct Submit {
     pub id: i32,
     pub uuid: ::uuid::Uuid,
@@ -35,7 +35,7 @@ pub struct Submit {
 }
 
 #[derive(Insertable)]
-#[table_name = "submits"]
+#[diesel(table_name = submits)]
 struct NewSubmit<'a> {
     pub uuid: &'a ::uuid::Uuid,
     pub submit_time: &'a NaiveDateTime,
@@ -46,7 +46,7 @@ struct NewSubmit<'a> {
 
 impl Submit {
     pub fn create(
-        database_connection: &PgConnection,
+        database_connection: &mut PgConnection,
         submit_datetime: &NaiveDateTime,
         submit_id: &::uuid::Uuid,
         requested_image: &Image,
@@ -61,21 +61,21 @@ impl Submit {
             repo_hash_id: repo_hash.id,
         };
 
-        database_connection.transaction::<_, Error, _>(|| {
+        database_connection.transaction::<_, Error, _>(|conn| {
             diesel::insert_into(submits::table)
                 .values(&new_submit)
 
                 // required because if we re-use the staging store, we do not create a new UUID but re-use the old one
                 .on_conflict_do_nothing()
 
-                .execute(database_connection)
+                .execute(conn)
                 .context("Inserting new submit into submits table")?;
 
-            Self::with_id(database_connection, submit_id)
+            Self::with_id(conn, submit_id)
         })
     }
 
-    pub fn with_id(database_connection: &PgConnection, submit_id: &::uuid::Uuid) -> Result<Submit> {
+    pub fn with_id(database_connection: &mut PgConnection, submit_id: &::uuid::Uuid) -> Result<Submit> {
         dsl::submits
             .filter(submits::uuid.eq(submit_id))
             .first::<Submit>(database_connection)

@@ -18,6 +18,8 @@ use anyhow::Result;
 use diesel::PgConnection;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
+use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::Pool;
 use walkdir::WalkDir;
 
 use crate::config::Configuration;
@@ -27,7 +29,7 @@ pub async fn metrics(
     repo_path: &Path,
     config: &Configuration,
     repo: Repository,
-    conn: PgConnection,
+    pool: Pool<ConnectionManager<PgConnection>>,
 ) -> Result<()> {
     let mut out = std::io::stdout();
 
@@ -44,16 +46,16 @@ pub async fn metrics(
         })
         .count();
 
-    let n_artifacts     = async { crate::schema::artifacts::table.count().get_result::<i64>(&conn) };
-    let n_endpoints     = async { crate::schema::endpoints::table.count().get_result::<i64>(&conn) };
-    let n_envvars       = async { crate::schema::envvars::table.count().get_result::<i64>(&conn) };
-    let n_githashes     = async { crate::schema::githashes::table.count().get_result::<i64>(&conn) };
-    let n_images        = async { crate::schema::images::table.count().get_result::<i64>(&conn) };
-    let n_jobs          = async { crate::schema::jobs::table.count().get_result::<i64>(&conn) };
-    let n_packages      = async { crate::schema::packages::table.count().get_result::<i64>(&conn) };
-    let n_releasestores = async { crate::schema::release_stores::table.count().get_result::<i64>(&conn) };
-    let n_releases      = async { crate::schema::releases::table.count().get_result::<i64>(&conn) };
-    let n_submits       = async { crate::schema::submits::table.count().get_result::<i64>(&conn) };
+    let n_artifacts     = async { crate::schema::artifacts::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
+    let n_endpoints     = async { crate::schema::endpoints::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
+    let n_envvars       = async { crate::schema::envvars::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
+    let n_githashes     = async { crate::schema::githashes::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
+    let n_images        = async { crate::schema::images::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
+    let n_jobs          = async { crate::schema::jobs::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
+    let n_packages      = async { crate::schema::packages::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
+    let n_releasestores = async { crate::schema::release_stores::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
+    let n_releases      = async { crate::schema::releases::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
+    let n_submits       = async { crate::schema::submits::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
 
     let (
         n_artifacts,
