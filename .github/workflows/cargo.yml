@@ -1,6 +1,6 @@
 on: [push, pull_request, merge_group]
 
-name: CI
+name: Cargo
 
 jobs:
   check:
@@ -31,7 +31,7 @@ jobs:
 
   test:
     needs: [check]
-    name: Test Suite
+    name: Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -55,8 +55,8 @@ jobs:
       - name: Run cargo test
         run: cargo test
 
-  cargo-deny:
-    name: cargo-deny
+  deny:
+    name: Deny
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -73,9 +73,9 @@ jobs:
         with:
           command: check ${{ matrix.checks }}
 
-  lint:
+  clippy:
     needs: [check]
-    name: Lint
+    name: Clippy
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.optional }}
     strategy:
@@ -112,10 +112,10 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-latest
     needs:
-      - cargo-deny
       - check
       - test
-      - lint
+      - deny
+      - clippy
     steps:
       - run: |
           echo "Error: A required CI check failed!" >&2
