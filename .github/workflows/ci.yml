@@ -99,12 +99,17 @@ jobs:
       - name: cargo clippy
         run: cargo clippy --all-targets -- -D warnings
 
-  # We need some "accummulation" job here because bors fails (timeouts) to
-  # listen on matrix builds.
-  # Hence, we have some kind of dummy here that bors can listen on
-  ci-success:
-    name: CI
-    if: ${{ success() }}
+  # This "accumulation" job is used as the required CI check for PRs.
+  # We could require multiple jobs but the MSRV is subject to change and makes
+  # it into the job names when using the matrix strategy (e.g., "Check (1.65.0)").
+  # This approach seems to be the easiest solution for now.
+  # Ideally, it would be enough to set "needs" accordingly but GitHub will
+  # accept the "skipped" status as a "success" when merging (which is very
+  # bad!). Therefore, we need to always run this job and have to manually check
+  # if all required jobs did return "success".
+  result:
+    name: Result
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     needs:
       - cargo-deny
@@ -112,5 +117,12 @@ jobs:
       - test
       - lint
     steps:
-      - name: CI succeeded
-        run: exit 0
+      - run: |
+          echo "Error: A required CI check failed!" >&2
+          exit 1
+        if: >-
+          ${{
+            contains(needs.*.result, 'failure') ||
+            contains(needs.*.result, 'cancelled') ||
+            contains(needs.*.result, 'skipped')
+          }}
