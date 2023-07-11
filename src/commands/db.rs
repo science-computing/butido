@@ -16,10 +16,10 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use clap::ArgMatches;
 use colored::Colorize;
 use diesel::BelongingToDsl;
@@ -191,11 +191,7 @@ fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<(
             let rel = rel
                 .map(|r| r.release_date.to_string())
                 .unwrap_or_else(|| String::from("no"));
-            vec![
-                artifact.path,
-                rel,
-                job.uuid.to_string(),
-            ]
+            vec![artifact.path, rel, job.uuid.to_string()]
         })
         .collect::<Vec<_>>();
 
@@ -255,7 +251,8 @@ fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 /// Implementation of the "db submit" subcommand
 fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let mut conn = conn_cfg.establish_connection()?;
-    let submit_id = matches.get_one::<String>("submit")
+    let submit_id = matches
+        .get_one::<String>("submit")
         .map(|s| uuid::Uuid::from_str(s.as_ref()))
         .transpose()
         .context("Parsing submit UUID")?
@@ -294,7 +291,9 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
     let out = std::io::stdout();
     let mut outlock = out.lock();
 
-    indoc::writedoc!(outlock, r#"
+    indoc::writedoc!(
+        outlock,
+        r#"
             Submit   {submit_id}
             Date:    {submit_dt}
             Commit:  {submit_commit}
@@ -313,8 +312,20 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
         n_jobs_err = jobs_err.to_string().red(),
     )?;
 
-    let header = crate::commands::util::mk_header(["Job", "Success", "Package", "Version", "Container", "Endpoint", "Image"].to_vec());
-    let data = jobs.iter()
+    let header = crate::commands::util::mk_header(
+        [
+            "Job",
+            "Success",
+            "Package",
+            "Version",
+            "Container",
+            "Endpoint",
+            "Image",
+        ]
+        .to_vec(),
+    );
+    let data = jobs
+        .iter()
         .map(|job| {
             let image = models::Image::fetch_for_job(&mut conn, job)?
                 .ok_or_else(|| anyhow!("Image for job {} not found", job.uuid))?;
@@ -344,13 +355,23 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 /// Implementation of the "db submits" subcommand
 fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let csv = matches.get_flag("csv");
-    let limit = matches.get_one::<String>("limit").map(|s| s.parse::<i64>()).transpose()?;
-    let hdrs = crate::commands::util::mk_header(vec!["Time", "UUID", "For Package", "For Package Version"]);
+    let limit = matches
+        .get_one::<String>("limit")
+        .map(|s| s.parse::<i64>())
+        .transpose()?;
+    let hdrs = crate::commands::util::mk_header(vec![
+        "Time",
+        "UUID",
+        "For Package",
+        "For Package Version",
+    ]);
     let mut conn = conn_cfg.establish_connection()?;
 
     let query = schema::submits::table
         .order_by(schema::submits::id.desc()) // required for the --limit implementation
-        .inner_join(schema::githashes::table.on(schema::submits::repo_hash_id.eq(schema::githashes::id)))
+        .inner_join(
+            schema::githashes::table.on(schema::submits::repo_hash_id.eq(schema::githashes::id)),
+        )
         .inner_join(schema::images::table)
         .into_boxed();
 
@@ -377,7 +398,9 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
         // Get all submits which included the package, but were not necessarily made _for_ the package
         let query = query
             .inner_join(schema::jobs::table)
-            .inner_join(schema::packages::table.on(schema::jobs::package_id.eq(schema::packages::id)))
+            .inner_join(
+                schema::packages::table.on(schema::jobs::package_id.eq(schema::packages::id)),
+            )
             .filter(schema::packages::name.eq(&pkgname));
 
         let query = if let Some(limit) = limit {
@@ -392,7 +415,8 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
         schema::submits::table
             .order_by(schema::submits::id.desc()) // required for the --limit implementation
             .inner_join({
-                schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
+                schema::packages::table
+                    .on(schema::submits::requested_package_id.eq(schema::packages::id))
             })
             .filter(schema::submits::id.eq_any(submit_ids))
             .select((schema::submits::all_columns, schema::packages::all_columns))
@@ -401,7 +425,8 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
         // Get all submits _for_ the package
         let query = query
             .inner_join({
-                schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
+                schema::packages::table
+                    .on(schema::submits::requested_package_id.eq(schema::packages::id))
             })
             .filter(schema::packages::dsl::name.eq(&pkgname));
 
@@ -415,14 +440,17 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
     } else if let Some(limit) = limit {
         query
             .inner_join({
-                schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
+                schema::packages::table
+                    .on(schema::submits::requested_package_id.eq(schema::packages::id))
             })
             .select((schema::submits::all_columns, schema::packages::all_columns))
             .limit(limit)
             .load::<(models::Submit, models::Package)>(&mut conn)?
     } else {
-        query.inner_join({
-                schema::packages::table.on(schema::submits::requested_package_id.eq(schema::packages::id))
+        query
+            .inner_join({
+                schema::packages::table
+                    .on(schema::submits::requested_package_id.eq(schema::packages::id))
             })
             .select((schema::submits::all_columns, schema::packages::all_columns))
             .load::<(models::Submit, models::Package)>(&mut conn)?
@@ -438,7 +466,11 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
         ]
     };
 
-    let data = submits.into_iter().rev().map(submit_to_vec).collect::<Vec<_>>();
+    let data = submits
+        .into_iter()
+        .rev()
+        .map(submit_to_vec)
+        .collect::<Vec<_>>();
 
     if data.is_empty() {
         info!("No submits in database");
@@ -450,17 +482,14 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
 }
 
 /// Implementation of the "db jobs" subcommand
-fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
+fn jobs(
+    conn_cfg: DbConnectionConfig<'_>,
+    config: &Configuration,
+    matches: &ArgMatches,
+) -> Result<()> {
     let csv = matches.get_flag("csv");
     let hdrs = crate::commands::util::mk_header(vec![
-        "Submit",
-        "Job",
-        "Time",
-        "Host",
-        "Ok?",
-        "Package",
-        "Version",
-        "Distro",
+        "Submit", "Job", "Time", "Host", "Ok?", "Package", "Version", "Distro",
     ]);
     let mut conn = conn_cfg.establish_connection()?;
     let older_than_filter = get_date_filter("older_than", matches)?;
@@ -473,7 +502,11 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
         .inner_join(schema::images::table)
         .into_boxed();
 
-    if let Some(submit_uuid) = matches.get_one::<String>("submit_uuid").map(|s| uuid::Uuid::parse_str(s.as_ref())).transpose()? {
+    if let Some(submit_uuid) = matches
+        .get_one::<String>("submit_uuid")
+        .map(|s| uuid::Uuid::parse_str(s.as_ref()))
+        .transpose()?
+    {
         sel = sel.filter(schema::submits::uuid.eq(submit_uuid))
     }
 
@@ -481,19 +514,27 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
     //
     // If we get a filter for environment on CLI, we fetch all job ids that are associated with the
     // passed environment variables and make `sel` filter for those.
-    if let Some((name, val)) = matches.get_one::<String>("env_filter").map(|s| crate::util::env::parse_to_env(s.as_ref())).transpose()? {
+    if let Some((name, val)) = matches
+        .get_one::<String>("env_filter")
+        .map(|s| crate::util::env::parse_to_env(s.as_ref()))
+        .transpose()?
+    {
         debug!("Filtering for ENV: {} = {}", name, val);
         let jids = schema::envvars::table
             .filter({
                 use crate::diesel::BoolExpressionMethods;
-                schema::envvars::dsl::name.eq(name.as_ref())
+                schema::envvars::dsl::name
+                    .eq(name.as_ref())
                     .and(schema::envvars::dsl::value.eq(val))
             })
             .inner_join(schema::job_envs::table)
             .select(schema::job_envs::job_id)
             .load::<i32>(&mut conn)?;
 
-        debug!("Filtering for these IDs (because of env filter): {:?}", jids);
+        debug!(
+            "Filtering for these IDs (because of env filter): {:?}",
+            jids
+        );
         sel = sel.filter(schema::jobs::dsl::id.eq_any(jids));
     }
 
@@ -505,7 +546,11 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
         sel = sel.filter(schema::submits::dsl::submit_time.gt(datetime))
     }
 
-    if let Some(limit) = matches.get_one::<String>("limit").map(|s| s.parse::<i64>()).transpose()? {
+    if let Some(limit) = matches
+        .get_one::<String>("limit")
+        .map(|s| s.parse::<i64>())
+        .transpose()?
+    {
         sel = sel.limit(limit)
     }
 
@@ -524,7 +569,13 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
 
     let data = sel
         .order_by(schema::jobs::id.desc()) // required for the --limit implementation
-        .load::<(models::Job, models::Submit, models::Endpoint, models::Package, models::Image)>(&mut conn)?
+        .load::<(
+            models::Job,
+            models::Submit,
+            models::Endpoint,
+            models::Package,
+            models::Image,
+        )>(&mut conn)?
         .into_iter()
         .rev() // required for the --limit implementation
         .map(|(job, submit, ep, package, image)| {
@@ -542,7 +593,10 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
                 success,
                 package.name,
                 package.version,
-                image_short_name_map.get(&image_name).unwrap_or(&image_name).to_string(),
+                image_short_name_map
+                    .get(&image_name)
+                    .unwrap_or(&image_name)
+                    .to_string(),
             ])
         })
         .collect::<Result<Vec<_>>>()?;
@@ -557,7 +611,11 @@ fn jobs(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgM
 }
 
 /// Implementation of the "db job" subcommand
-fn job(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
+fn job(
+    conn_cfg: DbConnectionConfig<'_>,
+    config: &Configuration,
+    matches: &ArgMatches,
+) -> Result<()> {
     let script_highlight = !matches.get_flag("no_script_highlight");
     let script_line_numbers = !matches.get_flag("no_script_line_numbers");
     let configured_theme = config.script_highlight_theme();
@@ -748,23 +806,33 @@ fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
         .map_err(Error::from)
         .and_then(|s| crate::log::ParsedLog::from_str(&s))?
         .into_iter()
-        .map(|line| line.display().and_then(|d| writeln!(lock, "{d}").map_err(Error::from)))
+        .map(|line| {
+            line.display()
+                .and_then(|d| writeln!(lock, "{d}").map_err(Error::from))
+        })
         .collect::<Result<Vec<()>>>()
         .map(|_| ())
 }
 
 /// Implementation of the "db releases" subcommand
-fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &ArgMatches) -> Result<()> {
+fn releases(
+    conn_cfg: DbConnectionConfig<'_>,
+    config: &Configuration,
+    matches: &ArgMatches,
+) -> Result<()> {
     let csv = matches.get_flag("csv");
     let mut conn = conn_cfg.establish_connection()?;
     let header = crate::commands::util::mk_header(["Package", "Version", "Date", "Path"].to_vec());
     let mut query = schema::jobs::table
         .inner_join(schema::packages::table)
         .inner_join(schema::artifacts::table)
-        .inner_join(schema::releases::table
-            .on(schema::releases::artifact_id.eq(schema::artifacts::id)))
-        .inner_join(schema::release_stores::table
-            .on(schema::release_stores::id.eq(schema::releases::release_store_id)))
+        .inner_join(
+            schema::releases::table.on(schema::releases::artifact_id.eq(schema::artifacts::id)),
+        )
+        .inner_join(
+            schema::release_stores::table
+                .on(schema::release_stores::id.eq(schema::releases::release_store_id)),
+        )
         .order_by(schema::packages::dsl::name.asc())
         .then_order_by(schema::packages::dsl::version.asc())
         .then_order_by(schema::releases::release_date.asc())
@@ -794,10 +862,18 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
             let rst = schema::release_stores::all_columns;
             (art, pac, rel, rst)
         })
-        .load::<(models::Artifact, models::Package, models::Release, models::ReleaseStore)>(&mut conn)?
+        .load::<(
+            models::Artifact,
+            models::Package,
+            models::Release,
+            models::ReleaseStore,
+        )>(&mut conn)?
         .into_iter()
         .filter_map(|(art, pack, rel, rstore)| {
-            let p = config.releases_directory().join(rstore.store_name).join(art.path);
+            let p = config
+                .releases_directory()
+                .join(rstore.store_name)
+                .join(art.path);
 
             if p.is_file() {
                 Some(vec![
@@ -807,7 +883,12 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
                     p.display().to_string(),
                 ])
             } else {
-                warn!("Released file for {} {} not found: {}", pack.name, pack.version, p.display());
+                warn!(
+                    "Released file for {} {} not found: {}",
+                    pack.name,
+                    pack.version,
+                    p.display()
+                );
                 None
             }
         })
@@ -822,4 +903,3 @@ fn releases(conn_cfg: DbConnectionConfig<'_>, config: &Configuration, matches: &
 fn is_job_successfull(job: &models::Job) -> Result<Option<bool>> {
     crate::log::ParsedLog::from_str(&job.log_text).map(|pl| pl.is_successfull().to_bool())
 }
-

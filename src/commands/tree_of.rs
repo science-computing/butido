@@ -17,19 +17,16 @@ use anyhow::Result;
 use clap::ArgMatches;
 use resiter::AndThen;
 
+use crate::package::condition::ConditionData;
 use crate::package::Dag;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
-use crate::package::condition::ConditionData;
 use crate::repository::Repository;
-use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
+use crate::util::EnvironmentVariableName;
 
 /// Implementation of the "tree_of" subcommand
-pub async fn tree_of(
-    matches: &ArgMatches,
-    repo: Repository,
-) -> Result<()> {
+pub async fn tree_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
     let pname = matches
         .get_one::<String>("package_name")
         .map(|s| s.to_owned())

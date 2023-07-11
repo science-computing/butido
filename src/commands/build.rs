@@ -22,36 +22,36 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use colored::Colorize;
+use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::Pool;
 use diesel::ExpressionMethods;
 use diesel::PgConnection;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
-use diesel::r2d2::ConnectionManager;
-use diesel::r2d2::Pool;
 use itertools::Itertools;
-use tracing::{debug, info, trace, warn};
 use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
+use tracing::{debug, info, trace, warn};
 use uuid::Uuid;
 
 use crate::config::*;
+use crate::filestore::path::StoreRoot;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
-use crate::filestore::path::StoreRoot;
 use crate::job::JobResource;
 use crate::log::LogItem;
 use crate::orchestrator::OrchestratorSetup;
+use crate::package::condition::ConditionData;
 use crate::package::Dag;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
 use crate::package::Shebang;
-use crate::package::condition::ConditionData;
 use crate::repository::Repository;
 use crate::schema;
 use crate::source::SourceCache;
-use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
+use crate::util::EnvironmentVariableName;
 
 /// Implementation of the "build" subcommand
 #[allow(clippy::too_many_arguments)]
@@ -91,9 +91,20 @@ pub async fn build(
             .any(|img| image_name == img.name)
     {
         return Err(anyhow!(
-            "Requested build image {} is not in the configured images", image_name
+            "Requested build image {} is not in the configured images",
+            image_name
         ))
-        .with_context(|| anyhow!("Available images: {}", config.docker().images().iter().map(|img| img.name.clone()).join(", ")))
+        .with_context(|| {
+            anyhow!(
+                "Available images: {}",
+                config
+                    .docker()
+                    .images()
+                    .iter()
+                    .map(|img| img.name.clone())
+                    .join(", ")
+            )
+        })
         .with_context(|| anyhow!("Image present verification failed"))
         .map_err(Error::from);
     }
@@ -111,7 +122,14 @@ pub async fn build(
             crate::endpoint::EndpointConfiguration::builder()
                 .endpoint_name(ep_name.clone())
                 .endpoint(ep_cfg.clone())
-                .required_images(config.docker().images().iter().map(|img| img.name.clone()).collect::<Vec<_>>())
+                .required_images(
+                    config
+                        .docker()
+                        .images()
+                        .iter()
+                        .map(|img| img.name.clone())
+                        .collect::<Vec<_>>(),
+                )
                 .required_docker_versions(config.docker().docker_versions().clone())
                 .required_docker_api_versions(config.docker().docker_api_versions().clone())
                 .build()
@@ -145,7 +163,10 @@ pub async fn build(
         .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
 
     let packages = if let Some(pvers) = pvers {
-        debug!("Searching for package with version: '{}' '{}'", pname, pvers);
+        debug!(
+            "Searching for package with version: '{}' '{}'",
+            pname, pvers
+        );
         repo.find(&pname, &pvers)
     } else {
         debug!("Searching for package by name: '{}'", pname);
@@ -176,9 +197,11 @@ pub async fn build(
             debug!("Loading release directory: {}", p_str);
             let r = ReleaseStore::load(StoreRoot::new(p.clone())?, &bar_release_loading);
             if r.is_ok() {
-                bar_release_loading.finish_with_message(format!("Loaded releases in {p_str} successfully"));
+                bar_release_loading
+                    .finish_with_message(format!("Loaded releases in {p_str} successfully"));
             } else {
-                bar_release_loading.finish_with_message(format!("Failed to load releases in {p_str}"));
+                bar_release_loading
+                    .finish_with_message(format!("Failed to load releases in {p_str}"));
             }
             r.map(Arc::new)
         })
@@ -187,13 +210,16 @@ pub async fn build(
     let (staging_store, staging_dir, submit_id) = {
         let bar_staging_loading = progressbars.bar()?;
 
-        let (submit_id, p) = if let Some(staging_dir) = matches.get_one::<String>("staging_dir").map(PathBuf::from) {
+        let (submit_id, p) = if let Some(staging_dir) =
+            matches.get_one::<String>("staging_dir").map(PathBuf::from)
+        {
             info!(
                 "Setting staging dir to {} for this run",
                 staging_dir.display()
             );
 
-            let uuid = staging_dir.file_name()
+            let uuid = staging_dir
+                .file_name()
                 .ok_or_else(|| anyhow!("Seems not to be a directory: {}", staging_dir.display()))?
                 .to_owned()
                 .into_string()
@@ -224,7 +250,9 @@ pub async fn build(
         } else {
             bar_staging_loading.finish_with_message("Failed to load staging");
         }
-        r.map(RwLock::new).map(Arc::new).map(|store| (store, p, submit_id))?
+        r.map(RwLock::new)
+            .map(Arc::new)
+            .map(|store| (store, p, submit_id))?
     };
 
     let dag = {
@@ -234,7 +262,12 @@ pub async fn build(
             env: &additional_env,
         };
 
-        let dag = Dag::for_root_package(package.clone(), &repo, Some(&bar_tree_building), &condition_data)?;
+        let dag = Dag::for_root_package(
+            package.clone(),
+            &repo,
+            Some(&bar_tree_building),
+            &condition_data,
+        )?;
         bar_tree_building.finish_with_message("Finished loading Dag");
         dag
     };
@@ -298,7 +331,8 @@ pub async fn build(
 
     trace!("Setting up database jobs for Package, GitHash, Image");
     let db_package = async { Package::create_or_fetch(&mut database_pool.get().unwrap(), package) };
-    let db_githash = async { GitHash::create_or_fetch(&mut database_pool.get().unwrap(), &hash_str) };
+    let db_githash =
+        async { GitHash::create_or_fetch(&mut database_pool.get().unwrap(), &hash_str) };
     let db_image = async { Image::create_or_fetch(&mut database_pool.get().unwrap(), &image_name) };
     let db_envs = async {
         additional_env
@@ -347,15 +381,19 @@ pub async fn build(
         writeln!(outlock, "Starting submit: {}", mkgreen(&submit_id))?;
         writeln!(outlock, "Started at:      {}", mkgreen(&now))?;
         writeln!(outlock, "On Image:        {}", mkgreen(&db_image.name))?;
-        writeln!(outlock, "For Package:     {p} {v}",
+        writeln!(
+            outlock,
+            "For Package:     {p} {v}",
             p = mkgreen(&db_package.name),
-            v = mkgreen(&db_package.version))?;
+            v = mkgreen(&db_package.version)
+        )?;
         writeln!(outlock, "On repo hash:    {}", mkgreen(&db_githash.hash))?;
     }
 
     trace!("Setting up job sets");
     let resources: Vec<JobResource> = additional_env.into_iter().map(JobResource::from).collect();
-    let jobdag = crate::job::Dag::from_package_dag(dag, shebang, image_name, phases.clone(), resources);
+    let jobdag =
+        crate::job::Dag::from_package_dag(dag, shebang, image_name, phases.clone(), resources);
     trace!("Setting up job sets finished successfully");
 
     trace!("Setting up Orchestrator");
@@ -408,7 +446,8 @@ pub async fn build(
         writeln!(
             outlock,
             "Last {} lines of Job {}",
-            number_log_lines, job_uuid.to_string().red()
+            number_log_lines,
+            job_uuid.to_string().red()
         )?;
         writeln!(
             outlock,
@@ -431,7 +470,6 @@ pub async fn build(
                 if let LogItem::State(_) = line_item {
                     error_catched = true;
                 }
-
 
                 line_item.display().map(|d| d.to_string())
             })

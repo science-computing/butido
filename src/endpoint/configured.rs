@@ -13,31 +13,31 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use futures::FutureExt;
 use getset::{CopyGetters, Getters};
-use tracing::{trace, debug};
 use result_inspect::ResultInspect;
 use shiplift::Container;
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;
-use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
+use tracing::{debug, trace};
 use typed_builder::TypedBuilder;
 
 use crate::config::EndpointName;
 use crate::endpoint::EndpointConfiguration;
+use crate::filestore::path::ArtifactPath;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
-use crate::filestore::path::ArtifactPath;
 use crate::job::JobResource;
 use crate::job::RunnableJob;
-use crate::log::LogItem;
 use crate::log::buffer_stream_to_line_stream;
+use crate::log::LogItem;
 use crate::package::Script;
 use crate::util::docker::ContainerHash;
 use crate::util::docker::ImageName;
@@ -71,13 +71,14 @@ impl Debug for Endpoint {
 
 impl Endpoint {
     pub(super) async fn setup(epc: EndpointConfiguration) -> Result<Self> {
-        let ep = Endpoint::setup_endpoint(epc.endpoint_name(), epc.endpoint()).with_context(|| {
-            anyhow!(
-                "Setting up endpoint: {} -> {}",
-                epc.endpoint_name(),
-                epc.endpoint().uri()
-            )
-        })?;
+        let ep =
+            Endpoint::setup_endpoint(epc.endpoint_name(), epc.endpoint()).with_context(|| {
+                anyhow!(
+                    "Setting up endpoint: {} -> {}",
+                    epc.endpoint_name(),
+                    epc.endpoint().uri()
+                )
+            })?;
 
         let versions_compat =
             Endpoint::check_version_compat(epc.required_docker_versions().as_ref(), &ep);
@@ -245,7 +246,12 @@ impl Endpoint {
     pub fn utilization(&self) -> f64 {
         let max_jobs = self.num_max_jobs() as f64;
         let run_jobs = self.running_jobs() as f64;
-        trace!("utilization of {}: 100.0 / {} * {}", self.name(), max_jobs, run_jobs);
+        trace!(
+            "utilization of {}: 100.0 / {} * {}",
+            self.name(),
+            max_jobs,
+            run_jobs
+        );
         100.0 / max_jobs * run_jobs
     }
 
@@ -267,17 +273,12 @@ impl Endpoint {
             .containers()
             .list({
                 &shiplift::builder::ContainerListOptions::builder()
-                .all()
-                .build()
+                    .all()
+                    .build()
             })
             .await
             .map_err(Error::from)
-            .map(|containers| {
-                containers
-                    .into_iter()
-                    .map(ContainerStat::from)
-                    .collect()
-            })
+            .map(|containers| containers.into_iter().map(ContainerStat::from).collect())
     }
 
     pub async fn has_container_with_id(&self, id: &str) -> Result<bool> {
@@ -401,7 +402,9 @@ pub struct EndpointHandle(Arc<Endpoint>);
 
 impl EndpointHandle {
     pub fn new(ep: Arc<Endpoint>) -> Self {
-        let res = ep.running_jobs.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let res = ep
+            .running_jobs
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         trace!("Endpoint {} has one job more: {}", ep.name(), res + 1);
         EndpointHandle(ep)
     }
@@ -409,7 +412,10 @@ impl EndpointHandle {
 
 impl Drop for EndpointHandle {
     fn drop(&mut self) {
-        let res = self.0.running_jobs.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        let res = self
+            .0
+            .running_jobs
+            .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
         trace!("Endpoint {} has one job less: {}", self.0.name(), res - 1);
     }
 }
@@ -421,7 +427,6 @@ impl std::ops::Deref for EndpointHandle {
         self.0.deref()
     }
 }
-
 
 #[derive(Getters)]
 pub struct PreparedContainer<'a> {
@@ -503,7 +508,8 @@ impl<'a> PreparedContainer<'a> {
 
         let builder_opts = {
             let mut builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref());
-            let container_name = format!("butido-{package}-{version}-{id}",
+            let container_name = format!(
+                "butido-{package}-{version}-{id}",
                 package = job.package().name().as_ref(),
                 version = job.package().version().as_ref(),
                 id = job.uuid()
@@ -527,7 +533,12 @@ impl<'a> PreparedContainer<'a> {
             .containers()
             .create(&builder_opts)
             .await
-            .with_context(|| anyhow!("Creating container with builder options = {:?}", builder_opts))
+            .with_context(|| {
+                anyhow!(
+                    "Creating container with builder options = {:?}",
+                    builder_opts
+                )
+            })
             .with_context(|| anyhow!("Creating container on '{}'", endpoint.name))?;
         trace!("Create info = {:?}", create_info);
         Ok(create_info)
@@ -572,16 +583,34 @@ impl<'a> PreparedContainer<'a> {
                     .with_context(|| anyhow!("Reading file {}", source_path.display()))?;
 
                 drop(entry);
-                container.copy_file_into(destination, &buf)
+                container
+                    .copy_file_into(destination, &buf)
                     .await
-                    .inspect(|_| trace!("Successfully copied source {} to container {}", source_path.display(), container.id()))
-                    .with_context(|| anyhow!("Failed to copy source {} to container {}", source_path.display(), container.id()))
+                    .inspect(|_| {
+                        trace!(
+                            "Successfully copied source {} to container {}",
+                            source_path.display(),
+                            container.id()
+                        )
+                    })
+                    .with_context(|| {
+                        anyhow!(
+                            "Failed to copy source {} to container {}",
+                            source_path.display(),
+                            container.id()
+                        )
+                    })
                     .map_err(Error::from)
             })
             .collect::<futures::stream::FuturesUnordered<_>>()
             .collect::<Result<()>>()
             .await
-            .inspect(|_| trace!("Successfully copied sources to container {}", container.id()))
+            .inspect(|_| {
+                trace!(
+                    "Successfully copied sources to container {}",
+                    container.id()
+                )
+            })
             .with_context(|| anyhow!("Copying sources to container {}", container.id()))
             .map_err(Error::from)
     }
@@ -592,13 +621,20 @@ impl<'a> PreparedContainer<'a> {
     ) -> Result<()> {
         use tokio::io::AsyncReadExt;
 
-        debug!("Copying patches to container: {:?}", job.package().patches());
+        debug!(
+            "Copying patches to container: {:?}",
+            job.package().patches()
+        );
         job.package()
             .patches()
             .iter()
             .map(|patch| async move {
                 let destination = PathBuf::from(crate::consts::PATCH_DIR_PATH).join(patch);
-                trace!("Copying patch {} to container at {}", patch.display(), destination.display());
+                trace!(
+                    "Copying patch {} to container at {}",
+                    patch.display(),
+                    destination.display()
+                );
 
                 let mut buf = vec![];
                 tokio::fs::OpenOptions::new()
@@ -614,11 +650,18 @@ impl<'a> PreparedContainer<'a> {
                     .await
                     .with_context(|| anyhow!("Reading file {}", patch.display()))?;
 
-                container.copy_file_into(destination, &buf)
+                container
+                    .copy_file_into(destination, &buf)
                     .await
                     .map_err(Error::from)
                     .inspect(|_| trace!("Copying patch {} successfull", patch.display()))
-                    .with_context(|| anyhow!("Copying patch {} to container {}", patch.display(), container.id()))
+                    .with_context(|| {
+                        anyhow!(
+                            "Copying patch {} to container {}",
+                            patch.display(),
+                            container.id()
+                        )
+                    })
                     .map_err(Error::from)
             })
             .collect::<futures::stream::FuturesUnordered<_>>()
@@ -636,7 +679,8 @@ impl<'a> PreparedContainer<'a> {
         staging_store: Arc<RwLock<StagingStore>>,
         release_stores: &[Arc<ReleaseStore>],
     ) -> Result<()> {
-        let stream = job.resources()
+        let stream = job
+            .resources()
             .iter()
             .filter_map(JobResource::artifact)
             .cloned()
@@ -650,7 +694,8 @@ impl<'a> PreparedContainer<'a> {
                             container.id()
                         )
                     })?;
-                let destination = PathBuf::from(crate::consts::INPUTS_DIR_PATH).join(artifact_file_name);
+                let destination =
+                    PathBuf::from(crate::consts::INPUTS_DIR_PATH).join(artifact_file_name);
                 trace!(
                     "Copying {} to container: {}:{}",
                     art.display(),
@@ -658,9 +703,9 @@ impl<'a> PreparedContainer<'a> {
                     destination.display()
                 );
                 let staging_read = staging_store.read().await;
-                let buf = match staging_read.root_path().join(&art)?  {
+                let buf = match staging_read.root_path().join(&art)? {
                     Some(fp) => fp,
-                    None     => {
+                    None => {
                         // TODO: Optimize.
                         // I know this is not nice, but it works for now.
                         let mut found = None;
@@ -670,16 +715,22 @@ impl<'a> PreparedContainer<'a> {
                                 Ok(Some(path)) => {
                                     found = Some(path);
                                     break;
-                                },
+                                }
                                 Err(e) => {
-                                    trace!("Failed to join '{:?}' + '{:?}'", release_store.root_path(), art.display());
-                                    return Err(e)
-                                },
-                                Ok(None) =>  continue,
+                                    trace!(
+                                        "Failed to join '{:?}' + '{:?}'",
+                                        release_store.root_path(),
+                                        art.display()
+                                    );
+                                    return Err(e);
+                                }
+                                Ok(None) => continue,
                             }
                         }
-                        found.ok_or_else(|| anyhow!("Not found in staging or release store: {:?}", art))?
-                    },
+                        found.ok_or_else(|| {
+                            anyhow!("Not found in staging or release store: {:?}", art)
+                        })?
+                    }
                 }
                 .read()
                 .await
@@ -716,7 +767,12 @@ impl<'a> PreparedContainer<'a> {
         stream
             .collect::<Result<Vec<_>>>()
             .await
-            .inspect(|_| trace!("Successfully copied all artifacts to the container {}", container.id()))
+            .inspect(|_| {
+                trace!(
+                    "Successfully copied all artifacts to the container {}",
+                    container.id()
+                )
+            })
             .with_context(|| anyhow!("Copying artifacts to container {}", container.id()))
             .map_err(Error::from)
             .map(|_| ())
@@ -781,8 +837,12 @@ impl<'a> StartedContainer<'a> {
             .build();
         trace!("Exec options = {:?}", exec_opts);
 
-        trace!("Moving logs to log sink for container {}", self.create_info.id);
-        let stream = self.endpoint
+        trace!(
+            "Moving logs to log sink for container {}",
+            self.create_info.id
+        );
+        let stream = self
+            .endpoint
             .docker
             .containers()
             .get(&self.create_info.id)
@@ -805,16 +865,14 @@ impl<'a> StartedContainer<'a> {
                         )
                     })
                     .and_then(|l| {
-                        crate::log::parser()
-                            .parse(l.as_bytes())
-                            .with_context(|| {
-                                anyhow!(
-                                    "Parsing log from {}:{}: {:?}",
-                                    self.endpoint.name,
-                                    self.create_info.id,
-                                    l
-                                )
-                            })
+                        crate::log::parser().parse(l.as_bytes()).with_context(|| {
+                            anyhow!(
+                                "Parsing log from {}:{}: {:?}",
+                                self.endpoint.name,
+                                self.create_info.id,
+                                l
+                            )
+                        })
                     })
                     .and_then(|item| {
                         let exited_successfully = match item {
@@ -884,10 +942,16 @@ impl<'a> ExecutedContainer<'a> {
         &self.script
     }
 
-    pub async fn finalize(self, staging_store: Arc<RwLock<StagingStore>>) -> Result<FinalizedContainer> {
+    pub async fn finalize(
+        self,
+        staging_store: Arc<RwLock<StagingStore>>,
+    ) -> Result<FinalizedContainer> {
         let (exit_info, artifacts) = match self.exit_info {
             Some((false, msg)) => {
-                let err = anyhow!("Error during container run: '{msg}'", msg = msg.as_deref().unwrap_or(""));
+                let err = anyhow!(
+                    "Error during container run: '{msg}'",
+                    msg = msg.as_deref().unwrap_or("")
+                );
 
                 // error because the container errored
                 (Err(err), vec![])
@@ -896,7 +960,11 @@ impl<'a> ExecutedContainer<'a> {
             Some((true, _)) | None => {
                 let container = self.endpoint.docker.containers().get(&self.create_info.id);
 
-                trace!("Fetching {} from container {}", crate::consts::OUTPUTS_DIR_PATH, self.create_info.id);
+                trace!(
+                    "Fetching {} from container {}",
+                    crate::consts::OUTPUTS_DIR_PATH,
+                    self.create_info.id
+                );
                 let tar_stream = container
                     .copy_from(&PathBuf::from(crate::consts::OUTPUTS_DIR_PATH))
                     .map(|item| {

@@ -51,12 +51,18 @@ impl Image {
         })
     }
 
-    pub fn fetch_for_job(database_connection: &mut PgConnection, j: &crate::db::models::Job) -> Result<Option<Image>> {
+    pub fn fetch_for_job(
+        database_connection: &mut PgConnection,
+        j: &crate::db::models::Job,
+    ) -> Result<Option<Image>> {
         Self::fetch_by_id(database_connection, j.image_id)
     }
 
     pub fn fetch_by_id(database_connection: &mut PgConnection, iid: i32) -> Result<Option<Image>> {
-        match dsl::images.filter(id.eq(iid)).first::<Image>(database_connection) {
+        match dsl::images
+            .filter(id.eq(iid))
+            .first::<Image>(database_connection)
+        {
             Err(diesel::result::Error::NotFound) => Ok(None),
             Err(e) => Err(Error::from(e)),
             Ok(i) => Ok(Some(i)),

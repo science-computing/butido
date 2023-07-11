@@ -13,26 +13,25 @@ use std::collections::HashMap;
 use std::io::Result as IoResult;
 use std::io::Write;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use daggy::Walker;
 use getset::Getters;
 use indicatif::ProgressBar;
 use itertools::Itertools;
-use tracing::trace;
 use ptree::Style;
 use ptree::TreeItem;
 use resiter::AndThen;
+use tracing::trace;
 
-use crate::package::Package;
-use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
 use crate::package::condition::ConditionCheckable;
 use crate::package::condition::ConditionData;
 use crate::package::dependency::ParseDependency;
+use crate::package::Package;
+use crate::package::PackageName;
+use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
-
 
 #[derive(Debug, Getters)]
 pub struct Dag {
@@ -50,12 +49,12 @@ impl Dag {
         progress: Option<&ProgressBar>,
         conditional_data: &ConditionData<'_>, // required for selecting packages with conditional dependencies
     ) -> Result<Self> {
-
         /// helper fn with bad name to check the dependency condition of a dependency and parse the dependency into a tuple of
         /// name and version for further processing
-        fn process<D: ConditionCheckable + ParseDependency>(d: &D, conditional_data: &ConditionData<'_>)
-            -> Result<(bool, PackageName, PackageVersionConstraint)>
-        {
+        fn process<D: ConditionCheckable + ParseDependency>(
+            d: &D,
+            conditional_data: &ConditionData<'_>,
+        ) -> Result<(bool, PackageName, PackageVersionConstraint)> {
             // Check whether the condition of the dependency matches our data
             let take = d.check_condition(conditional_data)?;
             let (name, version) = d.parse_as_name_and_version()?;
@@ -71,21 +70,22 @@ impl Dag {
         ///
         /// It also filters out dependencies that do not match the `conditional_data` passed and
         /// makes the dependencies unique over (name, version).
-        fn get_package_dependencies<'a>(package: &'a Package, conditional_data: &'a ConditionData<'_>)
-            -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a
-        {
-
-            package.dependencies()
+        fn get_package_dependencies<'a>(
+            package: &'a Package,
+            conditional_data: &'a ConditionData<'_>,
+        ) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
+            package
+                .dependencies()
                 .build()
                 .iter()
                 .map(move |d| process(d, conditional_data))
                 .chain({
-                    package.dependencies()
+                    package
+                        .dependencies()
                         .runtime()
                         .iter()
                         .map(move |d| process(d, conditional_data))
                 })
-
                 // Now filter out all dependencies where their condition did not match our
                 // `conditional_data`.
                 .filter(|res| match res {
@@ -93,10 +93,8 @@ impl Dag {
                     Ok((false, _, _)) => false,
                     Err(_) => true,
                 })
-
                 // Map out the boolean from the condition, because we don't need that later on
                 .map(|res| res.map(|(_, name, vers)| (name, vers)))
-
                 // Make all dependencies unique, because we don't want to build one dependency
                 // multiple times
                 .unique_by(|res| res.as_ref().ok().cloned())
@@ -112,26 +110,40 @@ impl Dag {
         ) -> Result<()> {
             get_package_dependencies(p, conditional_data)
                 .and_then_ok(|(name, constr)| {
-                    trace!("Dependency for {} {} found: {:?}", p.name(), p.version(), name);
+                    trace!(
+                        "Dependency for {} {} found: {:?}",
+                        p.name(),
+                        p.version(),
+                        name
+                    );
                     let packs = repo.find_with_version(&name, &constr);
                     if packs.is_empty() {
-                        return Err(anyhow!("Dependency of {} {} not found: {} {}", p.name(), p.version(), name, constr))
+                        return Err(anyhow!(
+                            "Dependency of {} {} not found: {} {}",
+                            p.name(),
+                            p.version(),
+                            name,
+                            constr
+                        ));
                     }
                     trace!("Found in repo: {:?}", packs);
 
                     // If we didn't check that dependency already
-                    if !mappings.keys().any(|p| packs.iter().any(|pk| pk.name() == p.name() && pk.version() == p.version())) {
+                    if !mappings.keys().any(|p| {
+                        packs
+                            .iter()
+                            .any(|pk| pk.name() == p.name() && pk.version() == p.version())
+                    }) {
                         // recurse
-                        packs.into_iter()
-                            .try_for_each(|p| {
-                                let _ = progress.as_ref().map(|p| p.tick());
+                        packs.into_iter().try_for_each(|p| {
+                            let _ = progress.as_ref().map(|p| p.tick());
 
-                                let idx = dag.add_node(p);
-                                mappings.insert(p, idx);
+                            let idx = dag.add_node(p);
+                            mappings.insert(p, idx);
 
-                                trace!("Recursing for: {:?}", p);
-                                add_sub_packages(repo, mappings, dag, p, progress, conditional_data)
-                            })
+                            trace!("Recursing for: {:?}", p);
+                            add_sub_packages(repo, mappings, dag, p, progress, conditional_data)
+                        })
                     } else {
                         Ok(())
                     }
@@ -139,17 +151,19 @@ impl Dag {
                 .collect::<Result<()>>()
         }
 
-        fn add_edges(mappings: &HashMap<&Package, daggy::NodeIndex>,
+        fn add_edges(
+            mappings: &HashMap<&Package, daggy::NodeIndex>,
             dag: &mut daggy::Dag<&Package, i8>,
             conditional_data: &ConditionData<'_>,
-        ) -> Result<()>
-        {
+        ) -> Result<()> {
             for (package, idx) in mappings {
                 get_package_dependencies(package, conditional_data)
                     .and_then_ok(|(name, constr)| {
                         mappings
                             .iter()
-                            .filter(|(package, _)| *package.name() == name && constr.matches(package.version()))
+                            .filter(|(package, _)| {
+                                *package.name() == name && constr.matches(package.version())
+                            })
                             .try_for_each(|(_, dep_idx)| {
                                 dag.add_edge(*idx, *dep_idx, 0)
                                     .map(|_| ())
@@ -168,13 +182,20 @@ impl Dag {
         trace!("Making package Tree for {:?}", p);
         let root_idx = dag.add_node(&p);
         mappings.insert(&p, root_idx);
-        add_sub_packages(repo, &mut mappings, &mut dag, &p, progress, conditional_data)?;
+        add_sub_packages(
+            repo,
+            &mut mappings,
+            &mut dag,
+            &p,
+            progress,
+            conditional_data,
+        )?;
         add_edges(&mappings, &mut dag, conditional_data)?;
         trace!("Finished makeing package Tree");
 
         Ok(Dag {
             dag: dag.map(|_, p: &&Package| -> Package { (*p).clone() }, |_, e| *e),
-            root_idx
+            root_idx,
         })
     }
 
@@ -203,7 +224,11 @@ impl<'a> TreeItem for DagDisplay<'a> {
     type Child = Self;
 
     fn write_self<W: Write>(&self, f: &mut W, _: &Style) -> IoResult<()> {
-        let p = self.0.dag.graph().node_weight(self.1)
+        let p = self
+            .0
+            .dag
+            .graph()
+            .node_weight(self.1)
             .ok_or_else(|| anyhow!("Error finding node: {:?}", self.1))
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         write!(f, "{} {}", p.name(), p.version())
@@ -211,9 +236,10 @@ impl<'a> TreeItem for DagDisplay<'a> {
 
     fn children(&self) -> Cow<[Self::Child]> {
         let c = self.0.dag.children(self.1);
-        Cow::from(c.iter(&self.0.dag)
-            .map(|(_, idx)| DagDisplay(self.0, idx))
-            .collect::<Vec<_>>()
+        Cow::from(
+            c.iter(&self.0.dag)
+                .map(|(_, idx)| DagDisplay(self.0, idx))
+                .collect::<Vec<_>>(),
         )
     }
 }
@@ -224,13 +250,13 @@ mod tests {
 
     use std::collections::BTreeMap;
 
-    use crate::package::Dependencies;
-    use crate::package::Dependency;
     use crate::package::condition::Condition;
     use crate::package::condition::OneOrMore;
     use crate::package::tests::package;
     use crate::package::tests::pname;
     use crate::package::tests::pversion;
+    use crate::package::Dependencies;
+    use crate::package::Dependency;
     use crate::util::docker::ImageName;
 
     use indicatif::ProgressBar;
@@ -391,7 +417,9 @@ mod tests {
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();
-        assert!(ps.iter().any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
+        assert!(ps
+            .iter()
+            .any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
         assert!(ps.iter().any(|p| *p.name() == pname("p2")));
         assert!(ps.iter().any(|p| *p.name() == pname("p4")));
         assert!(ps.iter().any(|p| *p.name() == pname("p3")));
@@ -539,7 +567,9 @@ mod tests {
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();
-        assert!(ps.iter().any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
+        assert!(ps
+            .iter()
+            .any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
         assert!(ps.iter().any(|p| *p.name() == pname("p2")));
         assert!(ps.iter().any(|p| *p.name() == pname("p3")));
         assert!(ps.iter().any(|p| *p.name() == pname("p4")));
@@ -649,12 +679,13 @@ mod tests {
         assert!(r.is_ok());
         let r = r.unwrap();
         let ps = r.all_packages();
-        assert!(ps.iter().any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
+        assert!(ps
+            .iter()
+            .any(|p| *p.name() == pname("p1") && *p.version() == pversion("1")));
         assert!(ps.iter().any(|p| *p.name() == pname("p2")));
         assert!(ps.iter().any(|p| *p.name() == pname("p3")));
         assert!(ps.iter().any(|p| *p.name() == pname("p4")));
     }
-
 
     /// Build a repository with two packages and a condition for their dependency
     fn repo_with_ab_packages_with_condition(cond: Condition) -> (Package, Repository) {
@@ -712,8 +743,14 @@ mod tests {
         assert!(ps.iter().any(|p| *p.version() == pversion("1")));
 
         // Not in the tree:
-        assert!(!ps.iter().any(|p| *p.name() == pname("b")), "'b' should not be in tree, but is: {ps:?}");
-        assert!(!ps.iter().any(|p| *p.version() == pversion("2")), "'2' should not be in tree, but is: {ps:?}");
+        assert!(
+            !ps.iter().any(|p| *p.name() == pname("b")),
+            "'b' should not be in tree, but is: {ps:?}"
+        );
+        assert!(
+            !ps.iter().any(|p| *p.version() == pversion("2")),
+            "'2' should not be in tree, but is: {ps:?}"
+        );
     }
 
     // Test whether the dependency DAG is correctly build if a image is used, but not the one
@@ -779,6 +816,4 @@ mod tests {
         assert!(ps.iter().any(|p| *p.name() == pname("b")));
         assert!(ps.iter().any(|p| *p.version() == pversion("2")));
     }
-
 }
-

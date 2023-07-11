@@ -10,32 +10,38 @@
 
 //! Implementation of the 'find-artifact' subcommand
 
-use std::path::PathBuf;
-use std::io::Write;
-use std::sync::Arc;
 use std::convert::TryFrom;
+use std::io::Write;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
-use diesel::PgConnection;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
+use diesel::PgConnection;
 use itertools::Itertools;
 use tracing::{debug, trace};
 
 use crate::config::Configuration;
+use crate::filestore::path::StoreRoot;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
-use crate::filestore::path::StoreRoot;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
-use crate::util::progress::ProgressBars;
 use crate::util::docker::ImageName;
+use crate::util::progress::ProgressBars;
 
 /// Implementation of the "find_artifact" subcommand
-pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progressbars: ProgressBars, repo: Repository, database_pool: Pool<ConnectionManager<PgConnection>>) -> Result<()> {
+pub async fn find_artifact(
+    matches: &ArgMatches,
+    config: &Configuration,
+    progressbars: ProgressBars,
+    repo: Repository,
+    database_pool: Pool<ConnectionManager<PgConnection>>,
+) -> Result<()> {
     let package_name_regex = crate::commands::util::mk_package_name_regex({
         matches.get_one::<String>("package_name_regex").unwrap() // safe by clap
     })?;
@@ -48,16 +54,25 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
         .context("Parsing package version constraint")
         .context("A valid package version constraint looks like this: '=1.0.0'")?;
 
-    let env_filter = matches.get_many::<String>("env_filter")
-        .map(|vals| vals.map(AsRef::as_ref).map(crate::util::env::parse_to_env).collect::<Result<Vec<_>>>())
+    let env_filter = matches
+        .get_many::<String>("env_filter")
+        .map(|vals| {
+            vals.map(AsRef::as_ref)
+                .map(crate::util::env::parse_to_env)
+                .collect::<Result<Vec<_>>>()
+        })
         .transpose()?
         .unwrap_or_default();
 
-    let image_name = matches.get_one::<String>("image")
+    let image_name = matches
+        .get_one::<String>("image")
         .map(|s| s.to_owned())
         .map(ImageName::from);
 
-    debug!("Finding artifacts for '{:?}' '{:?}'", package_name_regex, package_version_constraint);
+    debug!(
+        "Finding artifacts for '{:?}' '{:?}'",
+        package_name_regex, package_version_constraint
+    );
 
     let release_stores = config
         .release_stores()
@@ -70,16 +85,19 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
             debug!("Loading release directory: {}", p_str);
             let r = ReleaseStore::load(StoreRoot::new(p.clone())?, &bar_release_loading);
             if r.is_ok() {
-                bar_release_loading.finish_with_message(format!("Loaded releases in {p_str} successfully"));
+                bar_release_loading
+                    .finish_with_message(format!("Loaded releases in {p_str} successfully"));
             } else {
-                bar_release_loading.finish_with_message(format!("Failed to load releases in {p_str}"));
+                bar_release_loading
+                    .finish_with_message(format!("Failed to load releases in {p_str}"));
             }
 
             r.map(Arc::new)
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let staging_store = if let Some(p) = matches.get_one::<String>("staging_dir").map(PathBuf::from) {
+    let staging_store = if let Some(p) = matches.get_one::<String>("staging_dir").map(PathBuf::from)
+    {
         let bar_staging_loading = progressbars.bar()?;
 
         if !p.is_dir() {
@@ -121,7 +139,8 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
                 .build()
                 .run()?;
 
-            pathes.iter()
+            pathes
+                .iter()
                 .map(|tpl| (tpl.0.joined(), tpl.1))
                 .sorted_by(|tpla, tplb| {
                     use std::cmp::Ordering;
@@ -151,7 +170,8 @@ pub async fn find_artifact(matches: &ArgMatches, config: &Configuration, progres
                         writeln!(std::io::stdout(), "[{}] {}", time, path.display())
                     } else {
                         writeln!(std::io::stdout(), "[unknown] {}", path.display())
-                    }.map_err(Error::from)
+                    }
+                    .map_err(Error::from)
                 })
         })
         .inspect(|r| trace!("Query resulted in: {:?}", r))

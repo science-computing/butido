@@ -101,10 +101,7 @@ impl SourceEntry {
             .context("Opening file failed")?;
 
         trace!("Reader constructed for path: {}", p.display());
-        self.package_source
-            .hash()
-            .matches_hash_of(reader)
-            .await
+        self.package_source.hash().matches_hash_of(reader).await
     }
 
     pub async fn create(&self) -> Result<tokio::fs::File> {

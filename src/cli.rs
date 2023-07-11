@@ -12,10 +12,10 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use clap::crate_authors;
-use clap::Command;
 use clap::Arg;
 use clap::ArgAction;
 use clap::ArgGroup;
+use clap::Command;
 
 use tracing::{debug, error};
 
@@ -1246,7 +1246,8 @@ fn arg_older_than_date(about: &str) -> Arg {
         .long("older-than")
         .value_name("DATE")
         .help(about.to_owned())
-        .long_help(r#"
+        .long_help(
+            r#"
             DATE can be a freeform date, for example '2h'
             It can also be a exact date: '2020-01-01 00:12:45'
             If the hour-minute-second part is omitted, " 00:00:00" is appended automatically.
@@ -1264,7 +1265,8 @@ fn arg_older_than_date(about: &str) -> Arg {
                 months, month, M -- defined as 30.44 days
                 years, year, y -- defined as 365.25 days
 
-        "#)
+        "#,
+        )
         .value_parser(parse_date_from_string)
 }
 
@@ -1274,7 +1276,8 @@ fn arg_newer_than_date(about: &str) -> Arg {
         .long("newer-than")
         .value_name("DATE")
         .help(about.to_owned())
-        .long_help(r#"
+        .long_help(
+            r#"
             DATE can be a freeform date, for example '2h'
             It can also be a exact date: '2020-01-01 00:12:45'
             If the hour-minute-second part is omitted, " 00:00:00" is appended automatically.
@@ -1292,7 +1295,8 @@ fn arg_newer_than_date(about: &str) -> Arg {
                 months, month, M -- defined as 30.44 days
                 years, year, y -- defined as 365.25 days
 
-        "#)
+        "#,
+        )
         .value_parser(parse_date_from_string)
 }
 
@@ -1315,11 +1319,15 @@ fn parse_date_from_string(s: &str) -> std::result::Result<String, String> {
 }
 
 fn parse_usize(s: &str) -> std::result::Result<String, String> {
-    usize::from_str(s) .map_err(|e| e.to_string()).map(|_| s.to_owned())
+    usize::from_str(s)
+        .map_err(|e| e.to_string())
+        .map(|_| s.to_owned())
 }
 
 fn parse_u64(s: &str) -> std::result::Result<String, String> {
-    u64::from_str(s).map_err(|e| e.to_string()).map(|_| s.to_owned())
+    u64::from_str(s)
+        .map_err(|e| e.to_string())
+        .map(|_| s.to_owned())
 }
 
 #[cfg(test)]

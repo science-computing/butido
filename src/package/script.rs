@@ -21,7 +21,6 @@ use handlebars::{
     Context, Handlebars, Helper, HelperDef, HelperResult, JsonRender, Output, PathAndJson,
     RenderContext, RenderError,
 };
-use tracing::trace;
 use serde::Deserialize;
 use serde::Serialize;
 use syntect::easy::HighlightLines;
@@ -29,6 +28,7 @@ use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 use tokio::process::Command;
+use tracing::trace;
 
 use crate::package::Package;
 use crate::package::Phase;
@@ -138,8 +138,7 @@ impl<'a> HighlightedScript<'a> {
 
         LinesWithEndings::from(&self.script.0)
             .map(move |line| -> Result<String> {
-                h
-                    .highlight_line(line, &self.ps)
+                h.highlight_line(line, &self.ps)
                     .with_context(|| anyhow!("Could not highlight the following line: {}", line))
                     .map(|r| as_24_bit_terminal_escaped(&r[..], true) + reset_all_attributes)
             })
@@ -148,7 +147,8 @@ impl<'a> HighlightedScript<'a> {
     }
 
     pub fn lines_numbered(&'a self) -> Result<impl Iterator<Item = (usize, String)> + 'a> {
-        self.lines().map(|iter| iter.enumerate().map(|(n, l)| (n + 1, l)))
+        self.lines()
+            .map(|iter| iter.enumerate().map(|(n, l)| (n + 1, l)))
     }
 }
 
@@ -248,7 +248,13 @@ impl<'a> ScriptBuilder<'a> {
         }
 
         hb.render("script", package)
-            .with_context(|| anyhow!("Rendering script for package {} {} failed", package.name(), package.version()))
+            .with_context(|| {
+                anyhow!(
+                    "Rendering script for package {} {} failed",
+                    package.name(),
+                    package.version()
+                )
+            })
             .map_err(Error::from)
     }
 }

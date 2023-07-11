@@ -48,7 +48,7 @@ impl TryFrom<&std::path::Component<'_>> for PathComponent {
                 } else {
                     Ok(PathComponent::DirName(filename.to_string()))
                 }
-            },
+            }
         }
     }
 }
@@ -64,8 +64,7 @@ impl PathComponent {
     pub fn dir_name(&self) -> Option<&str> {
         match self {
             PathComponent::PkgToml => None,
-            PathComponent::DirName(dn) => Some(dn)
+            PathComponent::DirName(dn) => Some(dn),
         }
     }
 }
-

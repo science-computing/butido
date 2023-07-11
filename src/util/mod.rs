@@ -39,7 +39,6 @@ impl AsRef<str> for EnvironmentVariableName {
     }
 }
 
-
 pub mod docker;
 pub mod env;
 pub mod filters;

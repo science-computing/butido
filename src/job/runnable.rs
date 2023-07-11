@@ -24,8 +24,8 @@ use crate::package::Script;
 use crate::package::ScriptBuilder;
 use crate::source::SourceCache;
 use crate::source::SourceEntry;
-use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
+use crate::util::EnvironmentVariableName;
 
 /// A job configuration that can be run. All inputs are clear here.
 #[derive(Debug, Getters)]
@@ -75,7 +75,11 @@ impl RunnableJob {
                 .chain(git_commit_env.as_ref().into_iter().map(|(k, v)| (k, v)))
                 .inspect(|(name, _)| debug!("Checking: {}", name))
                 .try_for_each(|(name, _)| {
-                    trace!("{:?} contains? {:?}", config.containers().allowed_env(), name);
+                    trace!(
+                        "{:?} contains? {:?}",
+                        config.containers().allowed_env(),
+                        name
+                    );
                     if !config.containers().allowed_env().contains(name) {
                         Err(anyhow!("Environment variable name not allowed: {}", name))
                     } else {
@@ -130,17 +134,13 @@ impl RunnableJob {
     }
 
     pub fn environment(&self) -> impl Iterator<Item = (&EnvironmentVariableName, &String)> {
-        self.resources
-            .iter()
-            .filter_map(|r| r.env())
-            .chain({
-                self.package()
-                    .environment()
-                    .as_ref()
-                    .map(|hm| hm.iter())
-                    .into_iter()
-                    .flatten()
-            })
+        self.resources.iter().filter_map(|r| r.env()).chain({
+            self.package()
+                .environment()
+                .as_ref()
+                .map(|hm| hm.iter())
+                .into_iter()
+                .flatten()
+        })
     }
-
 }

@@ -10,16 +10,16 @@
 
 //! Implementation of the 'metrics' subcommand
 
-use std::path::Path;
 use std::io::Write;
+use std::path::Path;
 
 use anyhow::Error;
 use anyhow::Result;
+use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::Pool;
 use diesel::PgConnection;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
-use diesel::r2d2::ConnectionManager;
-use diesel::r2d2::Pool;
 use walkdir::WalkDir;
 
 use crate::config::Configuration;
@@ -46,16 +46,56 @@ pub async fn metrics(
         })
         .count();
 
-    let n_artifacts     = async { crate::schema::artifacts::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
-    let n_endpoints     = async { crate::schema::endpoints::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
-    let n_envvars       = async { crate::schema::envvars::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
-    let n_githashes     = async { crate::schema::githashes::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
-    let n_images        = async { crate::schema::images::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
-    let n_jobs          = async { crate::schema::jobs::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
-    let n_packages      = async { crate::schema::packages::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
-    let n_releasestores = async { crate::schema::release_stores::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
-    let n_releases      = async { crate::schema::releases::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
-    let n_submits       = async { crate::schema::submits::table.count().get_result::<i64>(&mut pool.get().unwrap()) };
+    let n_artifacts = async {
+        crate::schema::artifacts::table
+            .count()
+            .get_result::<i64>(&mut pool.get().unwrap())
+    };
+    let n_endpoints = async {
+        crate::schema::endpoints::table
+            .count()
+            .get_result::<i64>(&mut pool.get().unwrap())
+    };
+    let n_envvars = async {
+        crate::schema::envvars::table
+            .count()
+            .get_result::<i64>(&mut pool.get().unwrap())
+    };
+    let n_githashes = async {
+        crate::schema::githashes::table
+            .count()
+            .get_result::<i64>(&mut pool.get().unwrap())
+    };
+    let n_images = async {
+        crate::schema::images::table
+            .count()
+            .get_result::<i64>(&mut pool.get().unwrap())
+    };
+    let n_jobs = async {
+        crate::schema::jobs::table
+            .count()
+            .get_result::<i64>(&mut pool.get().unwrap())
+    };
+    let n_packages = async {
+        crate::schema::packages::table
+            .count()
+            .get_result::<i64>(&mut pool.get().unwrap())
+    };
+    let n_releasestores = async {
+        crate::schema::release_stores::table
+            .count()
+            .get_result::<i64>(&mut pool.get().unwrap())
+    };
+    let n_releases = async {
+        crate::schema::releases::table
+            .count()
+            .get_result::<i64>(&mut pool.get().unwrap())
+    };
+    let n_submits = async {
+        crate::schema::submits::table
+            .count()
+            .get_result::<i64>(&mut pool.get().unwrap())
+    };
 
     let (
         n_artifacts,
@@ -68,9 +108,24 @@ pub async fn metrics(
         n_releasestores,
         n_releases,
         n_submits,
-    ) = tokio::try_join!(n_artifacts, n_endpoints, n_envvars, n_githashes, n_images, n_jobs, n_packages, n_releasestores, n_releases, n_submits)?;
+    ) = tokio::try_join!(
+        n_artifacts,
+        n_endpoints,
+        n_envvars,
+        n_githashes,
+        n_images,
+        n_jobs,
+        n_packages,
+        n_releasestores,
+        n_releases,
+        n_submits
+    )?;
 
-    write!(out, "{}", indoc::formatdoc!(r#"
+    write!(
+        out,
+        "{}",
+        indoc::formatdoc!(
+            r#"
         Butido release {release}
 
         {configured_endpoints} Configured endpoints
@@ -92,23 +147,24 @@ pub async fn metrics(
         {n_releases} releases in database
         {n_submits} submits in database
     "#,
-        release = clap::crate_version!(),
-        configured_endpoints = config.docker().endpoints().len(),
-        configured_images = config.docker().images().len(),
-        configured_release_stores = config.release_stores().len(),
-        configured_phases = config.available_phases().len(),
-        nfiles = nfiles,
-        repo_packages = repo.packages().count(),
-        n_artifacts = n_artifacts,
-        n_endpoints = n_endpoints,
-        n_envvars = n_envvars,
-        n_githashes = n_githashes,
-        n_images = n_images,
-        n_jobs = n_jobs,
-        n_packages = n_packages,
-        n_releasestores = n_releasestores,
-        n_releases = n_releases,
-        n_submits = n_submits,
-    )).map_err(Error::from)
+            release = clap::crate_version!(),
+            configured_endpoints = config.docker().endpoints().len(),
+            configured_images = config.docker().images().len(),
+            configured_release_stores = config.release_stores().len(),
+            configured_phases = config.available_phases().len(),
+            nfiles = nfiles,
+            repo_packages = repo.packages().count(),
+            n_artifacts = n_artifacts,
+            n_endpoints = n_endpoints,
+            n_envvars = n_envvars,
+            n_githashes = n_githashes,
+            n_images = n_images,
+            n_jobs = n_jobs,
+            n_packages = n_packages,
+            n_releasestores = n_releasestores,
+            n_releases = n_releases,
+            n_submits = n_submits,
+        )
+    )
+    .map_err(Error::from)
 }
-

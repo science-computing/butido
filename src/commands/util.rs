@@ -10,19 +10,19 @@
 
 //! Utility module for subcommand implementation helpers
 
-use std::io::Write;
 use std::fmt::Display;
+use std::io::Write;
 use std::path::Path;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use clap::ArgMatches;
 use itertools::Itertools;
-use tracing::{error, info, trace};
 use regex::Regex;
 use tokio_stream::StreamExt;
+use tracing::{error, info, trace};
 
 use crate::config::*;
 use crate::package::Package;
@@ -183,7 +183,7 @@ pub fn display_data<D: Display>(
     csv: bool,
 ) -> Result<()> {
     if data.is_empty() {
-        return Ok(())
+        return Ok(());
     }
 
     if csv {
@@ -204,9 +204,10 @@ pub fn display_data<D: Display>(
             .and_then(|text| writeln!(lock, "{text}").map_err(Error::from))
     } else if atty::is(atty::Stream::Stdout) {
         let mut ascii_table = ascii_table::AsciiTable::default();
-        ascii_table.set_max_width(terminal_size::terminal_size()
-            .map(|tpl| tpl.0 .0 as usize) // an ugly interface indeed!
-            .unwrap_or(80)
+        ascii_table.set_max_width(
+            terminal_size::terminal_size()
+                .map(|tpl| tpl.0 .0 as usize) // an ugly interface indeed!
+                .unwrap_or(80),
         );
 
         headers.into_iter().enumerate().for_each(|(i, c)| {
@@ -225,8 +226,12 @@ pub fn display_data<D: Display>(
     }
 }
 
-pub fn get_date_filter(name: &str, matches: &ArgMatches) -> Result<Option<chrono::DateTime::<chrono::Local>>> {
-    matches.get_one::<String>(name)
+pub fn get_date_filter(
+    name: &str,
+    matches: &ArgMatches,
+) -> Result<Option<chrono::DateTime<chrono::Local>>> {
+    matches
+        .get_one::<String>(name)
         .map(|s| {
             trace!("Parsing duration: '{}'", s);
             humantime::parse_duration(s)
@@ -257,4 +262,3 @@ pub fn get_date_filter(name: &str, matches: &ArgMatches) -> Result<Option<chrono
         })
         .transpose()
 }
-

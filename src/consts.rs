@@ -8,10 +8,9 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-
 /// The path to the directory inside the container where the inputs for the script run are copied
 /// to.
-pub const INPUTS_DIR_PATH: &str  = "/inputs";
+pub const INPUTS_DIR_PATH: &str = "/inputs";
 
 /// The path to the directory inside the container where the outputs of a compile job must be
 /// located after the script was run
@@ -21,5 +20,4 @@ pub const OUTPUTS_DIR_NAME: &str = "outputs";
 pub const PATCH_DIR_PATH: &str = "/patches";
 
 /// The path where the script that is executed inside the container is copied to.
-pub const SCRIPT_PATH: &str      = "/script";
-
+pub const SCRIPT_PATH: &str = "/script";

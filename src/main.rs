@@ -39,7 +39,7 @@
     unused_must_use,
     unused_mut,
     unused_parens,
-    while_true,
+    while_true
 )]
 #![allow(macro_use_extern_crate)]
 #![allow(unstable_name_collisions)] // TODO: Remove me with the next rustc update (probably)
@@ -54,10 +54,10 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use aquamarine as _;
 use clap::ArgMatches;
 use logcrate::debug;
-use logcrate::error;
-use aquamarine as _; // doc-helper crate
+use logcrate::error; // doc-helper crate
 
 mod cli;
 mod commands;
@@ -81,7 +81,7 @@ use crate::repository::Repository;
 use crate::util::progress::ProgressBars;
 use indoc::concatdoc;
 
-pub const VERSION_LONG: &str = concatdoc!{"
+pub const VERSION_LONG: &str = concatdoc! {"
     butido ", env!("VERGEN_GIT_DESCRIBE"), "
     Git SHA:              ", env!("VERGEN_GIT_SHA"), "
     Git Commit Timestamp: ", env!("VERGEN_GIT_COMMIT_TIMESTAMP"), "
@@ -113,52 +113,56 @@ async fn main() -> Result<()> {
         std::process::exit(0);
     }
 
-    let repo = git2::Repository::open(PathBuf::from("."))
-        .map_err(|e| match e.code() {
-            git2::ErrorCode::NotFound => {
-                eprintln!("Butido must be executed in the top-level of the git repository");
-                std::process::exit(1)
-            },
-            _ => Error::from(e),
-        })?;
+    let repo = git2::Repository::open(PathBuf::from(".")).map_err(|e| match e.code() {
+        git2::ErrorCode::NotFound => {
+            eprintln!("Butido must be executed in the top-level of the git repository");
+            std::process::exit(1)
+        }
+        _ => Error::from(e),
+    })?;
 
     let repo_path = repo
         .workdir()
         .ok_or_else(|| anyhow!("Not a repository with working directory. Cannot do my job!"))?;
 
     let mut config = ::config::Config::default();
-    config.merge(::config::File::from(repo_path.join("config.toml")).required(true))
+    config
+        .merge(::config::File::from(repo_path.join("config.toml")).required(true))
         .context("Failed to load config.toml from repository")?;
 
     {
         let xdg = xdg::BaseDirectories::with_prefix("butido")?;
         let xdg_config_file = xdg.find_config_file("config.toml");
         if let Some(xdg_config) = xdg_config_file {
-            debug!("Configuration file found with XDG: {}", xdg_config.display());
-            config.merge(::config::File::from(xdg_config).required(false))
+            debug!(
+                "Configuration file found with XDG: {}",
+                xdg_config.display()
+            );
+            config
+                .merge(::config::File::from(xdg_config).required(false))
                 .context("Failed to load config.toml from XDG configuration directory")?;
         } else {
-            debug!("No configuration file found with XDG: {}", xdg.get_config_home().display());
+            debug!(
+                "No configuration file found with XDG: {}",
+                xdg.get_config_home().display()
+            );
         }
     }
 
     config.merge(::config::Environment::with_prefix("BUTIDO"))?;
 
-    let config = config.try_into::<NotValidatedConfiguration>()
+    let config = config
+        .try_into::<NotValidatedConfiguration>()
         .context("Failed to load Configuration object")?
         .validate()
         .context("Failed to validate configuration")?;
 
     let hide_bars = cli.get_flag("hide_bars") || crate::util::stdout_is_pipe();
-    let progressbars = ProgressBars::setup(
-        config.progress_format().clone(),
-        hide_bars,
-    );
+    let progressbars = ProgressBars::setup(config.progress_format().clone(), hide_bars);
 
     let load_repo = || -> Result<Repository> {
         let bar = progressbars.bar()?;
-        let repo = Repository::load(repo_path, &bar)
-            .context("Loading the repository")?;
+        let repo = Repository::load(repo_path, &bar).context("Loading the repository")?;
         bar.finish_with_message("Repository loading finished");
         Ok(repo)
     };
@@ -262,21 +266,19 @@ async fn main() -> Result<()> {
                 .context("metrics command failed")?
         }
 
-        Some(("endpoint", matches)) => {
-            crate::commands::endpoint(matches, &config, progressbars)
-                .await
-                .context("endpoint command failed")?
-        },
+        Some(("endpoint", matches)) => crate::commands::endpoint(matches, &config, progressbars)
+            .await
+            .context("endpoint command failed")?,
         Some((other, _)) => {
             error!("Unknown subcommand: {}", other);
             error!("Use --help to find available subcommands");
-            return Err(anyhow!("Unknown subcommand: {}", other))
-        },
+            return Err(anyhow!("Unknown subcommand: {}", other));
+        }
         None => {
             error!("No subcommand.");
             error!("Use --help to find available subcommands");
-            return Err(anyhow!("No subcommand"))
-        },
+            return Err(anyhow!("No subcommand"));
+        }
     }
 
     Ok(())
@@ -288,7 +290,12 @@ fn generate_completions(matches: &ArgMatches) {
 
     fn print_completions(shell: Shell, cmd: &mut clap::Command) {
         eprintln!("Generating shell completions for {shell}...");
-        generate(shell, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
+        generate(
+            shell,
+            cmd,
+            cmd.get_name().to_string(),
+            &mut std::io::stdout(),
+        );
     }
 
     // src/cli.rs enforces that `shell` is set to a valid `Shell` so this is always true:

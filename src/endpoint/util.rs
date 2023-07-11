@@ -21,10 +21,8 @@ pub async fn setup_endpoints(endpoints: Vec<EndpointConfiguration>) -> Result<Ve
     let unordered = futures::stream::FuturesUnordered::new();
 
     for cfg in endpoints.into_iter() {
-        unordered
-            .push(Endpoint::setup(cfg).map(|r_ep| r_ep.map(Arc::new)));
+        unordered.push(Endpoint::setup(cfg).map(|r_ep| r_ep.map(Arc::new)));
     }
 
     unordered.collect().await
 }
-

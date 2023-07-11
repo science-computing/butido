@@ -64,10 +64,8 @@ impl Submit {
         database_connection.transaction::<_, Error, _>(|conn| {
             diesel::insert_into(submits::table)
                 .values(&new_submit)
-
                 // required because if we re-use the staging store, we do not create a new UUID but re-use the old one
                 .on_conflict_do_nothing()
-
                 .execute(conn)
                 .context("Inserting new submit into submits table")?;
 
@@ -75,7 +73,10 @@ impl Submit {
         })
     }
 
-    pub fn with_id(database_connection: &mut PgConnection, submit_id: &::uuid::Uuid) -> Result<Submit> {
+    pub fn with_id(
+        database_connection: &mut PgConnection,
+        submit_id: &::uuid::Uuid,
+    ) -> Result<Submit> {
         dsl::submits
             .filter(submits::uuid.eq(submit_id))
             .first::<Submit>(database_connection)

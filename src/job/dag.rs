@@ -50,27 +50,22 @@ impl Dag {
     }
 
     pub fn iter(&'_ self) -> impl Iterator<Item = JobDefinition> + '_ {
-        self.dag
-            .graph()
-            .node_indices()
-            .map(move |idx| {
-                let job = self.dag.graph().node_weight(idx).unwrap(); // TODO
-                let children = self.dag.children(idx);
-                let children_uuids = children.iter(&self.dag)
-                    .filter_map(|(_, node_idx)| {
-                        self.dag.graph().node_weight(node_idx)
-                    })
-                    .map(Job::uuid)
-                    .cloned()
-                    .collect();
+        self.dag.graph().node_indices().map(move |idx| {
+            let job = self.dag.graph().node_weight(idx).unwrap(); // TODO
+            let children = self.dag.children(idx);
+            let children_uuids = children
+                .iter(&self.dag)
+                .filter_map(|(_, node_idx)| self.dag.graph().node_weight(node_idx))
+                .map(Job::uuid)
+                .cloned()
+                .collect();
 
-                JobDefinition {
-                    job,
-                    dependencies: children_uuids
-                }
-            })
+            JobDefinition {
+                job,
+                dependencies: children_uuids,
+            }
+        })
     }
-
 }
 
 #[derive(Debug)]
@@ -78,4 +73,3 @@ pub struct JobDefinition<'a> {
     pub job: &'a Job,
     pub dependencies: Vec<Uuid>,
 }
-

@@ -59,17 +59,30 @@ impl PackagePrintFlags {
     }
 }
 
-
 pub trait PreparePrintable<'a>
-    where Self: Borrow<Package> + Sized
+where
+    Self: Borrow<Package> + Sized,
 {
-    fn prepare_print(self, config: &'a Configuration, flags: &'a PackagePrintFlags, handlebars: &'a Handlebars<'a>, i: usize) -> PreparePrintPackage<'a, Self>;
+    fn prepare_print(
+        self,
+        config: &'a Configuration,
+        flags: &'a PackagePrintFlags,
+        handlebars: &'a Handlebars<'a>,
+        i: usize,
+    ) -> PreparePrintPackage<'a, Self>;
 }
 
 impl<'a, P> PreparePrintable<'a> for P
-    where P: Borrow<Package>
+where
+    P: Borrow<Package>,
 {
-    fn prepare_print(self, config: &'a Configuration, flags: &'a PackagePrintFlags, handlebars: &'a Handlebars<'a>, i: usize) -> PreparePrintPackage<'a, P> {
+    fn prepare_print(
+        self,
+        config: &'a Configuration,
+        flags: &'a PackagePrintFlags,
+        handlebars: &'a Handlebars<'a>,
+        i: usize,
+    ) -> PreparePrintPackage<'a, P> {
         PreparePrintPackage {
             package: self,
             config,
@@ -88,7 +101,6 @@ pub struct PreparePrintPackage<'a, P: Borrow<Package>> {
     i: usize,
 }
 
-
 pub fn handlebars_for_package_printing(format: &str) -> Result<Handlebars> {
     let mut hb = Handlebars::new();
     hb.register_escape_fn(handlebars::no_escape);
@@ -98,11 +110,13 @@ pub fn handlebars_for_package_printing(format: &str) -> Result<Handlebars> {
 
 impl<'a, P: Borrow<Package>> PreparePrintPackage<'a, P> {
     pub fn into_displayable(self) -> Result<PrintablePackage> {
-        let script = ScriptBuilder::new(&Shebang::from(self.config.shebang().clone())).build(
-            self.package.borrow(),
-            self.config.available_phases(),
-            *self.config.strict_script_interpolation(),
-        ).context("Rendering script for printing it failed")?;
+        let script = ScriptBuilder::new(&Shebang::from(self.config.shebang().clone()))
+            .build(
+                self.package.borrow(),
+                self.config.available_phases(),
+                *self.config.strict_script_interpolation(),
+            )
+            .context("Rendering script for printing it failed")?;
 
         let script = crate::ui::script_to_printable(
             &script,
@@ -110,12 +124,17 @@ impl<'a, P: Borrow<Package>> PreparePrintPackage<'a, P> {
             self.config
                 .script_highlight_theme()
                 .as_ref()
-                .ok_or_else(|| anyhow!("Highlighting for script enabled, but no theme configured"))?,
+                .ok_or_else(|| {
+                    anyhow!("Highlighting for script enabled, but no theme configured")
+                })?,
             self.flags.script_line_numbers,
         )?;
 
         let mut data = BTreeMap::new();
-        data.insert("i", serde_json::Value::Number(serde_json::Number::from(self.i)));
+        data.insert(
+            "i",
+            serde_json::Value::Number(serde_json::Number::from(self.i)),
+        );
         data.insert("p", serde_json::to_value(self.package.borrow())?);
         data.insert("script", serde_json::Value::String(script));
         data.insert("print_any", serde_json::Value::Bool(self.flags.print_any()));
@@ -170,11 +189,12 @@ impl<'a, P: Borrow<Package>> PreparePrintPackage<'a, P> {
     }
 }
 
-pub struct PrintablePackage { string: String }
+pub struct PrintablePackage {
+    string: String,
+}
 
 impl std::fmt::Display for PrintablePackage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.string)
     }
 }
-

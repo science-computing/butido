@@ -43,7 +43,9 @@ pub struct DbConnectionConfig<'a> {
 
 impl<'a> std::fmt::Debug for DbConnectionConfig<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "postgres://{user}:PASSWORD@{host}:{port}/{name}?connect_timeout={timeout}",
+        write!(
+            f,
+            "postgres://{user}:PASSWORD@{host}:{port}/{name}?connect_timeout={timeout}",
             host = self.database_host,
             port = self.database_port,
             user = self.database_user,
@@ -56,21 +58,29 @@ impl<'a> std::fmt::Debug for DbConnectionConfig<'a> {
 impl<'a> DbConnectionConfig<'a> {
     pub fn parse(config: &'a Configuration, cli: &'a ArgMatches) -> Result<DbConnectionConfig<'a>> {
         Ok(DbConnectionConfig {
-            database_host: cli.get_one::<String>("database_host").unwrap_or_else(|| config.database_host()),
+            database_host: cli
+                .get_one::<String>("database_host")
+                .unwrap_or_else(|| config.database_host()),
             database_port: {
                 cli.get_one::<String>("database_port")
                     .map(|s| s.parse::<u16>())
                     .transpose()?
                     .unwrap_or_else(|| *config.database_port())
             },
-            database_user: cli.get_one::<String>("database_user").unwrap_or_else(|| config.database_user()),
-            database_password: cli.get_one::<String>("database_password").unwrap_or_else(|| config.database_password()),
-            database_name: cli.get_one::<String>("database_name").unwrap_or_else(|| config.database_name()),
+            database_user: cli
+                .get_one::<String>("database_user")
+                .unwrap_or_else(|| config.database_user()),
+            database_password: cli
+                .get_one::<String>("database_password")
+                .unwrap_or_else(|| config.database_password()),
+            database_name: cli
+                .get_one::<String>("database_name")
+                .unwrap_or_else(|| config.database_name()),
             database_connection_timeout: {
                 cli.get_one::<String>("database_connection_timeout")
                     .map(|s| s.parse::<u16>())
                     .transpose()?
-                    .unwrap_or_else( || {
+                    .unwrap_or_else(|| {
                         // hardcoded default of 30 seconds database timeout
                         config.database_connection_timeout().unwrap_or(30)
                     })
@@ -96,13 +106,14 @@ impl<'a> DbConnectionConfig<'a> {
     }
 
     pub fn establish_pool(self) -> Result<Pool<ConnectionManager<PgConnection>>> {
-        debug!("Trying to create a connection pool for database: {:?}", self);
+        debug!(
+            "Trying to create a connection pool for database: {:?}",
+            self
+        );
         let manager = ConnectionManager::<PgConnection>::new(self.get_database_uri());
         Pool::builder()
             .min_idle(Some(1))
             .build(manager)
             .map_err(Error::from)
     }
-
 }
-

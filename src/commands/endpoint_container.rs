@@ -12,23 +12,26 @@
 
 use std::borrow::Cow;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use clap::ArgMatches;
-use tokio_stream::StreamExt;
 use shiplift::Container;
+use tokio_stream::StreamExt;
 
 use crate::config::Configuration;
 use crate::config::EndpointName;
 
-pub async fn container(endpoint_names: Vec<EndpointName>,
+pub async fn container(
+    endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
     let container_id = matches.get_one::<String>("container_id").unwrap();
-    let endpoints = crate::commands::endpoint::connect_to_endpoints(config, &endpoint_names).await?;
-    let relevant_endpoints = endpoints.into_iter()
+    let endpoints =
+        crate::commands::endpoint::connect_to_endpoints(config, &endpoint_names).await?;
+    let relevant_endpoints = endpoints
+        .into_iter()
         .map(|ep| async {
             ep.has_container_with_id(container_id)
                 .await
@@ -38,31 +41,35 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
         .collect::<Result<Vec<(_, bool)>>>()
         .await?
         .into_iter()
-        .filter_map(|tpl| {
-            if tpl.1 {
-                Some(tpl.0)
-            } else {
-                None
-            }
-        })
+        .filter_map(|tpl| if tpl.1 { Some(tpl.0) } else { None })
         .collect::<Vec<_>>();
 
     if relevant_endpoints.len() > 1 {
-        return Err(anyhow!("Found more than one container for id {}", container_id))
+        return Err(anyhow!(
+            "Found more than one container for id {}",
+            container_id
+        ));
     }
 
-    let relevant_endpoint = relevant_endpoints.get(0).ok_or_else(|| {
-        anyhow!("Found no container for id {}", container_id)
-    })?;
+    let relevant_endpoint = relevant_endpoints
+        .get(0)
+        .ok_or_else(|| anyhow!("Found no container for id {}", container_id))?;
 
-    let container = relevant_endpoint.get_container_by_id(container_id)
+    let container = relevant_endpoint
+        .get_container_by_id(container_id)
         .await?
-        .ok_or_else(|| anyhow!("Cannot find container {} on {}", container_id, relevant_endpoint.name()))?;
+        .ok_or_else(|| {
+            anyhow!(
+                "Cannot find container {} on {}",
+                container_id,
+                relevant_endpoint.name()
+            )
+        })?;
 
     let confirm = |prompt: String| dialoguer::Confirm::new().with_prompt(prompt).interact();
 
     match matches.subcommand() {
-        Some(("top", matches))  => top(matches, container).await,
+        Some(("top", matches)) => top(matches, container).await,
         Some(("kill", matches)) => {
             confirm({
                 if let Some(sig) = matches.get_one::<String>("signal") {
@@ -73,36 +80,44 @@ pub async fn container(endpoint_names: Vec<EndpointName>,
             })?;
 
             kill(matches, container).await
-        },
+        }
         Some(("delete", _)) => {
             if confirm(format!("Really delete {container_id}?"))? {
                 delete(container).await
             } else {
                 Ok(())
             }
-        },
-        Some(("start", _))      => {
+        }
+        Some(("start", _)) => {
             if confirm(format!("Really start {container_id}?"))? {
                 start(container).await
             } else {
                 Ok(())
             }
-        },
+        }
         Some(("stop", matches)) => {
             if confirm(format!("Really stop {container_id}?"))? {
                 stop(matches, container).await
             } else {
                 Ok(())
             }
-        },
+        }
         Some(("exec", matches)) => {
-            let commands = matches.get_many::<String>("commands").unwrap().map(AsRef::as_ref).collect::<Vec<&str>>();
-            if confirm(format!("Really run '{}' in {}?", commands.join(" "), container_id))? {
+            let commands = matches
+                .get_many::<String>("commands")
+                .unwrap()
+                .map(AsRef::as_ref)
+                .collect::<Vec<&str>>();
+            if confirm(format!(
+                "Really run '{}' in {}?",
+                commands.join(" "),
+                container_id
+            ))? {
                 exec(matches, container).await
             } else {
                 Ok(())
             }
-        },
+        }
         Some(("inspect", _)) => inspect(container).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
@@ -117,7 +132,10 @@ async fn top(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
 
 async fn kill(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     let signal = matches.get_one::<String>("signal");
-    container.kill(signal.map(|s| s.as_ref())).await.map_err(Error::from)
+    container
+        .kill(signal.map(|s| s.as_ref()))
+        .await
+        .map_err(Error::from)
 }
 
 async fn delete(container: Container<'_>) -> Result<()> {
@@ -129,40 +147,46 @@ async fn start(container: Container<'_>) -> Result<()> {
 }
 
 async fn stop(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
-    container.stop({
-        matches
-            .get_one::<String>("timeout")
-            .map(|s| s.parse::<u64>())
-            .transpose()?
-            .map(std::time::Duration::from_secs)
-    })
-    .await
-    .map_err(Error::from)
+    container
+        .stop({
+            matches
+                .get_one::<String>("timeout")
+                .map(|s| s.parse::<u64>())
+                .transpose()?
+                .map(std::time::Duration::from_secs)
+        })
+        .await
+        .map_err(Error::from)
 }
 
 async fn exec(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
-    use std::io::Write;
     use futures::TryStreamExt;
+    use std::io::Write;
 
     let execopts = shiplift::builder::ExecContainerOptions::builder()
         .cmd({
-            matches.get_many::<String>("commands").unwrap().map(AsRef::as_ref).collect::<Vec<&str>>()
+            matches
+                .get_many::<String>("commands")
+                .unwrap()
+                .map(AsRef::as_ref)
+                .collect::<Vec<&str>>()
         })
         .attach_stdout(true)
         .attach_stderr(true)
         .build();
 
-    container.exec(&execopts)
+    container
+        .exec(&execopts)
         .map_err(Error::from)
         .try_for_each(|chunk| async {
             match chunk {
                 shiplift::tty::TtyChunk::StdIn(_) => Err(anyhow!("Cannot handle STDIN TTY chunk")),
                 shiplift::tty::TtyChunk::StdOut(v) => {
                     std::io::stdout().write(&v).map_err(Error::from).map(|_| ())
-                },
+                }
                 shiplift::tty::TtyChunk::StdErr(v) => {
                     std::io::stderr().write(&v).map_err(Error::from).map(|_| ())
-                },
+                }
             }
         })
         .await
@@ -178,8 +202,8 @@ async fn exec(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
 // This is the most ugly function of the whole codebase. As ugly as it is: It is simply printing
 // things, nothing here is too complex code-wise (except some nested formatting stuff...)
 async fn inspect(container: Container<'_>) -> Result<()> {
-    use std::io::Write;
     use itertools::Itertools;
+    use std::io::Write;
 
     let d = container.inspect().await?;
 
@@ -206,7 +230,11 @@ async fn inspect(container: Container<'_>) -> Result<()> {
             .unwrap_or_else(|| Cow::from("None"))
     }
 
-    writeln!(std::io::stdout(), "{}", indoc::formatdoc!(r#"
+    writeln!(
+        std::io::stdout(),
+        "{}",
+        indoc::formatdoc!(
+            r#"
         Container: {container_id}
 
         app_armor_profile: {app_armor_profile}
@@ -277,141 +305,176 @@ async fn inspect(container: Container<'_>) -> Result<()> {
             status: {state_status}
         mounts: {mounts}
     "#,
-
-    container_id = container.id(),
-
-    app_armor_profile = d.app_armor_profile,
-    args = d.args.iter().join(", "),
-
-    config_attach_stderr = d.config.attach_stderr.to_string(),
-    config_attach_stdin = d.config.attach_stdin.to_string(),
-    config_attach_stdout = d.config.attach_stdout.to_string(),
-    config_cmd = option_vec(d.config.cmd.as_ref()),
-    config_domainname = d.config.domainname,
-    config_entrypoint = option_vec(d.config.entrypoint.as_ref()),
-    config_env = option_vec_nl(d.config.env.as_ref(), 8),
-    config_exposed_ports = {
-        d.config.exposed_ports.map(|hm| {
-            let s = hm.iter()
-                .map(|(k, v_hm)| {
-                    format!("{:ind$}{k}:\n{hm}",
-                        "", ind = 8,
-                        k = k,
-                        hm = v_hm.iter()
-                            .map(|(k, v)| format!("{:ind$}{k}: {v}", "", ind = 12, k = k, v = v))
-                            .collect::<Vec<_>>()
-                            .join("\n")
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-
-            format!("\n{s}")
-        })
-        .unwrap_or_else(|| String::from("None"))
-    },
-    config_hostname = d.config.hostname,
-    config_image = d.config.image,
-    config_labels = {
-        d.config.labels
-            .map(|hm| {
-                let s = hm.iter()
-                    .map(|(k, v)| format!("{:ind$}{k}: {v}", "", ind = 8, k = k, v = v))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                format!("\n{s}")
-            })
-            .unwrap_or_else(|| String::from("None"))
-    },
-    config_on_build = option_vec(d.config.on_build.as_ref()),
-    config_open_stdin = d.config.open_stdin.to_string(),
-    config_stdin_once = d.config.stdin_once.to_string(),
-    config_tty = d.config.tty.to_string(),
-    config_user = d.config.user,
-    config_working_dir = d.config.working_dir,
-
-    created = d.created.to_string(),
-    driver = d.driver,
-
-    host_config_cgroup_parent = option_tostr(d.host_config.cgroup_parent.as_ref()),
-    host_config_container_id_file = d.host_config.container_id_file,
-    host_config_cpu_shares = option_tostr(d.host_config.cpu_shares.as_ref()),
-    host_config_cpuset_cpus = option_tostr(d.host_config.cpuset_cpus.as_ref()),
-    host_config_memory = option_tostr(d.host_config.memory.as_ref()),
-    host_config_memory_swap = option_tostr(d.host_config.memory_swap.as_ref()),
-    host_config_network_mode = d.host_config.network_mode,
-    host_config_pid_mode = option_tostr(d.host_config.pid_mode.as_ref()),
-    host_config_port_bindings = {
-        d.host_config.port_bindings
-            .map(|hm| {
-                let s = hm.iter()
-                    .map(|(k, v)| {
-                        let v = v.iter()
-                            .map(|hm| {
-                                hm.iter()
-                                    .map(|(k, v)| {
-                                        format!("{:ind$}{k}: {v}", "", ind = 12, k = k, v = v)
-                                    })
-                                    .collect::<Vec<_>>()
-                                    .join("\n")
+            container_id = container.id(),
+            app_armor_profile = d.app_armor_profile,
+            args = d.args.iter().join(", "),
+            config_attach_stderr = d.config.attach_stderr.to_string(),
+            config_attach_stdin = d.config.attach_stdin.to_string(),
+            config_attach_stdout = d.config.attach_stdout.to_string(),
+            config_cmd = option_vec(d.config.cmd.as_ref()),
+            config_domainname = d.config.domainname,
+            config_entrypoint = option_vec(d.config.entrypoint.as_ref()),
+            config_env = option_vec_nl(d.config.env.as_ref(), 8),
+            config_exposed_ports = {
+                d.config
+                    .exposed_ports
+                    .map(|hm| {
+                        let s = hm
+                            .iter()
+                            .map(|(k, v_hm)| {
+                                format!(
+                                    "{:ind$}{k}:\n{hm}",
+                                    "",
+                                    ind = 8,
+                                    k = k,
+                                    hm = v_hm
+                                        .iter()
+                                        .map(|(k, v)| format!(
+                                            "{:ind$}{k}: {v}",
+                                            "",
+                                            ind = 12,
+                                            k = k,
+                                            v = v
+                                        ))
+                                        .collect::<Vec<_>>()
+                                        .join("\n")
+                                )
                             })
                             .collect::<Vec<_>>()
                             .join("\n");
 
-                        format!("{:ind$}{k}: \n{v}", "", ind = 8, k = k, v = v)
+                        format!("\n{s}")
                     })
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                format!("\n{s}")
-            })
-            .unwrap_or_else(|| String::from("None"))
-    },
-    host_config_privileged = d.host_config.privileged.to_string(),
-    host_config_publish_all_ports = d.host_config.publish_all_ports.to_string(),
-    host_config_readonly_rootfs = option_tostr(d.host_config.readonly_rootfs.as_ref()),
+                    .unwrap_or_else(|| String::from("None"))
+            },
+            config_hostname = d.config.hostname,
+            config_image = d.config.image,
+            config_labels = {
+                d.config
+                    .labels
+                    .map(|hm| {
+                        let s = hm
+                            .iter()
+                            .map(|(k, v)| format!("{:ind$}{k}: {v}", "", ind = 8, k = k, v = v))
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        format!("\n{s}")
+                    })
+                    .unwrap_or_else(|| String::from("None"))
+            },
+            config_on_build = option_vec(d.config.on_build.as_ref()),
+            config_open_stdin = d.config.open_stdin.to_string(),
+            config_stdin_once = d.config.stdin_once.to_string(),
+            config_tty = d.config.tty.to_string(),
+            config_user = d.config.user,
+            config_working_dir = d.config.working_dir,
+            created = d.created.to_string(),
+            driver = d.driver,
+            host_config_cgroup_parent = option_tostr(d.host_config.cgroup_parent.as_ref()),
+            host_config_container_id_file = d.host_config.container_id_file,
+            host_config_cpu_shares = option_tostr(d.host_config.cpu_shares.as_ref()),
+            host_config_cpuset_cpus = option_tostr(d.host_config.cpuset_cpus.as_ref()),
+            host_config_memory = option_tostr(d.host_config.memory.as_ref()),
+            host_config_memory_swap = option_tostr(d.host_config.memory_swap.as_ref()),
+            host_config_network_mode = d.host_config.network_mode,
+            host_config_pid_mode = option_tostr(d.host_config.pid_mode.as_ref()),
+            host_config_port_bindings = {
+                d.host_config
+                    .port_bindings
+                    .map(|hm| {
+                        let s = hm
+                            .iter()
+                            .map(|(k, v)| {
+                                let v = v
+                                    .iter()
+                                    .map(|hm| {
+                                        hm.iter()
+                                            .map(|(k, v)| {
+                                                format!(
+                                                    "{:ind$}{k}: {v}",
+                                                    "",
+                                                    ind = 12,
+                                                    k = k,
+                                                    v = v
+                                                )
+                                            })
+                                            .collect::<Vec<_>>()
+                                            .join("\n")
+                                    })
+                                    .collect::<Vec<_>>()
+                                    .join("\n");
 
-    hostname_path = d.hostname_path,
-    hosts_path = d.hosts_path,
-    log_path = d.log_path,
-    id = d.id,
-    image = d.image,
-    mount_label = d.mount_label,
-    name = d.name,
+                                format!("{:ind$}{k}: \n{v}", "", ind = 8, k = k, v = v)
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        format!("\n{s}")
+                    })
+                    .unwrap_or_else(|| String::from("None"))
+            },
+            host_config_privileged = d.host_config.privileged.to_string(),
+            host_config_publish_all_ports = d.host_config.publish_all_ports.to_string(),
+            host_config_readonly_rootfs = option_tostr(d.host_config.readonly_rootfs.as_ref()),
+            hostname_path = d.hostname_path,
+            hosts_path = d.hosts_path,
+            log_path = d.log_path,
+            id = d.id,
+            image = d.image,
+            mount_label = d.mount_label,
+            name = d.name,
+            network_settings_bridge = d.network_settings.bridge,
+            network_settings_gateway = d.network_settings.gateway,
+            network_settings_ip_address = d.network_settings.ip_address,
+            network_settings_ip_prefix_len = d.network_settings.ip_prefix_len.to_string(),
+            network_settings_mac_address = d.network_settings.mac_address,
+            network_settings_ports = {
+                d.network_settings
+                    .ports
+                    .map(|hm| {
+                        let s = hm
+                            .iter()
+                            .map(|(k, v)| {
+                                let v = v
+                                    .as_ref()
+                                    .map(|v| {
+                                        v.iter()
+                                            .map(|hm| {
+                                                let s = hm
+                                                    .iter()
+                                                    .map(|(k, v)| {
+                                                        format!(
+                                                            "{:ind$}{k}: {v}",
+                                                            "",
+                                                            ind = 12,
+                                                            k = k,
+                                                            v = v
+                                                        )
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                                    .join("\n");
+                                                format!("\n{s}")
+                                            })
+                                            .collect::<Vec<_>>()
+                                            .join("\n")
+                                    })
+                                    .unwrap_or_else(|| String::from("None"));
 
-    network_settings_bridge = d.network_settings.bridge,
-    network_settings_gateway = d.network_settings.gateway,
-    network_settings_ip_address = d.network_settings.ip_address,
-    network_settings_ip_prefix_len = d.network_settings.ip_prefix_len.to_string(),
-    network_settings_mac_address = d.network_settings.mac_address,
-    network_settings_ports = {
-        d.network_settings.ports 
-            .map(|hm| {
-                let s = hm.iter()
+                                format!("{:ind$}{k}: \n{v}", "", ind = 8, k = k, v = v)
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        format!("\n{s}")
+                    })
+                    .unwrap_or_else(|| String::from("None"))
+            },
+            network_settings_networks = {
+                let s = d
+                    .network_settings
+                    .networks
+                    .iter()
                     .map(|(k, v)| {
-                        let v = v.as_ref().map(|v| {
-                            v.iter()
-                                .map(|hm| {
-                                    let s = hm.iter()
-                                        .map(|(k, v)| format!("{:ind$}{k}: {v}", "", ind = 12, k = k, v = v))
-                                        .collect::<Vec<_>>()
-                                        .join("\n");
-                                    format!("\n{s}")
-                                })
-                                .collect::<Vec<_>>()
-                                .join("\n")
-                        }).unwrap_or_else(|| String::from("None"));
-
-                        format!("{:ind$}{k}: \n{v}", "", ind = 8, k = k, v = v)
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                format!("\n{s}")
-            })
-            .unwrap_or_else(|| String::from("None"))
-    },
-    network_settings_networks = {
-        let s = d.network_settings.networks.iter().map(|(k, v)| {
-            indoc::formatdoc!(r#"
+                        indoc::formatdoc!(
+                            r#"
                 {k}:
                     network_id: {network_id}
                     endpoint_id: {endpoint_id}
@@ -423,67 +486,68 @@ async fn inspect(container: Container<'_>) -> Result<()> {
                     global_ipv6_prefix_len: {global_ipv6_prefix_len}
                     mac_address: {mac_address}
             "#,
-            k = k,
-            network_id = v.network_id,
-            endpoint_id = v.endpoint_id,
-            gateway = v.gateway,
-            ip_address = v.ip_address,
-            ip_prefix_len = v.ip_prefix_len,
-            ipv6_gateway = v.ipv6_gateway,
-            global_ipv6_address = v.global_ipv6_address,
-            global_ipv6_prefix_len = v.global_ipv6_prefix_len.to_string(),
-            mac_address = v.mac_address,
-            )
-            .lines()
-            .map(|s| format!("{:ind$}{s}", "", ind = 8, s = s))
-            .join("\n")
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
+                            k = k,
+                            network_id = v.network_id,
+                            endpoint_id = v.endpoint_id,
+                            gateway = v.gateway,
+                            ip_address = v.ip_address,
+                            ip_prefix_len = v.ip_prefix_len,
+                            ipv6_gateway = v.ipv6_gateway,
+                            global_ipv6_address = v.global_ipv6_address,
+                            global_ipv6_prefix_len = v.global_ipv6_prefix_len.to_string(),
+                            mac_address = v.mac_address,
+                        )
+                        .lines()
+                        .map(|s| format!("{:ind$}{s}", "", ind = 8, s = s))
+                        .join("\n")
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
 
-        format!("\n{s}")
-    },
-
-    path = d.path,
-    process_label = d.process_label,
-    resolv_conf_path = d.resolv_conf_path,
-    restart_count = d.restart_count.to_string(),
-
-    state_error = d.state.error,
-    state_exit_code = d.state.exit_code.to_string(),
-    state_finished_at = d.state.finished_at.to_string(),
-    state_oom_killed = d.state.oom_killed.to_string(),
-    state_paused = d.state.paused.to_string(),
-    state_pid = d.state.pid.to_string(),
-    state_restarting = d.state.restarting.to_string(),
-    state_running = d.state.running.to_string(),
-    state_started_at = d.state.started_at.to_string(),
-    state_status = d.state.status,
-
-    mounts = {
-        let s = d.mounts.iter()
-            .map(|mount| {
-                indoc::formatdoc!(r#"
+                format!("\n{s}")
+            },
+            path = d.path,
+            process_label = d.process_label,
+            resolv_conf_path = d.resolv_conf_path,
+            restart_count = d.restart_count.to_string(),
+            state_error = d.state.error,
+            state_exit_code = d.state.exit_code.to_string(),
+            state_finished_at = d.state.finished_at.to_string(),
+            state_oom_killed = d.state.oom_killed.to_string(),
+            state_paused = d.state.paused.to_string(),
+            state_pid = d.state.pid.to_string(),
+            state_restarting = d.state.restarting.to_string(),
+            state_running = d.state.running.to_string(),
+            state_started_at = d.state.started_at.to_string(),
+            state_status = d.state.status,
+            mounts = {
+                let s = d
+                    .mounts
+                    .iter()
+                    .map(|mount| {
+                        indoc::formatdoc!(
+                            r#"
                     source: {source}
                     destination: {destination}
                     mode: {mode}
                     rw: {rw}
 
                 "#,
-                source = mount.source,
-                destination = mount.destination,
-                mode = mount.mode,
-                rw = mount.rw.to_string()
-                )
-                .lines()
-                .map(|s| format!("{:ind$}{s}", "", ind = 4, s = s))
-                .join("\n")
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
+                            source = mount.source,
+                            destination = mount.destination,
+                            mode = mount.mode,
+                            rw = mount.rw.to_string()
+                        )
+                        .lines()
+                        .map(|s| format!("{:ind$}{s}", "", ind = 4, s = s))
+                        .join("\n")
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
 
-        format!("\n{s}")
-    }
-    )).map_err(Error::from)
+                format!("\n{s}")
+            }
+        )
+    )
+    .map_err(Error::from)
 }
-

@@ -43,14 +43,14 @@ impl std::fmt::Debug for ParsedLog {
         writeln!(f, "ParsedLog [")?;
         for (i, line) in self.0.iter().enumerate() {
             match line {
-                LogItem::Line(l)         => {
+                LogItem::Line(l) => {
                     let s = std::str::from_utf8(l).unwrap_or("ERROR UTF8 ENCODING");
                     writeln!(f, "[{i}] Line('{s}')")?
-                },
-                LogItem::Progress(u)     => writeln!(f, "[{i}] Progress({u})")?,
+                }
+                LogItem::Progress(u) => writeln!(f, "[{i}] Progress({u})")?,
                 LogItem::CurrentPhase(s) => writeln!(f, "[{i}] Phase({s})")?,
-                LogItem::State(Ok(_))    => writeln!(f, "[{i}] State::OK")?,
-                LogItem::State(Err(_))   => writeln!(f, "[{i}] State::Err")?,
+                LogItem::State(Ok(_)) => writeln!(f, "[{i}] State::OK")?,
+                LogItem::State(Err(_)) => writeln!(f, "[{i}] State::Err")?,
             }
         }
 
@@ -74,7 +74,7 @@ impl FromStr for ParsedLog {
 pub enum JobResult {
     Success,
     Errored,
-    Unknown
+    Unknown,
 }
 
 impl JobResult {
@@ -93,7 +93,7 @@ impl ParsedLog {
             .iter()
             .rev()
             .filter_map(|line| match line {
-                LogItem::State(Ok(_))  => Some(JobResult::Success),
+                LogItem::State(Ok(_)) => Some(JobResult::Success),
                 LogItem::State(Err(_)) => Some(JobResult::Errored),
                 _ => None,
             })

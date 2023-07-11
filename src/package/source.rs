@@ -12,9 +12,9 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use getset::Getters;
-use tracing::trace;
 use serde::Deserialize;
 use serde::Serialize;
+use tracing::trace;
 use url::Url;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Getters)]
@@ -52,7 +52,8 @@ pub struct SourceHash {
 impl SourceHash {
     pub async fn matches_hash_of<R: tokio::io::AsyncRead + Unpin>(&self, reader: R) -> Result<()> {
         trace!("Hashing buffer with: {:?}", self.hashtype);
-        let h = self.hashtype
+        let h = self
+            .hashtype
             .hash_from_reader(reader)
             .await
             .context("Hashing failed")?;
@@ -93,7 +94,10 @@ pub enum HashType {
 }
 
 impl HashType {
-    async fn hash_from_reader<R: tokio::io::AsyncRead + Unpin>(&self, mut reader: R) -> Result<HashValue> {
+    async fn hash_from_reader<R: tokio::io::AsyncRead + Unpin>(
+        &self,
+        mut reader: R,
+    ) -> Result<HashValue> {
         use tokio::io::AsyncReadExt;
 
         let mut buffer = [0; 1024];
@@ -105,7 +109,8 @@ impl HashType {
                 trace!("SHA1 hashing buffer");
                 let mut m = sha1::Sha1::new();
                 loop {
-                    let count = reader.read(&mut buffer)
+                    let count = reader
+                        .read(&mut buffer)
                         .await
                         .context("Reading buffer failed")?;
 
@@ -124,7 +129,8 @@ impl HashType {
                 trace!("SHA256 hashing buffer");
                 let mut m = sha2::Sha256::new();
                 loop {
-                    let count = reader.read(&mut buffer)
+                    let count = reader
+                        .read(&mut buffer)
                         .await
                         .context("Reading buffer failed")?;
 
@@ -145,7 +151,8 @@ impl HashType {
                 trace!("SHA512 hashing buffer");
                 let mut m = sha2::Sha512::new();
                 loop {
-                    let count = reader.read(&mut buffer)
+                    let count = reader
+                        .read(&mut buffer)
                         .await
                         .context("Reading buffer failed")?;
 

@@ -13,4 +13,3 @@ pub use representation::FileSystemRepresentation;
 
 mod element;
 mod path;
-

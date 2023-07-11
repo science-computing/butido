@@ -30,8 +30,13 @@ struct NewEndpoint<'a> {
 }
 
 impl Endpoint {
-    pub fn create_or_fetch(database_connection: &mut PgConnection, ep_name: &EndpointName) -> Result<Endpoint> {
-        let new_ep = NewEndpoint { name: ep_name.as_ref() };
+    pub fn create_or_fetch(
+        database_connection: &mut PgConnection,
+        ep_name: &EndpointName,
+    ) -> Result<Endpoint> {
+        let new_ep = NewEndpoint {
+            name: ep_name.as_ref(),
+        };
 
         database_connection.transaction::<_, Error, _>(|conn| {
             diesel::insert_into(endpoints::table)
@@ -46,12 +51,21 @@ impl Endpoint {
         })
     }
 
-    pub fn fetch_for_job(database_connection: &mut PgConnection, j: &crate::db::models::Job) -> Result<Option<Endpoint>> {
+    pub fn fetch_for_job(
+        database_connection: &mut PgConnection,
+        j: &crate::db::models::Job,
+    ) -> Result<Option<Endpoint>> {
         Self::fetch_by_id(database_connection, j.endpoint_id)
     }
 
-    pub fn fetch_by_id(database_connection: &mut PgConnection, eid: i32) -> Result<Option<Endpoint>> {
-        match dsl::endpoints.filter(id.eq(eid)).first::<Endpoint>(database_connection) {
+    pub fn fetch_by_id(
+        database_connection: &mut PgConnection,
+        eid: i32,
+    ) -> Result<Option<Endpoint>> {
+        match dsl::endpoints
+            .filter(id.eq(eid))
+            .first::<Endpoint>(database_connection)
+        {
             Err(diesel::result::Error::NotFound) => Ok(None),
             Err(e) => Err(Error::from(e)),
             Ok(e) => Ok(Some(e)),
