@@ -253,15 +253,13 @@ async fn of(matches: &ArgMatches, config: &Configuration, repo: Repository) -> R
 
             (p, pathes)
         })
-        .fold(Ok(std::io::stdout()), |out, (package, pathes)| {
-            out.and_then(|mut out| {
-                writeln!(out, "{} {}", package.name(), package.version())?;
-                for path in pathes {
-                    writeln!(out, "\t{}", path.display())?;
-                }
+        .try_fold(std::io::stdout(), |mut out, (package, pathes)| {
+            writeln!(out, "{} {}", package.name(), package.version())?;
+            for path in pathes {
+                writeln!(out, "\t{}", path.display())?;
+            }
 
-                Ok(out)
-            })
+            Ok(out)
         })
         .map(|_| ())
 }
