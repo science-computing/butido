@@ -15,9 +15,9 @@ use std::convert::TryFrom;
 use anyhow::Context;
 use anyhow::Result;
 use clap::ArgMatches;
-use tracing::trace;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use tracing::trace;
 
 use crate::config::Configuration;
 use crate::package::PackageVersionConstraint;

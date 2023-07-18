@@ -12,21 +12,18 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
+use crate::package::dependency::condition::Condition;
 use crate::package::dependency::ParseDependency;
 use crate::package::dependency::StringEqual;
-use crate::package::dependency::condition::Condition;
+use crate::package::PackageName;
+use crate::package::PackageVersionConstraint;
 
 /// A dependency that is packaged and is required during runtime
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(untagged)]
 pub enum Dependency {
     Simple(String),
-    Conditional {
-        name: String,
-        condition: Condition,
-    },
+    Conditional { name: String, condition: Condition },
 }
 
 #[cfg(test)]
@@ -62,7 +59,9 @@ impl From<String> for Dependency {
 
 impl ParseDependency for Dependency {
     fn parse_as_name_and_version(&self) -> Result<(PackageName, PackageVersionConstraint)> {
-        crate::package::dependency::parse_package_dependency_string_into_name_and_version(self.as_ref())
+        crate::package::dependency::parse_package_dependency_string_into_name_and_version(
+            self.as_ref(),
+        )
     }
 }
 
@@ -79,7 +78,8 @@ mod tests {
 
     #[test]
     fn test_parse_dependency() {
-        let s: TestSetting = toml::from_str(r#"setting = "foo""#).expect("Parsing TestSetting failed");
+        let s: TestSetting =
+            toml::from_str(r#"setting = "foo""#).expect("Parsing TestSetting failed");
 
         match s.setting {
             Dependency::Simple(name) => assert_eq!(name, "foo", "Expected 'foo', got {name}"),
@@ -89,14 +89,19 @@ mod tests {
 
     #[test]
     fn test_parse_conditional_dependency() {
-        let s: TestSetting = toml::from_str(r#"setting = { name = "foo", condition = { in_image = "bar"} }"#).expect("Parsing TestSetting failed");
+        let s: TestSetting =
+            toml::from_str(r#"setting = { name = "foo", condition = { in_image = "bar"} }"#)
+                .expect("Parsing TestSetting failed");
         match s.setting {
             Dependency::Conditional { name, condition } => {
                 assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
-                assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
-            },
+                assert_eq!(
+                    condition.in_image().as_ref(),
+                    Some(&OneOrMore::<String>::One(String::from("bar")))
+                );
+            }
             other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
@@ -117,12 +122,14 @@ mod tests {
                 assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
-                assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
-            },
+                assert_eq!(
+                    condition.in_image().as_ref(),
+                    Some(&OneOrMore::<String>::One(String::from("bar")))
+                );
+            }
             other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
-
 
     #[derive(serde::Serialize, serde::Deserialize)]
     #[allow(unused)]
@@ -132,14 +139,19 @@ mod tests {
 
     #[test]
     fn test_parse_conditional_dependencies() {
-        let s: TestSettings = toml::from_str(r#"settings = [{ name = "foo", condition = { in_image = "bar"} }]"#).expect("Parsing TestSetting failed");
+        let s: TestSettings =
+            toml::from_str(r#"settings = [{ name = "foo", condition = { in_image = "bar"} }]"#)
+                .expect("Parsing TestSetting failed");
         match s.settings.get(0).expect("Has not one dependency") {
             Dependency::Conditional { name, condition } => {
                 assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
-                assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
-            },
+                assert_eq!(
+                    condition.in_image().as_ref(),
+                    Some(&OneOrMore::<String>::One(String::from("bar")))
+                );
+            }
             other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
@@ -159,8 +171,11 @@ mod tests {
                 assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
-                assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
-            },
+                assert_eq!(
+                    condition.in_image().as_ref(),
+                    Some(&OneOrMore::<String>::One(String::from("bar")))
+                );
+            }
             other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
@@ -180,8 +195,11 @@ mod tests {
                 assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
-                assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
-            },
+                assert_eq!(
+                    condition.in_image().as_ref(),
+                    Some(&OneOrMore::<String>::One(String::from("bar")))
+                );
+            }
             other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
@@ -205,8 +223,11 @@ mod tests {
                 assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
-                assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("bar"))));
-            },
+                assert_eq!(
+                    condition.in_image().as_ref(),
+                    Some(&OneOrMore::<String>::One(String::from("bar")))
+                );
+            }
             other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
 
@@ -215,10 +236,12 @@ mod tests {
                 assert_eq!(name, "baz", "Expected 'baz', got {name}");
                 assert_eq!(*condition.has_env(), None);
                 assert_eq!(*condition.env_eq(), None);
-                assert_eq!(condition.in_image().as_ref(), Some(&OneOrMore::<String>::One(String::from("boogie"))));
-            },
+                assert_eq!(
+                    condition.in_image().as_ref(),
+                    Some(&OneOrMore::<String>::One(String::from("boogie")))
+                );
+            }
             other => panic!("Unexpected deserialization to other variant: {other:?}"),
         }
     }
 }
-

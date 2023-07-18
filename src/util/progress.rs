@@ -8,8 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use indicatif::*;
 use getset::CopyGetters;
+use indicatif::*;
 
 #[derive(Clone, Debug, CopyGetters)]
 pub struct ProgressBars {
@@ -21,10 +21,7 @@ pub struct ProgressBars {
 
 impl ProgressBars {
     pub fn setup(bar_template: String, hide: bool) -> Self {
-        ProgressBars {
-            bar_template,
-            hide,
-        }
+        ProgressBars { bar_template, hide }
     }
 
     pub fn bar(&self) -> anyhow::Result<ProgressBar> {

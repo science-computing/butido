@@ -14,14 +14,14 @@ use std::convert::TryFrom;
 use std::io::Write;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use clap::ArgMatches;
 use colored::Colorize;
-use tracing::{info, trace};
 use tokio_stream::StreamExt;
+use tracing::{info, trace};
 
 use crate::config::*;
 use crate::package::Package;
@@ -44,7 +44,9 @@ pub async fn source(
         Some(("verify", matches)) => verify(matches, config, repo, progressbars).await,
         Some(("list-missing", matches)) => list_missing(matches, config, repo).await,
         Some(("url", matches)) => url(matches, repo).await,
-        Some(("download", matches)) => crate::commands::source::download::download(matches, config, repo, progressbars).await,
+        Some(("download", matches)) => {
+            crate::commands::source::download::download(matches, config, repo, progressbars).await
+        }
         Some(("of", matches)) => of(matches, config, repo).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
@@ -68,7 +70,8 @@ pub async fn verify(
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
-    let matching_regexp = matches.get_one::<String>("matching")
+    let matching_regexp = matches
+        .get_one::<String>("matching")
         .map(|s| crate::commands::util::mk_package_name_regex(s.as_ref()))
         .transpose()?;
 
@@ -107,7 +110,8 @@ where
     bar.set_message("Verifying sources");
     bar.set_length(sources.len() as u64);
 
-    let results = sources.into_iter()
+    let results = sources
+        .into_iter()
         .map(|src| (bar.clone(), src))
         .map(|(bar, source)| async move {
             trace!("Verifying: {}", source.path().display());
@@ -219,11 +223,7 @@ pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
         })
 }
 
-async fn of(
-    matches: &ArgMatches,
-    config: &Configuration,
-    repo: Repository,
-) -> Result<()> {
+async fn of(matches: &ArgMatches, config: &Configuration, repo: Repository) -> Result<()> {
     let cache = PathBuf::from(config.source_cache_root());
     let sc = SourceCache::new(cache);
     let pname = matches
@@ -245,7 +245,8 @@ async fn of(
                 .unwrap_or(true)
         })
         .map(|p| {
-            let pathes = sc.sources_for(p)
+            let pathes = sc
+                .sources_for(p)
                 .into_iter()
                 .map(|source| source.path())
                 .collect::<Vec<PathBuf>>();

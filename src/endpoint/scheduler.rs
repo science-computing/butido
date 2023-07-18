@@ -16,21 +16,21 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use colored::Colorize;
-use diesel::PgConnection;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
+use diesel::PgConnection;
 use indicatif::ProgressBar;
 use itertools::Itertools;
-use tracing::trace;
 use tokio::io::AsyncWriteExt;
-use tokio::sync::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::RwLock;
+use tracing::trace;
 use uuid::Uuid;
 
 use crate::db::models as dbmodels;
 use crate::endpoint::Endpoint;
-use crate::endpoint::EndpointHandle;
 use crate::endpoint::EndpointConfiguration;
+use crate::endpoint::EndpointHandle;
 use crate::filestore::ArtifactPath;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
@@ -74,7 +74,11 @@ impl EndpointScheduler {
     /// # Warning
     ///
     /// This function blocks as long as there is no free endpoint available!
-    pub async fn schedule_job(&self, job: RunnableJob, bar: indicatif::ProgressBar) -> Result<JobHandle> {
+    pub async fn schedule_job(
+        &self,
+        job: RunnableJob,
+        bar: indicatif::ProgressBar,
+    ) -> Result<JobHandle> {
         let endpoint = self.select_free_endpoint().await?;
 
         Ok(JobHandle {
@@ -94,13 +98,20 @@ impl EndpointScheduler {
             let ep = self
                 .endpoints
                 .iter()
-                .filter(|ep| { // filter out all running containers where the number of max jobs is reached
+                .filter(|ep| {
+                    // filter out all running containers where the number of max jobs is reached
                     let r = ep.running_jobs() < ep.num_max_jobs();
-                    trace!("Endpoint {} considered for scheduling job: {}", ep.name(), r);
+                    trace!(
+                        "Endpoint {} considered for scheduling job: {}",
+                        ep.name(),
+                        r
+                    );
                     r
                 })
                 .sorted_by(|ep1, ep2| {
-                    ep1.utilization().partial_cmp(&ep2.utilization()).unwrap_or(std::cmp::Ordering::Equal)
+                    ep1.utilization()
+                        .partial_cmp(&ep2.utilization())
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 })
                 .next();
 
@@ -136,14 +147,26 @@ impl JobHandle {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let endpoint_uri = self.endpoint.uri().clone();
         let endpoint_name = self.endpoint.name().clone();
-        let endpoint = dbmodels::Endpoint::create_or_fetch(&mut self.db.get().unwrap(), self.endpoint.name())?;
-        let package = dbmodels::Package::create_or_fetch(&mut self.db.get().unwrap(), self.job.package())?;
-        let image = dbmodels::Image::create_or_fetch(&mut self.db.get().unwrap(), self.job.image())?;
+        let endpoint =
+            dbmodels::Endpoint::create_or_fetch(&mut self.db.get().unwrap(), self.endpoint.name())?;
+        let package =
+            dbmodels::Package::create_or_fetch(&mut self.db.get().unwrap(), self.job.package())?;
+        let image =
+            dbmodels::Image::create_or_fetch(&mut self.db.get().unwrap(), self.job.image())?;
         let envs = self.create_env_in_db()?;
         let job_id = *self.job.uuid();
-        trace!("Running on Job {} on Endpoint {}", job_id, self.endpoint.name());
-        let prepared_container = self.endpoint
-            .prepare_container(&self.job, self.staging_store.clone(), self.release_stores.clone())
+        trace!(
+            "Running on Job {} on Endpoint {}",
+            job_id,
+            self.endpoint.name()
+        );
+        let prepared_container = self
+            .endpoint
+            .prepare_container(
+                &self.job,
+                self.staging_store.clone(),
+                self.release_stores.clone(),
+            )
             .await?;
         let container_id = prepared_container.create_info().id.clone();
         let running_container = prepared_container
@@ -174,7 +197,8 @@ impl JobHandle {
         drop(self.bar);
 
         let (run_container, logres) = tokio::join!(running_container, logres);
-        let log = logres.with_context(|| anyhow!("Collecting logs for job on '{}'", endpoint_name))?;
+        let log =
+            logres.with_context(|| anyhow!("Collecting logs for job on '{}'", endpoint_name))?;
         let run_container = run_container
             .with_context(|| anyhow!("Running container {} failed", container_id))
             .with_context(|| {
@@ -202,8 +226,14 @@ impl JobHandle {
 
         trace!("DB: Job entry for job {} created: {}", job.uuid, job.id);
         for env in envs {
-            dbmodels::JobEnv::create(&mut self.db.get().unwrap(), &job, &env)
-                .with_context(|| format!("Creating Environment Variable mapping for Job: {}", job.uuid))?;
+            dbmodels::JobEnv::create(&mut self.db.get().unwrap(), &job, &env).with_context(
+                || {
+                    format!(
+                        "Creating Environment Variable mapping for Job: {}",
+                        job.uuid
+                    )
+                },
+            )?;
         }
 
         let res: crate::endpoint::FinalizedContainer = run_container
@@ -239,7 +269,7 @@ impl JobHandle {
             trace!("Error was returned from script");
             return Ok({
                 res.map(|_| vec![]) // to have the proper type, will never be executed
-             })
+            });
         }
 
         // Have to do it the ugly way here because of borrowing semantics
@@ -259,7 +289,13 @@ impl JobHandle {
     }
 
     /// Helper to create an error object with a nice message.
-    fn create_job_run_error(job_id: &Uuid, package_name: &str, package_version: &str, endpoint_uri: &str, container_id: &str) -> Error {
+    fn create_job_run_error(
+        job_id: &Uuid,
+        package_name: &str,
+        package_version: &str,
+        endpoint_uri: &str,
+        container_id: &str,
+    ) -> Error {
         anyhow!(indoc::formatdoc!(
             r#"Error while running job for {package_name} {package_version} with id:
 
@@ -276,9 +312,10 @@ impl JobHandle {
             job_id = job_id.to_string().red(),
             package_name = package_name.to_string().red(),
             package_version = package_version.to_string().red(),
-
-            docker_connect_string = format!("docker --host {endpoint_uri} exec -it {container_id} /bin/bash"
-            ).yellow().bold(),
+            docker_connect_string =
+                format!("docker --host {endpoint_uri} exec -it {container_id} /bin/bash")
+                    .yellow()
+                    .bold(),
         ))
     }
 
@@ -295,7 +332,9 @@ impl JobHandle {
                     .inspect(|(k, v)| {
                         trace!("Creating environment variable in database: {} = {}", k, v)
                     })
-                    .map(|(k, v)| dbmodels::EnvVar::create_or_fetch(&mut self.db.get().unwrap(), k, v))
+                    .map(|(k, v)| {
+                        dbmodels::EnvVar::create_or_fetch(&mut self.db.get().unwrap(), k, v)
+                    })
                     .collect::<Result<Vec<_>>>()
             })
             .transpose()?
@@ -310,7 +349,9 @@ impl JobHandle {
                     .inspect(|(k, v)| {
                         trace!("Creating environment variable in database: {} = {}", k, v)
                     })
-                    .map(|(k, v)| dbmodels::EnvVar::create_or_fetch(&mut self.db.get().unwrap(), k, v))
+                    .map(|(k, v)| {
+                        dbmodels::EnvVar::create_or_fetch(&mut self.db.get().unwrap(), k, v)
+                    })
             })
             .collect()
     }
@@ -335,7 +376,8 @@ impl<'a> LogReceiver<'a> {
         // Reserve a reasonable amount of elements.
         accu.reserve(4096);
 
-        let mut logfile = self.get_logfile()
+        let mut logfile = self
+            .get_logfile()
             .await
             .transpose()
             .context("Getting Logfile")?;
@@ -353,15 +395,16 @@ impl<'a> LogReceiver<'a> {
             // Timeout for receiving from the log receiver channel
             // This way we can update (`tick()`) the progress bar and show the user that things are
             // happening, even if there was no log output for several seconds.
-            let logitem = match tokio::time::timeout(timeout_duration, self.log_receiver.recv()).await {
-                Err(_ /* elapsed */) => {
-                    self.bar.tick(); // just ping the progressbar here
-                    continue
-                },
+            let logitem =
+                match tokio::time::timeout(timeout_duration, self.log_receiver.recv()).await {
+                    Err(_ /* elapsed */) => {
+                        self.bar.tick(); // just ping the progressbar here
+                        continue;
+                    }
 
-                Ok(None) => break, // if the log is empty, we're done
-                Ok(Some(logitem)) => logitem,
-            };
+                    Ok(None) => break, // if the log is empty, we're done
+                    Ok(Some(logitem)) => logitem,
+                };
 
             if let Some(lf) = logfile.as_mut() {
                 lf.write_all(logitem.display()?.to_string().as_bytes())
@@ -381,14 +424,23 @@ impl<'a> LogReceiver<'a> {
                     trace!("Setting bar phase to {}", phasename);
                     self.bar.set_message(format!(
                         "[{}/{} {} {} {}]: Phase: {}",
-                        self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version, phasename
+                        self.endpoint_name,
+                        self.container_id_chrs,
+                        self.job.uuid(),
+                        self.package_name,
+                        self.package_version,
+                        phasename
                     ));
                 }
                 LogItem::State(Ok(())) => {
                     trace!("Setting bar state to Ok");
                     self.bar.set_message(format!(
                         "[{}/{} {} {} {}]: State Ok",
-                        self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version
+                        self.endpoint_name,
+                        self.container_id_chrs,
+                        self.job.uuid(),
+                        self.package_name,
+                        self.package_version
                     ));
                     success = Some(true);
                 }
@@ -396,7 +448,12 @@ impl<'a> LogReceiver<'a> {
                     trace!("Setting bar state to Err: {}", e);
                     self.bar.set_message(format!(
                         "[{}/{} {} {} {}]: State Err: {}",
-                        self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version, e
+                        self.endpoint_name,
+                        self.container_id_chrs,
+                        self.job.uuid(),
+                        self.package_name,
+                        self.package_version,
+                        e
                     ));
                     success = Some(false);
                 }
@@ -408,15 +465,27 @@ impl<'a> LogReceiver<'a> {
         let finish_msg = match success {
             Some(true) => format!(
                 "[{}/{} {} {} {}]: finished successfully",
-                self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version
+                self.endpoint_name,
+                self.container_id_chrs,
+                self.job.uuid(),
+                self.package_name,
+                self.package_version
             ),
             Some(false) => format!(
                 "[{}/{} {} {} {}]: finished with error",
-                self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version
+                self.endpoint_name,
+                self.container_id_chrs,
+                self.job.uuid(),
+                self.package_name,
+                self.package_version
             ),
             None => format!(
                 "[{}/{} {} {} {}]: finished",
-                self.endpoint_name, self.container_id_chrs, self.job.uuid(), self.package_name, self.package_version
+                self.endpoint_name,
+                self.container_id_chrs,
+                self.job.uuid(),
+                self.package_name,
+                self.package_version
             ),
         };
         self.bar.finish_with_message(finish_msg);
@@ -438,7 +507,10 @@ impl<'a> LogReceiver<'a> {
             Some({
                 let path = log_dir.join(format!(
                     "{}-{}-{}-{}.log",
-                    self.package_name, self.package_version, self.job.image(), self.job.uuid()
+                    self.package_name,
+                    self.package_version,
+                    self.job.image(),
+                    self.job.uuid()
                 ));
                 tokio::fs::OpenOptions::new()
                     .create(true)

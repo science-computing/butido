@@ -60,12 +60,21 @@ impl Package {
         })
     }
 
-    pub fn fetch_for_job(database_connection: &mut PgConnection, j: &crate::db::models::Job) -> Result<Option<Package>> {
+    pub fn fetch_for_job(
+        database_connection: &mut PgConnection,
+        j: &crate::db::models::Job,
+    ) -> Result<Option<Package>> {
         Self::fetch_by_id(database_connection, j.package_id)
     }
 
-    pub fn fetch_by_id(database_connection: &mut PgConnection, pid: i32) -> Result<Option<Package>> {
-        match dsl::packages.filter(id.eq(pid)).first::<Package>(database_connection) {
+    pub fn fetch_by_id(
+        database_connection: &mut PgConnection,
+        pid: i32,
+    ) -> Result<Option<Package>> {
+        match dsl::packages
+            .filter(id.eq(pid))
+            .first::<Package>(database_connection)
+        {
             Err(diesel::result::Error::NotFound) => Ok(None),
             Err(e) => Err(Error::from(e)),
             Ok(p) => Ok(Some(p)),

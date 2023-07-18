@@ -16,10 +16,10 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use tracing::trace;
 use resiter::AndThen;
 use resiter::FilterMap;
 use resiter::Map;
+use tracing::trace;
 
 use crate::package::Package;
 use crate::package::PackageName;
@@ -54,7 +54,8 @@ impl Repository {
 
         fn get_patches(config: &Config) -> Result<Vec<PathBuf>> {
             match config.get_array("patches") {
-                Ok(v)  => v.into_iter()
+                Ok(v) => v
+                    .into_iter()
                     .map(config::Value::into_str)
                     .map_err(Error::from)
                     .map_err(|e| e.context("patches must be strings"))

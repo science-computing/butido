@@ -10,13 +10,13 @@
 
 use std::collections::BTreeMap;
 
+use anyhow::Result;
+use getset::Getters;
 use serde::Deserialize;
 use serde::Serialize;
-use getset::Getters;
-use anyhow::Result;
 
-use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
+use crate::util::EnvironmentVariableName;
 
 /// The Condition type
 ///
@@ -44,12 +44,16 @@ pub struct Condition {
 
 impl Condition {
     #[cfg(test)]
-    pub fn new(has_env: Option<OneOrMore<EnvironmentVariableName>>,
-               env_eq: Option<BTreeMap<EnvironmentVariableName, String>>,
-               in_image: Option<OneOrMore<String>>)
-        -> Self
-    {
-        Condition { has_env, env_eq, in_image }
+    pub fn new(
+        has_env: Option<OneOrMore<EnvironmentVariableName>>,
+        env_eq: Option<BTreeMap<EnvironmentVariableName, String>>,
+        in_image: Option<OneOrMore<String>>,
+    ) -> Self {
+        Condition {
+            has_env,
+            env_eq,
+            in_image,
+        }
     }
 
     /// Check whether the condition matches a certain set of data
@@ -59,15 +63,15 @@ impl Condition {
     /// Always returns Ok(_) in the current implementation
     pub fn matches(&self, data: &ConditionData<'_>) -> Result<bool> {
         if !self.matches_env_cond(data)? {
-            return Ok(false)
+            return Ok(false);
         }
 
         if !self.matches_env_eq_cond(data)? {
-            return Ok(false)
+            return Ok(false);
         }
 
         if !self.matches_in_image_cond(data)? {
-            return Ok(false)
+            return Ok(false);
         }
 
         Ok(true)
@@ -77,15 +81,13 @@ impl Condition {
         if let Some(has_env_cond) = self.has_env.as_ref() {
             let b = match has_env_cond {
                 OneOrMore::One(env) => data.env.iter().any(|(name, _)| env == name),
-                OneOrMore::More(envs) => envs.iter().all(|required_env| {
-                    data.env
-                        .iter()
-                        .any(|(name, _)| name == required_env)
-                })
+                OneOrMore::More(envs) => envs
+                    .iter()
+                    .all(|required_env| data.env.iter().any(|(name, _)| name == required_env)),
             };
 
             if !b {
-                return Ok(false)
+                return Ok(false);
             }
         }
 
@@ -94,17 +96,16 @@ impl Condition {
 
     fn matches_env_eq_cond(&self, data: &ConditionData<'_>) -> Result<bool> {
         if let Some(env_eq_cond) = self.env_eq.as_ref() {
-            let b = env_eq_cond.iter()
-                .all(|(req_env_name, req_env_val)| {
-                    data.env
-                        .iter()
-                        .find(|(env_name, _)| env_name == req_env_name)
-                        .map(|(_, env_val)| env_val == req_env_val)
-                        .unwrap_or(false)
-                });
+            let b = env_eq_cond.iter().all(|(req_env_name, req_env_val)| {
+                data.env
+                    .iter()
+                    .find(|(env_name, _)| env_name == req_env_name)
+                    .map(|(_, env_val)| env_val == req_env_val)
+                    .unwrap_or(false)
+            });
 
             if !b {
-                return Ok(false)
+                return Ok(false);
             }
         }
 
@@ -127,16 +128,13 @@ impl Condition {
                         .as_ref()
                         .map(|i| i.as_ref() == req_image)
                         .unwrap_or(false)
-                },
-                OneOrMore::More(req_images) => {
-                    req_images.iter()
-                        .any(|ri| {
-                            data.image_name
-                                .as_ref()
-                                .map(|inam| inam.as_ref() == ri)
-                                .unwrap_or(false)
-                        })
-                },
+                }
+                OneOrMore::More(req_images) => req_images.iter().any(|ri| {
+                    data.image_name
+                        .as_ref()
+                        .map(|inam| inam.as_ref() == ri)
+                        .unwrap_or(false)
+                }),
             };
 
             Ok(b)
@@ -145,7 +143,6 @@ impl Condition {
         }
     }
 }
-
 
 /// Helper type for supporting Vec<T> and T in value
 /// position of Condition
@@ -180,7 +177,6 @@ impl From<String> for OneOrMore<String> {
     }
 }
 
-
 #[derive(Debug)]
 pub struct ConditionData<'a> {
     pub(crate) image_name: Option<&'a ImageName>,
@@ -207,7 +203,9 @@ impl ConditionCheckable for crate::package::BuildDependency {
             // If the dependency is a simple one, e.g. "foo =1.2.3", there is no condition, so the
             // dependency has always to be used
             crate::package::BuildDependency::Simple(_) => Ok(true),
-            crate::package::BuildDependency::Conditional { condition, .. } => condition.matches(data),
+            crate::package::BuildDependency::Conditional { condition, .. } => {
+                condition.matches(data)
+            }
         }
     }
 }
@@ -232,7 +230,10 @@ mod tests {
         let s = r#"has_env = "foo""#;
         let c: Condition = toml::from_str(s).expect("Deserializing has_env");
 
-        assert_eq!(c.has_env.unwrap(), OneOrMore::<EnvironmentVariableName>::One(EnvironmentVariableName::from("foo")));
+        assert_eq!(
+            c.has_env.unwrap(),
+            OneOrMore::<EnvironmentVariableName>::One(EnvironmentVariableName::from("foo"))
+        );
         assert!(c.env_eq.is_none());
         assert!(c.in_image.is_none());
     }
@@ -244,7 +245,10 @@ mod tests {
 
         assert_eq!(c.has_env.unwrap(), {
             OneOrMore::<EnvironmentVariableName>::More({
-                vec![EnvironmentVariableName::from("foo"), EnvironmentVariableName::from("bar")]
+                vec![
+                    EnvironmentVariableName::from("foo"),
+                    EnvironmentVariableName::from("bar"),
+                ]
             })
         });
         assert!(c.env_eq.is_none());
@@ -272,7 +276,10 @@ mod tests {
 
         assert!(c.has_env.is_none());
         assert!(c.env_eq.is_none());
-        assert_eq!(c.in_image.unwrap(), OneOrMore::<String>::One(String::from("foo")));
+        assert_eq!(
+            c.in_image.unwrap(),
+            OneOrMore::<String>::One(String::from("foo"))
+        );
     }
 
     #[test]
@@ -282,7 +289,10 @@ mod tests {
 
         assert!(c.has_env.is_none());
         assert!(c.env_eq.is_none());
-        assert_eq!(c.in_image.unwrap(), OneOrMore::<String>::More(vec![String::from("foo")]));
+        assert_eq!(
+            c.in_image.unwrap(),
+            OneOrMore::<String>::More(vec![String::from("foo")])
+        );
     }
 
     #[test]
@@ -348,9 +358,15 @@ mod tests {
             env: &[],
         };
 
-        let condition = Condition::new({
-            Some(OneOrMore::<EnvironmentVariableName>::One(EnvironmentVariableName::from("A")))
-        }, None, None);
+        let condition = Condition::new(
+            {
+                Some(OneOrMore::<EnvironmentVariableName>::One(
+                    EnvironmentVariableName::from("A"),
+                ))
+            },
+            None,
+            None,
+        );
 
         assert!(!condition.matches(&data).unwrap());
     }
@@ -362,9 +378,15 @@ mod tests {
             env: &[(EnvironmentVariableName::from("A"), String::from("1"))],
         };
 
-        let condition = Condition::new({
-            Some(OneOrMore::<EnvironmentVariableName>::One(EnvironmentVariableName::from("A")))
-        }, None, None);
+        let condition = Condition::new(
+            {
+                Some(OneOrMore::<EnvironmentVariableName>::One(
+                    EnvironmentVariableName::from("A"),
+                ))
+            },
+            None,
+            None,
+        );
 
         assert!(condition.matches(&data).unwrap());
     }
@@ -376,11 +398,15 @@ mod tests {
             env: &[],
         };
 
-        let condition = Condition::new(None, {
-            let mut hm = BTreeMap::new();
-            hm.insert(EnvironmentVariableName::from("A"), String::from("1"));
-            Some(hm)
-        }, None);
+        let condition = Condition::new(
+            None,
+            {
+                let mut hm = BTreeMap::new();
+                hm.insert(EnvironmentVariableName::from("A"), String::from("1"));
+                Some(hm)
+            },
+            None,
+        );
 
         assert!(!condition.matches(&data).unwrap());
     }
@@ -392,11 +418,15 @@ mod tests {
             env: &[(EnvironmentVariableName::from("A"), String::from("1"))],
         };
 
-        let condition = Condition::new(None, {
-            let mut hm = BTreeMap::new();
-            hm.insert(EnvironmentVariableName::from("A"), String::from("2"));
-            Some(hm)
-        }, None);
+        let condition = Condition::new(
+            None,
+            {
+                let mut hm = BTreeMap::new();
+                hm.insert(EnvironmentVariableName::from("A"), String::from("2"));
+                Some(hm)
+            },
+            None,
+        );
 
         assert!(!condition.matches(&data).unwrap());
     }
@@ -408,13 +438,16 @@ mod tests {
             env: &[(EnvironmentVariableName::from("A"), String::from("1"))],
         };
 
-        let condition = Condition::new(None, {
-            let mut hm = BTreeMap::new();
-            hm.insert(EnvironmentVariableName::from("A"), String::from("1"));
-            Some(hm)
-        }, None);
+        let condition = Condition::new(
+            None,
+            {
+                let mut hm = BTreeMap::new();
+                hm.insert(EnvironmentVariableName::from("A"), String::from("1"));
+                Some(hm)
+            },
+            None,
+        );
 
         assert!(condition.matches(&data).unwrap());
     }
-
 }

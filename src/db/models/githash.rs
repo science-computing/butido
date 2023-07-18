@@ -30,7 +30,10 @@ struct NewGitHash<'a> {
 }
 
 impl GitHash {
-    pub fn create_or_fetch(database_connection: &mut PgConnection, githash: &str) -> Result<GitHash> {
+    pub fn create_or_fetch(
+        database_connection: &mut PgConnection,
+        githash: &str,
+    ) -> Result<GitHash> {
         let new_hash = NewGitHash { hash: githash };
 
         database_connection.transaction::<_, Error, _>(|conn| {

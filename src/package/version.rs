@@ -67,7 +67,6 @@ impl std::convert::TryFrom<&str> for PackageVersionConstraint {
             .context("Failed to parse package version constraint")
             .context("A package version constraint must have a comparator and a version string, like so: =0.1.0")
             .map_err(Error::from)
-
     }
 }
 
@@ -137,39 +136,17 @@ mod tests {
         assert!(PackageVersion::parser().parse(b"=a1").is_err());
         assert!(PackageVersion::parser().parse(b"a").is_err());
 
-        assert!(PackageVersionConstraint::parser()
-            .parse(b"")
-            .is_err());
-        assert!(PackageVersionConstraint::parser()
-            .parse(b"=")
-            .is_err());
-        assert!(PackageVersionConstraint::parser()
-            .parse(b"*1")
-            .is_err());
-        assert!(PackageVersionConstraint::parser()
-            .parse(b">1")
-            .is_err());
-        assert!(PackageVersionConstraint::parser()
-            .parse(b"<1")
-            .is_err());
-        assert!(PackageVersionConstraint::parser()
-            .parse(b"=a")
-            .is_err());
-        assert!(PackageVersionConstraint::parser()
-            .parse(b"=.a")
-            .is_err());
-        assert!(PackageVersionConstraint::parser()
-            .parse(b"=.1")
-            .is_err());
-        assert!(PackageVersionConstraint::parser()
-            .parse(b"=a1")
-            .is_err());
-        assert!(PackageVersionConstraint::parser()
-            .parse(b"1")
-            .is_err());
-        assert!(PackageVersionConstraint::parser()
-            .parse(b"a")
-            .is_err());
+        assert!(PackageVersionConstraint::parser().parse(b"").is_err());
+        assert!(PackageVersionConstraint::parser().parse(b"=").is_err());
+        assert!(PackageVersionConstraint::parser().parse(b"*1").is_err());
+        assert!(PackageVersionConstraint::parser().parse(b">1").is_err());
+        assert!(PackageVersionConstraint::parser().parse(b"<1").is_err());
+        assert!(PackageVersionConstraint::parser().parse(b"=a").is_err());
+        assert!(PackageVersionConstraint::parser().parse(b"=.a").is_err());
+        assert!(PackageVersionConstraint::parser().parse(b"=.1").is_err());
+        assert!(PackageVersionConstraint::parser().parse(b"=a1").is_err());
+        assert!(PackageVersionConstraint::parser().parse(b"1").is_err());
+        assert!(PackageVersionConstraint::parser().parse(b"a").is_err());
     }
 
     #[test]

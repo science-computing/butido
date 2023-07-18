@@ -10,14 +10,14 @@
 
 use std::fmt::Debug;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
-use tracing::trace;
 use result_inspect::ResultInspect;
+use tracing::trace;
 
 use crate::filestore::path::ArtifactPath;
 use crate::filestore::path::StoreRoot;

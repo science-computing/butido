@@ -64,4 +64,3 @@ pub enum EndpointType {
     #[serde(rename = "http")]
     Http,
 }
-

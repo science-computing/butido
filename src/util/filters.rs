@@ -11,8 +11,8 @@
 use anyhow::Error;
 use anyhow::Result;
 use filters::failable::filter::FailableFilter;
-use tracing::trace;
 use resiter::Map;
+use tracing::trace;
 
 use crate::package::Package;
 use crate::package::PackageName;

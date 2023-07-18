@@ -19,9 +19,9 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use diesel::prelude::*;
-use tracing::{debug, error, info, trace};
-use tokio_stream::StreamExt;
 use resiter::AndThen;
+use tokio_stream::StreamExt;
+use tracing::{debug, error, info, trace};
 
 use crate::config::Configuration;
 use crate::db::models as dbmodels;
@@ -34,13 +34,12 @@ pub async fn release(
     matches: &ArgMatches,
 ) -> Result<()> {
     match matches.subcommand() {
-        Some(("new", matches))  => new_release(db_connection_config, config, matches).await,
-        Some(("rm", matches))   => rm_release(db_connection_config, config, matches).await,
+        Some(("new", matches)) => new_release(db_connection_config, config, matches).await,
+        Some(("rm", matches)) => rm_release(db_connection_config, config, matches).await,
         Some((other, _matches)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("Missing subcommand")),
     }
 }
-
 
 async fn new_release(
     db_connection_config: DbConnectionConfig<'_>,
@@ -136,16 +135,21 @@ async fn new_release(
 
     let staging_base: &PathBuf = &config.staging_directory().join(submit.uuid.to_string());
 
-    let release_store = crate::db::models::ReleaseStore::create(&mut pool.get().unwrap(), release_store_name)?;
+    let release_store =
+        crate::db::models::ReleaseStore::create(&mut pool.get().unwrap(), release_store_name)?;
     let do_update = matches.get_flag("package_do_update");
     let interactive = !matches.get_flag("noninteractive");
 
     let now = chrono::offset::Local::now().naive_local();
-    let any_err = arts.into_iter()
+    let any_err = arts
+        .into_iter()
         .map(|art| async {
             let art = art; // ensure it is moved
             let art_path = staging_base.join(&art.path);
-            let dest_path = config.releases_directory().join(release_store_name).join(&art.path);
+            let dest_path = config
+                .releases_directory()
+                .join(release_store_name)
+                .join(&art.path);
             debug!(
                 "Trying to release {} to {}",
                 art_path.display(),
@@ -162,27 +166,51 @@ async fn new_release(
                 if dest_path.exists() && !do_update {
                     return Err(anyhow!("Does already exist: {}", dest_path.display()));
                 } else if dest_path.exists() && do_update {
-                    writeln!(std::io::stderr(), "Going to update: {}", dest_path.display())?;
-                    if interactive && !dialoguer::Confirm::new().with_prompt("Continue?").interact()? {
-                        return Err(anyhow!("Does already exist: {} and update was denied", dest_path.display()));
+                    writeln!(
+                        std::io::stderr(),
+                        "Going to update: {}",
+                        dest_path.display()
+                    )?;
+                    if interactive
+                        && !dialoguer::Confirm::new()
+                            .with_prompt("Continue?")
+                            .interact()?
+                    {
+                        return Err(anyhow!(
+                            "Does already exist: {} and update was denied",
+                            dest_path.display()
+                        ));
                     }
                 }
 
                 if dest_path.exists() {
-                    debug!("Removing {} before writing new file to this path", dest_path.display());
-                    tokio::fs::remove_file(&dest_path)
-                        .await
-                        .with_context(|| anyhow!("Removing {} before writing new file to this path", dest_path.display()))?;
+                    debug!(
+                        "Removing {} before writing new file to this path",
+                        dest_path.display()
+                    );
+                    tokio::fs::remove_file(&dest_path).await.with_context(|| {
+                        anyhow!(
+                            "Removing {} before writing new file to this path",
+                            dest_path.display()
+                        )
+                    })?;
                 }
 
                 // else !dest_path.exists()
                 tokio::fs::copy(&art_path, &dest_path)
                     .await
-                    .with_context(|| anyhow!("Copying {} to {}", art_path.display(), dest_path.display()))
+                    .with_context(|| {
+                        anyhow!("Copying {} to {}", art_path.display(), dest_path.display())
+                    })
                     .map_err(Error::from)
                     .and_then(|_| {
                         debug!("Updating {:?} to set released = true", art);
-                        let rel = crate::db::models::Release::create(&mut pool.get().unwrap(), &art, &now, &release_store)?;
+                        let rel = crate::db::models::Release::create(
+                            &mut pool.get().unwrap(),
+                            &art,
+                            &now,
+                            &release_store,
+                        )?;
                         debug!("Release object = {:?}", rel);
                         Ok(dest_path)
                     })
@@ -224,7 +252,10 @@ pub async fn rm_release(
         ));
     }
     if !config.release_stores().contains(release_store_name) {
-        return Err(anyhow!("Unknown release store name: {}", release_store_name))
+        return Err(anyhow!(
+            "Unknown release store name: {}",
+            release_store_name
+        ));
     }
 
     let pname = matches.get_one::<String>("package_name").unwrap(); // safe by clap
@@ -233,29 +264,54 @@ pub async fn rm_release(
 
     let mut conn = db_connection_config.establish_connection()?;
 
-    let (release, artifact) = crate::schema::jobs::table
-        .inner_join(crate::schema::packages::table)
-        .inner_join(crate::schema::artifacts::table)
-        .inner_join(crate::schema::releases::table
-            .on(crate::schema::releases::artifact_id.eq(crate::schema::artifacts::id)))
-        .inner_join(crate::schema::release_stores::table
-            .on(crate::schema::release_stores::id.eq(crate::schema::releases::release_store_id)))
-        .filter(crate::schema::packages::dsl::name.eq(&pname)
-            .and(crate::schema::packages::dsl::version.eq(&pvers)))
-        .filter(crate::schema::release_stores::dsl::store_name.eq(&release_store_name))
-        .order(crate::schema::releases::dsl::release_date.desc())
-        .select((crate::schema::releases::all_columns, crate::schema::artifacts::all_columns))
-        .first::<(crate::db::models::Release, crate::db::models::Artifact)>(&mut conn)?;
+    let (release, artifact) =
+        crate::schema::jobs::table
+            .inner_join(crate::schema::packages::table)
+            .inner_join(crate::schema::artifacts::table)
+            .inner_join(
+                crate::schema::releases::table
+                    .on(crate::schema::releases::artifact_id.eq(crate::schema::artifacts::id)),
+            )
+            .inner_join(crate::schema::release_stores::table.on(
+                crate::schema::release_stores::id.eq(crate::schema::releases::release_store_id),
+            ))
+            .filter(
+                crate::schema::packages::dsl::name
+                    .eq(&pname)
+                    .and(crate::schema::packages::dsl::version.eq(&pvers)),
+            )
+            .filter(crate::schema::release_stores::dsl::store_name.eq(&release_store_name))
+            .order(crate::schema::releases::dsl::release_date.desc())
+            .select((
+                crate::schema::releases::all_columns,
+                crate::schema::artifacts::all_columns,
+            ))
+            .first::<(crate::db::models::Release, crate::db::models::Artifact)>(&mut conn)?;
 
-    let artifact_path = config.releases_directory().join(release_store_name).join(&artifact.path);
+    let artifact_path = config
+        .releases_directory()
+        .join(release_store_name)
+        .join(&artifact.path);
     if !artifact_path.is_file() {
-        return Err(anyhow!("Not a file: {}", artifact_path.display()))
+        return Err(anyhow!("Not a file: {}", artifact_path.display()));
     }
 
-    writeln!(std::io::stderr(), "Going to delete: {}", artifact_path.display())?;
-    writeln!(std::io::stderr(), "Going to remove from database: Release with ID {} from {}", release.id, release.release_date)?;
-    if !dialoguer::Confirm::new().with_prompt("Continue?").interact()? {
-        return Ok(())
+    writeln!(
+        std::io::stderr(),
+        "Going to delete: {}",
+        artifact_path.display()
+    )?;
+    writeln!(
+        std::io::stderr(),
+        "Going to remove from database: Release with ID {} from {}",
+        release.id,
+        release.release_date
+    )?;
+    if !dialoguer::Confirm::new()
+        .with_prompt("Continue?")
+        .interact()?
+    {
+        return Ok(());
     }
 
     tokio::fs::remove_file(&artifact_path).await?;
@@ -266,4 +322,3 @@ pub async fn rm_release(
 
     Ok(())
 }
-

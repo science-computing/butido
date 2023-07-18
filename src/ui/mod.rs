@@ -13,8 +13,8 @@
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
 use itertools::Itertools;
 
 use crate::config::Configuration;

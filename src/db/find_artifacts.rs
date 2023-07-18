@@ -14,17 +14,17 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use chrono::NaiveDateTime;
+use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::Pool;
 use diesel::BoolExpressionMethods;
 use diesel::ExpressionMethods;
 use diesel::JoinOnDsl;
 use diesel::PgConnection;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
-use diesel::r2d2::ConnectionManager;
-use diesel::r2d2::Pool;
-use tracing::{debug, trace};
 use resiter::AndThen;
 use resiter::FilterMap;
+use tracing::{debug, trace};
 
 use crate::config::Configuration;
 use crate::db::models as dbmodels;
@@ -36,8 +36,8 @@ use crate::package::Package;
 use crate::package::ScriptBuilder;
 use crate::package::Shebang;
 use crate::schema;
-use crate::util::EnvironmentVariableName;
 use crate::util::docker::ImageName;
+use crate::util::EnvironmentVariableName;
 
 /// Find an artifact by a job description
 ///
@@ -99,23 +99,25 @@ impl<'a> FindArtifacts<'a> {
         let mut query = schema::packages::table
             .filter({
                 // The package with pkg.name() and pkg.version()
-                let package_name_filter = schema::packages::name.eq(self.package.name().as_ref() as &str);
+                let package_name_filter =
+                    schema::packages::name.eq(self.package.name().as_ref() as &str);
                 let package_version_filter =
                     schema::packages::version.eq(self.package.version().as_ref() as &str);
 
                 package_name_filter.and(package_version_filter)
             })
-
             // TODO: Only select from submits where the submit contained jobs that are in the
             // dependencies of `pkg`.
             .inner_join(schema::jobs::table.inner_join(schema::submits::table))
             .inner_join(schema::artifacts::table.on(schema::jobs::id.eq(schema::artifacts::job_id)))
-
             // TODO: We do not yet have a method to "left join" properly, because diesel only has
             // left_outer_join (left_join is an alias)
             // So do not include release dates here, for now
             //.left_outer_join(schema::releases::table.on(schema::releases::artifact_id.eq(schema::artifacts::id)))
-            .inner_join(schema::images::table.on(schema::submits::requested_image_id.eq(schema::images::id)))
+            .inner_join(
+                schema::images::table
+                    .on(schema::submits::requested_image_id.eq(schema::images::id)),
+            )
             .into_boxed();
 
         if let Some(allowed_images) = self.package.allowed_images() {
@@ -179,12 +181,14 @@ impl<'a> FindArtifacts<'a> {
                     .collect();
 
                 trace!("The job we found had env: {:?}", job_env);
-                let envs_equal = environments_equal(&job_env, package_environment.as_ref(), self.env_filter);
+                let envs_equal =
+                    environments_equal(&job_env, package_environment.as_ref(), self.env_filter);
                 trace!("environments where equal = {}", envs_equal);
                 Ok((tpl.0, envs_equal))
             })
-            .filter(|r| match r { // the actual filtering from above
-                Err(_)         => true,
+            .filter(|r| match r {
+                // the actual filtering from above
+                Err(_) => true,
                 Ok((_, bl)) => *bl,
             })
             .and_then_ok(|(art, _)| {
@@ -204,7 +208,7 @@ impl<'a> FindArtifacts<'a> {
                     );
                     if let Some(art) = staging.get(&artpath) {
                         trace!("Found in staging: {:?}", art);
-                        return staging.root_path().join(art).map(|p| p.map(|p| (p, ndt)))
+                        return staging.root_path().join(art).map(|p| p.map(|p| (p, ndt)));
                     }
                 }
 
@@ -214,11 +218,17 @@ impl<'a> FindArtifacts<'a> {
                 for release_store in self.release_stores {
                     if let Some(art) = release_store.get(&artpath) {
                         trace!("Found in release: {:?}", art);
-                        return release_store.root_path().join(art).map(|p| p.map(|p| (p, ndt)))
+                        return release_store
+                            .root_path()
+                            .join(art)
+                            .map(|p| p.map(|p| (p, ndt)));
                     }
                 }
 
-                trace!("Found no release for artifact {:?} in any release store", artpath.display());
+                trace!(
+                    "Found no release for artifact {:?} in any release store",
+                    artpath.display()
+                );
                 Ok(None)
             })
             .filter_map_ok(|opt| opt)
@@ -226,46 +236,56 @@ impl<'a> FindArtifacts<'a> {
     }
 }
 
-
-fn environments_equal(job_env: &[(String, String)], pkg_env: Option<&HashMap<EnvironmentVariableName, String>>, add_env: &[(EnvironmentVariableName, String)]) -> bool {
+fn environments_equal(
+    job_env: &[(String, String)],
+    pkg_env: Option<&HashMap<EnvironmentVariableName, String>>,
+    add_env: &[(EnvironmentVariableName, String)],
+) -> bool {
     use std::ops::Deref;
 
-    let job_envs_all_found = || job_env.iter()
-        .map(|(key, value)| (EnvironmentVariableName::from(key.deref()), value))
-        .all(|(key, value)| {
+    let job_envs_all_found = || {
+        job_env
+            .iter()
+            .map(|(key, value)| (EnvironmentVariableName::from(key.deref()), value))
+            .all(|(key, value)| {
+                // check whether pair is in pkg_env
+                let is_in_pkg_env = || {
+                    pkg_env
+                        .as_ref()
+                        .map(|hm| {
+                            if let Some(val) = hm.get(&key) {
+                                value == val
+                            } else {
+                                false
+                            }
+                        })
+                        .unwrap_or(false)
+                };
 
-            // check whether pair is in pkg_env
-            let is_in_pkg_env = || pkg_env.as_ref()
-                .map(|hm| {
-                    if let Some(val) = hm.get(&key) {
-                        value == val
-                    } else {
-                        false
-                    }
-                })
-                .unwrap_or(false);
+                // check whether pair is in add_env
+                let is_in_add_env = || add_env.iter().any(|(k, v)| *k == key && v == value);
 
-            // check whether pair is in add_env
-            let is_in_add_env = || add_env.iter().any(|(k, v)| *k == key && v == value);
-
-            let r = is_in_pkg_env() || is_in_add_env();
-            trace!("Job Env ({}, {}) found: {}", key, value, r);
-            r
-        });
-
-    let pkg_envs_all_found = || pkg_env.map(|hm| {
-        hm.iter()
-            .all(|(k, v)| {
-            job_env.contains(&(k.as_ref().to_string(), v.to_string())) // TODO: do not allocate
+                let r = is_in_pkg_env() || is_in_add_env();
+                trace!("Job Env ({}, {}) found: {}", key, value, r);
+                r
             })
-    })
-    .unwrap_or(true);
+    };
 
-    let add_envs_all_found = || add_env.iter()
-        .all(|(k, v)| {
+    let pkg_envs_all_found = || {
+        pkg_env
+            .map(|hm| {
+                hm.iter().all(|(k, v)| {
+                    job_env.contains(&(k.as_ref().to_string(), v.to_string())) // TODO: do not allocate
+                })
+            })
+            .unwrap_or(true)
+    };
+
+    let add_envs_all_found = || {
+        add_env.iter().all(|(k, v)| {
             job_env.contains(&(k.as_ref().to_string(), v.to_string())) // TODO: do not allocate
-        });
+        })
+    };
 
     job_envs_all_found() && pkg_envs_all_found() && add_envs_all_found()
 }
-

@@ -16,22 +16,22 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use anyhow::Error;
-use anyhow::Context;
-use anyhow::Result;
 use anyhow::anyhow;
-use diesel::PgConnection;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
+use diesel::PgConnection;
 use git2::Repository;
 use indicatif::ProgressBar;
 use itertools::Itertools;
-use tracing::{debug, trace, error};
 use resiter::FilterMap;
-use tokio::sync::RwLock;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
+use tracing::{debug, error, trace};
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
 
@@ -47,8 +47,8 @@ use crate::job::JobDefinition;
 use crate::job::RunnableJob;
 use crate::orchestrator::util::*;
 use crate::source::SourceCache;
-use crate::util::EnvironmentVariableName;
 use crate::util::progress::ProgressBars;
+use crate::util::EnvironmentVariableName;
 
 #[cfg_attr(doc, aquamarine::aquamarine)]
 /// The Orchestrator
@@ -251,7 +251,7 @@ impl ProducedArtifact {
 }
 
 impl Borrow<ArtifactPath> for ProducedArtifact {
-    fn borrow(&self) -> &ArtifactPath  {
+    fn borrow(&self) -> &ArtifactPath {
         match self {
             ProducedArtifact::Built(a) => a,
             ProducedArtifact::Reused(a) => a,
@@ -281,9 +281,7 @@ impl<'a> Orchestrator<'a> {
                 .git_author()
                 .as_ref()
                 .map(|varname| -> Result<_> {
-                    let username = self.repository
-                        .config()?
-                        .get_string("user.name")?;
+                    let username = self.repository.config()?.get_string("user.name")?;
 
                     Ok((varname.clone(), username))
                 })
@@ -311,7 +309,8 @@ impl<'a> Orchestrator<'a> {
         //    This is an Option<> because we need to set it later and the root of the tree needs a
         //    special handling, as this very function will wait on a receiver that gets the results
         //    of the root task
-        let jobs: Vec<(Receiver<JobResult>, TaskPreparation, Sender<JobResult>, _)> = self.jobdag
+        let jobs: Vec<(Receiver<JobResult>, TaskPreparation, Sender<JobResult>, _)> = self
+            .jobdag
             .iter()
             .map(|jobdef| {
                 // We initialize the channel with 100 elements here, as there is unlikely a task
@@ -319,7 +318,10 @@ impl<'a> Orchestrator<'a> {
                 // Either way, this might be increased in future.
                 let (sender, receiver) = tokio::sync::mpsc::channel(100);
 
-                trace!("Creating TaskPreparation object for job {}", jobdef.job.uuid());
+                trace!(
+                    "Creating TaskPreparation object for job {}",
+                    jobdef.job.uuid()
+                );
                 let bar = self.progress_generator.bar()?;
                 let bar = multibar.add(bar);
                 bar.set_length(100);
@@ -337,7 +339,12 @@ impl<'a> Orchestrator<'a> {
                     database: self.database.clone(),
                 };
 
-                Ok((receiver, tp, sender, std::cell::RefCell::new(None as Option<Vec<Sender<JobResult>>>)))
+                Ok((
+                    receiver,
+                    tp,
+                    sender,
+                    std::cell::RefCell::new(None as Option<Vec<Sender<JobResult>>>),
+                ))
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -354,9 +361,9 @@ impl<'a> Orchestrator<'a> {
         for job in jobs.iter() {
             if let Some(mut v) = job.3.borrow_mut().as_mut() {
                 v.extend({
-                jobs.iter()
-                    .filter(|j| j.1.jobdef.dependencies.contains(job.1.jobdef.job.uuid()))
-                    .map(|j| j.2.clone())
+                    jobs.iter()
+                        .filter(|j| j.1.jobdef.dependencies.contains(job.1.jobdef.job.uuid()))
+                        .map(|j| j.2.clone())
                 });
 
                 continue;
@@ -364,13 +371,16 @@ impl<'a> Orchestrator<'a> {
 
             // else, but not in else {} because of borrowing
             *job.3.borrow_mut() = {
-                let depending_on_job = jobs.iter()
+                let depending_on_job = jobs
+                    .iter()
                     .filter(|j| j.1.jobdef.dependencies.contains(job.1.jobdef.job.uuid()))
                     .map(|j| {
                         if j.1.jobdef.job.uuid() == job.1.jobdef.job.uuid() {
-                            Err(anyhow!("Package does depend on itself: {} {}",
-                                    job.1.jobdef.job.package().name(),
-                                    job.1.jobdef.job.package().version()))
+                            Err(anyhow!(
+                                "Package does depend on itself: {} {}",
+                                job.1.jobdef.job.package().name(),
+                                job.1.jobdef.job.package().version()
+                            ))
                         } else {
                             Ok(j)
                         }
@@ -378,7 +388,11 @@ impl<'a> Orchestrator<'a> {
                     .map_ok(|j| j.2.clone())
                     .collect::<Result<Vec<Sender<JobResult>>>>()?;
 
-                trace!("{:?} is depending on {}", depending_on_job, job.1.jobdef.job.uuid());
+                trace!(
+                    "{:?} is depending on {}",
+                    depending_on_job,
+                    job.1.jobdef.job.uuid()
+                );
                 if depending_on_job.is_empty() {
                     None
                 } else {
@@ -394,7 +408,8 @@ impl<'a> Orchestrator<'a> {
         // By that property, we can find the root task.
         //
         // Here, we copy its uuid, because we need it later.
-        let root_job_id = jobs.iter()
+        let root_job_id = jobs
+            .iter()
             .find(|j| j.3.borrow().is_none())
             .map(|j| j.1.jobdef.job.uuid())
             .ok_or_else(|| anyhow!("Failed to find root task"))?;
@@ -415,7 +430,10 @@ impl<'a> Orchestrator<'a> {
             .map(|prep| {
                 trace!("Creating JobTask for = {}", prep.1.jobdef.job.uuid());
                 // the sender is set or we need to use the root sender
-                let sender = prep.3.into_inner().unwrap_or_else(|| vec![root_sender.clone()]);
+                let sender = prep
+                    .3
+                    .into_inner()
+                    .unwrap_or_else(|| vec![root_sender.clone()]);
                 JobTask::new(prep.0, prep.1, sender)
             })
             .inspect(|task| trace!("Running: {}", task.jobdef.job.uuid()))
@@ -426,15 +444,16 @@ impl<'a> Orchestrator<'a> {
         running_jobs.collect::<Result<()>>().await?;
         trace!("All jobs finished");
         match root_receiver.recv().await {
-            None                     => Err(anyhow!("No result received...")),
+            None => Err(anyhow!("No result received...")),
             Some(Ok(results)) => {
-                let results = results.into_iter()
+                let results = results
+                    .into_iter()
                     .flat_map(|tpl| tpl.1.into_iter())
                     .map(ProducedArtifact::unpack)
                     .collect();
                 Ok((results, HashMap::with_capacity(0)))
-            },
-            Some(Err(errors))        => Ok((vec![], errors)),
+            }
+            Some(Err(errors)) => Ok((vec![], errors)),
         }
     }
 }
@@ -484,7 +503,6 @@ struct JobTask<'a> {
     sender: Vec<Sender<JobResult>>,
 }
 
-
 /// Implement Drop to close the progress bar
 ///
 /// This implementation is a bit of a hack.
@@ -513,19 +531,26 @@ impl<'a> Drop for JobTask<'a> {
                 "error on other task"
             };
 
-            self.bar.finish_with_message(format!("[{} {} {}] Stopped, {msg}",
+            self.bar.finish_with_message(format!(
+                "[{} {} {}] Stopped, {msg}",
                 self.jobdef.job.uuid(),
                 self.jobdef.job.package().name(),
                 self.jobdef.job.package().version(),
-                msg = errmsg));
+                msg = errmsg
+            ));
         }
     }
 }
 
 impl<'a> JobTask<'a> {
-    fn new(receiver: Receiver<JobResult>, prep: TaskPreparation<'a>, sender: Vec<Sender<JobResult>>) -> Self {
+    fn new(
+        receiver: Receiver<JobResult>,
+        prep: TaskPreparation<'a>,
+        sender: Vec<Sender<JobResult>>,
+    ) -> Self {
         let bar = prep.bar.clone();
-        bar.set_message(format!("[{} {} {}]: Booting",
+        bar.set_message(format!(
+            "[{} {} {}]: Booting",
             prep.jobdef.job.uuid(),
             prep.jobdef.job.package().name(),
             prep.jobdef.job.package().version()
@@ -555,58 +580,84 @@ impl<'a> JobTask<'a> {
     /// returned successfully.
     async fn run(mut self) -> Result<()> {
         debug!("[{}]: Running", self.jobdef.job.uuid());
-        debug!("[{}]: Waiting for dependencies = {:?}", self.jobdef.job.uuid(), {
-            self.jobdef.dependencies.iter().map(|u| u.to_string()).collect::<Vec<String>>()
-        });
+        debug!(
+            "[{}]: Waiting for dependencies = {:?}",
+            self.jobdef.job.uuid(),
+            {
+                self.jobdef
+                    .dependencies
+                    .iter()
+                    .map(|u| u.to_string())
+                    .collect::<Vec<String>>()
+            }
+        );
 
         let dep_len = self.jobdef.dependencies.len();
         // A list of job run results from dependencies that were received from the tasks for the
         // dependencies
-        let mut received_dependencies: HashMap<Uuid, Vec<ProducedArtifact>> = HashMap::with_capacity(dep_len);
+        let mut received_dependencies: HashMap<Uuid, Vec<ProducedArtifact>> =
+            HashMap::with_capacity(dep_len);
 
         // A list of errors that were received from the tasks for the dependencies
         let mut received_errors: HashMap<Uuid, Error> = HashMap::with_capacity(dep_len);
 
         // Helper function to check whether all UUIDs are in a list of UUIDs
         let all_dependencies_are_in = |dependency_uuids: &[Uuid], list: &HashMap<Uuid, Vec<_>>| {
-            dependency_uuids.iter().all(|dependency_uuid| {
-                list.keys().any(|id| id == dependency_uuid)
-            })
+            dependency_uuids
+                .iter()
+                .all(|dependency_uuid| list.keys().any(|id| id == dependency_uuid))
         };
 
         // as long as the job definition lists dependencies that are not in the received_dependencies list...
         while !all_dependencies_are_in(&self.jobdef.dependencies, &received_dependencies) {
             // Update the status bar message
             self.bar.set_message({
-                format!("[{} {} {}]: Waiting ({}/{})...",
+                format!(
+                    "[{} {} {}]: Waiting ({}/{})...",
                     self.jobdef.job.uuid(),
                     self.jobdef.job.package().name(),
                     self.jobdef.job.package().version(),
-                    received_dependencies.iter().filter(|(rd_uuid, _)| self.jobdef.dependencies.contains(rd_uuid)).count(),
-                    dep_len)
+                    received_dependencies
+                        .iter()
+                        .filter(|(rd_uuid, _)| self.jobdef.dependencies.contains(rd_uuid))
+                        .count(),
+                    dep_len
+                )
             });
             trace!("[{}]: Updated bar", self.jobdef.job.uuid());
 
             trace!("[{}]: receiving...", self.jobdef.job.uuid());
             // receive from the receiver
-            let continue_receiving = self.perform_receive(&mut received_dependencies, &mut received_errors).await?;
+            let continue_receiving = self
+                .perform_receive(&mut received_dependencies, &mut received_errors)
+                .await?;
 
-            trace!("[{}]: Received errors = {}", self.jobdef.job.uuid(), received_errors.display_error_map());
+            trace!(
+                "[{}]: Received errors = {}",
+                self.jobdef.job.uuid(),
+                received_errors.display_error_map()
+            );
             // if there are any errors from child tasks
             if !received_errors.is_empty() {
                 // send them to the parent,...
                 //
                 // We only send to one parent, because it doesn't matter
                 // And we know that we have at least one sender
-                error!("[{}]: Received errors = {}", self.jobdef.job.uuid(), received_errors.display_error_map());
+                error!(
+                    "[{}]: Received errors = {}",
+                    self.jobdef.job.uuid(),
+                    received_errors.display_error_map()
+                );
                 self.sender[0].send(Err(received_errors)).await;
 
                 // ... and stop operation, because the whole tree will fail anyways.
-                self.bar.finish_with_message(format!("[{} {} {}] Stopping, errors from child received",
+                self.bar.finish_with_message(format!(
+                    "[{} {} {}] Stopping, errors from child received",
                     self.jobdef.job.uuid(),
                     self.jobdef.job.package().name(),
-                    self.jobdef.job.package().version()));
-                return Ok(())
+                    self.jobdef.job.package().version()
+                ));
+                return Ok(());
             }
 
             if !continue_receiving {
@@ -616,7 +667,8 @@ impl<'a> JobTask<'a> {
 
         // Check if any of the received dependencies was built (and not reused).
         // If any dependency was built, we need to build as well.
-        let any_dependency_was_built = received_dependencies.values()
+        let any_dependency_was_built = received_dependencies
+            .values()
             .flat_map(|v| v.iter())
             .any(ProducedArtifact::was_build);
 
@@ -631,7 +683,10 @@ impl<'a> JobTask<'a> {
             // This is because we do not have access to the commandline-passed (additional)
             // environment variables at this point. But using the JobResource::env() variables
             // works as well.
-            let additional_env = self.jobdef.job.resources()
+            let additional_env = self
+                .jobdef
+                .job
+                .resources()
                 .iter()
                 .filter_map(crate::job::JobResource::env)
                 .map(|(k, v)| (k.clone(), v.clone()))
@@ -645,7 +700,6 @@ impl<'a> JobTask<'a> {
                 .package(self.jobdef.job.package())
                 .release_stores(&self.release_stores)
                 .image_name(Some(self.jobdef.job.image()))
-
                 // We can simply pass the staging store here, because it doesn't hurt. There are
                 // two scenarios:
                 //
@@ -665,11 +719,18 @@ impl<'a> JobTask<'a> {
                 .build()
                 .run()?;
 
-            debug!("[{}]: Found {} replacement artifacts", self.jobdef.job.uuid(), replacement_artifacts.len());
-            trace!("[{}]: Found replacement artifacts: {:?}", self.jobdef.job.uuid(), replacement_artifacts);
+            debug!(
+                "[{}]: Found {} replacement artifacts",
+                self.jobdef.job.uuid(),
+                replacement_artifacts.len()
+            );
+            trace!(
+                "[{}]: Found replacement artifacts: {:?}",
+                self.jobdef.job.uuid(),
+                replacement_artifacts
+            );
             let mut artifacts = replacement_artifacts
                 .into_iter()
-
                 // First of all, we sort by whether the artifact path is in the staging store,
                 // because we prefer staging store artifacts at this point.
                 .sorted_by(|(p1, _), (p2, _)| {
@@ -677,12 +738,10 @@ impl<'a> JobTask<'a> {
                     let r2 = p2.is_in_staging_store(&staging_store);
                     r1.cmp(&r2)
                 })
-
                 // We don't need duplicates here, so remove them by making the iterator unique
                 // If we have two artifacts that are the same, the one in the staging store will be
                 // preffered in the next step
                 .unique_by(|tpl| tpl.0.artifact_path().clone())
-
                 // Fetch the artifact from the staging store, if there is one.
                 // If there is none, try the release store.
                 // If there is none, there won't be a replacement artifact
@@ -702,23 +761,31 @@ impl<'a> JobTask<'a> {
 
             if !artifacts.is_empty() {
                 received_dependencies.insert(*self.jobdef.job.uuid(), artifacts);
-                trace!("[{}]: Sending to parent: {:?}", self.jobdef.job.uuid(), received_dependencies);
+                trace!(
+                    "[{}]: Sending to parent: {:?}",
+                    self.jobdef.job.uuid(),
+                    received_dependencies
+                );
                 for s in self.sender.iter() {
                     s.send(Ok(received_dependencies.clone()))
                         .await
                         .context("Cannot send received dependencies to parent")
                         .with_context(|| {
-                            format!("Sending-Channel is closed in Task for {}: {} {}",
+                            format!(
+                                "Sending-Channel is closed in Task for {}: {} {}",
                                 self.jobdef.job.uuid(),
                                 self.jobdef.job.package().name(),
-                                self.jobdef.job.package().version())
+                                self.jobdef.job.package().version()
+                            )
                         })?;
                 }
-                self.bar.finish_with_message(format!("[{} {} {}] Reusing artifact",
+                self.bar.finish_with_message(format!(
+                    "[{} {} {}] Reusing artifact",
                     self.jobdef.job.uuid(),
                     self.jobdef.job.package().name(),
-                    self.jobdef.job.package().version()));
-                return Ok(())
+                    self.jobdef.job.package().version()
+                ));
+                return Ok(());
             }
         }
 
@@ -732,8 +799,13 @@ impl<'a> JobTask<'a> {
             .map(ProducedArtifact::borrow)
             .cloned()
             .collect::<Vec<ArtifactPath>>();
-        trace!("[{}]: Dependency artifacts = {:?}", self.jobdef.job.uuid(), dependency_artifacts);
-        self.bar.set_message(format!("[{} {} {}]: Preparing...",
+        trace!(
+            "[{}]: Dependency artifacts = {:?}",
+            self.jobdef.job.uuid(),
+            dependency_artifacts
+        );
+        self.bar.set_message(format!(
+            "[{} {} {}]: Preparing...",
             self.jobdef.job.uuid(),
             self.jobdef.job.package().name(),
             self.jobdef.job.package().version()
@@ -746,9 +818,11 @@ impl<'a> JobTask<'a> {
             self.config,
             self.git_author_env,
             self.git_commit_env,
-            dependency_artifacts)?;
+            dependency_artifacts,
+        )?;
 
-        self.bar.set_message(format!("[{} {} {}]: Scheduling...",
+        self.bar.set_message(format!(
+            "[{} {} {}]: Scheduling...",
             self.jobdef.job.uuid(),
             self.jobdef.job.package().name(),
             self.jobdef.job.package().version()
@@ -756,9 +830,19 @@ impl<'a> JobTask<'a> {
         let job_uuid = *self.jobdef.job.uuid();
 
         // Schedule the job on the scheduler
-        match self.scheduler.schedule_job(runnable, self.bar.clone()).await?.run().await? {
+        match self
+            .scheduler
+            .schedule_job(runnable, self.bar.clone())
+            .await?
+            .run()
+            .await?
+        {
             Err(e) => {
-                trace!("[{}]: Scheduler returned error = {:?}", self.jobdef.job.uuid(), e);
+                trace!(
+                    "[{}]: Scheduler returned error = {:?}",
+                    self.jobdef.job.uuid(),
+                    e
+                );
                 // ... and we send that to our parent
                 //
                 // We only send to one parent, because it doesn't matter anymore
@@ -771,14 +855,20 @@ impl<'a> JobTask<'a> {
                     .send(Err(errormap))
                     .await
                     .context("Failed sending scheduler errors to parent")
-                    .with_context(|| format!("Failed sending error from job {}", self.jobdef.job.uuid()))?;
-                return Ok(())
-            },
+                    .with_context(|| {
+                        format!("Failed sending error from job {}", self.jobdef.job.uuid())
+                    })?;
+                return Ok(());
+            }
 
             // if the scheduler run reports success,
             // it returns the database artifact objects it created!
             Ok(artifacts) => {
-                trace!("[{}]: Scheduler returned artifacts = {:?}", self.jobdef.job.uuid(), artifacts);
+                trace!(
+                    "[{}]: Scheduler returned artifacts = {:?}",
+                    self.jobdef.job.uuid(),
+                    artifacts
+                );
 
                 // mark the produced artifacts as "built" (rather than reused)
                 let artifacts = artifacts.into_iter().map(ProducedArtifact::Built).collect();
@@ -787,7 +877,7 @@ impl<'a> JobTask<'a> {
                 for s in self.sender.iter() {
                     s.send(Ok(received_dependencies.clone())).await?;
                 }
-            },
+            }
         }
 
         trace!("[{}]: Finished successfully", self.jobdef.job.uuid());
@@ -802,7 +892,11 @@ impl<'a> JobTask<'a> {
     /// Return Ok(true) if we should continue operation
     /// Return Ok(false) if the channel is empty and we're done receiving or if the channel is
     /// empty and there were errors collected
-    async fn perform_receive(&mut self, received_dependencies: &mut HashMap<Uuid, Vec<ProducedArtifact>>, received_errors: &mut HashMap<Uuid, Error>) -> Result<bool> {
+    async fn perform_receive(
+        &mut self,
+        received_dependencies: &mut HashMap<Uuid, Vec<ProducedArtifact>>,
+        received_errors: &mut HashMap<Uuid, Error>,
+    ) -> Result<bool> {
         match self.receiver.recv().await {
             Some(Ok(mut v)) => {
                 // The task we depend on succeeded and returned an
@@ -810,46 +904,58 @@ impl<'a> JobTask<'a> {
                 trace!("[{}]: Received: {:?}", self.jobdef.job.uuid(), v);
                 received_dependencies.extend(v);
                 Ok(true)
-            },
+            }
             Some(Err(mut e)) => {
                 // The task we depend on failed
                 // we log that error for now
                 trace!("[{}]: Received: {:?}", self.jobdef.job.uuid(), e);
                 received_errors.extend(e);
                 Ok(true)
-            },
+            }
             None => {
                 // The task we depend on finished... we must check what we have now...
-                trace!("[{}]: Received nothing, channel seems to be empty", self.jobdef.job.uuid());
+                trace!(
+                    "[{}]: Received nothing, channel seems to be empty",
+                    self.jobdef.job.uuid()
+                );
 
                 // If the channel was closed and there are already errors in the `received_errors`
                 // buffer, we return Ok(false) to notify the caller that we should not continue
                 // receiving
                 if !received_errors.is_empty() {
-                    trace!("[{}]: There are errors, stop receiving", self.jobdef.job.uuid());
-                    return Ok(false)
+                    trace!(
+                        "[{}]: There are errors, stop receiving",
+                        self.jobdef.job.uuid()
+                    );
+                    return Ok(false);
                 }
 
                 // Find all dependencies that we need but which are not received
                 let received = received_dependencies.keys().collect::<Vec<_>>();
-                let missing_deps: Vec<_> = self.jobdef
+                let missing_deps: Vec<_> = self
+                    .jobdef
                     .dependencies
                     .iter()
                     .filter(|d| !received.contains(d))
                     .collect();
-                trace!("[{}]: Missing dependencies = {:?}", self.jobdef.job.uuid(), missing_deps);
+                trace!(
+                    "[{}]: Missing dependencies = {:?}",
+                    self.jobdef.job.uuid(),
+                    missing_deps
+                );
 
                 // ... if there are any, error
                 if !missing_deps.is_empty() {
                     let missing: Vec<String> = missing_deps.iter().map(|u| u.to_string()).collect();
-                    Err(anyhow!("Childs finished, but dependencies still missing: {:?}", missing))
+                    Err(anyhow!(
+                        "Childs finished, but dependencies still missing: {:?}",
+                        missing
+                    ))
                 } else {
                     // all dependencies are received
-                   Ok(false)
+                    Ok(false)
                 }
-            },
+            }
         }
     }
-
 }
-

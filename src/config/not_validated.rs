@@ -24,7 +24,6 @@ use crate::package::PhaseName;
 /// The configuration that is loaded from the filesystem
 #[derive(Debug, Getters, Deserialize)]
 pub struct NotValidatedConfiguration {
-
     /// Compatibility setting
     ///
     /// If the version of butido is (semver) incompatible to this setting in the configuration,
@@ -177,7 +176,9 @@ impl NotValidatedConfiguration {
         }
 
         if self.release_stores.is_empty() {
-            return Err(anyhow!("You need at least one release store in 'release_stores'"))
+            return Err(anyhow!(
+                "You need at least one release store in 'release_stores'"
+            ));
         }
 
         // Error if source_cache_root is not a directory

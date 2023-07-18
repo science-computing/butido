@@ -36,11 +36,12 @@ impl StoreRoot {
                     "Creating a missing release store directory: {}",
                     root.display()
                 );
-                std::fs::create_dir(&root)
-                    .with_context(|| anyhow!(
+                std::fs::create_dir(&root).with_context(|| {
+                    anyhow!(
                         "Couldn't automatically create the following release store directory: {}",
                         root.display()
-                    ))?;
+                    )
+                })?;
                 Ok(StoreRoot(root))
             } else {
                 Err(anyhow!(
@@ -106,7 +107,10 @@ impl StoreRoot {
     /// `self` and returns the written pathes.
     ///
     /// The function filteres out the "/output" directory (that's what is meant by "butido-style").
-    pub(in crate::filestore) fn unpack_archive_here<R>(&self, mut ar: tar::Archive<R>) -> Result<Vec<PathBuf>>
+    pub(in crate::filestore) fn unpack_archive_here<R>(
+        &self,
+        mut ar: tar::Archive<R>,
+    ) -> Result<Vec<PathBuf>>
     where
         R: std::io::Read,
     {
@@ -132,9 +136,7 @@ impl StoreRoot {
                 let unpack_dest = self.0.join(&path);
                 trace!("Unpack to = '{:?}'", unpack_dest);
 
-                entry.unpack(unpack_dest)
-                    .map(|_| path)
-                    .map_err(Error::from)
+                entry.unpack(unpack_dest).map(|_| path).map_err(Error::from)
             })
             .collect::<Result<Vec<_>>>()
     }
@@ -185,7 +187,6 @@ impl AsRef<Path> for ArtifactPath {
 pub struct FullArtifactPath<'a>(&'a StoreRoot, &'a ArtifactPath);
 
 impl<'a> FullArtifactPath<'a> {
-
     pub fn is_in_staging_store(&self, store: &StagingStore) -> bool {
         store.0.root_path() == self.0
     }

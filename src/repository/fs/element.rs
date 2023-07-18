@@ -18,7 +18,7 @@ use crate::repository::fs::path::PathComponent;
 #[derive(Debug)]
 pub enum Element {
     File(String),
-    Dir(HashMap<PathComponent, Element>)
+    Dir(HashMap<PathComponent, Element>),
 }
 
 impl Element {
@@ -30,4 +30,3 @@ impl Element {
         }
     }
 }
-

@@ -16,28 +16,33 @@ use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::Error;
-use anyhow::Context;
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use clap::ArgMatches;
-use tracing::{debug, info, trace};
 use itertools::Itertools;
 use tokio_stream::StreamExt;
+use tracing::{debug, info, trace};
 
 use crate::config::Configuration;
 use crate::config::EndpointName;
-use crate::util::progress::ProgressBars;
 use crate::endpoint::Endpoint;
+use crate::util::progress::ProgressBars;
 
-pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_generator: ProgressBars) -> Result<()> {
+pub async fn endpoint(
+    matches: &ArgMatches,
+    config: &Configuration,
+    progress_generator: ProgressBars,
+) -> Result<()> {
     let endpoint_names = matches
         .get_one::<String>("endpoint_name")
         .map(|s| s.to_owned())
         .map(EndpointName::from)
         .map(|ep| vec![ep])
         .unwrap_or_else(|| {
-            config.docker()
+            config
+                .docker()
                 .endpoints()
                 .iter()
                 .map(|(ep_name, _)| ep_name)
@@ -47,8 +52,12 @@ pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_gen
 
     match matches.subcommand() {
         Some(("ping", matches)) => ping(endpoint_names, matches, config, progress_generator).await,
-        Some(("stats", matches)) => stats(endpoint_names, matches, config, progress_generator).await,
-        Some(("container", matches)) => crate::commands::endpoint_container::container(endpoint_names, matches, config).await,
+        Some(("stats", matches)) => {
+            stats(endpoint_names, matches, config, progress_generator).await
+        }
+        Some(("container", matches)) => {
+            crate::commands::endpoint_container::container(endpoint_names, matches, config).await
+        }
         Some(("containers", matches)) => containers(endpoint_names, matches, config).await,
         Some(("images", matches)) => images(endpoint_names, matches, config).await,
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
@@ -56,13 +65,22 @@ pub async fn endpoint(matches: &ArgMatches, config: &Configuration, progress_gen
     }
 }
 
-async fn ping(endpoint_names: Vec<EndpointName>,
+async fn ping(
+    endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
-    progress_generator: ProgressBars
+    progress_generator: ProgressBars,
 ) -> Result<()> {
-    let n_pings = matches.get_one::<String>("ping_n").map(|s| s.parse::<u64>()).transpose()?.unwrap(); // safe by clap
-    let sleep = matches.get_one::<String>("ping_sleep").map(|s| s.parse::<u64>()).transpose()?.unwrap(); // safe by clap
+    let n_pings = matches
+        .get_one::<String>("ping_n")
+        .map(|s| s.parse::<u64>())
+        .transpose()?
+        .unwrap(); // safe by clap
+    let sleep = matches
+        .get_one::<String>("ping_sleep")
+        .map(|s| s.parse::<u64>())
+        .transpose()?
+        .unwrap(); // safe by clap
     let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
     let multibar = Arc::new({
         let mp = indicatif::MultiProgress::new();
@@ -90,7 +108,7 @@ async fn ping(endpoint_names: Vec<EndpointName>,
                     bar.inc(1);
                     if let Err(e) = r {
                         bar.finish_with_message(format!("Pinging {} failed", endpoint.name()));
-                        return Err(e)
+                        return Err(e);
                     }
 
                     tokio::time::sleep(tokio::time::Duration::from_secs(sleep)).await;
@@ -105,10 +123,11 @@ async fn ping(endpoint_names: Vec<EndpointName>,
         .await
 }
 
-async fn stats(endpoint_names: Vec<EndpointName>,
+async fn stats(
+    endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
-    progress_generator: ProgressBars
+    progress_generator: ProgressBars,
 ) -> Result<()> {
     let csv = matches.get_flag("csv");
     let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
@@ -116,17 +135,20 @@ async fn stats(endpoint_names: Vec<EndpointName>,
     bar.set_length(endpoint_names.len() as u64);
     bar.set_message("Fetching stats");
 
-    let hdr = crate::commands::util::mk_header([
-        "Name",
-        "Containers",
-        "Images",
-        "Kernel",
-        "Memory",
-        "Memory limit",
-        "Cores",
-        "OS",
-        "System Time",
-    ].to_vec());
+    let hdr = crate::commands::util::mk_header(
+        [
+            "Name",
+            "Containers",
+            "Images",
+            "Kernel",
+            "Memory",
+            "Memory limit",
+            "Cores",
+            "OS",
+            "System Time",
+        ]
+        .to_vec(),
+    );
 
     let data = endpoints
         .into_iter()
@@ -165,8 +187,8 @@ async fn stats(endpoint_names: Vec<EndpointName>,
     crate::commands::util::display_data(hdr, data, csv)
 }
 
-
-async fn containers(endpoint_names: Vec<EndpointName>,
+async fn containers(
+    endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
@@ -180,7 +202,8 @@ async fn containers(endpoint_names: Vec<EndpointName>,
     }
 }
 
-async fn containers_list(endpoint_names: Vec<EndpointName>,
+async fn containers_list(
+    endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
@@ -189,19 +212,17 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.get_flag("csv");
-    let hdr = crate::commands::util::mk_header([
-        "Endpoint",
-        "Container id",
-        "Image",
-        "Created",
-        "Status",
-    ].to_vec());
+    let hdr = crate::commands::util::mk_header(
+        ["Endpoint", "Container id", "Image", "Created", "Status"].to_vec(),
+    );
 
     let data = connect_to_endpoints(config, &endpoint_names)
         .await?
         .into_iter()
         .map(|ep| async move {
-            ep.container_stats().await.map(|stats| (ep.name().clone(), stats))
+            ep.container_stats()
+                .await
+                .map(|stats| (ep.name().clone(), stats))
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Result<Vec<(_, _)>>>()
@@ -213,8 +234,18 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
                 .into_iter()
                 .filter(|stat| list_stopped || stat.state != "exited")
                 .filter(|stat| filter_image.map(|fim| *fim == stat.image).unwrap_or(true))
-                .filter(|stat| older_than_filter.as_ref().map(|time| time > &stat.created).unwrap_or(true))
-                .filter(|stat| newer_than_filter.as_ref().map(|time| time < &stat.created).unwrap_or(true))
+                .filter(|stat| {
+                    older_than_filter
+                        .as_ref()
+                        .map(|time| time > &stat.created)
+                        .unwrap_or(true)
+                })
+                .filter(|stat| {
+                    newer_than_filter
+                        .as_ref()
+                        .map(|time| time < &stat.created)
+                        .unwrap_or(true)
+                })
                 .map(|stat| {
                     vec![
                         endpoint_name.as_ref().to_owned(),
@@ -231,7 +262,8 @@ async fn containers_list(endpoint_names: Vec<EndpointName>,
     crate::commands::util::display_data(hdr, data, csv)
 }
 
-async fn containers_prune(endpoint_names: Vec<EndpointName>,
+async fn containers_prune(
+    endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
@@ -242,12 +274,23 @@ async fn containers_prune(endpoint_names: Vec<EndpointName>,
         .await?
         .into_iter()
         .map(move |ep| async move {
-            let stats = ep.container_stats()
+            let stats = ep
+                .container_stats()
                 .await?
                 .into_iter()
                 .filter(|stat| stat.state == "exited")
-                .filter(|stat| older_than_filter.as_ref().map(|time| time > &stat.created).unwrap_or(true))
-                .filter(|stat| newer_than_filter.as_ref().map(|time| time < &stat.created).unwrap_or(true))
+                .filter(|stat| {
+                    older_than_filter
+                        .as_ref()
+                        .map(|time| time > &stat.created)
+                        .unwrap_or(true)
+                })
+                .filter(|stat| {
+                    newer_than_filter
+                        .as_ref()
+                        .map(|time| time < &stat.created)
+                        .unwrap_or(true)
+                })
                 .map(|stat| (ep.clone(), stat))
                 .collect::<Vec<(_, _)>>();
             Ok(stats)
@@ -256,12 +299,16 @@ async fn containers_prune(endpoint_names: Vec<EndpointName>,
         .collect::<Result<Vec<_>>>()
         .await?;
 
-    let prompt = format!("Really delete {} Containers?", stats.iter().flatten().count());
+    let prompt = format!(
+        "Really delete {} Containers?",
+        stats.iter().flatten().count()
+    );
     if !dialoguer::Confirm::new().with_prompt(prompt).interact()? {
-        return Ok(())
+        return Ok(());
     }
 
-    stats.into_iter()
+    stats
+        .into_iter()
         .flat_map(Vec::into_iter)
         .map(|(ep, stat)| async move {
             ep.get_container_by_id(&stat.id)
@@ -276,11 +323,15 @@ async fn containers_prune(endpoint_names: Vec<EndpointName>,
         .await
 }
 
-async fn containers_top(endpoint_names: Vec<EndpointName>,
+async fn containers_top(
+    endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let limit = matches.get_one::<String>("limit").map(|s| usize::from_str(s.as_ref())).transpose()?;
+    let limit = matches
+        .get_one::<String>("limit")
+        .map(|s| usize::from_str(s.as_ref()))
+        .transpose()?;
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.get_flag("csv");
@@ -290,13 +341,24 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
         .into_iter()
         .inspect(|ep| trace!("Fetching stats for endpoint: {}", ep.name()))
         .map(move |ep| async move {
-            let stats = ep.container_stats()
+            let stats = ep
+                .container_stats()
                 .await?
                 .into_iter()
                 .inspect(|stat| trace!("Fetching stats for container: {}", stat.id))
                 .filter(|stat| stat.state == "running")
-                .filter(|stat| older_than_filter.as_ref().map(|time| time > &stat.created).unwrap_or(true))
-                .filter(|stat| newer_than_filter.as_ref().map(|time| time < &stat.created).unwrap_or(true))
+                .filter(|stat| {
+                    older_than_filter
+                        .as_ref()
+                        .map(|time| time > &stat.created)
+                        .unwrap_or(true)
+                })
+                .filter(|stat| {
+                    newer_than_filter
+                        .as_ref()
+                        .map(|time| time < &stat.created)
+                        .unwrap_or(true)
+                })
                 .map(|stat| (ep.clone(), stat))
                 .collect::<Vec<(_, _)>>();
             Ok(stats)
@@ -329,7 +391,8 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
                 top.processes
             };
 
-            let hm = top.titles
+            let hm = top
+                .titles
                 .into_iter()
                 .zip(processes.into_iter())
                 .collect::<HashMap<String, Vec<String>>>();
@@ -339,44 +402,48 @@ async fn containers_top(endpoint_names: Vec<EndpointName>,
 
     let hdr = crate::commands::util::mk_header({
         std::iter::once("Container ID")
-            .chain({
-                data.values()
-                    .flat_map(|hm| hm.keys())
-                    .map(|s| s.deref())
-            })
+            .chain(data.values().flat_map(|hm| hm.keys()).map(|s| s.deref()))
             .collect::<Vec<&str>>()
             .into_iter()
             .unique()
             .collect()
     });
 
-    let data = data.into_iter()
+    let data = data
+        .into_iter()
         .flat_map(|(container_id, top_hm)| {
-            top_hm.values()
-                .map(|t| std::iter::once(container_id.clone()).chain(t.iter().map(String::clone)).collect())
+            top_hm
+                .values()
+                .map(|t| {
+                    std::iter::once(container_id.clone())
+                        .chain(t.iter().map(String::clone))
+                        .collect()
+                })
                 .collect::<Vec<Vec<String>>>()
         })
-
         // ugly hack to bring order to the galaxy
-        .sorted_by(|v1, v2| if let (Some(f1), Some(f2)) = (v1.iter().next(), v2.iter().next()) {
-            f1.cmp(f2)
-        } else {
-            std::cmp::Ordering::Less
+        .sorted_by(|v1, v2| {
+            if let (Some(f1), Some(f2)) = (v1.iter().next(), v2.iter().next()) {
+                f1.cmp(f2)
+            } else {
+                std::cmp::Ordering::Less
+            }
         })
         .collect::<Vec<Vec<String>>>();
 
     crate::commands::util::display_data(hdr, data, csv)
 }
 
-
-async fn containers_stop(endpoint_names: Vec<EndpointName>,
+async fn containers_stop(
+    endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
 
-    let stop_timeout = matches.get_one::<String>("timeout")
+    let stop_timeout = matches
+        .get_one::<String>("timeout")
         .map(|s| s.parse::<u64>())
         .transpose()?
         .map(std::time::Duration::from_secs);
@@ -385,12 +452,23 @@ async fn containers_stop(endpoint_names: Vec<EndpointName>,
         .await?
         .into_iter()
         .map(move |ep| async move {
-            let stats = ep.container_stats()
+            let stats = ep
+                .container_stats()
                 .await?
                 .into_iter()
                 .filter(|stat| stat.state == "exited")
-                .filter(|stat| older_than_filter.as_ref().map(|time| time > &stat.created).unwrap_or(true))
-                .filter(|stat| newer_than_filter.as_ref().map(|time| time < &stat.created).unwrap_or(true))
+                .filter(|stat| {
+                    older_than_filter
+                        .as_ref()
+                        .map(|time| time > &stat.created)
+                        .unwrap_or(true)
+                })
+                .filter(|stat| {
+                    newer_than_filter
+                        .as_ref()
+                        .map(|time| time < &stat.created)
+                        .unwrap_or(true)
+                })
                 .map(|stat| (ep.clone(), stat))
                 .collect::<Vec<(_, _)>>();
             Ok(stats)
@@ -401,10 +479,11 @@ async fn containers_stop(endpoint_names: Vec<EndpointName>,
 
     let prompt = format!("Really stop {} Containers?", stats.iter().flatten().count());
     if !dialoguer::Confirm::new().with_prompt(prompt).interact()? {
-        return Ok(())
+        return Ok(());
     }
 
-    stats.into_iter()
+    stats
+        .into_iter()
         .flat_map(Vec::into_iter)
         .map(|(ep, stat)| async move {
             ep.get_container_by_id(&stat.id)
@@ -419,8 +498,8 @@ async fn containers_stop(endpoint_names: Vec<EndpointName>,
         .await
 }
 
-
-async fn images(endpoint_names: Vec<EndpointName>,
+async fn images(
+    endpoint_names: Vec<EndpointName>,
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
@@ -432,7 +511,8 @@ async fn images(endpoint_names: Vec<EndpointName>,
     }
 }
 
-async fn images_list(endpoint_names: Vec<EndpointName>,
+async fn images_list(
+    endpoint_names: Vec<EndpointName>,
     _matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
@@ -450,17 +530,24 @@ async fn images_list(endpoint_names: Vec<EndpointName>,
     let mut lock = out.lock();
 
     iter.try_for_each(|img| {
-        writeln!(lock, "{created} {id}", created = img.created(), id = {
-            if let Some(tags)= img.tags() {
-                tags.join(", ")
-            } else {
-                img.id().clone()
+        writeln!(
+            lock,
+            "{created} {id}",
+            created = img.created(),
+            id = {
+                if let Some(tags) = img.tags() {
+                    tags.join(", ")
+                } else {
+                    img.id().clone()
+                }
             }
-        }).map_err(Error::from)
+        )
+        .map_err(Error::from)
     })
 }
 
-async fn images_present(endpoint_names: Vec<EndpointName>,
+async fn images_present(
+    endpoint_names: Vec<EndpointName>,
     _matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
@@ -468,10 +555,12 @@ async fn images_present(endpoint_names: Vec<EndpointName>,
 
     let eps = connect_to_endpoints(config, &endpoint_names).await?;
 
-    let ep_names_to_images = eps.iter()
+    let ep_names_to_images = eps
+        .iter()
         .map(|ep| async move {
             ep.images(None).await.map(|imgs| {
-                let img_tags = imgs.filter_map(|img| img.tags().clone().map(Vec::into_iter))
+                let img_tags = imgs
+                    .filter_map(|img| img.tags().clone().map(Vec::into_iter))
                     .flatten()
                     .map(ImageName::from)
                     .collect();
@@ -491,7 +580,8 @@ async fn images_present(endpoint_names: Vec<EndpointName>,
     ep_names_to_images
         .iter()
         .try_for_each(|(ep_name, ep_imgs)| {
-            config.docker()
+            config
+                .docker()
                 .images()
                 .iter()
                 .map(|config_img| (ep_imgs.contains(&config_img.name), &config_img.name))
@@ -507,7 +597,10 @@ async fn images_present(endpoint_names: Vec<EndpointName>,
 
 /// Helper function to connect to all endpoints from the configuration, that appear (by name) in
 /// the `endpoint_names` list
-pub(super) async fn connect_to_endpoints(config: &Configuration, endpoint_names: &[EndpointName]) -> Result<Vec<Arc<Endpoint>>> {
+pub(super) async fn connect_to_endpoints(
+    config: &Configuration,
+    endpoint_names: &[EndpointName],
+) -> Result<Vec<Arc<Endpoint>>> {
     let endpoint_configurations = config
         .docker()
         .endpoints()
@@ -517,7 +610,14 @@ pub(super) async fn connect_to_endpoints(config: &Configuration, endpoint_names:
             crate::endpoint::EndpointConfiguration::builder()
                 .endpoint_name(ep_name.clone())
                 .endpoint(ep_cfg.clone())
-                .required_images(config.docker().images().iter().map(|img| img.name.clone()).collect::<Vec<_>>())
+                .required_images(
+                    config
+                        .docker()
+                        .images()
+                        .iter()
+                        .map(|img| img.name.clone())
+                        .collect::<Vec<_>>(),
+                )
                 .required_docker_versions(config.docker().docker_versions().clone())
                 .required_docker_api_versions(config.docker().docker_api_versions().clone())
                 .build()
@@ -525,9 +625,14 @@ pub(super) async fn connect_to_endpoints(config: &Configuration, endpoint_names:
         .collect::<Vec<_>>();
 
     info!("Endpoint config build");
-    info!("Connecting to {n} endpoints: {eps}",
+    info!(
+        "Connecting to {n} endpoints: {eps}",
         n = endpoint_configurations.len(),
-        eps = endpoint_configurations.iter().map(|epc| epc.endpoint_name()).join(", "));
+        eps = endpoint_configurations
+            .iter()
+            .map(|epc| epc.endpoint_name())
+            .join(", ")
+    );
 
     crate::endpoint::util::setup_endpoints(endpoint_configurations).await
 }

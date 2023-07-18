@@ -8,8 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use anyhow::Error;
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel::PgConnection;
@@ -81,12 +81,13 @@ impl Job {
             .values(&new_job)
             .on_conflict_do_nothing();
 
-        trace!("Query = {}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
+        trace!(
+            "Query = {}",
+            diesel::debug_query::<diesel::pg::Pg, _>(&query)
+        );
 
         database_connection.transaction::<_, Error, _>(|conn| {
-            query
-                .execute(conn)
-                .context("Creating job in database")?;
+            query.execute(conn).context("Creating job in database")?;
 
             dsl::jobs
                 .filter(uuid.eq(job_uuid))
@@ -96,7 +97,10 @@ impl Job {
         })
     }
 
-    pub fn env(&self, database_connection: &mut PgConnection) -> Result<Vec<crate::db::models::EnvVar>> {
+    pub fn env(
+        &self,
+        database_connection: &mut PgConnection,
+    ) -> Result<Vec<crate::db::models::EnvVar>> {
         use crate::schema;
 
         schema::job_envs::table

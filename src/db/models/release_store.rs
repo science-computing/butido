@@ -16,8 +16,8 @@ use diesel::PgConnection;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 
-use crate::schema::release_stores;
 use crate::schema;
+use crate::schema::release_stores;
 
 #[derive(Debug, Identifiable, Queryable)]
 #[diesel(table_name = release_stores)]
@@ -29,14 +29,12 @@ pub struct ReleaseStore {
 #[derive(Insertable)]
 #[diesel(table_name = release_stores)]
 struct NewReleaseStore<'a> {
-    pub store_name : &'a str,
+    pub store_name: &'a str,
 }
 
 impl ReleaseStore {
     pub fn create(database_connection: &mut PgConnection, name: &str) -> Result<ReleaseStore> {
-        let new_relstore = NewReleaseStore {
-            store_name: name,
-        };
+        let new_relstore = NewReleaseStore { store_name: name };
 
         database_connection.transaction::<_, Error, _>(|conn| {
             diesel::insert_into(schema::release_stores::table)
@@ -51,4 +49,3 @@ impl ReleaseStore {
         })
     }
 }
-

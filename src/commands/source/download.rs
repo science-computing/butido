@@ -12,15 +12,15 @@ use std::convert::TryFrom;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
 use clap::ArgMatches;
-use tracing::{debug, trace};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
+use tracing::{debug, trace};
 
 use crate::config::*;
 use crate::package::PackageName;
@@ -56,7 +56,7 @@ impl ProgressWrapper {
             finished_downloads: 0,
             current_bytes: 0,
             sum_bytes: 0,
-            bar: Arc::new(Mutex::new(bar))
+            bar: Arc::new(Mutex::new(bar)),
         }
     }
 
@@ -94,16 +94,26 @@ impl ProgressWrapper {
 
     async fn success(&self) {
         let bar = self.bar.lock().await;
-        bar.finish_with_message(format!("Succeeded {}/{} downloads", self.finished_downloads, self.download_count));
+        bar.finish_with_message(format!(
+            "Succeeded {}/{} downloads",
+            self.finished_downloads, self.download_count
+        ));
     }
 
     async fn error(&self) {
         let bar = self.bar.lock().await;
-        bar.finish_with_message(format!("At least one download of {} failed", self.download_count));
+        bar.finish_with_message(format!(
+            "At least one download of {} failed",
+            self.download_count
+        ));
     }
 }
 
-async fn perform_download(source: &SourceEntry, progress: Arc<Mutex<ProgressWrapper>>, timeout: Option<u64>) -> Result<()> {
+async fn perform_download(
+    source: &SourceEntry,
+    progress: Arc<Mutex<ProgressWrapper>>,
+    timeout: Option<u64>,
+) -> Result<()> {
     trace!("Creating: {:?}", source);
     let file = source.create().await.with_context(|| {
         anyhow!(
@@ -113,8 +123,8 @@ async fn perform_download(source: &SourceEntry, progress: Arc<Mutex<ProgressWrap
     })?;
 
     let mut file = tokio::io::BufWriter::new(file);
-    let client_builder = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::limited(10));
+    let client_builder =
+        reqwest::Client::builder().redirect(reqwest::redirect::Policy::limited(10));
 
     let client_builder = if let Some(to) = timeout {
         client_builder.timeout(std::time::Duration::from_secs(to))
@@ -122,20 +132,22 @@ async fn perform_download(source: &SourceEntry, progress: Arc<Mutex<ProgressWrap
         client_builder
     };
 
-    let client = client_builder.build().context("Building HTTP client failed")?;
+    let client = client_builder
+        .build()
+        .context("Building HTTP client failed")?;
 
-    let request = client.get(source.url().as_ref())
+    let request = client
+        .get(source.url().as_ref())
         .build()
         .with_context(|| anyhow!("Building request for {} failed", source.url().as_ref()))?;
 
     let response = match client.execute(request).await {
         Ok(resp) => resp,
-        Err(e) => {
-            return Err(e).with_context(|| anyhow!("Downloading '{}'", source.url()))
-        }
+        Err(e) => return Err(e).with_context(|| anyhow!("Downloading '{}'", source.url())),
     };
 
-    progress.lock()
+    progress
+        .lock()
         .await
         .inc_download_bytes(response.content_length().unwrap_or(0))
         .await;
@@ -143,24 +155,14 @@ async fn perform_download(source: &SourceEntry, progress: Arc<Mutex<ProgressWrap
     let mut stream = response.bytes_stream();
     while let Some(bytes) = stream.next().await {
         let bytes = bytes?;
-        tokio::try_join!(
-            file.write_all(bytes.as_ref()),
-            async {
-                progress.lock()
-                    .await
-                    .add_bytes(bytes.len())
-                    .await;
-                Ok(())
-            }
-        )?;
+        tokio::try_join!(file.write_all(bytes.as_ref()), async {
+            progress.lock().await.add_bytes(bytes.len()).await;
+            Ok(())
+        })?;
     }
 
-    file.flush()
-        .await
-        .map_err(Error::from)
-        .map(|_| ())
+    file.flush().await.map_err(Error::from).map(|_| ())
 }
-
 
 // Implementation of the 'source download' subcommand
 pub async fn download(
@@ -170,7 +172,8 @@ pub async fn download(
     progressbars: ProgressBars,
 ) -> Result<()> {
     let force = matches.get_flag("force");
-    let timeout = matches.get_one::<String>("timeout")
+    let timeout = matches
+        .get_one::<String>("timeout")
         .map(|s| s.parse::<u64>())
         .transpose()
         .context("Parsing timeout argument to integer")?;
@@ -186,13 +189,16 @@ pub async fn download(
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
-    let matching_regexp = matches.get_one::<String>("matching")
+    let matching_regexp = matches
+        .get_one::<String>("matching")
         .map(|s| crate::commands::util::mk_package_name_regex(s.as_ref()))
         .transpose()?;
 
     let progressbar = Arc::new(Mutex::new(ProgressWrapper::new(progressbars.bar()?)));
 
-    let download_sema = Arc::new(tokio::sync::Semaphore::new(NUMBER_OF_MAX_CONCURRENT_DOWNLOADS));
+    let download_sema = Arc::new(tokio::sync::Semaphore::new(
+        NUMBER_OF_MAX_CONCURRENT_DOWNLOADS,
+    ));
 
     let mut r = repo.packages()
         .filter(|p| {
@@ -208,24 +214,25 @@ pub async fn download(
             }
         }).peekable();
 
-        // check if the iterator is empty
-        if r.peek().is_none() {
-            let pname = matches.get_one::<String>("package_name");
-            let pvers = matches.get_one::<String>("package_version");
-            let matching_regexp = matches.get_one::<String>("matching");
+    // check if the iterator is empty
+    if r.peek().is_none() {
+        let pname = matches.get_one::<String>("package_name");
+        let pvers = matches.get_one::<String>("package_version");
+        let matching_regexp = matches.get_one::<String>("matching");
 
-            match (pname, pvers, matching_regexp) {
-                (Some(pname), None, None)       => return Err(anyhow!("{} not found", pname)),
-                (Some(pname), Some(vers), None) => return Err(anyhow!("{} {} not found", pname, vers)),
-                (None, None, Some(regex))       => return Err(anyhow!("{} regex not found", regex)),
+        match (pname, pvers, matching_regexp) {
+            (Some(pname), None, None) => return Err(anyhow!("{} not found", pname)),
+            (Some(pname), Some(vers), None) => return Err(anyhow!("{} {} not found", pname, vers)),
+            (None, None, Some(regex)) => return Err(anyhow!("{} regex not found", regex)),
 
-                (_, _, _) => {
-                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
-                },
+            (_, _, _) => {
+                panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
             }
         }
+    }
 
-        let r = r.flat_map(|p| {
+    let r = r
+        .flat_map(|p| {
             sc.sources_for(p).into_iter().map(|source| {
                 let download_sema = download_sema.clone();
                 let progressbar = progressbar.clone();
@@ -243,7 +250,9 @@ pub async fn download(
                     if source_path_exists && !force {
                         Err(anyhow!("Source exists: {}", source.path().display()))
                     } else {
-                        if source_path_exists /* && force is implied by 'if' above*/ {
+                        if source_path_exists
+                        /* && force is implied by 'if' above*/
+                        {
                             source.remove_file().await?;
                         }
 
@@ -274,4 +283,3 @@ pub async fn download(
     debug!("r = {:?}", r);
     r
 }
-

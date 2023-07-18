@@ -16,9 +16,9 @@ use anyhow::Result;
 use clap::ArgMatches;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use tracing::trace;
 use resiter::Filter;
 use resiter::Map;
+use tracing::trace;
 
 use crate::commands::util::getbool;
 use crate::config::*;
@@ -87,7 +87,8 @@ pub async fn what_depends(
         .filter_ok(|(b, _)| *b)
         .map_ok(|tpl| tpl.1)
         .inspect(|pkg| trace!("Found package: {:?}", pkg))
-        .map_ok(|p| { // poor mans enumerate_ok()
+        .map_ok(|p| {
+            // poor mans enumerate_ok()
             i += 1;
             p.prepare_print(config, &flags, &hb, i)
         });
