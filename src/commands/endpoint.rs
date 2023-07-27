@@ -394,7 +394,7 @@ async fn containers_top(
             let hm = top
                 .titles
                 .into_iter()
-                .zip(processes.into_iter())
+                .zip(processes)
                 .collect::<HashMap<String, Vec<String>>>();
             (container_id, hm)
         })

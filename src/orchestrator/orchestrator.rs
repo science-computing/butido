@@ -262,7 +262,7 @@ impl Borrow<ArtifactPath> for ProducedArtifact {
 impl<'a> Orchestrator<'a> {
     pub async fn run(self, output: &mut Vec<ArtifactPath>) -> Result<HashMap<Uuid, Error>> {
         let (results, errors) = self.run_tree().await?;
-        output.extend(results.into_iter());
+        output.extend(results);
         Ok(errors)
     }
 
@@ -690,8 +690,8 @@ impl<'a> JobTask<'a> {
                 .iter()
                 .filter_map(crate::job::JobResource::env)
                 .map(|(k, v)| (k.clone(), v.clone()))
-                .chain(self.git_author_env.cloned().into_iter())
-                .chain(self.git_commit_env.cloned().into_iter())
+                .chain(self.git_author_env.cloned())
+                .chain(self.git_commit_env.cloned())
                 .collect::<Vec<_>>();
 
             let replacement_artifacts = crate::db::FindArtifacts::builder()
