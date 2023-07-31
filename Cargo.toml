@@ -53,7 +53,7 @@ lazy_static    = "1"
 log            = "0.4"
 parse-display  = "0.8"
 pom            = "3"
-ptree          = "0.4"
+ptree          = { version = "0.4", default-features = false }
 rayon          = "1"
 regex          = "1"
 reqwest        = { version = "0.11", features = [ "stream" ] }
