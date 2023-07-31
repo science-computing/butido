@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use is_terminal::IsTerminal;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -47,5 +48,5 @@ pub mod parser;
 pub mod progress;
 
 pub fn stdout_is_pipe() -> bool {
-    !atty::is(atty::Stream::Stdout)
+    !std::io::stdout().is_terminal()
 }

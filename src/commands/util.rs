@@ -19,6 +19,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
+use is_terminal::IsTerminal;
 use itertools::Itertools;
 use regex::Regex;
 use tokio_stream::StreamExt;
@@ -202,7 +203,7 @@ pub fn display_data<D: Display>(
             .map_err(Error::from)
             .and_then(|t| String::from_utf8(t).map_err(Error::from))
             .and_then(|text| writeln!(lock, "{text}").map_err(Error::from))
-    } else if atty::is(atty::Stream::Stdout) {
+    } else if std::io::stdout().is_terminal() {
         let mut ascii_table = ascii_table::AsciiTable::default();
         ascii_table.set_max_width(
             terminal_size::terminal_size()
