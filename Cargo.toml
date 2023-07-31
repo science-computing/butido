@@ -8,7 +8,7 @@ authors = [
   "Michael Weiss <michael.weiss@atos.net>", # @primeos-work
 ]
 edition = "2021"
-rust-version = "1.65.0" # MSRV
+rust-version = "1.67.0" # MSRV
 license = "EPL-2.0"
 
 description = "Linux package tool utilizing Docker, PostgreSQL, and TOML"
