@@ -101,6 +101,7 @@ jobs:
         include:
           - rust: 1.67.0 # MSRV
             optional: false
+            extra_opts: "-A unknown-lints"
           - rust: beta
             optional: true
     steps:
@@ -113,7 +114,7 @@ jobs:
         with:
           shared-key: "ci"
       - name: cargo clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings ${{ matrix.extra_opts }}
 
   # This "accumulation" job is used as the required CI check for PRs.
   # We could require multiple jobs but the MSRV is subject to change and makes
