@@ -98,12 +98,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust:
-          - beta
-        optional: [true]
         include:
           - rust: 1.67.0 # MSRV
             optional: false
+          - rust: beta
+            optional: true
     steps:
       - uses: actions/checkout@v3.5.3
       - uses: dtolnay/rust-toolchain@v1
