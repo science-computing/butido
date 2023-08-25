@@ -227,7 +227,7 @@ impl PartialEq for Package {
 
 impl PartialOrd for Package {
     fn partial_cmp(&self, other: &Package) -> Option<std::cmp::Ordering> {
-        (self.name(), self.version()).partial_cmp(&(other.name(), other.version()))
+        Some(self.cmp(other))
     }
 }
 
