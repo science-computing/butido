@@ -144,6 +144,7 @@ async fn new_release(
     let any_err = arts
         .into_iter()
         .map(|art| async {
+            #[allow(clippy::redundant_locals)]
             let art = art; // ensure it is moved
             let art_path = staging_base.join(&art.path);
             let dest_path = config
