@@ -24,6 +24,7 @@ use crate::util::docker::ImageName;
 use crate::util::EnvironmentVariableName;
 
 #[derive(Clone, Serialize, Deserialize, Getters)]
+#[serde(deny_unknown_fields)]
 pub struct Package {
     #[getset(get = "pub")]
     name: PackageName,
