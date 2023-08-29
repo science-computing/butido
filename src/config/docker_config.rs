@@ -42,11 +42,6 @@ pub struct DockerConfig {
     #[getset(get = "pub")]
     docker_api_versions: Option<Vec<String>>,
 
-    /// Whether the program should verify that the required images are present.
-    /// You want this to be true normally.
-    #[getset(get_copy = "pub")]
-    verify_images_present: bool,
-
     #[getset(get = "pub")]
     images: Vec<ContainerImage>,
 
