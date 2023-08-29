@@ -41,6 +41,7 @@ use crate::db::DbConnectionConfig;
 use crate::log::JobResult;
 use crate::package::Script;
 use crate::schema;
+use crate::util::docker::resolve_image_name;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
@@ -508,6 +509,14 @@ fn jobs(
         .transpose()?
     {
         sel = sel.filter(schema::submits::uuid.eq(submit_uuid))
+    }
+
+    if let Some(image_name) = matches
+        .get_one::<String>("image")
+        .map(|s| resolve_image_name(s, config.docker().images()))
+        .transpose()?
+    {
+        sel = sel.filter(schema::images::name.eq(image_name.as_ref().to_string()))
     }
 
     // Filter for environment variables from the CLI
