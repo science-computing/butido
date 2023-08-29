@@ -82,34 +82,6 @@ pub async fn build(
         .get_one::<String>("image")
         .map(|s| resolve_image_name(s, config.docker().images()))
         .unwrap()?; // safe by clap
-    // TODO: Drop `verify_images_present` as this doesn't verify that "every used endpoint actually
-    // has the requested image present" (only checks against the configured images list and that
-    // part is already covered by the new `resolve_image_name` function.
-    if config.docker().verify_images_present()
-        && !config
-            .docker()
-            .images()
-            .iter()
-            .any(|img| image_name == img.name)
-    {
-        return Err(anyhow!(
-            "Requested build image {} is not in the configured images",
-            image_name
-        ))
-        .with_context(|| {
-            anyhow!(
-                "Available images: {}",
-                config
-                    .docker()
-                    .images()
-                    .iter()
-                    .map(|img| img.name.clone())
-                    .join(", ")
-            )
-        })
-        .with_context(|| anyhow!("Image present verification failed"))
-        .map_err(Error::from);
-    }
 
     debug!("Getting repository HEAD");
     let hash_str = crate::util::git::get_repo_head_commit_hash(&git_repo)?;

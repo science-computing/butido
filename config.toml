@@ -157,20 +157,6 @@ images = [
     { name = "debian:bullseye", short_name = "deb11" },
 ]
 
-#
-# Verify whether the requested images are present
-#
-# This setting is twofold:
-# First, it checks whether the image requested on the commandline (when
-# building) is actually in the whitelist (`docker.images` setting in the
-# configuration file).
-# Second, it checks that every used endpoint actually has the requested image
-# present.
-# This check is done when setting up the connection to the endpoints, so this
-# will fail _before_ any actual building starts.
-#
-verify_images_present = true
-
 
 #
 # List of Docker endpoints
