@@ -256,6 +256,14 @@ pub fn cli() -> Command {
                     .help("Only list jobs of a certain submit")
                 )
 
+                .arg(Arg::new("image")
+                    .required(false)
+                    .value_name("IMAGE NAME")
+                    .short('I')
+                    .long("image")
+                    .help("Only list jobs built with the Docker image IMAGE NAME")
+                )
+
                 .arg(Arg::new("env_filter")
                     .required(false)
                     .long("env")
