@@ -49,7 +49,6 @@ use crate::package::Shebang;
 use crate::repository::Repository;
 use crate::schema;
 use crate::source::SourceCache;
-use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
 use crate::util::EnvironmentVariableName;
 
@@ -65,6 +64,7 @@ pub async fn build(
     repo_path: &Path,
 ) -> Result<()> {
     use crate::db::models::{EnvVar, GitHash, Image, Job, Package, Submit};
+    use crate::util::docker::resolve_image_name;
 
     let git_repo = git2::Repository::open(repo_path)
         .with_context(|| anyhow!("Opening repository at {}", repo_path.display()))?;
@@ -80,9 +80,11 @@ pub async fn build(
 
     let image_name = matches
         .get_one::<String>("image")
-        .map(|s| s.to_owned())
-        .map(ImageName::from)
-        .unwrap(); // safe by clap
+        .map(|s| resolve_image_name(s, config.docker().images()))
+        .unwrap()?; // safe by clap
+    // TODO: Drop `verify_images_present` as this doesn't verify that "every used endpoint actually
+    // has the requested image present" (only checks against the configured images list and that
+    // part is already covered by the new `resolve_image_name` function.
     if config.docker().verify_images_present()
         && !config
             .docker()

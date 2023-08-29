@@ -253,7 +253,7 @@ async fn main() -> Result<()> {
 
         Some(("tree-of", matches)) => {
             let repo = load_repo()?;
-            crate::commands::tree_of(matches, repo)
+            crate::commands::tree_of(matches, repo, &config)
                 .await
                 .context("tree-of command failed")?
         }
