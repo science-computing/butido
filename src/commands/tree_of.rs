@@ -17,16 +17,17 @@ use anyhow::Result;
 use clap::ArgMatches;
 use resiter::AndThen;
 
+use crate::config::Configuration;
 use crate::package::condition::ConditionData;
 use crate::package::Dag;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
-use crate::util::docker::ImageName;
+use crate::util::docker::resolve_image_name;
 use crate::util::EnvironmentVariableName;
 
 /// Implementation of the "tree_of" subcommand
-pub async fn tree_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
+pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configuration) -> Result<()> {
     let pname = matches
         .get_one::<String>("package_name")
         .map(|s| s.to_owned())
@@ -39,8 +40,8 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
 
     let image_name = matches
         .get_one::<String>("image")
-        .map(|s| s.to_owned())
-        .map(ImageName::from);
+        .map(|s| resolve_image_name(s, config.docker().images()))
+        .transpose()?;
 
     let additional_env = matches
         .get_many::<String>("env")
