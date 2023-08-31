@@ -67,19 +67,19 @@ impl Repository {
             }
         }
 
-        fsr.files()
+        let leaf_files = fsr
+            .files()
             .par_iter()
             .inspect(|path| trace!("Checking for leaf file: {}", path.display()))
-            .filter_map(|path| {
-                match fsr.is_leaf_file(path) {
-                    Ok(true) => Some(Ok(path)),
-                    Ok(false) => None,
-                    Err(e) => Some(Err(e)),
-                }
-            })
-            .inspect(|r| trace!("Loading files for {:?}", r))
+            .filter_map(|path| match fsr.is_leaf_file(path) {
+                Ok(true) => Some(Ok(path)),
+                Ok(false) => None,
+                Err(e) => Some(Err(e)),
+            });
+        progress.set_length(leaf_files.clone().count().try_into()?);
+        leaf_files.inspect(|r| trace!("Loading files for {:?}", r))
             .map(|path| {
-                progress.tick();
+                progress.inc(1);
                 let path = path?;
                 fsr.get_files_for(path)?
                     .iter()

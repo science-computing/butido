@@ -162,6 +162,7 @@ async fn main() -> Result<()> {
 
     let load_repo = || -> Result<Repository> {
         let bar = progressbars.bar()?;
+        bar.set_message("Loading repository...");
         let repo = Repository::load(repo_path, &bar).context("Loading the repository")?;
         bar.finish_with_message("Repository loading finished");
         Ok(repo)
