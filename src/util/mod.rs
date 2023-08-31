@@ -8,7 +8,8 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use is_terminal::IsTerminal;
+use std::io::IsTerminal;
+
 use serde::Deserialize;
 use serde::Serialize;
 
