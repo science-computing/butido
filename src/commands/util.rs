@@ -11,6 +11,7 @@
 //! Utility module for subcommand implementation helpers
 
 use std::fmt::Display;
+use std::io::IsTerminal;
 use std::io::Write;
 use std::path::Path;
 
@@ -19,7 +20,6 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
-use is_terminal::IsTerminal;
 use itertools::Itertools;
 use regex::Regex;
 use tokio_stream::StreamExt;
