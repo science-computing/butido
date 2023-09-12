@@ -49,7 +49,6 @@ use crate::package::Shebang;
 use crate::repository::Repository;
 use crate::schema;
 use crate::source::SourceCache;
-use crate::util::docker::ImageName;
 use crate::util::progress::ProgressBars;
 use crate::util::EnvironmentVariableName;
 
@@ -65,6 +64,7 @@ pub async fn build(
     repo_path: &Path,
 ) -> Result<()> {
     use crate::db::models::{EnvVar, GitHash, Image, Job, Package, Submit};
+    use crate::util::docker::resolve_image_name;
 
     let git_repo = git2::Repository::open(repo_path)
         .with_context(|| anyhow!("Opening repository at {}", repo_path.display()))?;
@@ -80,34 +80,8 @@ pub async fn build(
 
     let image_name = matches
         .get_one::<String>("image")
-        .map(|s| s.to_owned())
-        .map(ImageName::from)
-        .unwrap(); // safe by clap
-    if config.docker().verify_images_present()
-        && !config
-            .docker()
-            .images()
-            .iter()
-            .any(|img| image_name == img.name)
-    {
-        return Err(anyhow!(
-            "Requested build image {} is not in the configured images",
-            image_name
-        ))
-        .with_context(|| {
-            anyhow!(
-                "Available images: {}",
-                config
-                    .docker()
-                    .images()
-                    .iter()
-                    .map(|img| img.name.clone())
-                    .join(", ")
-            )
-        })
-        .with_context(|| anyhow!("Image present verification failed"))
-        .map_err(Error::from);
-    }
+        .map(|s| resolve_image_name(s, config.docker().images()))
+        .unwrap()?; // safe by clap
 
     debug!("Getting repository HEAD");
     let hash_str = crate::util::git::get_repo_head_commit_hash(&git_repo)?;

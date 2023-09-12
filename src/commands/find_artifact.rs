@@ -31,7 +31,7 @@ use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
-use crate::util::docker::ImageName;
+use crate::util::docker::resolve_image_name;
 use crate::util::progress::ProgressBars;
 
 /// Implementation of the "find_artifact" subcommand
@@ -66,8 +66,8 @@ pub async fn find_artifact(
 
     let image_name = matches
         .get_one::<String>("image")
-        .map(|s| s.to_owned())
-        .map(ImageName::from);
+        .map(|s| resolve_image_name(s, config.docker().images()))
+        .transpose()?;
 
     debug!(
         "Finding artifacts for '{:?}' '{:?}'",

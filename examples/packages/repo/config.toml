@@ -40,7 +40,6 @@ available_phases = [
 images = [
     { name = "debian:bullseye", short_name = "deb11" },
 ]
-verify_images_present = true
 
 #
 # Docker endpoints
