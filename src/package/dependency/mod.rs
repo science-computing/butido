@@ -64,7 +64,12 @@ pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_
         .map(|m| String::from(m.as_str()))
         .ok_or_else(|| anyhow!("Could not parse version: '{}'", s))?;
 
-    let v = PackageVersionConstraint::try_from(vers)?;
+    let v = PackageVersionConstraint::try_from(vers).map_err(|e| {
+        e.context(anyhow!(
+            "Could not parse the following package dependency string: {}",
+            s
+        ))
+    })?;
     Ok((PackageName::from(name), v))
 }
 
