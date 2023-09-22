@@ -10,6 +10,7 @@
 
 use std::ops::Deref;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -64,8 +65,8 @@ impl std::convert::TryFrom<&str> for PackageVersionConstraint {
     fn try_from(s: &str) -> Result<Self> {
         PackageVersionConstraint::parser()
             .parse(s.as_bytes())
-            .context("Failed to parse package version constraint")
-            .context("A package version constraint must have a comparator and a version string, like so: =0.1.0")
+            .context(anyhow!("Failed to parse the following package version constraint: {}", s))
+            .context("A package version constraint must have a comparator (only `=` is currently supported) and a version string, like so: =0.1.0")
             .map_err(Error::from)
     }
 }
