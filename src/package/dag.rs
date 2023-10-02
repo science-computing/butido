@@ -42,6 +42,12 @@ pub struct Dag {
     root_idx: daggy::NodeIndex,
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+enum DependencyType {
+    Build,
+    Runtime,
+}
+
 impl Dag {
     /// Builds the package/dependency DAG for the given package
     pub fn for_root_package(
@@ -50,18 +56,20 @@ impl Dag {
         progress: Option<&ProgressBar>,
         conditional_data: &ConditionData<'_>, // required for selecting packages with conditional dependencies
     ) -> Result<Self> {
-        /// Helper fn to check the dependency condition of a dependency and parse the dependency into a tuple of
-        /// name and version for further processing
+        /// Helper fn to check the dependency condition of a dependency and parse the dependency
+        /// into a tuple for further processing
         fn process_dependency<D: ConditionCheckable + ParseDependency>(
-            d: &D,
+            dependency: &D,
+            dependency_type: DependencyType,
             conditional_data: &ConditionData<'_>,
-        ) -> Result<(bool, PackageName, PackageVersionConstraint)> {
+        ) -> Result<(bool, PackageName, PackageVersionConstraint, DependencyType)> {
             // Check whether the condition of the dependency matches our data
-            let take = d.check_condition(conditional_data)?;
-            let (name, version) = d.parse_as_name_and_version()?;
+            let take = dependency.check_condition(conditional_data)?;
+            let (name, version) = dependency.parse_as_name_and_version()?;
 
-            // (dependency check result, name of the dependency, version constraint of the dependency)
-            Ok((take, name, version))
+            // (dependency check result, name of the dependency, version constraint of the
+            // dependency, and type (build/runtime))
+            Ok((take, name, version, dependency_type))
         }
 
         /// Helper fn to get the dependencies of a package
@@ -74,31 +82,30 @@ impl Dag {
         fn get_package_dependencies<'a>(
             package: &'a Package,
             conditional_data: &'a ConditionData<'_>,
-        ) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
+        ) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint, DependencyType)>> + 'a
+        {
             trace!("Collecting the dependencies of {package:?} {conditional_data:?}");
             package
                 .dependencies()
                 .build()
                 .iter()
-                .map(move |d| process_dependency(d, conditional_data))
+                .map(move |d| process_dependency(d, DependencyType::Build, conditional_data))
                 .chain({
-                    package
-                        .dependencies()
-                        .runtime()
-                        .iter()
-                        .map(move |d| process_dependency(d, conditional_data))
+                    package.dependencies().runtime().iter().map(move |d| {
+                        process_dependency(d, DependencyType::Runtime, conditional_data)
+                    })
                 })
                 // Now filter out all dependencies where their condition did not match our
                 // `conditional_data`.
                 .filter(|res| match res {
-                    Ok((true, _, _)) => true,
-                    Ok((false, _, _)) => false,
+                    Ok((true, _, _, _)) => true,
+                    Ok((false, _, _, _)) => false,
                     Err(_) => true,
                 })
                 // Map out the boolean from the condition, because we don't need that later on
-                .map(|res| res.map(|(_, name, vers)| (name, vers)))
+                .map(|res| res.map(|(_, name, vers, kind)| (name, vers, kind)))
                 // Make all dependencies unique, because we don't want to build one dependency
-                // multiple times
+                // multiple times (TODO: there shouldn't be duplicates -> warn/error instead)
                 .unique_by(|res| res.as_ref().ok().cloned())
         }
 
@@ -113,13 +120,14 @@ impl Dag {
             conditional_data: &ConditionData<'_>,
         ) -> Result<()> {
             get_package_dependencies(p, conditional_data)
-                .and_then_ok(|(name, constr)| {
+                .and_then_ok(|(name, constr, kind)| {
                     trace!(
-                        "Processing the following dependency of {} {}: {} {}",
+                        "Processing the following dependency of {} {}: {} {} {:?}",
                         p.name(),
                         p.version(),
                         name,
-                        constr
+                        constr,
+                        kind
                     );
                     let packs = repo.find_with_version(&name, &constr);
                     trace!(
@@ -177,14 +185,14 @@ impl Dag {
         ) -> Result<()> {
             for (package, idx) in mappings {
                 get_package_dependencies(package, conditional_data)
-                    .and_then_ok(|(name, constr)| {
+                    .and_then_ok(|(name, constr, kind)| {
                         mappings
                             .iter()
                             .filter(|(package, _)| {
                                 *package.name() == name && constr.matches(package.version())
                             })
                             .try_for_each(|(_, dep_idx)| {
-                                dag.add_edge(*idx, *dep_idx, 0)
+                                dag.add_edge(*idx, *dep_idx, kind.clone() as i8)
                                     .map(|_| ())
                                     .map_err(Error::from)
                             })
