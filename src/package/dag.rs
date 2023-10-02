@@ -244,12 +244,12 @@ impl Dag {
     }
 
     pub fn display(&self) -> DagDisplay {
-        DagDisplay(self, self.root_idx)
+        DagDisplay(self, self.root_idx, None)
     }
 }
 
 #[derive(Clone)]
-pub struct DagDisplay<'a>(&'a Dag, daggy::NodeIndex);
+pub struct DagDisplay<'a>(&'a Dag, daggy::NodeIndex, Option<daggy::EdgeIndex>);
 
 impl<'a> TreeItem for DagDisplay<'a> {
     type Child = Self;
@@ -262,14 +262,31 @@ impl<'a> TreeItem for DagDisplay<'a> {
             .node_weight(self.1)
             .ok_or_else(|| anyhow!("Error finding node: {:?}", self.1))
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        write!(f, "{} {}", p.name(), p.version())
+        let dependency_type = match self.2 {
+            // Only the root package has no edge and we pretend it's a runtime dependency as we
+            // only mark build time dependencies in the output:
+            None => &DependencyType::Runtime,
+            Some(edge_idx) => self
+                .0
+                .dag
+                .graph()
+                .edge_weight(edge_idx)
+                .ok_or_else(|| anyhow!("Error finding edge: {:?}", self.2))
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
+        };
+        let extra_info = match dependency_type {
+            // We mark build time dependencies with a star:
+            &DependencyType::Build => "*",
+            _ => "",
+        };
+        write!(f, "{}{} {}", extra_info, p.name(), p.version())
     }
 
     fn children(&self) -> Cow<[Self::Child]> {
         let c = self.0.dag.children(self.1);
         Cow::from(
             c.iter(&self.0.dag)
-                .map(|(_, idx)| DagDisplay(self.0, idx))
+                .map(|(edge_idx, node_idx)| DagDisplay(self.0, node_idx, Some(edge_idx)))
                 .collect::<Vec<_>>(),
         )
     }
