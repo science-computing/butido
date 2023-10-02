@@ -15,6 +15,7 @@ use uuid::Uuid;
 
 use crate::job::Job;
 use crate::job::JobResource;
+use crate::package::DependencyType;
 use crate::package::Package;
 use crate::package::PhaseName;
 use crate::package::Shebang;
@@ -23,7 +24,7 @@ use crate::util::docker::ImageName;
 #[derive(Debug, Getters)]
 pub struct Dag {
     #[getset(get = "pub")]
-    dag: DaggyDag<Job, i8>,
+    dag: DaggyDag<Job, DependencyType>,
 }
 
 impl Dag {
@@ -45,7 +46,7 @@ impl Dag {
         };
 
         Dag {
-            dag: dag.dag().map(build_job, |_, e| *e),
+            dag: dag.dag().map(build_job, |_, e| (*e).clone()),
         }
     }
 
