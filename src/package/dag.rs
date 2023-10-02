@@ -36,14 +36,14 @@ use crate::repository::Repository;
 #[derive(Debug, Getters)]
 pub struct Dag {
     #[getset(get = "pub")]
-    dag: daggy::Dag<Package, i8>,
+    dag: daggy::Dag<Package, DependencyType>,
 
     #[getset(get = "pub")]
     root_idx: daggy::NodeIndex,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
-enum DependencyType {
+pub enum DependencyType {
     Build,
     Runtime,
 }
@@ -114,7 +114,7 @@ impl Dag {
         fn add_sub_packages<'a>(
             repo: &'a Repository,
             mappings: &mut HashMap<&'a Package, daggy::NodeIndex>,
-            dag: &mut daggy::Dag<&'a Package, i8>,
+            dag: &mut daggy::Dag<&'a Package, DependencyType>,
             p: &'a Package,
             progress: Option<&ProgressBar>,
             conditional_data: &ConditionData<'_>,
@@ -180,7 +180,7 @@ impl Dag {
         // makes that function more complex but doing it separately is weird).
         fn add_edges(
             mappings: &HashMap<&Package, daggy::NodeIndex>,
-            dag: &mut daggy::Dag<&Package, i8>,
+            dag: &mut daggy::Dag<&Package, DependencyType>,
             conditional_data: &ConditionData<'_>,
         ) -> Result<()> {
             for (package, idx) in mappings {
@@ -192,7 +192,7 @@ impl Dag {
                                 *package.name() == name && constr.matches(package.version())
                             })
                             .try_for_each(|(_, dep_idx)| {
-                                dag.add_edge(*idx, *dep_idx, kind.clone() as i8)
+                                dag.add_edge(*idx, *dep_idx, kind.clone())
                                     .map(|_| ())
                                     .map_err(Error::from)
                             })
@@ -204,7 +204,7 @@ impl Dag {
         }
 
         // Create an empty DAG and use the above helper functions to compute the dependency graph:
-        let mut dag: daggy::Dag<&Package, i8> = daggy::Dag::new();
+        let mut dag: daggy::Dag<&Package, DependencyType> = daggy::Dag::new();
         let mut mappings = HashMap::new();
 
         trace!("Building the package dependency DAG for package {:?}", p);
@@ -222,7 +222,10 @@ impl Dag {
         trace!("Finished building the package DAG");
 
         Ok(Dag {
-            dag: dag.map(|_, p: &&Package| -> Package { (*p).clone() }, |_, e| *e),
+            dag: dag.map(
+                |_, p: &&Package| -> Package { (*p).clone() },
+                |_, e| (*e).clone(),
+            ),
             root_idx,
         })
     }
