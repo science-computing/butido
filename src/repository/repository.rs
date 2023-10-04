@@ -63,7 +63,7 @@ impl Repository {
                     .map_ok(PathBuf::from)
                     .collect(),
                 Err(config::ConfigError::NotFound(_)) => Ok(Vec::with_capacity(0)),
-                Err(e) => Err(e).map_err(Error::from),
+                Err(e) => Err(Error::from(e)),
             }
         }
 
