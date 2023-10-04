@@ -371,10 +371,9 @@ struct LogReceiver<'a> {
 impl<'a> LogReceiver<'a> {
     async fn join(mut self) -> Result<String> {
         let mut success = None;
-        let mut accu = vec![];
 
         // Reserve a reasonable amount of elements.
-        accu.reserve(4096);
+        let mut accu = Vec::with_capacity(4096);
 
         let mut logfile = self
             .get_logfile()
