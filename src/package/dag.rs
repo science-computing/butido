@@ -36,31 +36,40 @@ use crate::repository::Repository;
 #[derive(Debug, Getters)]
 pub struct Dag {
     #[getset(get = "pub")]
-    dag: daggy::Dag<Package, i8>,
+    dag: daggy::Dag<Package, DependencyType>,
 
     #[getset(get = "pub")]
     root_idx: daggy::NodeIndex,
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+pub enum DependencyType {
+    Build,
+    Runtime,
+}
+
 impl Dag {
+    /// Builds the package/dependency DAG for the given package
     pub fn for_root_package(
         p: Package,
         repo: &Repository,
         progress: Option<&ProgressBar>,
         conditional_data: &ConditionData<'_>, // required for selecting packages with conditional dependencies
     ) -> Result<Self> {
-        /// helper fn with bad name to check the dependency condition of a dependency and parse the dependency into a tuple of
-        /// name and version for further processing
-        fn process<D: ConditionCheckable + ParseDependency>(
-            d: &D,
+        /// Helper fn to check the dependency condition of a dependency and parse the dependency
+        /// into a tuple for further processing
+        fn process_dependency<D: ConditionCheckable + ParseDependency>(
+            dependency: &D,
+            dependency_type: DependencyType,
             conditional_data: &ConditionData<'_>,
-        ) -> Result<(bool, PackageName, PackageVersionConstraint)> {
+        ) -> Result<(bool, PackageName, PackageVersionConstraint, DependencyType)> {
             // Check whether the condition of the dependency matches our data
-            let take = d.check_condition(conditional_data)?;
-            let (name, version) = d.parse_as_name_and_version()?;
+            let take = dependency.check_condition(conditional_data)?;
+            let (name, version) = dependency.parse_as_name_and_version()?;
 
-            // (dependency check result, name of the dependency, version of the dependency)
-            Ok((take, name, version))
+            // (dependency check result, name of the dependency, version constraint of the
+            // dependency, and type (build/runtime))
+            Ok((take, name, version, dependency_type))
         }
 
         /// Helper fn to get the dependencies of a package
@@ -73,71 +82,86 @@ impl Dag {
         fn get_package_dependencies<'a>(
             package: &'a Package,
             conditional_data: &'a ConditionData<'_>,
-        ) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint)>> + 'a {
+        ) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint, DependencyType)>> + 'a
+        {
+            trace!("Collecting the dependencies of {package:?} {conditional_data:?}");
             package
                 .dependencies()
                 .build()
                 .iter()
-                .map(move |d| process(d, conditional_data))
+                .map(move |d| process_dependency(d, DependencyType::Build, conditional_data))
                 .chain({
-                    package
-                        .dependencies()
-                        .runtime()
-                        .iter()
-                        .map(move |d| process(d, conditional_data))
+                    package.dependencies().runtime().iter().map(move |d| {
+                        process_dependency(d, DependencyType::Runtime, conditional_data)
+                    })
                 })
                 // Now filter out all dependencies where their condition did not match our
                 // `conditional_data`.
                 .filter(|res| match res {
-                    Ok((true, _, _)) => true,
-                    Ok((false, _, _)) => false,
+                    Ok((true, _, _, _)) => true,
+                    Ok((false, _, _, _)) => false,
                     Err(_) => true,
                 })
                 // Map out the boolean from the condition, because we don't need that later on
-                .map(|res| res.map(|(_, name, vers)| (name, vers)))
+                .map(|res| res.map(|(_, name, vers, kind)| (name, vers, kind)))
                 // Make all dependencies unique, because we don't want to build one dependency
-                // multiple times
+                // multiple times (TODO: there shouldn't be duplicates -> warn/error instead)
                 .unique_by(|res| res.as_ref().ok().cloned())
         }
 
+        /// Main helper function to build the DAG. Recursively resolves a package's dependencies
+        /// and adds corresponding nodes to the DAG. The edges are added later in `add_edges()`.
         fn add_sub_packages<'a>(
             repo: &'a Repository,
             mappings: &mut HashMap<&'a Package, daggy::NodeIndex>,
-            dag: &mut daggy::Dag<&'a Package, i8>,
+            dag: &mut daggy::Dag<&'a Package, DependencyType>,
             p: &'a Package,
             progress: Option<&ProgressBar>,
             conditional_data: &ConditionData<'_>,
         ) -> Result<()> {
             get_package_dependencies(p, conditional_data)
-                .and_then_ok(|(name, constr)| {
+                .and_then_ok(|(name, constr, kind)| {
                     trace!(
-                        "Dependency for {} {} found: {:?}",
+                        "Processing the following dependency of {} {}: {} {} {:?}",
                         p.name(),
                         p.version(),
-                        name
+                        name,
+                        constr,
+                        kind
                     );
                     let packs = repo.find_with_version(&name, &constr);
+                    trace!(
+                        "Found the following matching packages in the repo: {:?}",
+                        packs
+                    );
                     if packs.is_empty() {
                         return Err(anyhow!(
-                            "Dependency of {} {} not found: {} {}",
+                            "Couldn't find the following dependency of {} {} in the repo: {} {}",
                             p.name(),
                             p.version(),
                             name,
                             constr
                         ));
                     }
-                    trace!("Found in repo: {:?}", packs);
 
-                    // If we didn't check that dependency already
+                    // Check if we already created a DAG node for any of the matching packages and
+                    // only add a new node and recurse if necessary.
                     if !mappings.keys().any(|p| {
                         packs
                             .iter()
                             .any(|pk| pk.name() == p.name() && pk.version() == p.version())
                     }) {
-                        // recurse
+                        // TODO: It should be sufficient to process a single package of `packs`.
+                        // The `packs` vector contains a list of all packages in the repo that
+                        // match the dependency specification (PackageName and
+                        // PackageVersionConstraint). All packages must have the same name so only
+                        // the version can differ -> we could simply pick the package with the most
+                        // recent version and optionally omit a warning (or even abort with an error).
                         packs.into_iter().try_for_each(|p| {
                             let _ = progress.as_ref().map(|p| p.tick());
 
+                            // Add the package to the DAG and recursively proceed with the
+                            // subpackages (dependencies).
                             let idx = dag.add_node(p);
                             mappings.insert(p, idx);
 
@@ -151,21 +175,24 @@ impl Dag {
                 .collect::<Result<()>>()
         }
 
+        // Helper fn to add the edges to the DAG with all nodes.
+        // TODO: It seems easier and more efficient to do this in `add_sub_packages` as well (it
+        // makes that function more complex but doing it separately is weird).
         fn add_edges(
             mappings: &HashMap<&Package, daggy::NodeIndex>,
-            dag: &mut daggy::Dag<&Package, i8>,
+            dag: &mut daggy::Dag<&Package, DependencyType>,
             conditional_data: &ConditionData<'_>,
         ) -> Result<()> {
             for (package, idx) in mappings {
                 get_package_dependencies(package, conditional_data)
-                    .and_then_ok(|(name, constr)| {
+                    .and_then_ok(|(name, constr, kind)| {
                         mappings
                             .iter()
                             .filter(|(package, _)| {
                                 *package.name() == name && constr.matches(package.version())
                             })
                             .try_for_each(|(_, dep_idx)| {
-                                dag.add_edge(*idx, *dep_idx, 0)
+                                dag.add_edge(*idx, *dep_idx, kind.clone())
                                     .map(|_| ())
                                     .map_err(Error::from)
                             })
@@ -176,10 +203,11 @@ impl Dag {
             Ok(())
         }
 
-        let mut dag: daggy::Dag<&Package, i8> = daggy::Dag::new();
+        // Create an empty DAG and use the above helper functions to compute the dependency graph:
+        let mut dag: daggy::Dag<&Package, DependencyType> = daggy::Dag::new();
         let mut mappings = HashMap::new();
 
-        trace!("Making package Tree for {:?}", p);
+        trace!("Building the package dependency DAG for package {:?}", p);
         let root_idx = dag.add_node(&p);
         mappings.insert(&p, root_idx);
         add_sub_packages(
@@ -191,10 +219,13 @@ impl Dag {
             conditional_data,
         )?;
         add_edges(&mappings, &mut dag, conditional_data)?;
-        trace!("Finished makeing package Tree");
+        trace!("Finished building the package DAG");
 
         Ok(Dag {
-            dag: dag.map(|_, p: &&Package| -> Package { (*p).clone() }, |_, e| *e),
+            dag: dag.map(
+                |_, p: &&Package| -> Package { (*p).clone() },
+                |_, e| (*e).clone(),
+            ),
             root_idx,
         })
     }
@@ -213,12 +244,12 @@ impl Dag {
     }
 
     pub fn display(&self) -> DagDisplay {
-        DagDisplay(self, self.root_idx)
+        DagDisplay(self, self.root_idx, None)
     }
 }
 
 #[derive(Clone)]
-pub struct DagDisplay<'a>(&'a Dag, daggy::NodeIndex);
+pub struct DagDisplay<'a>(&'a Dag, daggy::NodeIndex, Option<daggy::EdgeIndex>);
 
 impl<'a> TreeItem for DagDisplay<'a> {
     type Child = Self;
@@ -231,14 +262,31 @@ impl<'a> TreeItem for DagDisplay<'a> {
             .node_weight(self.1)
             .ok_or_else(|| anyhow!("Error finding node: {:?}", self.1))
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        write!(f, "{} {}", p.name(), p.version())
+        let dependency_type = match self.2 {
+            // Only the root package has no edge and we pretend it's a runtime dependency as we
+            // only mark build time dependencies in the output:
+            None => &DependencyType::Runtime,
+            Some(edge_idx) => self
+                .0
+                .dag
+                .graph()
+                .edge_weight(edge_idx)
+                .ok_or_else(|| anyhow!("Error finding edge: {:?}", self.2))
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
+        };
+        let extra_info = match dependency_type {
+            // We mark build time dependencies with a star:
+            &DependencyType::Build => "*",
+            _ => "",
+        };
+        write!(f, "{}{} {}", extra_info, p.name(), p.version())
     }
 
     fn children(&self) -> Cow<[Self::Child]> {
         let c = self.0.dag.children(self.1);
         Cow::from(
             c.iter(&self.0.dag)
-                .map(|(_, idx)| DagDisplay(self.0, idx))
+                .map(|(edge_idx, node_idx)| DagDisplay(self.0, node_idx, Some(edge_idx)))
                 .collect::<Vec<_>>(),
         )
     }
