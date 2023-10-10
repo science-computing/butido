@@ -98,8 +98,11 @@ async fn main() -> Result<()> {
     });
 
     tracing_subscriber::fmt::fmt()
-        .with_max_level(tracing::Level::WARN)
-        .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
+        .with_env_filter(
+            tracing_subscriber::filter::EnvFilter::builder()
+                .with_default_directive(tracing_subscriber::filter::LevelFilter::WARN.into())
+                .from_env_lossy(),
+        )
         .init();
     debug!("Debugging enabled");
 
