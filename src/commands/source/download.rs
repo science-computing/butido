@@ -139,6 +139,15 @@ async fn perform_download(
         Err(e) => return Err(e).with_context(|| anyhow!("Downloading '{}'", &source.url())),
     };
 
+    if response.status() != reqwest::StatusCode::OK {
+        return Err(anyhow!(
+            "Received HTTP status code \"{}\" but \"{}\" is expected for a successful download",
+            response.status(),
+            reqwest::StatusCode::OK
+        ))
+        .with_context(|| anyhow!("Downloading \"{}\" failed", &source.url()));
+    }
+
     progress
         .lock()
         .await
