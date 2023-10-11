@@ -231,7 +231,6 @@ dependencies = [
  "indoc",
  "itertools 0.11.0",
  "lazy_static",
- "log",
  "parse-display",
  "pom",
  "ptree",
