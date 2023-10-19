@@ -43,7 +43,6 @@
 #![allow(macro_use_extern_crate)]
 #![allow(unstable_name_collisions)] // TODO: Remove me with the next rustc update (probably)
 
-extern crate log as logcrate;
 #[macro_use]
 extern crate diesel;
 
@@ -55,8 +54,7 @@ use anyhow::Error;
 use anyhow::Result;
 use aquamarine as _;
 use clap::ArgMatches;
-use logcrate::debug;
-use logcrate::error; // doc-helper crate
+use tracing::{debug, error};
 
 mod cli;
 mod commands;
@@ -98,8 +96,11 @@ async fn main() -> Result<()> {
     });
 
     tracing_subscriber::fmt::fmt()
-        .with_max_level(tracing::Level::WARN)
-        .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
+        .with_env_filter(
+            tracing_subscriber::filter::EnvFilter::builder()
+                .with_default_directive(tracing_subscriber::filter::LevelFilter::WARN.into())
+                .from_env_lossy(),
+        )
         .init();
     debug!("Debugging enabled");
 
