@@ -114,15 +114,8 @@ async fn perform_download(
     progress: Arc<Mutex<ProgressWrapper>>,
     timeout: Option<u64>,
 ) -> Result<()> {
-    trace!("Creating: {:?}", source);
-    let file = source.create().await.with_context(|| {
-        anyhow!(
-            "Creating source file destination: {}",
-            source.path().display()
-        )
-    })?;
+    trace!("Downloading: {:?}", source);
 
-    let mut file = tokio::io::BufWriter::new(file);
     let client_builder =
         reqwest::Client::builder().redirect(reqwest::redirect::Policy::limited(10));
 
@@ -145,6 +138,15 @@ async fn perform_download(
         Ok(resp) => resp,
         Err(e) => return Err(e).with_context(|| anyhow!("Downloading '{}'", &source.url())),
     };
+
+    if response.status() != reqwest::StatusCode::OK {
+        return Err(anyhow!(
+            "Received HTTP status code \"{}\" but \"{}\" is expected for a successful download",
+            response.status(),
+            reqwest::StatusCode::OK
+        ))
+        .with_context(|| anyhow!("Downloading \"{}\" failed", &source.url()));
+    }
 
     progress
         .lock()
@@ -172,6 +174,14 @@ async fn perform_download(
         "The server returned content type \"{content_type}\" for \"{}\"",
         source.url()
     );
+
+    let file = source.create().await.with_context(|| {
+        anyhow!(
+            "Creating source file destination: {}",
+            source.path().display()
+        )
+    })?;
+    let mut file = tokio::io::BufWriter::new(file);
 
     let mut stream = response.bytes_stream();
     while let Some(bytes) = stream.next().await {
