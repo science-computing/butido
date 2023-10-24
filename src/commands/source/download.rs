@@ -20,7 +20,7 @@ use clap::ArgMatches;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
-use tracing::{debug, trace};
+use tracing::{debug, info, trace, warn};
 
 use crate::config::*;
 use crate::package::PackageName;
@@ -143,7 +143,7 @@ async fn perform_download(
 
     let response = match client.execute(request).await {
         Ok(resp) => resp,
-        Err(e) => return Err(e).with_context(|| anyhow!("Downloading '{}'", source.url())),
+        Err(e) => return Err(e).with_context(|| anyhow!("Downloading '{}'", &source.url())),
     };
 
     progress
@@ -151,6 +151,27 @@ async fn perform_download(
         .await
         .inc_download_bytes(response.content_length().unwrap_or(0))
         .await;
+
+    // Check the content type to warn the user when downloading HTML files or when the server
+    // didn't specify a content type.
+    let content_type = &response
+        .headers()
+        .get("content-type")
+        .map(|h| h.to_str().unwrap_or(""))
+        .unwrap_or("");
+
+    if content_type.contains("text/html") {
+        warn!("The downloaded source ({}) is an HTML file", source.url());
+    } else if content_type == &"" {
+        warn!(
+            "The server didn't specify a content type for the downloaded source ({})",
+            source.url()
+        );
+    }
+    info!(
+        "The server returned content type \"{content_type}\" for \"{}\"",
+        source.url()
+    );
 
     let mut stream = response.bytes_stream();
     while let Some(bytes) = stream.next().await {
