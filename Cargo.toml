@@ -74,7 +74,7 @@ unindent       = "0.2"
 url            = { version = "2", features = ["serde"] }
 uuid           = { version = "1", features = ["serde", "v4"] }
 walkdir        = "2"
-which          = "4"
+which          = "5"
 xdg            = "2"
 rand = "0.8"
 tracing = "0.1"
