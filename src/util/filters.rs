@@ -191,7 +191,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(found.len(), 1);
-        let p = found.get(0).unwrap();
+        let p = found.first().unwrap();
         assert_eq!(*p.name(), pname("a"));
         assert_eq!(
             *p.dependencies().runtime(),
@@ -289,7 +289,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(found.len(), 1);
-        let p = found.get(0).unwrap();
+        let p = found.first().unwrap();
         assert_eq!(*p.name(), pname("a"));
         assert_eq!(
             *p.dependencies().runtime(),
@@ -346,7 +346,7 @@ mod tests {
         assert_eq!(found.len(), 2);
 
         {
-            let p = found.get(0).unwrap();
+            let p = found.first().unwrap();
             assert_eq!(*p.name(), pname("a"));
             assert_eq!(
                 *p.dependencies().runtime(),
