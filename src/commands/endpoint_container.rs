@@ -52,7 +52,7 @@ pub async fn container(
     }
 
     let relevant_endpoint = relevant_endpoints
-        .get(0)
+        .first()
         .ok_or_else(|| anyhow!("Found no container for id {}", container_id))?;
 
     let container = relevant_endpoint

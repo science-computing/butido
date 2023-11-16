@@ -142,7 +142,7 @@ mod tests {
         let s: TestSettings =
             toml::from_str(r#"settings = [{ name = "foo", condition = { in_image = "bar"} }]"#)
                 .expect("Parsing TestSetting failed");
-        match s.settings.get(0).expect("Has not one dependency") {
+        match s.settings.first().expect("Has not one dependency") {
             Dependency::Conditional { name, condition } => {
                 assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
@@ -166,7 +166,7 @@ mod tests {
 
         let s: TestSettings = toml::from_str(pretty).expect("Parsing TestSetting failed");
 
-        match s.settings.get(0).expect("Has not one dependency") {
+        match s.settings.first().expect("Has not one dependency") {
             Dependency::Conditional { name, condition } => {
                 assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
@@ -190,7 +190,7 @@ mod tests {
 
         let s: TestSettings = toml::from_str(pretty).expect("Parsing TestSetting failed");
 
-        match s.settings.get(0).expect("Has not one dependency") {
+        match s.settings.first().expect("Has not one dependency") {
             Dependency::Conditional { name, condition } => {
                 assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
@@ -218,7 +218,7 @@ mod tests {
 
         let s: TestSettings = toml::from_str(pretty).expect("Parsing TestSetting failed");
 
-        match s.settings.get(0).expect("Has not one dependencies") {
+        match s.settings.first().expect("Has not one dependencies") {
             Dependency::Conditional { name, condition } => {
                 assert_eq!(name, "foo", "Expected 'foo', got {name}");
                 assert_eq!(*condition.has_env(), None);
