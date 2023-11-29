@@ -205,7 +205,7 @@ pub mod tests {
         let ps = repo.find_by_name(&pname("a"));
         assert_eq!(ps.len(), 1);
 
-        let p = ps.get(0).unwrap();
+        let p = ps.first().unwrap();
         assert_eq!(*p.name(), pname("a"));
         assert_eq!(*p.version(), pversion("1"));
         assert!(!p.version_is_semver());
@@ -233,7 +233,7 @@ pub mod tests {
         let ps = repo.find(&pname("a"), &pversion("2"));
         assert_eq!(ps.len(), 1);
 
-        let p = ps.get(0).unwrap();
+        let p = ps.first().unwrap();
         assert_eq!(*p.name(), pname("a"));
         assert_eq!(*p.version(), pversion("2"));
         assert!(!p.version_is_semver());
@@ -269,7 +269,7 @@ pub mod tests {
         let ps = repo.find_with_version(&pname("a"), &constraint);
         assert_eq!(ps.len(), 1);
 
-        let p = ps.get(0).unwrap();
+        let p = ps.first().unwrap();
         assert_eq!(*p.name(), pname("a"));
         assert_eq!(*p.version(), pversion("2"));
         assert!(!p.version_is_semver());

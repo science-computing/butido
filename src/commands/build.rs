@@ -157,7 +157,7 @@ pub async fn build(
         ));
     }
     let package = *packages
-        .get(0)
+        .first()
         .ok_or_else(|| anyhow!("Found no package."))?;
 
     let release_stores = config
