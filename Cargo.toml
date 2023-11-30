@@ -4,8 +4,8 @@ version = "0.4.0"
 authors = [
   # Only for the current/active maintainers (sorted alphabetically by the surname)
   # All other authors are listed in the "Authors" section of README.md
-  "Nico Steinle <nico.steinle@atos.net>", # @ammernico
-  "Michael Weiss <michael.weiss@atos.net>", # @primeos-work
+  "Nico Steinle <nico.steinle@eviden.com>", # @ammernico
+  "Michael Weiss <michael.weiss@eviden.com>", # @primeos-work
 ]
 edition = "2021"
 rust-version = "1.70.0" # MSRV
