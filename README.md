@@ -97,8 +97,8 @@ cd /tmp/butido-test-repo
 - Original author: Matthias Beyer <mail@beyermatthias.de> @matthiasbeyer
 - Active maintainers: See `authors` in Cargo.toml
 - Passive maintainers
-  - Erdmut Pfeifer <erdmut.pfeifer@atos.net> @ErdmutPfeifer
-  - Christoph Prokop <christoph.prokop@atos.net> @christophprokop
+  - Erdmut Pfeifer <erdmut.pfeifer@eviden.com> @ErdmutPfeifer
+  - Christoph Prokop <christoph.prokop@eviden.com> @christophprokop
 
 
 # License
