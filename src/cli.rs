@@ -256,6 +256,7 @@ pub fn cli() -> Command {
                 .arg(Arg::new("limit")
                     .required(false)
                     .long("limit")
+                    .short('L')
                     .value_name("LIMIT")
                     .help("Only list LIMIT submits")
                 )
