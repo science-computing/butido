@@ -24,6 +24,33 @@ pub const IDENT_DEPENDENCY_TYPE_BUILD: &str = "build";
 pub const IDENT_DEPENDENCY_TYPE_RUNTIME: &str = "runtime";
 
 pub fn cli() -> Command {
+    let releases_list_command = Command::new("releases")
+        .about("List releases")
+        .arg(
+            Arg::new("csv")
+                .action(ArgAction::SetTrue)
+                .required(false)
+                .long("csv")
+                .help("Format output as CSV"),
+        )
+        .arg(arg_older_than_date("List only releases older than DATE"))
+        .arg(arg_newer_than_date("List only releases newer than DATE"))
+        .arg(
+            Arg::new("store")
+                .required(false)
+                .long("to")
+                .value_name("STORE")
+                .help("List only releases to STORE"),
+        )
+        .arg(
+            Arg::new("package")
+                .required(false)
+                .long("package")
+                .short('p')
+                .value_name("PKG")
+                .help("Only list releases for package PKG"),
+        );
+
     Command::new("butido")
         .author(crate_authors!())
         .disable_version_flag(true)
@@ -355,33 +382,7 @@ pub fn cli() -> Command {
                     .help("The id of the Job")
                 )
             )
-            .subcommand(Command::new("releases")
-                .about("List releases")
-                .arg(Arg::new("csv")
-                    .action(ArgAction::SetTrue)
-                    .required(false)
-                    .long("csv")
-                    .help("Format output as CSV")
-                )
-
-                .arg(arg_older_than_date("List only releases older than DATE"))
-                .arg(arg_newer_than_date("List only releases newer than DATE"))
-
-                .arg(Arg::new("store")
-                    .required(false)
-                    .long("to")
-                    .value_name("STORE")
-                    .help("List only releases to STORE")
-                )
-
-                .arg(Arg::new("package")
-                    .required(false)
-                    .long("package")
-                    .short('p')
-                    .value_name("PKG")
-                    .help("Only list releases for package PKG")
-                )
-            )
+            .subcommand(releases_list_command.clone())
         )
 
         .subcommand(Command::new("build")
@@ -827,6 +828,7 @@ pub fn cli() -> Command {
 
         .subcommand(Command::new("release")
             .about("Manage artifact releases")
+            .subcommand(releases_list_command.name("list"))
             .subcommand(Command::new("rm")
                 .about("Remove release artifacts")
                 .long_about(indoc::indoc!(r#"

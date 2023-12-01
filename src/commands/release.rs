@@ -34,6 +34,9 @@ pub async fn release(
     matches: &ArgMatches,
 ) -> Result<()> {
     match matches.subcommand() {
+        Some(("list", matches)) => {
+            crate::commands::db::releases(db_connection_config, config, matches)
+        }
         Some(("new", matches)) => new_release(db_connection_config, config, matches).await,
         Some(("rm", matches)) => rm_release(db_connection_config, config, matches).await,
         Some((other, _matches)) => Err(anyhow!("Unknown subcommand: {}", other)),
