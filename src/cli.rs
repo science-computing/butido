@@ -192,6 +192,13 @@ pub fn cli() -> Command {
                     .value_name("JOB UUID")
                     .help("Print only artifacts for a certain job")
                 )
+                .arg(Arg::new("limit")
+                    .required(false)
+                    .long("limit")
+                    .short('L')
+                    .value_name("LIMIT")
+                    .help("Only list LIMIT artifacts")
+                )
             )
 
             .subcommand(Command::new("envvars")
