@@ -824,7 +824,7 @@ fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 }
 
 /// Implementation of the "db releases" subcommand
-fn releases(
+pub fn releases(
     conn_cfg: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
