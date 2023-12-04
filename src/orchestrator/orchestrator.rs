@@ -406,14 +406,23 @@ impl<'a> Orchestrator<'a> {
         // By now, all tasks should be associated with their respective sender.
         // Only one has None sender: The task that is the "root" of the tree.
         // By that property, we can find the root task.
+        // (Note: It should normally be the first jobs item as we start building the DAG from the
+        // root task (-> first node in the DAG) but we don't explicitly guarantee this.)
         //
         // Here, we copy its uuid, because we need it later.
-        let root_job_id = jobs
+        let root_job = jobs
             .iter()
             .find(|j| j.3.borrow().is_none())
-            .map(|j| j.1.jobdef.job.uuid())
             .ok_or_else(|| anyhow!("Failed to find root task"))?;
+        let root_job_id = root_job.1.jobdef.job.uuid();
         trace!("Root job id = {}", root_job_id);
+        // Move the progress bar for the root task to the bottom to ensure that it will be visible
+        // without having to scroll up (the MultiProgress implementation doesn't let us modify the
+        // order so we have to remove and re-add it - it works despite the clone because
+        // ProgressBar is an Arc around its internal state and is documented that way):
+        let root_job_bar = &root_job.1.bar;
+        multibar.remove(root_job_bar);
+        multibar.add(root_job_bar.clone());
 
         // Create a sender and a receiver for the root of the tree
         let (root_sender, mut root_receiver) = tokio::sync::mpsc::channel(100);
