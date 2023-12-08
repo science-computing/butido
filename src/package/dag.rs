@@ -14,6 +14,7 @@ use std::io::Result as IoResult;
 use std::io::Write;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use daggy::Walker;
@@ -191,10 +192,20 @@ impl Dag {
                             .filter(|(pkg, _)| {
                                 *pkg.name() == dep_name && dep_constr.matches(pkg.version())
                             })
-                            .try_for_each(|(_, dep_idx)| {
+                            .try_for_each(|(dep, dep_idx)| {
                                 dag.add_edge(*idx, *dep_idx, dep_kind.clone())
                                     .map(|_| ())
                                     .map_err(Error::from)
+                                    .with_context(|| {
+                                        anyhow!(
+                                            "Failed to add package dependency DAG edge \
+                                            from package \"{}\" ({}) to dependency \"{}\" ({})",
+                                            package.name(),
+                                            package.version(),
+                                            dep.name(),
+                                            dep.version(),
+                                        )
+                                    })
                             })
                     })
                     .collect::<Result<()>>()?
