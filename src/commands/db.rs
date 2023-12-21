@@ -165,29 +165,33 @@ fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<(
     use crate::schema::artifacts::dsl;
 
     let csv = matches.get_flag("csv");
-    let hdrs = crate::commands::util::mk_header(vec!["Path", "Released", "Job"]);
-    let mut conn = conn_cfg.establish_connection()?;
-    let data = matches
+    let job_uuid = matches
         .get_one::<String>("job_uuid")
         .map(|s| uuid::Uuid::parse_str(s.as_ref()))
-        .transpose()?
-        .map(|job_uuid| -> Result<_> {
-            dsl::artifacts
-                .inner_join(schema::jobs::table)
-                .left_join(schema::releases::table)
-                .filter(schema::jobs::dsl::uuid.eq(job_uuid))
-                .load::<(models::Artifact, models::Job, Option<models::Release>)>(&mut conn)
-                .map_err(Error::from)
-        })
-        .unwrap_or_else(|| {
-            dsl::artifacts
-                .inner_join(schema::jobs::table)
-                .left_join(schema::releases::table)
-                .order_by(schema::artifacts::id.asc())
-                .load::<(models::Artifact, models::Job, Option<models::Release>)>(&mut conn)
-                .map_err(Error::from)
-        })?
+        .transpose()?;
+    let limit = matches
+        .get_one::<String>("limit")
+        .map(|s| s.parse::<i64>())
+        .transpose()?;
+
+    let hdrs = crate::commands::util::mk_header(vec!["Path", "Released", "Job"]);
+    let mut conn = conn_cfg.establish_connection()?;
+    let mut query = dsl::artifacts
+        .order_by(schema::artifacts::id.desc()) // required for the --limit implementation
+        .inner_join(schema::jobs::table)
+        .left_join(schema::releases::table)
+        .into_boxed();
+    if let Some(job_uuid) = job_uuid {
+        query = query.filter(schema::jobs::dsl::uuid.eq(job_uuid))
+    };
+    if let Some(limit) = limit {
+        query = query.limit(limit)
+    };
+
+    let data = query
+        .load::<(models::Artifact, models::Job, Option<models::Release>)>(&mut conn)?
         .into_iter()
+        .rev() // We want the newest artifacts at the bottom (reverse the order for --limit)
         .map(|(artifact, job, rel)| {
             let rel = rel
                 .map(|r| r.release_date.to_string())
