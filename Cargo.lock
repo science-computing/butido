@@ -241,6 +241,7 @@ dependencies = [
  "resiter",
  "result-inspect",
  "rlimit",
+ "rustversion",
  "semver",
  "serde",
  "serde_json",
