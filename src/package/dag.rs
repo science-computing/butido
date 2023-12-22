@@ -14,6 +14,7 @@ use std::io::Result as IoResult;
 use std::io::Write;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use daggy::Walker;
@@ -185,16 +186,26 @@ impl Dag {
         ) -> Result<()> {
             for (package, idx) in mappings {
                 get_package_dependencies(package, conditional_data)
-                    .and_then_ok(|(name, constr, kind)| {
+                    .and_then_ok(|(dep_name, dep_constr, dep_kind)| {
                         mappings
                             .iter()
-                            .filter(|(package, _)| {
-                                *package.name() == name && constr.matches(package.version())
+                            .filter(|(pkg, _)| {
+                                *pkg.name() == dep_name && dep_constr.matches(pkg.version())
                             })
-                            .try_for_each(|(_, dep_idx)| {
-                                dag.add_edge(*idx, *dep_idx, kind.clone())
+                            .try_for_each(|(dep, dep_idx)| {
+                                dag.add_edge(*idx, *dep_idx, dep_kind.clone())
                                     .map(|_| ())
                                     .map_err(Error::from)
+                                    .with_context(|| {
+                                        anyhow!(
+                                            "Failed to add package dependency DAG edge \
+                                            from package \"{}\" ({}) to dependency \"{}\" ({})",
+                                            package.name(),
+                                            package.version(),
+                                            dep.name(),
+                                            dep.version(),
+                                        )
+                                    })
                             })
                     })
                     .collect::<Result<()>>()?
@@ -218,6 +229,7 @@ impl Dag {
             progress,
             conditional_data,
         )?;
+        trace!("Adding the dependency edges to the DAG for package {:?}", p);
         add_edges(&mappings, &mut dag, conditional_data)?;
         trace!("Finished building the package DAG");
 
