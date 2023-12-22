@@ -54,6 +54,9 @@ use anyhow::Error;
 use anyhow::Result;
 use aquamarine as _;
 use clap::ArgMatches;
+// TODO: Drop the rust-inspect dependency once we bump the MSRV to 1.76:
+#[rustversion::since(1.76)]
+use result_inspect as _;
 use tracing::{debug, error};
 
 mod cli;
