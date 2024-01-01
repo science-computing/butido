@@ -19,7 +19,7 @@ use anyhow::Error;
 use anyhow::Result;
 use handlebars::{
     Context, Handlebars, Helper, HelperDef, HelperResult, JsonRender, Output, PathAndJson,
-    RenderContext, RenderError,
+    RenderContext, RenderErrorReason,
 };
 use serde::Deserialize;
 use serde::Serialize;
@@ -272,10 +272,19 @@ impl HelperDef for PhaseHelper {
         out: &mut dyn Output,
     ) -> HelperResult {
         h.param(0)
-            .ok_or_else(|| RenderError::new("Required parameter missing: phase name"))?
+            .ok_or_else(|| {
+                RenderErrorReason::ParamNotFoundForName("PhaseHelper", "0 (name)".to_owned())
+            })?
             .value()
             .as_str()
-            .ok_or_else(|| RenderError::new("Required parameter must be a string: phase name"))
+            .ok_or_else(|| {
+                RenderErrorReason::ParamTypeMismatchForName(
+                    "PhaseHelper",
+                    "0 (name)".to_owned(),
+                    "str".to_owned(),
+                )
+                .into()
+            })
             .and_then(|phase_name| {
                 out.write("echo '#BUTIDO:PHASE:")?;
                 out.write(phase_name)?;
@@ -298,10 +307,19 @@ impl HelperDef for StateHelper {
         out: &mut dyn Output,
     ) -> HelperResult {
         h.param(0)
-            .ok_or_else(|| RenderError::new("Required parameter missing: state"))?
+            .ok_or_else(|| {
+                RenderErrorReason::ParamNotFoundForName("StateHelper", "0 (state)".to_owned())
+            })?
             .value()
             .as_str()
-            .ok_or_else(|| RenderError::new("Required parameter must be a string: state"))
+            .ok_or_else(|| {
+                RenderErrorReason::ParamTypeMismatchForName(
+                    "StateHelper",
+                    "0 (state)".to_owned(),
+                    "str".to_owned(),
+                )
+                .into()
+            })
             .and_then(|state| match state {
                 "OK" => {
                     out.write("echo '#BUTIDO:STATE:OK'")?;
@@ -309,16 +327,22 @@ impl HelperDef for StateHelper {
                 }
                 "ERR" => {
                     let state_msg = h.param(1).ok_or_else(|| {
-                        RenderError::new("Required parameter missing: state message")
+                        RenderErrorReason::ParamNotFoundForName(
+                            "StateHelper",
+                            "1 (message)".to_owned(),
+                        )
                     })?;
                     out.write("echo '#BUTIDO:STATE:ERR:")?;
                     out.write(state_msg.value().render().as_ref())?;
                     out.write("'")?;
                     Ok(())
                 }
-                other => Err(RenderError::new(format!(
-                    "Parameter must bei either 'OK' or 'ERR', '{other}' is invalid"
-                ))),
+                other => Err(RenderErrorReason::ParamTypeMismatchForName(
+                    "StateHelper",
+                    "0 (state)".to_owned(),
+                    format!("str (must be either 'OK' or 'ERR'; '{other}' is invalid)"),
+                )
+                .into()),
             })
     }
 }
@@ -336,10 +360,19 @@ impl HelperDef for ProgressHelper {
         out: &mut dyn Output,
     ) -> HelperResult {
         h.param(0)
-            .ok_or_else(|| RenderError::new("Required parameter missing: progress"))?
+            .ok_or_else(|| {
+                RenderErrorReason::ParamNotFoundForName("ProgressHelper", "0 (progress)".to_owned())
+            })?
             .value()
             .as_i64()
-            .ok_or_else(|| RenderError::new("Required parameter must be a number: progress"))
+            .ok_or_else(|| {
+                RenderErrorReason::ParamTypeMismatchForName(
+                    "ProgressHelper",
+                    "0 (progress)".to_owned(),
+                    "i64".to_owned(),
+                )
+                .into()
+            })
             .and_then(|progress| {
                 out.write("echo '#BUTIDO:PROGRESS:")?;
                 out.write(&progress.to_string())?;
@@ -379,18 +412,29 @@ impl HelperDef for JoinWithHelper {
     ) -> HelperResult {
         let joiner = h
             .param(0)
-            .ok_or_else(|| RenderError::new("Required parameter missing: Join string"))?
+            .ok_or_else(|| {
+                RenderErrorReason::ParamNotFoundForName(
+                    "JoinWithHelper",
+                    "0 (separator)".to_owned(),
+                )
+            })?
             .value()
             .as_str()
-            .ok_or_else(|| RenderError::new("Required parameter must be a string: joinstr"))?;
+            .ok_or_else(|| {
+                RenderErrorReason::ParamTypeMismatchForName(
+                    "JoinWithHelper",
+                    "0 (separator)".to_owned(),
+                    "str".to_owned(),
+                )
+            })?;
 
         joinstrs(joiner, h.params().iter().skip(1), out)
     }
 }
 
-fn joinstrs<'reg: 'rc, 'rc, I>(with: &str, params: I, out: &mut dyn Output) -> HelperResult
+fn joinstrs<'rc, I>(with: &str, params: I, out: &mut dyn Output) -> HelperResult
 where
-    I: Iterator<Item = &'rc PathAndJson<'reg, 'rc>>,
+    I: Iterator<Item = &'rc PathAndJson<'rc>>,
 {
     use itertools::Itertools;
     use std::result::Result as RResult;
@@ -399,9 +443,9 @@ where
         .map(|p| {
             p.value()
                 .as_str()
-                .ok_or_else(|| RenderError::new("All parameters must be string"))
+                .ok_or_else(|| RenderErrorReason::Other("All parameters must be string".to_owned()))
         })
-        .collect::<RResult<Vec<&str>, RenderError>>()?
+        .collect::<RResult<Vec<&str>, RenderErrorReason>>()?
         .into_iter()
         .join(with);
 
