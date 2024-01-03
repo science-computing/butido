@@ -394,7 +394,7 @@ impl HelperDef for JoinHelper {
         _rc: &mut RenderContext,
         out: &mut dyn Output,
     ) -> HelperResult {
-        joinstrs("", h.params().iter(), out)
+        joinstrs("", h.params().iter().enumerate(), out)
     }
 }
 
@@ -410,7 +410,7 @@ impl HelperDef for JoinWithHelper {
         _rc: &mut RenderContext,
         out: &mut dyn Output,
     ) -> HelperResult {
-        let joiner = h
+        let separator = h
             .param(0)
             .ok_or_else(|| {
                 RenderErrorReason::ParamNotFoundForName(
@@ -428,26 +428,30 @@ impl HelperDef for JoinWithHelper {
                 )
             })?;
 
-        joinstrs(joiner, h.params().iter().skip(1), out)
+        joinstrs(separator, h.params().iter().enumerate().skip(1), out)
     }
 }
 
-fn joinstrs<'rc, I>(with: &str, params: I, out: &mut dyn Output) -> HelperResult
+fn joinstrs<'rc, I>(separator: &str, params: I, out: &mut dyn Output) -> HelperResult
 where
-    I: Iterator<Item = &'rc PathAndJson<'rc>>,
+    I: Iterator<Item = (usize, &'rc PathAndJson<'rc>)>,
 {
     use itertools::Itertools;
     use std::result::Result as RResult;
 
     let s = params
-        .map(|p| {
-            p.value()
-                .as_str()
-                .ok_or_else(|| RenderErrorReason::Other("All parameters must be string".to_owned()))
+        .map(|(i, p)| {
+            p.value().as_str().ok_or_else(|| {
+                RenderErrorReason::ParamTypeMismatchForName(
+                    "joinstrs",
+                    i.to_string(),
+                    "str".to_owned(),
+                )
+            })
         })
         .collect::<RResult<Vec<&str>, RenderErrorReason>>()?
         .into_iter()
-        .join(with);
+        .join(separator);
 
     out.write(&s)?;
     Ok(())
