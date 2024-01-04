@@ -52,6 +52,7 @@ lazy_static = "1"
 parse-display = "0.8"
 pom = "3"
 ptree = { version = "0.4", default-features = false }
+rand = "0.8"
 rayon = "1"
 regex = "1"
 reqwest = { version = "0.11", features = [ "stream" ] }
@@ -70,6 +71,8 @@ tar = "0.4"
 terminal_size = "0.3"
 tokio = { version = "1", features = ["macros", "fs", "process", "io-util", "time"] }
 tokio-stream = "0.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 typed-builder = "0.18"
 unindent = "0.2"
 url = { version = "2", features = ["serde"] }
@@ -77,9 +80,6 @@ uuid = { version = "1", features = ["serde", "v4"] }
 walkdir = "2"
 which = "5"
 xdg = "2"
-rand = "0.8"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
 toml = "0.8"
