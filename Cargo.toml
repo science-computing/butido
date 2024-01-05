@@ -70,6 +70,7 @@ tar = "0.4"
 terminal_size = "0.3"
 tokio = { version = "1", features = ["macros", "fs", "process", "io-util", "time"] }
 tokio-stream = "0.1"
+toml = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 typed-builder = "0.18"
@@ -79,9 +80,6 @@ uuid = { version = "1", features = ["serde", "v4"] }
 walkdir = "2"
 which = "5"
 xdg = "2"
-
-[dev-dependencies]
-toml = "0.8"
 
 [build-dependencies]
 anyhow = "1"
