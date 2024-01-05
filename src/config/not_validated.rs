@@ -21,16 +21,19 @@ use crate::config::ContainerConfig;
 use crate::config::DockerConfig;
 use crate::package::PhaseName;
 
+// The configuration version must be increased each time breaking changes are made that require
+// users to update their configurations:
+const CONFIGURATION_VERSION: u16 = 1;
+
 /// The configuration that is loaded from the filesystem
 #[derive(Debug, Getters, Deserialize)]
 pub struct NotValidatedConfiguration {
-    /// Compatibility setting
-    ///
-    /// If the version of butido is (semver) incompatible to this setting in the configuration,
-    /// butido won't execute any further because it might fail later due to configuration
-    /// incompatibilities
+    /// Compatibility setting to check if the butido configuration from the user is compatible with
+    /// the current butido version (this is kinda optional since the configuration is type checked
+    /// but it's useful to avoid accidents (butido will abort if the configuration isn't
+    /// compatible) and to inform users of required changes).
     #[getset(get = "pub")]
-    compatibility: semver::VersionReq,
+    compatibility: u16,
 
     /// The directory logs are written to, if logs are requested in plaintext files
     #[getset(get = "pub")]
@@ -149,14 +152,17 @@ impl NotValidatedConfiguration {
     /// This function does sanity-checking on the configuration values.
     /// It fails with the appropriate error message if a setting is bogus.
     pub fn validate(self) -> Result<Configuration> {
-        let crate_version = semver::Version::parse(env!("CARGO_PKG_VERSION"))
-            .context("Parsing version of crate (CARGO_PKG_VERSION) into semver::Version object")?;
-
-        if !self.compatibility.matches(&crate_version) {
+        if self.compatibility != CONFIGURATION_VERSION {
             return Err(anyhow!(
-                "Configuration is not compatible to butido {}",
-                crate_version
-            ));
+                "The provided configuration is not compatible with this butido binary"
+            ))
+            .with_context(|| {
+                anyhow!(
+                    "The expected configuration version is {} while the provided configuration has a compatibility setting of {}",
+                    CONFIGURATION_VERSION,
+                    self.compatibility,
+                )
+            });
         }
 
         // Error if staging_directory is not a directory

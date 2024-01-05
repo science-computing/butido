@@ -1,5 +1,12 @@
 # Changelog
 
+## Upcoming
+
+### Major/Breaking changes
+
+* The format of the `compatibility` setting has changed from a string
+  (`semver::VersionReq`) to a number (`u16`) and needs to be updated to `1`.
+
 ## v0.4.0
 
 This release contains breaking changes. The relevant changes are listed in the
