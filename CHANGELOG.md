@@ -1,11 +1,16 @@
 # Changelog
 
+## Configuration changes
+
+All configuration changes are documented in [CHANGELOG.toml](./CHANGELOG.toml).
+Butido should automatically output the relevant changes when the configuration
+is too old (i.e., must be updated).
+
 ## Upcoming
 
 ### Major/Breaking changes
 
-* The format of the `compatibility` setting has changed from a string
-  (`semver::VersionReq`) to a number (`u16`) and needs to be updated to `1`.
+* The configuration must be updated, see `CHANGELOG.toml` for details.
 
 ## v0.4.0
 

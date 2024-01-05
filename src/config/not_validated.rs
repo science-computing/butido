@@ -21,8 +21,9 @@ use crate::config::ContainerConfig;
 use crate::config::DockerConfig;
 use crate::package::PhaseName;
 
-// The configuration version must be increased each time breaking changes are made that require
-// users to update their configurations:
+// The configuration version must be increased each time breaking configuration changes are made
+// (that require users to update their configurations) and the required changes must be documented
+// in CHANGELOG.toml:
 const CONFIGURATION_VERSION: u16 = 1;
 
 /// The configuration that is loaded from the filesystem
@@ -151,6 +152,7 @@ pub fn check_compatibility(config: &config::Config) -> Result<()> {
     let compatibility = config.get_str("compatibility").context(
         "Make sure that the butido configuration is present and that \"compatibility\" is set",
     )?;
+    // Parse the compatibility setting:
     let compatibility = compatibility
         .parse::<u16>()
         .with_context(|| {
@@ -159,8 +161,11 @@ pub fn check_compatibility(config: &config::Config) -> Result<()> {
         .context("The format of the \"compatibility\" setting has changed from a string to a number")
         .context("Set \"compatibility\" to 0 to get a summary of the required changes")?;
 
-    if compatibility != CONFIGURATION_VERSION {
-        return Err(anyhow!(
+    if compatibility == CONFIGURATION_VERSION {
+        Ok(()) // Everything is fine
+    } else {
+        // The configuration is incompatible (too old or too new):
+        let err = Err(anyhow!(
             "The provided configuration is not compatible with this butido binary"
         ))
         .with_context(|| {
@@ -169,11 +174,39 @@ pub fn check_compatibility(config: &config::Config) -> Result<()> {
                 CONFIGURATION_VERSION,
                 compatibility,
             )
-        })
-        .context("Please refer to the changelog in README.md for the required configuration changes");
-    }
+        });
 
-    Ok(())
+        if compatibility > CONFIGURATION_VERSION {
+            err.context("This version of butido is too old for your configuration")
+                .context("Update butido or downgrade your configuration")
+        } else {
+            // The configuration must be updated -> try to output the required changes from the changelog:
+            let changelog_toml = include_str!("../../CHANGELOG.toml");
+            // TODO: Parse CHANGELOG.toml at compile time to avoid runtime errors:
+            let changelog: std::collections::HashMap<String, String> = toml::from_str(
+                changelog_toml,
+            )
+            .context("Butido bug: Couldn't parse the embedded CHANGELOG.toml")
+            .context(
+                "Please refer to the changelog in README.{md,toml} for the required configuration changes",
+            )?;
+
+            // Output the required configuration changes to stderr:
+            eprintln!(
+                "The butido configuration is too old and the following changes are required:"
+            );
+            for i in (compatibility + 1)..=CONFIGURATION_VERSION {
+                if let Some(changelog_entry) = changelog.get(&i.to_string()) {
+                    eprintln!("- Version {i}: {changelog_entry}");
+                } else {
+                    eprintln!("- Version {i}: Error (butido bug): The changelog entry is missing!");
+                }
+            }
+            eprintln!("- Update the `compatibility` setting to `{CONFIGURATION_VERSION}`\n");
+
+            err
+        }
+    }
 }
 
 impl NotValidatedConfiguration {
