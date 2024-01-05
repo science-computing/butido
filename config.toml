@@ -18,7 +18,7 @@ progress_format = "[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {ms
 # The shebang line used when compiling the packaging scripts
 # Default if this value is not set is "#!/bin/bash".
 # Can be overwritten temporarily via CLI
-script_shebang = "#!/bin/bash"
+shebang = "#!/bin/bash"
 
 # The number of log lines to show if a build fails.
 # Defaults to 10

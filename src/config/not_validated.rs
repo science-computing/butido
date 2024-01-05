@@ -28,6 +28,7 @@ const CONFIGURATION_VERSION: u16 = 1;
 
 /// The configuration that is loaded from the filesystem
 #[derive(Debug, Getters, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NotValidatedConfiguration {
     /// Compatibility setting to check if the butido configuration from the user is compatible with
     /// the current butido version (this is kinda optional since the configuration is type checked
