@@ -217,6 +217,9 @@ impl NotValidatedConfiguration {
     /// This function does sanity-checking on the configuration values.
     /// It fails with the appropriate error message if a setting is bogus.
     pub fn validate(self) -> Result<Configuration> {
+        self.validate_config(false)
+    }
+    fn validate_config(self, skip_filesystem_checks: bool) -> Result<Configuration> {
         // Double-check the compatibility (mainly to avoid "error: field `compatibility` is never read")
         if self.compatibility != CONFIGURATION_VERSION {
             return Err(anyhow!(
@@ -225,7 +228,7 @@ impl NotValidatedConfiguration {
         }
 
         // Error if staging_directory is not a directory
-        if !self.staging_directory.is_dir() {
+        if !(skip_filesystem_checks || self.staging_directory.is_dir()) {
             return Err(anyhow!(
                 "Not a directory: staging = {}",
                 self.staging_directory.display()
@@ -233,7 +236,7 @@ impl NotValidatedConfiguration {
         }
 
         // Error if releases_directory is not a directory
-        if !self.releases_directory.is_dir() {
+        if !(skip_filesystem_checks || self.releases_directory.is_dir()) {
             return Err(anyhow!(
                 "Not a directory: releases = {}",
                 self.releases_directory.display()
@@ -247,7 +250,7 @@ impl NotValidatedConfiguration {
         }
 
         // Error if source_cache_root is not a directory
-        if !self.source_cache_root.is_dir() {
+        if !(skip_filesystem_checks || self.source_cache_root.is_dir()) {
             return Err(anyhow!(
                 "Not a directory: releases = {}",
                 self.source_cache_root.display()
@@ -285,10 +288,13 @@ impl NotValidatedConfiguration {
 
 #[cfg(test)]
 mod tests {
+    use super::check_compatibility;
     use super::load_changelog;
+    use super::NotValidatedConfiguration;
     use super::CONFIGURATION_VERSION;
 
     #[test]
+    // A test to guard against unnecessary runtime failures
     fn test_loading_changelog_toml() {
         let changelog = load_changelog();
         assert!(changelog.is_ok());
@@ -296,5 +302,19 @@ mod tests {
         for i in 0..=CONFIGURATION_VERSION {
             assert!(changelog.get(&i.to_string()).is_some());
         }
+    }
+
+    #[test]
+    // A test to ensure the example configuration file is up-to-date and valid
+    fn test_loading_example_configuration_file() {
+        let mut config = config::Config::default();
+        assert!(config
+            .merge(config::File::with_name("config.toml").required(true))
+            .is_ok());
+        assert!(check_compatibility(&config).is_ok());
+        let config = config.try_into::<NotValidatedConfiguration>();
+        assert!(config.is_ok(), "Config loading failed: {config:?}");
+        let config = config.unwrap().validate_config(true);
+        assert!(config.is_ok(), "Config validation failed: {config:?}");
     }
 }
