@@ -145,6 +145,37 @@ pub struct NotValidatedConfiguration {
     available_phases: Vec<PhaseName>,
 }
 
+// Helper function to check if the configuration should be compatible before loading (type checking) it:
+pub fn check_compatibility(config: &config::Config) -> Result<()> {
+    // We don't use config.get_int() as it is petty lax and, e.g., converts `true` to `1`:
+    let compatibility = config.get_str("compatibility").context(
+        "Make sure that the butido configuration is present and that \"compatibility\" is set",
+    )?;
+    let compatibility = compatibility
+        .parse::<u16>()
+        .with_context(|| {
+            anyhow!("Failed to parse the value of the compatibility setting ({}) into a number (str -> u16)", compatibility)
+        })
+        .context("The format of the \"compatibility\" setting has changed from a string to a number")
+        .context("Set \"compatibility\" to 0 to get a summary of the required changes")?;
+
+    if compatibility != CONFIGURATION_VERSION {
+        return Err(anyhow!(
+            "The provided configuration is not compatible with this butido binary"
+        ))
+        .with_context(|| {
+            anyhow!(
+                "The expected configuration version is {} while the provided configuration has a compatibility setting of {}",
+                CONFIGURATION_VERSION,
+                compatibility,
+            )
+        })
+        .context("Please refer to the changelog in README.md for the required configuration changes");
+    }
+
+    Ok(())
+}
+
 impl NotValidatedConfiguration {
     /// Validate the NotValidatedConfiguration object and make it into a Configuration object, if
     /// validation succeeds
@@ -152,17 +183,11 @@ impl NotValidatedConfiguration {
     /// This function does sanity-checking on the configuration values.
     /// It fails with the appropriate error message if a setting is bogus.
     pub fn validate(self) -> Result<Configuration> {
+        // Double-check the compatibility (mainly to avoid "error: field `compatibility` is never read")
         if self.compatibility != CONFIGURATION_VERSION {
             return Err(anyhow!(
                 "The provided configuration is not compatible with this butido binary"
-            ))
-            .with_context(|| {
-                anyhow!(
-                    "The expected configuration version is {} while the provided configuration has a compatibility setting of {}",
-                    CONFIGURATION_VERSION,
-                    self.compatibility,
-                )
-            });
+            ));
         }
 
         // Error if staging_directory is not a directory

@@ -154,11 +154,16 @@ async fn main() -> Result<()> {
 
     config.merge(::config::Environment::with_prefix("BUTIDO"))?;
 
+    // Check the "compatibility" setting before loading (type checking) the configuration so that
+    // we can better inform the users about required changes:
+    check_compatibility(&config)
+        .context("The butido configuration failed the compatibility check")?;
+
     let config = config
         .try_into::<NotValidatedConfiguration>()
-        .context("Failed to load Configuration object")?
+        .context("Failed to load (type check) the butido configuration")?
         .validate()
-        .context("Failed to validate configuration")?;
+        .context("Failed to validate the butido configuration")?;
 
     let hide_bars = cli.get_flag("hide_bars") || crate::util::stdout_is_pipe();
     let progressbars = ProgressBars::setup(config.progress_format().clone(), hide_bars);
