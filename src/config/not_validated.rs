@@ -146,6 +146,13 @@ pub struct NotValidatedConfiguration {
     available_phases: Vec<PhaseName>,
 }
 
+fn load_changelog() -> Result<std::collections::HashMap<String, String>> {
+    let changelog_toml = include_str!("../../CHANGELOG.toml");
+    // Ideally this would be done at compile time but we'll use tests for now to avoid unnecessary
+    // runtime errors due to TOML (parsing) errors in CHANGELOG.toml:
+    toml::from_str(changelog_toml).context("Butido bug: Couldn't parse the embedded CHANGELOG.toml")
+}
+
 // Helper function to check if the configuration should be compatible before loading (type checking) it:
 pub fn check_compatibility(config: &config::Config) -> Result<()> {
     // We don't use config.get_int() as it is petty lax and, e.g., converts `true` to `1`:
@@ -181,13 +188,7 @@ pub fn check_compatibility(config: &config::Config) -> Result<()> {
                 .context("Update butido or downgrade your configuration")
         } else {
             // The configuration must be updated -> try to output the required changes from the changelog:
-            let changelog_toml = include_str!("../../CHANGELOG.toml");
-            // TODO: Parse CHANGELOG.toml at compile time to avoid runtime errors:
-            let changelog: std::collections::HashMap<String, String> = toml::from_str(
-                changelog_toml,
-            )
-            .context("Butido bug: Couldn't parse the embedded CHANGELOG.toml")
-            .context(
+            let changelog = load_changelog().context(
                 "Please refer to the changelog in README.{md,toml} for the required configuration changes",
             )?;
 
@@ -279,5 +280,21 @@ impl NotValidatedConfiguration {
         }
 
         Ok(Configuration { inner: self })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::load_changelog;
+    use super::CONFIGURATION_VERSION;
+
+    #[test]
+    fn test_loading_changelog_toml() {
+        let changelog = load_changelog();
+        assert!(changelog.is_ok());
+        let changelog = changelog.unwrap();
+        for i in 0..=CONFIGURATION_VERSION {
+            assert!(changelog.get(&i.to_string()).is_some());
+        }
     }
 }
