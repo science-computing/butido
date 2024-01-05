@@ -304,17 +304,28 @@ mod tests {
         }
     }
 
-    #[test]
-    // A test to ensure the example configuration file is up-to-date and valid
-    fn test_loading_example_configuration_file() {
+    // A helper function to load and validate butido configuration files:
+    fn test_loading_configuration_file(file_path: &str) {
         let mut config = config::Config::default();
         assert!(config
-            .merge(config::File::with_name("config.toml").required(true))
+            .merge(config::File::with_name(file_path).required(true))
             .is_ok());
         assert!(check_compatibility(&config).is_ok());
         let config = config.try_into::<NotValidatedConfiguration>();
         assert!(config.is_ok(), "Config loading failed: {config:?}");
         let config = config.unwrap().validate_config(true);
         assert!(config.is_ok(), "Config validation failed: {config:?}");
+    }
+
+    #[test]
+    // A test to ensure the example configuration file is up-to-date and valid
+    fn test_loading_example_configuration_file() {
+        test_loading_configuration_file("config.toml");
+    }
+
+    #[test]
+    // A test to ensure the example repo config file is up-to-date and valid
+    fn test_loading_example_repo_configuration_file() {
+        test_loading_configuration_file("examples/packages/repo/config.toml");
     }
 }
