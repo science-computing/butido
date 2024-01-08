@@ -221,6 +221,19 @@ impl NotValidatedConfiguration {
         self.validate_config(false)
     }
     fn validate_config(self, skip_filesystem_checks: bool) -> Result<Configuration> {
+        // A trivial helper to check if a directory is missing:
+        let check_directory_exists = |path: &PathBuf, config_key_name: &str| -> Result<()> {
+            if skip_filesystem_checks || path.is_dir() {
+                Ok(())
+            } else {
+                Err(anyhow!(
+                    "Not a directory: {} = {}",
+                    config_key_name,
+                    path.display()
+                ))
+            }
+        };
+
         // Double-check the compatibility (mainly to avoid "error: field `compatibility` is never read")
         if self.compatibility != CONFIGURATION_VERSION {
             return Err(anyhow!(
@@ -229,20 +242,10 @@ impl NotValidatedConfiguration {
         }
 
         // Error if staging_directory is not a directory
-        if !(skip_filesystem_checks || self.staging_directory.is_dir()) {
-            return Err(anyhow!(
-                "Not a directory: staging = {}",
-                self.staging_directory.display()
-            ));
-        }
+        check_directory_exists(&self.staging_directory, "staging")?;
 
         // Error if releases_directory is not a directory
-        if !(skip_filesystem_checks || self.releases_directory.is_dir()) {
-            return Err(anyhow!(
-                "Not a directory: releases = {}",
-                self.releases_directory.display()
-            ));
-        }
+        check_directory_exists(&self.releases_directory, "releases")?;
 
         if self.release_stores.is_empty() {
             return Err(anyhow!(
@@ -251,12 +254,7 @@ impl NotValidatedConfiguration {
         }
 
         // Error if source_cache_root is not a directory
-        if !(skip_filesystem_checks || self.source_cache_root.is_dir()) {
-            return Err(anyhow!(
-                "Not a directory: releases = {}",
-                self.source_cache_root.display()
-            ));
-        }
+        check_directory_exists(&self.source_cache_root, "releases")?;
 
         // Error if there are no phases configured
         if self.available_phases.is_empty() {
