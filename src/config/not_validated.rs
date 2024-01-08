@@ -245,7 +245,7 @@ impl NotValidatedConfiguration {
         check_directory_exists(&self.staging_directory, "staging")?;
 
         // Error if releases_directory is not a directory
-        check_directory_exists(&self.releases_directory, "releases")?;
+        check_directory_exists(&self.releases_directory, "releases_root")?;
 
         if self.release_stores.is_empty() {
             return Err(anyhow!(
@@ -254,7 +254,7 @@ impl NotValidatedConfiguration {
         }
 
         // Error if source_cache_root is not a directory
-        check_directory_exists(&self.source_cache_root, "releases")?;
+        check_directory_exists(&self.source_cache_root, "source_cache")?;
 
         // Error if there are no phases configured
         if self.available_phases.is_empty() {
