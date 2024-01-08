@@ -241,20 +241,17 @@ impl NotValidatedConfiguration {
             ));
         }
 
-        // Error if staging_directory is not a directory
-        check_directory_exists(&self.staging_directory, "staging")?;
-
-        // Error if releases_directory is not a directory
+        // Error if the configured directories are missing or no directories:
+        check_directory_exists(&self.log_dir, "log_dir")?;
         check_directory_exists(&self.releases_directory, "releases_root")?;
+        check_directory_exists(&self.staging_directory, "staging")?;
+        check_directory_exists(&self.source_cache_root, "source_cache")?;
 
         if self.release_stores.is_empty() {
             return Err(anyhow!(
                 "You need at least one release store in 'release_stores'"
             ));
         }
-
-        // Error if source_cache_root is not a directory
-        check_directory_exists(&self.source_cache_root, "source_cache")?;
 
         // Error if there are no phases configured
         if self.available_phases.is_empty() {
