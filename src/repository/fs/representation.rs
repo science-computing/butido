@@ -40,6 +40,12 @@ pub struct FileSystemRepresentation {
     #[getset(get = "pub")]
     files: Vec<PathBuf>,
 
+    // A recursive data structure that represents the repository from the root.
+    // Valid entries are:
+    // - PkgToml -> File(content: String)
+    // - DirName(name: String) -> Dir(entries: HashMap<PathComponent, Element>)
+    // Directories are recursive and can contain (sub)directories (0-n) and at most one `pkg.toml`
+    // file.
     elements: HashMap<PathComponent, Element>,
 }
 
@@ -85,7 +91,7 @@ impl FileSystemRepresentation {
                 let de_path = de.path().strip_prefix(&fsr.root)?;
                 fsr.files.push(de_path.to_path_buf());
 
-                // traverse the HashMap tree
+                // Build/extend the HashMap tree by adding the current path:
                 for cmp in de_path.components() {
                     match PathComponent::try_from(&cmp)? {
                         PathComponent::PkgToml => {
@@ -98,6 +104,7 @@ impl FileSystemRepresentation {
                                 .entry(dir.clone())
                                 .or_insert_with(|| Element::Dir(HashMap::new()));
 
+                            // Step into the sub HashMap tree for the next iteration:
                             curr_hm = curr_hm
                                 .get_mut(&dir)
                                 .unwrap() // safe, because we just inserted it
@@ -133,6 +140,10 @@ impl FileSystemRepresentation {
 
         // Helper to check whether a tree contains pkg.toml files, recursively
         fn toml_files_in_tree(hm: &HashMap<PathComponent, Element>) -> bool {
+            // This is an optional optimization (should save time by avoiding potentially
+            // unnecessarily recursing the tree at the cost of this extra check) since we also
+            // check for this case in the match below (i.e., it's a shortcut that doesn't affect
+            // correctness):
             if let Some(Element::File(_)) = hm.get(&PathComponent::PkgToml) {
                 return true;
             }
@@ -150,17 +161,20 @@ impl FileSystemRepresentation {
             false
         }
 
+        // Traverse the repo tree and check if the current tree
+        // (directory) contains other `pkg.toml` files once we've hit a `pkg.toml` file:
         for elem in path.components() {
             let elem = PathComponent::try_from(&elem)?;
 
             match curr_hm.get(&elem) {
                 Some(Element::File(_)) => {
-                    // if I have a file now, and the current hashmap only holds either
-                    // * No directory
-                    // * or a directory where all subdirs do not contain a pkg.toml
+                    // We've hit a `pkg.toml` file (should be the final iteration) and it is a leaf
+                    // file, if the current hashmap only holds either:
+                    // * No directory (i.e., just one entry: this `pkg.toml` file)
+                    // * Directories where all subdirs (recursive) do not contain a `pkg.toml` file
                     return Ok(curr_hm.values().count() == 1 || !toml_files_in_tree(curr_hm));
                 }
-                Some(Element::Dir(hm)) => curr_hm = hm,
+                Some(Element::Dir(hm)) => curr_hm = hm, // Move into the subtree
                 None => anyhow::bail!(
                     "Path component '{:?}' was not loaded in map, this is most likely a bug",
                     elem
@@ -173,7 +187,7 @@ impl FileSystemRepresentation {
 
     /// Get a Vec<(PathBuf, &String)> for the `path`.
     ///
-    /// The result of this function is the trail of pkg.toml files from `self.root` to `path`,
+    /// The result of this function is the trail of `pkg.toml` files from `self.root` to `path`,
     /// whereas the PathBuf is the actual path to the file and the `&String` is the content of the
     /// individual file.
     ///
@@ -181,12 +195,15 @@ impl FileSystemRepresentation {
     pub fn get_files_for<'a>(&'a self, path: &Path) -> Result<Vec<(PathBuf, &'a String)>> {
         let mut res = Vec::with_capacity(10); // good enough
 
+        // Traverse the repo tree and collect all `pkg.toml` files along
+        // the way:
         let mut curr_hm = &self.elements;
         let mut curr_path = PathBuf::from("");
         for elem in path.components() {
             let elem = PathComponent::try_from(&elem)?;
 
             if !elem.is_pkg_toml() {
+                // The current directory contains a `pkg.toml` file -> add it:
                 if let Some(Element::File(intermediate)) = curr_hm.get(&PathComponent::PkgToml) {
                     res.push((curr_path.join("pkg.toml"), intermediate));
                 }
@@ -195,6 +212,7 @@ impl FileSystemRepresentation {
             match curr_hm.get(&elem) {
                 Some(Element::File(cont)) => res.push((curr_path.join("pkg.toml"), cont)),
                 Some(Element::Dir(hm)) => {
+                    // Move into the directory/subtree:
                     curr_path = curr_path.join(elem.dir_name().unwrap()); // unwrap safe by above match
                     curr_hm = hm;
                 }
