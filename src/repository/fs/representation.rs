@@ -136,15 +136,13 @@ impl FileSystemRepresentation {
     ///
     ///
     pub fn is_leaf_file(&self, path: &Path) -> Result<bool> {
-        let mut curr_hm = &self.elements;
-
         // Helper to check whether a tree contains pkg.toml files, recursively
         fn toml_files_in_tree(hm: &HashMap<PathComponent, Element>) -> bool {
             // This is an optional optimization (should save time by avoiding potentially
             // unnecessarily recursing the tree at the cost of this extra check) since we also
             // check for this case in the match below (i.e., it's a shortcut that doesn't affect
             // correctness):
-            if let Some(Element::File(_)) = hm.get(&PathComponent::PkgToml) {
+            if hm.contains_key(&PathComponent::PkgToml) {
                 return true;
             }
 
@@ -163,6 +161,7 @@ impl FileSystemRepresentation {
 
         // Traverse the repo tree and check if the current tree
         // (directory) contains other `pkg.toml` files once we've hit a `pkg.toml` file:
+        let mut curr_hm = &self.elements;
         for elem in path.components() {
             let elem = PathComponent::try_from(&elem)?;
 
@@ -202,16 +201,14 @@ impl FileSystemRepresentation {
         for elem in path.components() {
             let elem = PathComponent::try_from(&elem)?;
 
-            if !elem.is_pkg_toml() {
-                // The current directory contains a `pkg.toml` file -> add it:
-                if let Some(Element::File(intermediate)) = curr_hm.get(&PathComponent::PkgToml) {
-                    res.push((curr_path.join("pkg.toml"), intermediate));
-                }
-            }
-
             match curr_hm.get(&elem) {
                 Some(Element::File(cont)) => res.push((curr_path.join("pkg.toml"), cont)),
                 Some(Element::Dir(hm)) => {
+                    if let Some(Element::File(intermediate)) = curr_hm.get(&PathComponent::PkgToml)
+                    {
+                        // The current directory contains a `pkg.toml` file -> add it:
+                        res.push((curr_path.join("pkg.toml"), intermediate));
+                    }
                     // Move into the directory/subtree:
                     curr_path = curr_path.join(elem.dir_name().unwrap()); // unwrap safe by above match
                     curr_hm = hm;
