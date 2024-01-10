@@ -79,6 +79,9 @@ impl FileSystemRepresentation {
             .map_err(Error::from)
             .and_then_ok(|de| {
                 let mut curr_hm = &mut fsr.elements;
+                // Warning: It's dangerous to strip the repo root from the paths as those paths are
+                // exposed outside of this structure (so the repo root must be prepended again when
+                // trying to access the files!):
                 let de_path = de.path().strip_prefix(&fsr.root)?;
                 fsr.files.push(de_path.to_path_buf());
 
@@ -88,7 +91,7 @@ impl FileSystemRepresentation {
                         PathComponent::PkgToml => {
                             curr_hm
                                 .entry(PathComponent::PkgToml)
-                                .or_insert(Element::File(load_file(de_path)?));
+                                .or_insert(Element::File(load_file(&fsr.root, de_path)?));
                         }
                         dir @ PathComponent::DirName(_) => {
                             curr_hm
@@ -236,9 +239,9 @@ fn is_pkgtoml(entry: &DirEntry) -> bool {
 }
 
 /// Helper fn to load a Path into memory as String
-fn load_file(path: &Path) -> Result<String> {
+fn load_file(root: &PathBuf, path: &Path) -> Result<String> {
     trace!("Reading {}", path.display());
-    std::fs::read_to_string(path)
+    std::fs::read_to_string(root.join(path))
         .with_context(|| anyhow!("Reading file from filesystem: {}", path.display()))
         .map_err(Error::from)
 }
@@ -461,5 +464,53 @@ mod tests {
                 (pb("foo/bar/baz/pkg.toml"), &s("content3")),
             ]
         );
+    }
+
+    #[test]
+    fn test_loading_the_example_repo() -> Result<()> {
+        let fsr = FileSystemRepresentation::load(pb("examples/packages/repo/"))?;
+
+        // Test the leaf file logic:
+        assert!(!fsr.is_leaf_file("pkg.toml".as_ref()).unwrap());
+        assert!(!fsr.is_leaf_file("s/pkg.toml".as_ref()).unwrap());
+        assert!(fsr.is_leaf_file("s/19.0/pkg.toml".as_ref()).unwrap());
+        assert!(fsr.is_leaf_file("invalid/pkg.toml".as_ref()).is_err());
+
+        // Test if all pkg.toml files get found/loaded and check the leaf files count:
+        let pkgtoml_files_count = 29; // find examples/packages/repo/ -name pkg.toml | wc -l
+        assert_eq!(fsr.files().len(), pkgtoml_files_count);
+        // Manually count the non-leaf files:
+        let non_leaf_files_count = 2;
+        // Or the following can be used to count the leaf directories (with quite a few asterisks though!):
+        // find examples/packages/repo/ -type d -links 2 | wc -l
+        let leaf_files_count = fsr
+            .files()
+            .iter()
+            .filter(|path| fsr.is_leaf_file(path).unwrap())
+            .count();
+        assert_eq!(leaf_files_count, pkgtoml_files_count - non_leaf_files_count);
+
+        // Test getting all pkg.toml files for a given path:
+        assert!(fsr.get_files_for("invalid/pkg.toml".as_ref()).is_err());
+        fn assert_files_for(fsr: &FileSystemRepresentation, path: &str, files: Vec<&PathBuf>) {
+            assert_eq!(
+                fsr.get_files_for(path.as_ref())
+                    .unwrap()
+                    .iter()
+                    .map(|(path, _)| path)
+                    .collect::<Vec<_>>(),
+                files,
+                "Get files for {path}"
+            );
+        }
+        assert_files_for(&fsr, "pkg.toml", vec![&pb("pkg.toml")]);
+        assert_files_for(&fsr, "z/pkg.toml", vec![&pb("pkg.toml"), &pb("z/pkg.toml")]);
+        assert_files_for(
+            &fsr,
+            "s/19.1/pkg.toml",
+            vec![&pb("pkg.toml"), &pb("s/pkg.toml"), &pb("s/19.1/pkg.toml")],
+        );
+
+        Ok(())
     }
 }
