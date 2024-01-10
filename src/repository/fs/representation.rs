@@ -274,7 +274,7 @@ mod tests {
             // Representing
             //  /
             //  /foo
-            //  /foo/pkg.toml
+            //  /foo/pkg.toml: content
             elements: vec![dir("foo", vec![pkgtoml("content")])]
                 .into_iter()
                 .collect(),
@@ -300,8 +300,8 @@ mod tests {
             //  /
             //  /foo
             //  /foo/bar
-            //  /foo/baz
-            //  /foo/baz/pkg.toml
+            //  /foo/bar/baz
+            //  /foo/bar/baz/pkg.toml: content
             elements: vec![dir(
                 "foo",
                 vec![dir("bar", vec![dir("baz", vec![pkgtoml("content")])])],
@@ -329,9 +329,11 @@ mod tests {
             // Representing
             //  /
             //  /foo
+            //  /foo/pkg.toml: content1
             //  /foo/bar
-            //  /foo/baz
-            //  /foo/baz/pkg.toml
+            //  /foo/bar/pkg.toml: content2
+            //  /foo/bar/baz
+            //  /foo/bar/baz/pkg.toml: content3
             elements: vec![dir(
                 "foo",
                 vec![
@@ -385,9 +387,10 @@ mod tests {
             // Representing
             //  /
             //  /foo
+            //  /foo/pkg.toml: content1
             //  /foo/bar
-            //  /foo/baz
-            //  /foo/baz/pkg.toml
+            //  /foo/bar/baz
+            //  /foo/bar/baz/pkg.toml: content3
             elements: vec![dir(
                 "foo",
                 vec![
@@ -425,10 +428,11 @@ mod tests {
 
             // Representing
             //  /
+            //  /pkg.toml: content1
             //  /foo
             //  /foo/bar
-            //  /foo/baz
-            //  /foo/baz/pkg.toml
+            //  /foo/bar/baz
+            //  /foo/bar/baz/pkg.toml: content3
             elements: vec![
                 pkgtoml("content1"),
                 dir(
