@@ -85,19 +85,18 @@ impl FileSystemRepresentation {
             .map_err(Error::from)
             .and_then_ok(|de| {
                 let mut curr_hm = &mut fsr.elements;
-                // Warning: It's dangerous to strip the repo root from the paths as those paths are
-                // exposed outside of this structure (so the repo root must be prepended again when
-                // trying to access the files!):
-                let de_path = de.path().strip_prefix(&fsr.root)?;
+                let de_path = de.path();
                 fsr.files.push(de_path.to_path_buf());
 
-                // Build/extend the HashMap tree by adding the current path:
-                for cmp in de_path.components() {
+                // Build/extend the HashMap tree by adding the current path (we strip the repo root
+                // prefix since we're only interested in the structure of the repo below its root):
+                let root_relative_path = de_path.strip_prefix(&fsr.root)?;
+                for cmp in root_relative_path.components() {
                     match PathComponent::try_from(&cmp)? {
                         PathComponent::PkgToml => {
                             curr_hm
                                 .entry(PathComponent::PkgToml)
-                                .or_insert(Element::File(load_file(&fsr.root, de_path)?));
+                                .or_insert(Element::File(load_file(de_path)?));
                         }
                         dir @ PathComponent::DirName(_) => {
                             curr_hm
@@ -159,8 +158,15 @@ impl FileSystemRepresentation {
             false
         }
 
-        // Traverse the repo tree and check if the current tree
+        // Traverse the repo tree via a root relative path and check if the current tree
         // (directory) contains other `pkg.toml` files once we've hit a `pkg.toml` file:
+        let path = path.strip_prefix(&self.root).with_context(|| {
+            anyhow!(
+                "The path `{}` doesn't include the repo root `{}`",
+                path.display(),
+                &self.root.display()
+            )
+        })?;
         let mut curr_hm = &self.elements;
         for elem in path.components() {
             let elem = PathComponent::try_from(&elem)?;
@@ -194,10 +200,17 @@ impl FileSystemRepresentation {
     pub fn get_files_for<'a>(&'a self, path: &Path) -> Result<Vec<(PathBuf, &'a String)>> {
         let mut res = Vec::with_capacity(10); // good enough
 
-        // Traverse the repo tree and collect all `pkg.toml` files along
-        // the way:
+        // Traverse the repo tree via a root relative path and collect all `pkg.toml` files along
+        // the way (we'll include self.root in the returned paths):
+        let path = path.strip_prefix(&self.root).with_context(|| {
+            anyhow!(
+                "The path `{}` doesn't include the repo root `{}`",
+                path.display(),
+                &self.root.display()
+            )
+        })?;
         let mut curr_hm = &self.elements;
-        let mut curr_path = PathBuf::from("");
+        let mut curr_path = self.root.clone();
         for elem in path.components() {
             let elem = PathComponent::try_from(&elem)?;
 
@@ -251,9 +264,9 @@ fn is_pkgtoml(entry: &DirEntry) -> bool {
 }
 
 /// Helper fn to load a Path into memory as String
-fn load_file(root: &PathBuf, path: &Path) -> Result<String> {
+fn load_file(path: &Path) -> Result<String> {
     trace!("Reading {}", path.display());
-    std::fs::read_to_string(root.join(path))
+    std::fs::read_to_string(path)
         .with_context(|| anyhow!("Reading file from filesystem: {}", path.display()))
         .map_err(Error::from)
 }
@@ -294,15 +307,15 @@ mod tests {
                 .into_iter()
                 .collect(),
 
-            files: vec![PathBuf::from("foo/pkg.toml")],
+            files: vec![PathBuf::from("/foo/pkg.toml")],
         };
 
-        let path = "foo/pkg.toml".as_ref();
+        let path = "/foo/pkg.toml".as_ref();
 
         assert!(fsr.is_leaf_file(path).unwrap());
         assert_eq!(
             fsr.get_files_for(path).unwrap(),
-            vec![(pb("foo/pkg.toml"), &s("content"))]
+            vec![(pb("/foo/pkg.toml"), &s("content"))]
         );
     }
 
@@ -324,15 +337,15 @@ mod tests {
             .into_iter()
             .collect(),
 
-            files: vec![PathBuf::from("foo/bar/baz/pkg.toml")],
+            files: vec![PathBuf::from("/foo/bar/baz/pkg.toml")],
         };
 
-        let path = "foo/bar/baz/pkg.toml".as_ref();
+        let path = "/foo/bar/baz/pkg.toml".as_ref();
 
         assert!(fsr.is_leaf_file(path).unwrap());
         assert_eq!(
             fsr.get_files_for(path).unwrap(),
-            vec![(pb("foo/bar/baz/pkg.toml"), &s("content"))]
+            vec![(pb("/foo/bar/baz/pkg.toml"), &s("content"))]
         );
     }
 
@@ -363,32 +376,32 @@ mod tests {
             .collect(),
 
             files: vec![
-                PathBuf::from("foo/pkg.toml"),
-                PathBuf::from("foo/bar/pkg.toml"),
-                PathBuf::from("foo/bar/baz/pkg.toml"),
+                PathBuf::from("/foo/pkg.toml"),
+                PathBuf::from("/foo/bar/pkg.toml"),
+                PathBuf::from("/foo/bar/baz/pkg.toml"),
             ],
         };
 
         {
-            let path = "foo/pkg.toml".as_ref();
+            let path = "/foo/pkg.toml".as_ref();
 
             assert!(!fsr.is_leaf_file(path).unwrap());
         }
         {
-            let path = "foo/bar/pkg.toml".as_ref();
+            let path = "/foo/bar/pkg.toml".as_ref();
 
             assert!(!fsr.is_leaf_file(path).unwrap());
         }
         {
-            let path = "foo/bar/baz/pkg.toml".as_ref();
+            let path = "/foo/bar/baz/pkg.toml".as_ref();
 
             assert!(fsr.is_leaf_file(path).unwrap());
             assert_eq!(
                 fsr.get_files_for(path).unwrap(),
                 vec![
-                    (pb("foo/pkg.toml"), &s("content1")),
-                    (pb("foo/bar/pkg.toml"), &s("content2")),
-                    (pb("foo/bar/baz/pkg.toml"), &s("content3")),
+                    (pb("/foo/pkg.toml"), &s("content1")),
+                    (pb("/foo/bar/pkg.toml"), &s("content2")),
+                    (pb("/foo/bar/baz/pkg.toml"), &s("content3")),
                 ]
             );
         }
@@ -417,21 +430,21 @@ mod tests {
             .collect(),
 
             files: vec![
-                PathBuf::from("foo/pkg.toml"),
-                PathBuf::from("foo/bar/baz/pkg.toml"),
+                PathBuf::from("/foo/pkg.toml"),
+                PathBuf::from("/foo/bar/baz/pkg.toml"),
             ],
         };
 
-        let path = "foo/pkg.toml".as_ref();
+        let path = "/foo/pkg.toml".as_ref();
         assert!(!fsr.is_leaf_file(path).unwrap());
 
-        let path = "foo/bar/baz/pkg.toml".as_ref();
+        let path = "/foo/bar/baz/pkg.toml".as_ref();
         assert!(fsr.is_leaf_file(path).unwrap());
         assert_eq!(
             fsr.get_files_for(path).unwrap(),
             vec![
-                (pb("foo/pkg.toml"), &s("content1")),
-                (pb("foo/bar/baz/pkg.toml"), &s("content3")),
+                (pb("/foo/pkg.toml"), &s("content1")),
+                (pb("/foo/bar/baz/pkg.toml"), &s("content3")),
             ]
         );
     }
@@ -459,34 +472,41 @@ mod tests {
             .collect(),
 
             files: vec![
-                PathBuf::from("pkg.toml"),
-                PathBuf::from("foo/bar/baz/pkg.toml"),
+                PathBuf::from("/pkg.toml"),
+                PathBuf::from("/foo/bar/baz/pkg.toml"),
             ],
         };
 
-        let path = "pkg.toml".as_ref();
+        let path = "/pkg.toml".as_ref();
         assert!(!fsr.is_leaf_file(path).unwrap());
 
-        let path = "foo/bar/baz/pkg.toml".as_ref();
+        let path = "/foo/bar/baz/pkg.toml".as_ref();
         assert!(fsr.is_leaf_file(path).unwrap());
         assert_eq!(
             fsr.get_files_for(path).unwrap(),
             vec![
-                (pb("pkg.toml"), &s("content1")),
-                (pb("foo/bar/baz/pkg.toml"), &s("content3")),
+                (pb("/pkg.toml"), &s("content1")),
+                (pb("/foo/bar/baz/pkg.toml"), &s("content3")),
             ]
         );
     }
 
     #[test]
     fn test_loading_the_example_repo() -> Result<()> {
-        let fsr = FileSystemRepresentation::load(pb("examples/packages/repo/"))?;
+        fn pb(repo_relative_path: &str) -> PathBuf {
+            PathBuf::from("examples/packages/repo/").join(repo_relative_path)
+        }
+        fn ps(repo_relative_path: &str) -> String {
+            String::from(pb(repo_relative_path).to_string_lossy())
+        }
+
+        let fsr = FileSystemRepresentation::load(pb(""))?;
 
         // Test the leaf file logic:
-        assert!(!fsr.is_leaf_file("pkg.toml".as_ref()).unwrap());
-        assert!(!fsr.is_leaf_file("s/pkg.toml".as_ref()).unwrap());
-        assert!(fsr.is_leaf_file("s/19.0/pkg.toml".as_ref()).unwrap());
-        assert!(fsr.is_leaf_file("invalid/pkg.toml".as_ref()).is_err());
+        assert!(!fsr.is_leaf_file(&pb("pkg.toml")).unwrap());
+        assert!(!fsr.is_leaf_file(&pb("s/pkg.toml")).unwrap());
+        assert!(fsr.is_leaf_file(&pb("s/19.0/pkg.toml")).unwrap());
+        assert!(fsr.is_leaf_file(&pb("invalid/pkg.toml")).is_err());
 
         // Test if all pkg.toml files get found/loaded and check the leaf files count:
         let pkgtoml_files_count = 29; // find examples/packages/repo/ -name pkg.toml | wc -l
@@ -503,7 +523,7 @@ mod tests {
         assert_eq!(leaf_files_count, pkgtoml_files_count - non_leaf_files_count);
 
         // Test getting all pkg.toml files for a given path:
-        assert!(fsr.get_files_for("invalid/pkg.toml".as_ref()).is_err());
+        assert!(fsr.get_files_for(&pb("invalid/pkg.toml")).is_err());
         fn assert_files_for(fsr: &FileSystemRepresentation, path: &str, files: Vec<&PathBuf>) {
             assert_eq!(
                 fsr.get_files_for(path.as_ref())
@@ -515,11 +535,15 @@ mod tests {
                 "Get files for {path}"
             );
         }
-        assert_files_for(&fsr, "pkg.toml", vec![&pb("pkg.toml")]);
-        assert_files_for(&fsr, "z/pkg.toml", vec![&pb("pkg.toml"), &pb("z/pkg.toml")]);
+        assert_files_for(&fsr, &ps("pkg.toml"), vec![&pb("pkg.toml")]);
         assert_files_for(
             &fsr,
-            "s/19.1/pkg.toml",
+            &ps("z/pkg.toml"),
+            vec![&pb("pkg.toml"), &pb("z/pkg.toml")],
+        );
+        assert_files_for(
+            &fsr,
+            &ps("s/19.1/pkg.toml"),
             vec![&pb("pkg.toml"), &pb("s/pkg.toml"), &pb("s/19.1/pkg.toml")],
         );
 
