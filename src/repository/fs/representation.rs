@@ -31,7 +31,7 @@ use crate::repository::fs::path::PathComponent;
 /// A type representing the filesystem
 ///
 /// This type can be used to load pkg.toml files from the filesystem. As soon as this object is
-/// loaded, all filesystem access is done and postprocessing of the loaded data can happen
+/// loaded, all filesystem access is done and postprocessing of the loaded data can happen.
 #[derive(Debug, getset::Getters)]
 pub struct FileSystemRepresentation {
     #[getset(get = "pub")]
@@ -44,7 +44,7 @@ pub struct FileSystemRepresentation {
 }
 
 impl FileSystemRepresentation {
-    /// Load the FileSystemRepresentation object starting a `root`.
+    /// Load the FileSystemRepresentation object starting at `root`.
     pub fn load(root: PathBuf) -> Result<Self> {
         let mut fsr = FileSystemRepresentation {
             root: root.clone(),
@@ -120,6 +120,7 @@ impl FileSystemRepresentation {
     /// # Example
     ///
     ///     /
+    ///     /pkg.toml <-- is not a leaf
     ///     /foo/
     ///     /foo/pkg.toml <-- is leaf
     ///     /bar/
@@ -170,15 +171,11 @@ impl FileSystemRepresentation {
         Ok(false)
     }
 
-    /// Get a Vec<(PathBuf, &String)> for the `path`
+    /// Get a Vec<(PathBuf, &String)> for the `path`.
     ///
     /// The result of this function is the trail of pkg.toml files from `self.root` to `path`,
     /// whereas the PathBuf is the actual path to the file and the `&String` is the content of the
     /// individual file.
-    ///
-    /// Merging all Strings in the returned Vec as Config objects should produce a Package. to
-    /// `path`, whereas the PathBuf is the actual path to the file and the `&String` is the content
-    /// of the individual file.
     ///
     /// Merging all Strings in the returned Vec as Config objects should produce a Package.
     pub fn get_files_for<'a>(&'a self, path: &Path) -> Result<Vec<(PathBuf, &'a String)>> {
