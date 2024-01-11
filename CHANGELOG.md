@@ -1,5 +1,17 @@
 # Changelog
 
+## Configuration changes
+
+All configuration changes are documented in [CHANGELOG.toml](./CHANGELOG.toml).
+Butido should automatically output the relevant changes when the configuration
+is too old (i.e., must be updated).
+
+## Upcoming
+
+### Major/Breaking changes
+
+* The configuration must be updated, see `CHANGELOG.toml` for details.
+
 ## v0.4.0
 
 This release contains breaking changes. The relevant changes are listed in the

@@ -1,0 +1,4 @@
+# Each key-value mapping is a changelog entry (configuration version -> required changes):
+0 = "This version was never used"
+1 = """The format of the `compatibility` setting has changed from a string \
+(`semver::VersionReq`) to a number (`u16`)."""

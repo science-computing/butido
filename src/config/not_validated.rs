@@ -21,16 +21,21 @@ use crate::config::ContainerConfig;
 use crate::config::DockerConfig;
 use crate::package::PhaseName;
 
+// The configuration version must be increased each time breaking configuration changes are made
+// (that require users to update their configurations) and the required changes must be documented
+// in CHANGELOG.toml:
+const CONFIGURATION_VERSION: u16 = 1;
+
 /// The configuration that is loaded from the filesystem
 #[derive(Debug, Getters, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NotValidatedConfiguration {
-    /// Compatibility setting
-    ///
-    /// If the version of butido is (semver) incompatible to this setting in the configuration,
-    /// butido won't execute any further because it might fail later due to configuration
-    /// incompatibilities
+    /// Compatibility setting to check if the butido configuration from the user is compatible with
+    /// the current butido version (this is kinda optional since the configuration is type checked
+    /// but it's useful to avoid accidents (butido will abort if the configuration isn't
+    /// compatible) and to inform users of required changes).
     #[getset(get = "pub")]
-    compatibility: semver::VersionReq,
+    compatibility: u16,
 
     /// The directory logs are written to, if logs are requested in plaintext files
     #[getset(get = "pub")]
@@ -142,6 +147,70 @@ pub struct NotValidatedConfiguration {
     available_phases: Vec<PhaseName>,
 }
 
+fn load_changelog() -> Result<std::collections::HashMap<String, String>> {
+    let changelog_toml = include_str!("../../CHANGELOG.toml");
+    // Ideally this would be done at compile time but we'll use tests for now to avoid unnecessary
+    // runtime errors due to TOML (parsing) errors in CHANGELOG.toml:
+    toml::from_str(changelog_toml).context("Butido bug: Couldn't parse the embedded CHANGELOG.toml")
+}
+
+// Helper function to check if the configuration should be compatible before loading (type checking) it:
+pub fn check_compatibility(config: &config::Config) -> Result<()> {
+    // We don't use config.get_int() as it is petty lax and, e.g., converts `true` to `1`:
+    let compatibility = config.get_str("compatibility").context(
+        "Make sure that the butido configuration is present and that \"compatibility\" is set",
+    )?;
+    // Parse the compatibility setting:
+    let compatibility = compatibility
+        .parse::<u16>()
+        .with_context(|| {
+            anyhow!("Failed to parse the value of the compatibility setting ({}) into a number (str -> u16)", compatibility)
+        })
+        .context("The format of the \"compatibility\" setting has changed from a string to a number")
+        .context("Set \"compatibility\" to 0 to get a summary of the required changes")?;
+
+    if compatibility == CONFIGURATION_VERSION {
+        Ok(()) // Everything is fine
+    } else {
+        // The configuration is incompatible (too old or too new):
+        let err = Err(anyhow!(
+            "The provided configuration is not compatible with this butido binary"
+        ))
+        .with_context(|| {
+            anyhow!(
+                "The expected configuration version is {} while the provided configuration has a compatibility setting of {}",
+                CONFIGURATION_VERSION,
+                compatibility,
+            )
+        });
+
+        if compatibility > CONFIGURATION_VERSION {
+            err.context("This version of butido is too old for your configuration")
+                .context("Update butido or downgrade your configuration")
+        } else {
+            // The configuration must be updated -> try to output the required changes from the changelog:
+            let changelog = load_changelog().context(
+                "Please refer to the changelog in README.{md,toml} for the required configuration changes",
+            )?;
+
+            // Output the required configuration changes to stderr:
+            eprintln!(
+                "The butido configuration is too old and the following changes are required:"
+            );
+            for i in (compatibility + 1)..=CONFIGURATION_VERSION {
+                if let Some(changelog_entry) = changelog.get(&i.to_string()) {
+                    eprintln!("- Version {i}: {changelog_entry}");
+                } else {
+                    eprintln!("- Version {i}: Error (butido bug): The changelog entry is missing!");
+                }
+            }
+            eprintln!("- Update the `compatibility` setting to `{CONFIGURATION_VERSION}`\n");
+
+            err
+        }
+    }
+}
+
 impl NotValidatedConfiguration {
     /// Validate the NotValidatedConfiguration object and make it into a Configuration object, if
     /// validation succeeds
@@ -149,43 +218,38 @@ impl NotValidatedConfiguration {
     /// This function does sanity-checking on the configuration values.
     /// It fails with the appropriate error message if a setting is bogus.
     pub fn validate(self) -> Result<Configuration> {
-        let crate_version = semver::Version::parse(env!("CARGO_PKG_VERSION"))
-            .context("Parsing version of crate (CARGO_PKG_VERSION) into semver::Version object")?;
+        self.validate_config(false)
+    }
+    fn validate_config(self, skip_filesystem_checks: bool) -> Result<Configuration> {
+        // A trivial helper to check if a directory is missing:
+        let check_directory_exists = |path: &PathBuf, config_key_name: &str| -> Result<()> {
+            if skip_filesystem_checks || path.is_dir() {
+                Ok(())
+            } else {
+                Err(anyhow!(
+                    "Not a directory: {} = {}",
+                    config_key_name,
+                    path.display()
+                ))
+            }
+        };
 
-        if !self.compatibility.matches(&crate_version) {
+        // Double-check the compatibility (mainly to avoid "error: field `compatibility` is never read")
+        if self.compatibility != CONFIGURATION_VERSION {
             return Err(anyhow!(
-                "Configuration is not compatible to butido {}",
-                crate_version
+                "The provided configuration is not compatible with this butido binary"
             ));
         }
 
-        // Error if staging_directory is not a directory
-        if !self.staging_directory.is_dir() {
-            return Err(anyhow!(
-                "Not a directory: staging = {}",
-                self.staging_directory.display()
-            ));
-        }
-
-        // Error if releases_directory is not a directory
-        if !self.releases_directory.is_dir() {
-            return Err(anyhow!(
-                "Not a directory: releases = {}",
-                self.releases_directory.display()
-            ));
-        }
+        // Error if the configured directories are missing or no directories:
+        check_directory_exists(&self.log_dir, "log_dir")?;
+        check_directory_exists(&self.releases_directory, "releases_root")?;
+        check_directory_exists(&self.staging_directory, "staging")?;
+        check_directory_exists(&self.source_cache_root, "source_cache")?;
 
         if self.release_stores.is_empty() {
             return Err(anyhow!(
                 "You need at least one release store in 'release_stores'"
-            ));
-        }
-
-        // Error if source_cache_root is not a directory
-        if !self.source_cache_root.is_dir() {
-            return Err(anyhow!(
-                "Not a directory: releases = {}",
-                self.source_cache_root.display()
             ));
         }
 
@@ -215,5 +279,49 @@ impl NotValidatedConfiguration {
         }
 
         Ok(Configuration { inner: self })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::check_compatibility;
+    use super::load_changelog;
+    use super::NotValidatedConfiguration;
+    use super::CONFIGURATION_VERSION;
+
+    #[test]
+    // A test to guard against unnecessary runtime failures
+    fn test_loading_changelog_toml() {
+        let changelog = load_changelog();
+        assert!(changelog.is_ok());
+        let changelog = changelog.unwrap();
+        for i in 0..=CONFIGURATION_VERSION {
+            assert!(changelog.get(&i.to_string()).is_some());
+        }
+    }
+
+    // A helper function to load and validate butido configuration files:
+    fn test_loading_configuration_file(file_path: &str) {
+        let mut config = config::Config::default();
+        assert!(config
+            .merge(config::File::with_name(file_path).required(true))
+            .is_ok());
+        assert!(check_compatibility(&config).is_ok());
+        let config = config.try_into::<NotValidatedConfiguration>();
+        assert!(config.is_ok(), "Config loading failed: {config:?}");
+        let config = config.unwrap().validate_config(true);
+        assert!(config.is_ok(), "Config validation failed: {config:?}");
+    }
+
+    #[test]
+    // A test to ensure the example configuration file is up-to-date and valid
+    fn test_loading_example_configuration_file() {
+        test_loading_configuration_file("config.toml");
+    }
+
+    #[test]
+    // A test to ensure the example repo config file is up-to-date and valid
+    fn test_loading_example_repo_configuration_file() {
+        test_loading_configuration_file("examples/packages/repo/config.toml");
     }
 }

@@ -1,5 +1,5 @@
 # Example configuration file for butido
-compatibility = "0.1.0"
+compatibility = 1
 script_highlight_theme = "Solarized (dark)"
 
 releases_root  = "/tmp/butido-test-releases"
