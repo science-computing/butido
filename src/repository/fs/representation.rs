@@ -31,7 +31,7 @@ use crate::repository::fs::path::PathComponent;
 /// A type representing the filesystem
 ///
 /// This type can be used to load pkg.toml files from the filesystem. As soon as this object is
-/// loaded, all filesystem access is done and postprocessing of the loaded data can happen
+/// loaded, all filesystem access is done and postprocessing of the loaded data can happen.
 #[derive(Debug, getset::Getters)]
 pub struct FileSystemRepresentation {
     #[getset(get = "pub")]
@@ -40,11 +40,17 @@ pub struct FileSystemRepresentation {
     #[getset(get = "pub")]
     files: Vec<PathBuf>,
 
+    // A recursive data structure that represents the repository from the root.
+    // Valid entries are:
+    // - PkgToml -> File(content: String)
+    // - DirName(name: String) -> Dir(entries: HashMap<PathComponent, Element>)
+    // Directories are recursive and can contain (sub)directories (0-n) and at most one `pkg.toml`
+    // file.
     elements: HashMap<PathComponent, Element>,
 }
 
 impl FileSystemRepresentation {
-    /// Load the FileSystemRepresentation object starting a `root`.
+    /// Load the FileSystemRepresentation object starting at `root`.
     pub fn load(root: PathBuf) -> Result<Self> {
         let mut fsr = FileSystemRepresentation {
             root: root.clone(),
@@ -79,11 +85,13 @@ impl FileSystemRepresentation {
             .map_err(Error::from)
             .and_then_ok(|de| {
                 let mut curr_hm = &mut fsr.elements;
-                let de_path = de.path().strip_prefix(&fsr.root)?;
+                let de_path = de.path();
                 fsr.files.push(de_path.to_path_buf());
 
-                // traverse the HashMap tree
-                for cmp in de_path.components() {
+                // Build/extend the HashMap tree by adding the current path (we strip the repo root
+                // prefix since we're only interested in the structure of the repo below its root):
+                let root_relative_path = de_path.strip_prefix(&fsr.root)?;
+                for cmp in root_relative_path.components() {
                     match PathComponent::try_from(&cmp)? {
                         PathComponent::PkgToml => {
                             curr_hm
@@ -95,6 +103,7 @@ impl FileSystemRepresentation {
                                 .entry(dir.clone())
                                 .or_insert_with(|| Element::Dir(HashMap::new()));
 
+                            // Step into the sub HashMap tree for the next iteration:
                             curr_hm = curr_hm
                                 .get_mut(&dir)
                                 .unwrap() // safe, because we just inserted it
@@ -117,6 +126,7 @@ impl FileSystemRepresentation {
     /// # Example
     ///
     ///     /
+    ///     /pkg.toml <-- is not a leaf
     ///     /foo/
     ///     /foo/pkg.toml <-- is leaf
     ///     /bar/
@@ -125,11 +135,13 @@ impl FileSystemRepresentation {
     ///
     ///
     pub fn is_leaf_file(&self, path: &Path) -> Result<bool> {
-        let mut curr_hm = &self.elements;
-
         // Helper to check whether a tree contains pkg.toml files, recursively
         fn toml_files_in_tree(hm: &HashMap<PathComponent, Element>) -> bool {
-            if let Some(Element::File(_)) = hm.get(&PathComponent::PkgToml) {
+            // This is an optional optimization (should save time by avoiding potentially
+            // unnecessarily recursing the tree at the cost of this extra check) since we also
+            // check for this case in the match below (i.e., it's a shortcut that doesn't affect
+            // correctness):
+            if hm.contains_key(&PathComponent::PkgToml) {
                 return true;
             }
 
@@ -146,17 +158,28 @@ impl FileSystemRepresentation {
             false
         }
 
+        // Traverse the repo tree via a root relative path and check if the current tree
+        // (directory) contains other `pkg.toml` files once we've hit a `pkg.toml` file:
+        let path = path.strip_prefix(&self.root).with_context(|| {
+            anyhow!(
+                "The path `{}` doesn't include the repo root `{}`",
+                path.display(),
+                &self.root.display()
+            )
+        })?;
+        let mut curr_hm = &self.elements;
         for elem in path.components() {
             let elem = PathComponent::try_from(&elem)?;
 
             match curr_hm.get(&elem) {
                 Some(Element::File(_)) => {
-                    // if I have a file now, and the current hashmap only holds either
-                    // * No directory
-                    // * or a directory where all subdirs do not contain a pkg.toml
+                    // We've hit a `pkg.toml` file (should be the final iteration) and it is a leaf
+                    // file, if the current hashmap only holds either:
+                    // * No directory (i.e., just one entry: this `pkg.toml` file)
+                    // * Directories where all subdirs (recursive) do not contain a `pkg.toml` file
                     return Ok(curr_hm.values().count() == 1 || !toml_files_in_tree(curr_hm));
                 }
-                Some(Element::Dir(hm)) => curr_hm = hm,
+                Some(Element::Dir(hm)) => curr_hm = hm, // Move into the subtree
                 None => anyhow::bail!(
                     "Path component '{:?}' was not loaded in map, this is most likely a bug",
                     elem
@@ -167,34 +190,39 @@ impl FileSystemRepresentation {
         Ok(false)
     }
 
-    /// Get a Vec<(PathBuf, &String)> for the `path`
+    /// Get a Vec<(PathBuf, &String)> for the `path`.
     ///
-    /// The result of this function is the trail of pkg.toml files from `self.root` to `path`,
+    /// The result of this function is the trail of `pkg.toml` files from `self.root` to `path`,
     /// whereas the PathBuf is the actual path to the file and the `&String` is the content of the
     /// individual file.
-    ///
-    /// Merging all Strings in the returned Vec as Config objects should produce a Package. to
-    /// `path`, whereas the PathBuf is the actual path to the file and the `&String` is the content
-    /// of the individual file.
     ///
     /// Merging all Strings in the returned Vec as Config objects should produce a Package.
     pub fn get_files_for<'a>(&'a self, path: &Path) -> Result<Vec<(PathBuf, &'a String)>> {
         let mut res = Vec::with_capacity(10); // good enough
 
+        // Traverse the repo tree via a root relative path and collect all `pkg.toml` files along
+        // the way (we'll include self.root in the returned paths):
+        let path = path.strip_prefix(&self.root).with_context(|| {
+            anyhow!(
+                "The path `{}` doesn't include the repo root `{}`",
+                path.display(),
+                &self.root.display()
+            )
+        })?;
         let mut curr_hm = &self.elements;
-        let mut curr_path = PathBuf::from("");
+        let mut curr_path = self.root.clone();
         for elem in path.components() {
             let elem = PathComponent::try_from(&elem)?;
-
-            if !elem.is_pkg_toml() {
-                if let Some(Element::File(intermediate)) = curr_hm.get(&PathComponent::PkgToml) {
-                    res.push((curr_path.join("pkg.toml"), intermediate));
-                }
-            }
 
             match curr_hm.get(&elem) {
                 Some(Element::File(cont)) => res.push((curr_path.join("pkg.toml"), cont)),
                 Some(Element::Dir(hm)) => {
+                    if let Some(Element::File(intermediate)) = curr_hm.get(&PathComponent::PkgToml)
+                    {
+                        // The current directory contains a `pkg.toml` file -> add it:
+                        res.push((curr_path.join("pkg.toml"), intermediate));
+                    }
+                    // Move into the directory/subtree:
                     curr_path = curr_path.join(elem.dir_name().unwrap()); // unwrap safe by above match
                     curr_hm = hm;
                 }
@@ -274,20 +302,20 @@ mod tests {
             // Representing
             //  /
             //  /foo
-            //  /foo/pkg.toml
+            //  /foo/pkg.toml: content
             elements: vec![dir("foo", vec![pkgtoml("content")])]
                 .into_iter()
                 .collect(),
 
-            files: vec![PathBuf::from("foo/pkg.toml")],
+            files: vec![PathBuf::from("/foo/pkg.toml")],
         };
 
-        let path = "foo/pkg.toml".as_ref();
+        let path = "/foo/pkg.toml".as_ref();
 
         assert!(fsr.is_leaf_file(path).unwrap());
         assert_eq!(
             fsr.get_files_for(path).unwrap(),
-            vec![(pb("foo/pkg.toml"), &s("content"))]
+            vec![(pb("/foo/pkg.toml"), &s("content"))]
         );
     }
 
@@ -300,8 +328,8 @@ mod tests {
             //  /
             //  /foo
             //  /foo/bar
-            //  /foo/baz
-            //  /foo/baz/pkg.toml
+            //  /foo/bar/baz
+            //  /foo/bar/baz/pkg.toml: content
             elements: vec![dir(
                 "foo",
                 vec![dir("bar", vec![dir("baz", vec![pkgtoml("content")])])],
@@ -309,15 +337,15 @@ mod tests {
             .into_iter()
             .collect(),
 
-            files: vec![PathBuf::from("foo/bar/baz/pkg.toml")],
+            files: vec![PathBuf::from("/foo/bar/baz/pkg.toml")],
         };
 
-        let path = "foo/bar/baz/pkg.toml".as_ref();
+        let path = "/foo/bar/baz/pkg.toml".as_ref();
 
         assert!(fsr.is_leaf_file(path).unwrap());
         assert_eq!(
             fsr.get_files_for(path).unwrap(),
-            vec![(pb("foo/bar/baz/pkg.toml"), &s("content"))]
+            vec![(pb("/foo/bar/baz/pkg.toml"), &s("content"))]
         );
     }
 
@@ -329,9 +357,11 @@ mod tests {
             // Representing
             //  /
             //  /foo
+            //  /foo/pkg.toml: content1
             //  /foo/bar
-            //  /foo/baz
-            //  /foo/baz/pkg.toml
+            //  /foo/bar/pkg.toml: content2
+            //  /foo/bar/baz
+            //  /foo/bar/baz/pkg.toml: content3
             elements: vec![dir(
                 "foo",
                 vec![
@@ -346,32 +376,32 @@ mod tests {
             .collect(),
 
             files: vec![
-                PathBuf::from("foo/pkg.toml"),
-                PathBuf::from("foo/bar/pkg.toml"),
-                PathBuf::from("foo/bar/baz/pkg.toml"),
+                PathBuf::from("/foo/pkg.toml"),
+                PathBuf::from("/foo/bar/pkg.toml"),
+                PathBuf::from("/foo/bar/baz/pkg.toml"),
             ],
         };
 
         {
-            let path = "foo/pkg.toml".as_ref();
+            let path = "/foo/pkg.toml".as_ref();
 
             assert!(!fsr.is_leaf_file(path).unwrap());
         }
         {
-            let path = "foo/bar/pkg.toml".as_ref();
+            let path = "/foo/bar/pkg.toml".as_ref();
 
             assert!(!fsr.is_leaf_file(path).unwrap());
         }
         {
-            let path = "foo/bar/baz/pkg.toml".as_ref();
+            let path = "/foo/bar/baz/pkg.toml".as_ref();
 
             assert!(fsr.is_leaf_file(path).unwrap());
             assert_eq!(
                 fsr.get_files_for(path).unwrap(),
                 vec![
-                    (pb("foo/pkg.toml"), &s("content1")),
-                    (pb("foo/bar/pkg.toml"), &s("content2")),
-                    (pb("foo/bar/baz/pkg.toml"), &s("content3")),
+                    (pb("/foo/pkg.toml"), &s("content1")),
+                    (pb("/foo/bar/pkg.toml"), &s("content2")),
+                    (pb("/foo/bar/baz/pkg.toml"), &s("content3")),
                 ]
             );
         }
@@ -385,9 +415,10 @@ mod tests {
             // Representing
             //  /
             //  /foo
+            //  /foo/pkg.toml: content1
             //  /foo/bar
-            //  /foo/baz
-            //  /foo/baz/pkg.toml
+            //  /foo/bar/baz
+            //  /foo/bar/baz/pkg.toml: content3
             elements: vec![dir(
                 "foo",
                 vec![
@@ -399,21 +430,21 @@ mod tests {
             .collect(),
 
             files: vec![
-                PathBuf::from("foo/pkg.toml"),
-                PathBuf::from("foo/bar/baz/pkg.toml"),
+                PathBuf::from("/foo/pkg.toml"),
+                PathBuf::from("/foo/bar/baz/pkg.toml"),
             ],
         };
 
-        let path = "foo/pkg.toml".as_ref();
+        let path = "/foo/pkg.toml".as_ref();
         assert!(!fsr.is_leaf_file(path).unwrap());
 
-        let path = "foo/bar/baz/pkg.toml".as_ref();
+        let path = "/foo/bar/baz/pkg.toml".as_ref();
         assert!(fsr.is_leaf_file(path).unwrap());
         assert_eq!(
             fsr.get_files_for(path).unwrap(),
             vec![
-                (pb("foo/pkg.toml"), &s("content1")),
-                (pb("foo/bar/baz/pkg.toml"), &s("content3")),
+                (pb("/foo/pkg.toml"), &s("content1")),
+                (pb("/foo/bar/baz/pkg.toml"), &s("content3")),
             ]
         );
     }
@@ -425,10 +456,11 @@ mod tests {
 
             // Representing
             //  /
+            //  /pkg.toml: content1
             //  /foo
             //  /foo/bar
-            //  /foo/baz
-            //  /foo/baz/pkg.toml
+            //  /foo/bar/baz
+            //  /foo/bar/baz/pkg.toml: content3
             elements: vec![
                 pkgtoml("content1"),
                 dir(
@@ -440,22 +472,81 @@ mod tests {
             .collect(),
 
             files: vec![
-                PathBuf::from("pkg.toml"),
-                PathBuf::from("foo/bar/baz/pkg.toml"),
+                PathBuf::from("/pkg.toml"),
+                PathBuf::from("/foo/bar/baz/pkg.toml"),
             ],
         };
 
-        let path = "pkg.toml".as_ref();
+        let path = "/pkg.toml".as_ref();
         assert!(!fsr.is_leaf_file(path).unwrap());
 
-        let path = "foo/bar/baz/pkg.toml".as_ref();
+        let path = "/foo/bar/baz/pkg.toml".as_ref();
         assert!(fsr.is_leaf_file(path).unwrap());
         assert_eq!(
             fsr.get_files_for(path).unwrap(),
             vec![
-                (pb("pkg.toml"), &s("content1")),
-                (pb("foo/bar/baz/pkg.toml"), &s("content3")),
+                (pb("/pkg.toml"), &s("content1")),
+                (pb("/foo/bar/baz/pkg.toml"), &s("content3")),
             ]
         );
+    }
+
+    #[test]
+    fn test_loading_the_example_repo() -> Result<()> {
+        fn pb(repo_relative_path: &str) -> PathBuf {
+            PathBuf::from("examples/packages/repo/").join(repo_relative_path)
+        }
+        fn ps(repo_relative_path: &str) -> String {
+            String::from(pb(repo_relative_path).to_string_lossy())
+        }
+
+        let fsr = FileSystemRepresentation::load(pb(""))?;
+
+        // Test the leaf file logic:
+        assert!(!fsr.is_leaf_file(&pb("pkg.toml")).unwrap());
+        assert!(!fsr.is_leaf_file(&pb("s/pkg.toml")).unwrap());
+        assert!(fsr.is_leaf_file(&pb("s/19.0/pkg.toml")).unwrap());
+        assert!(fsr.is_leaf_file(&pb("invalid/pkg.toml")).is_err());
+
+        // Test if all pkg.toml files get found/loaded and check the leaf files count:
+        let pkgtoml_files_count = 29; // find examples/packages/repo/ -name pkg.toml | wc -l
+        assert_eq!(fsr.files().len(), pkgtoml_files_count);
+        // Manually count the non-leaf files:
+        let non_leaf_files_count = 2;
+        // Or the following can be used to count the leaf directories (with quite a few asterisks though!):
+        // find examples/packages/repo/ -type d -links 2 | wc -l
+        let leaf_files_count = fsr
+            .files()
+            .iter()
+            .filter(|path| fsr.is_leaf_file(path).unwrap())
+            .count();
+        assert_eq!(leaf_files_count, pkgtoml_files_count - non_leaf_files_count);
+
+        // Test getting all pkg.toml files for a given path:
+        assert!(fsr.get_files_for(&pb("invalid/pkg.toml")).is_err());
+        fn assert_files_for(fsr: &FileSystemRepresentation, path: &str, files: Vec<&PathBuf>) {
+            assert_eq!(
+                fsr.get_files_for(path.as_ref())
+                    .unwrap()
+                    .iter()
+                    .map(|(path, _)| path)
+                    .collect::<Vec<_>>(),
+                files,
+                "Get files for {path}"
+            );
+        }
+        assert_files_for(&fsr, &ps("pkg.toml"), vec![&pb("pkg.toml")]);
+        assert_files_for(
+            &fsr,
+            &ps("z/pkg.toml"),
+            vec![&pb("pkg.toml"), &pb("z/pkg.toml")],
+        );
+        assert_files_for(
+            &fsr,
+            &ps("s/19.1/pkg.toml"),
+            vec![&pb("pkg.toml"), &pb("s/pkg.toml"), &pb("s/19.1/pkg.toml")],
+        );
+
+        Ok(())
     }
 }

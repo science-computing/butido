@@ -274,4 +274,32 @@ pub mod tests {
         assert_eq!(*p.version(), pversion("2"));
         assert!(!p.version_is_semver());
     }
+
+    #[test]
+    fn test_load_example_pkg_repo() -> Result<()> {
+        fn assert_pkg(repo: &Repository, name: &str, version: &str) {
+            let constraint =
+                PackageVersionConstraint::from_version(String::from("="), pversion(version));
+            let ps = repo.find_with_version(&pname(name), &constraint);
+            assert_eq!(ps.len(), 1, "Failed to find pkg: {name} ={version}");
+            let p = ps.first().unwrap();
+            assert_eq!(*p.name(), pname(name));
+            assert_eq!(*p.version(), pversion(version));
+            assert_eq!(p.sources().len(), 1);
+        }
+
+        let repo = Repository::load(
+            &PathBuf::from("examples/packages/repo/"),
+            &indicatif::ProgressBar::hidden(),
+        )?;
+
+        assert_pkg(&repo, "a", "1");
+        assert_pkg(&repo, "b", "2");
+        assert_pkg(&repo, "c", "3");
+        assert_pkg(&repo, "s", "19.0");
+        assert_pkg(&repo, "s", "19.1");
+        assert_pkg(&repo, "z", "26");
+
+        Ok(())
+    }
 }

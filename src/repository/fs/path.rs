@@ -54,11 +54,6 @@ impl TryFrom<&std::path::Component<'_>> for PathComponent {
 }
 
 impl PathComponent {
-    /// Helper fn whether this PathComponent is a PathComponent::PkgToml
-    pub fn is_pkg_toml(&self) -> bool {
-        std::matches!(self, PathComponent::PkgToml)
-    }
-
     /// Helper fn to get the directory name of this PathComponent if it is a PathComponent::DirName
     /// or None if it is not.
     pub fn dir_name(&self) -> Option<&str> {
