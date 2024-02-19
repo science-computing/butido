@@ -221,6 +221,8 @@ impl<'a> std::fmt::Debug for DebugPackage<'a> {
 }
 
 impl PartialEq for Package {
+    // Ignore the following lint as it results in a false positive with clippy 0.1.77:
+    #[allow(clippy::unconditional_recursion)]
     fn eq(&self, other: &Package) -> bool {
         (self.name(), self.version()).eq(&(other.name(), other.version()))
     }
