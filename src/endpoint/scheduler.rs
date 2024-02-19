@@ -512,7 +512,6 @@ impl<'a> LogReceiver<'a> {
                     self.job.uuid()
                 ));
                 tokio::fs::OpenOptions::new()
-                    .create(true)
                     .create_new(true)
                     .write(true)
                     .open(&path)

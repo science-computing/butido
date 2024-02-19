@@ -135,7 +135,6 @@ impl SourceEntry {
 
         trace!("Creating file now: {}", p.display());
         tokio::fs::OpenOptions::new()
-            .create(true)
             .create_new(true)
             .write(true)
             .open(&p)
