@@ -94,7 +94,13 @@ impl Repository {
 
                         // TODO: Get rid of the unnecessarily complex handling of the `patches` configuration setting:
                         // get the patches that are in the `config` object after the merge
-                        let patches = get_patches(&config)?
+                        let mut patches = get_patches(&config)?;
+                        if patches == patches_before_merge {
+                            // No change due to "config.merge(content)" so let's set `patches` to
+                            // an empty vector so that `patches_before_merge` will get used:
+                            patches = Vec::with_capacity(0)
+                        }
+                        let patches = patches
                             .into_iter()
                             // Prepend the path of the directory of the `pkg.toml` file to the name of the patch:
                             .map(|p| if let Some(current_dir) = path.parent() {
@@ -110,19 +116,9 @@ impl Repository {
                             .and_then_ok(|patch| if patch.exists() {
                                 trace!("Path to patch exists: {}", patch.display());
                                 Ok(Some(patch))
-                            } else if patches_before_merge.iter().any(|pb| pb.file_name() == patch.file_name()) {
-                                // We have a patch already in the array that is named equal to the patch
-                                // we have in the fold iteration.
-                                // It seems like this patch was already in the list and we re-found it
-                                // because we loaded a "deeper" pkg.toml file.
-                                // TODO: Stop ignoring such errors! If the "deeper" `pkg.toml`
-                                // specifies a patch then it should exist regardless of
-                                // `patches_before_merge` from previous (parent) `pkg.toml` files.
-                                // This just silently ignores errors and causes unexpected behavior!
-                                Ok(None)
                             } else {
-                                trace!("Path to patch does not exist: {}", patch.display());
                                 Err(anyhow!("Patch does not exist: {}", patch.display()))
+                                    .with_context(|| anyhow!("The patch is declared here: {}", path.display()))
                             })
                             .filter_map_ok(|o| o)
                             .collect::<Result<Vec<_>>>()?;
@@ -144,7 +140,17 @@ impl Repository {
                             .map(|p| p.display().to_string())
                             .map(config::Value::from)
                             .collect::<Vec<_>>();
-                        config.set_once("patches", config::Value::from(patches))?;
+                        {
+                            // Update the `patches` configuration setting:
+                            let mut patches_config = Config::new();
+                            patches_config.set("patches", config::Value::from(patches))?;
+                            config.merge(patches_config)?;
+                            // Ideally we'd use `config.set()` but that is a permanent override (so
+                            // subsequent `config.merge()` merges won't have an effect on
+                            // "patches"). There's also `config.set_once()` but that only lasts
+                            // until the next `config.merge()` and `config.set_default()` only sets
+                            // a default value.
+                        }
                         Ok(config)
                     })
                     .and_then(|c| c.try_into::<Package>().map_err(Error::from)
@@ -320,10 +326,10 @@ pub mod tests {
         // s/pkg.toml: patches = [ "./foo.patch" ]
         // s/19.0/pkg.toml: patches = ["./foo.patch","s190.patch"]
         // s/19.1/pkg.toml: - (no `patches` entry)
-        // s/19.2/pkg.toml: patches = ["foo.patch"]
-        // s/19.3/pkg.toml: patches = ["./foo.patch","s190.patch"]
+        // s/19.2/pkg.toml: patches = ["../foo.patch"]
+        // s/19.3/pkg.toml: patches = ["s190.patch"]
         let p = get_pkg(&repo, "s", "19.0");
-        // TODO: Ideally we'd normalize the `./` away:
+        // Ideally we'd normalize the `./` away:
         assert_eq!(
             p.patches(),
             &vec![
@@ -337,13 +343,12 @@ pub mod tests {
             &vec![PathBuf::from("examples/packages/repo/s/foo.patch")]
         );
         let p = get_pkg(&repo, "s", "19.2");
-        // TODO: One should expect `examples/packages/repo/s/19.2/foo.patch`:
+        // We might want to normalize the `19.2/../` away:
         assert_eq!(
             p.patches(),
-            &vec![PathBuf::from("examples/packages/repo/s/foo.patch")]
+            &vec![PathBuf::from("examples/packages/repo/s/19.2/../foo.patch")]
         );
         let p = get_pkg(&repo, "s", "19.3");
-        // TODO: `./foo.patch` gets silently ignored!:
         assert_eq!(
             p.patches(),
             &vec![PathBuf::from("examples/packages/repo/s/19.3/s193.patch")]
