@@ -1,0 +1,5 @@
+version = "19.3"
+patches = [
+  "./foo.patch",
+  "s193.patch",
+]

@@ -509,7 +509,7 @@ mod tests {
         assert!(fsr.is_leaf_file(&pb("invalid/pkg.toml")).is_err());
 
         // Test if all pkg.toml files get found/loaded and check the leaf files count:
-        let pkgtoml_files_count = 29; // find examples/packages/repo/ -name pkg.toml | wc -l
+        let pkgtoml_files_count = 31; // find examples/packages/repo/ -name pkg.toml | wc -l
         assert_eq!(fsr.files().len(), pkgtoml_files_count);
         // Manually count the non-leaf files:
         let non_leaf_files_count = 2;
