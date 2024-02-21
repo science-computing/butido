@@ -53,11 +53,19 @@ impl Repository {
         let fsr = FileSystemRepresentation::load(path.to_path_buf())?;
 
         // Helper function to extract the `patches` array from a package config/definition:
-        fn get_patches(config: &Config) -> Result<Vec<PathBuf>> {
+        fn get_patches(
+            config: &config::ConfigBuilder<config::builder::DefaultState>,
+            path: &Path,
+        ) -> Result<Vec<PathBuf>> {
+            // TODO: Avoid unnecessary config building (inefficient):
+            let config = config.build_cloned().context(anyhow!(
+                "Failed to load the following TOML file: {}",
+                path.display()
+            ))?;
             match config.get_array("patches") {
                 Ok(v) => v
                     .into_iter()
-                    .map(config::Value::into_str)
+                    .map(config::Value::into_string)
                     .map_err(Error::from)
                     .map_err(|e| e.context("patches must be strings"))
                     .map_err(Error::from)
@@ -85,13 +93,12 @@ impl Repository {
                 fsr.get_files_for(path)?
                     .iter()
                     .inspect(|(path, _)| trace!("Loading layer at {}", path.display()))
-                    .fold(Ok(Config::default()) as Result<_>, |config, (path, content)| {
+                    .fold(Ok(Config::builder()) as Result<_>, |config, (path, content)| {
                         let mut config = config?;
 
-                        let patches_before_merge = get_patches(&config)?;
-                        config.merge(config::File::from_str(content, config::FileFormat::Toml))
-                            .with_context(|| anyhow!("Loading contents of {}", path.display()))?;
-                        let patches_after_merge = get_patches(&config)?;
+                        let patches_before_merge = get_patches(&config, path)?;
+                        config = config.add_source(config::File::from_str(content, config::FileFormat::Toml));
+                        let patches_after_merge = get_patches(&config, path)?;
 
                         // TODO: Get rid of the unnecessarily complex handling of the `patches` configuration setting:
                         // Ideally this would be handled by the `config` crate (this is
@@ -133,9 +140,9 @@ impl Repository {
                             .collect::<Vec<_>>();
                         {
                             // Update the `patches` configuration setting:
-                            let mut patches_config = Config::new();
-                            patches_config.set("patches", config::Value::from(patches))?;
-                            config.merge(patches_config)?;
+                            let mut builder = Config::builder();
+                            builder = builder.set_default("patches", config::Value::from(patches))?;
+                            config = config.add_source(builder.build()?);
                             // Ideally we'd use `config.set()` but that is a permanent override (so
                             // subsequent `config.merge()` merges won't have an effect on
                             // "patches"). There's also `config.set_once()` but that only lasts
@@ -144,7 +151,7 @@ impl Repository {
                         }
                         Ok(config)
                     })
-                    .and_then(|c| c.try_into::<Package>().map_err(Error::from)
+                    .and_then(|c| c.build()?.try_deserialize::<Package>().map_err(Error::from)
                         .with_context(|| anyhow!("Could not load package configuration: {}", path.display())))
                     .map(|pkg| ((pkg.name().clone(), pkg.version().clone()), pkg))
             })
