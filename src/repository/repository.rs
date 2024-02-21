@@ -87,51 +87,42 @@ impl Repository {
                     .inspect(|(path, _)| trace!("Loading layer at {}", path.display()))
                     .fold(Ok(Config::default()) as Result<_>, |config, (path, content)| {
                         let mut config = config?;
-                        let patches_before_merge = get_patches(&config)?;
 
+                        let patches_before_merge = get_patches(&config)?;
                         config.merge(config::File::from_str(content, config::FileFormat::Toml))
                             .with_context(|| anyhow!("Loading contents of {}", path.display()))?;
+                        let patches_after_merge = get_patches(&config)?;
 
                         // TODO: Get rid of the unnecessarily complex handling of the `patches` configuration setting:
-                        // get the patches that are in the `config` object after the merge
-                        let mut patches = get_patches(&config)?;
-                        if patches == patches_before_merge {
-                            // No change due to "config.merge(content)" so let's set `patches` to
-                            // an empty vector so that `patches_before_merge` will get used:
-                            patches = Vec::with_capacity(0)
-                        }
-                        let patches = patches
-                            .into_iter()
-                            // Prepend the path of the directory of the `pkg.toml` file to the name of the patch:
-                            .map(|p| if let Some(current_dir) = path.parent() {
-                                Ok(current_dir.join(p))
-                            } else {
-                                Err(anyhow!("Path should point to path with parent, but doesn't: {}", path.display()))
-                            })
-                            .inspect(|patch| trace!("Patch: {:?}", patch))
-
-                            // if the patch file exists, use it (as config::Value).
-                            //
-                            // Otherwise we have an error here, because we're referring to a non-existing file.
-                            .and_then_ok(|patch| if patch.exists() {
-                                trace!("Path to patch exists: {}", patch.display());
-                                Ok(Some(patch))
-                            } else {
-                                Err(anyhow!("Patch does not exist: {}", patch.display()))
-                                    .with_context(|| anyhow!("The patch is declared here: {}", path.display()))
-                            })
-                            .filter_map_ok(|o| o)
-                            .collect::<Result<Vec<_>>>()?;
-
-                        // If we found any patches, use them. Otherwise use the array from before the merge
-                        // (which already has the correct pathes from the previous recursion).
-                        // TODO: Ideally this would be handled by the `config` crate (this is
+                        // Ideally this would be handled by the `config` crate (this is
                         // already the case for all other "settings" but in this case we also need
                         // to prepend the corresponding directory path).
-                        let patches = if !patches.is_empty() {
-                            patches
-                        } else {
+                        let patches = if patches_before_merge == patches_after_merge {
                             patches_before_merge
+                        } else {
+                            // The patches have changed since the `config.merge()` of the next
+                            // `pkg.toml` file so we have to build the paths to the patch files
+                            // by prepending the path to the directory of the `pkg.toml` file since
+                            // `path` is only available in this "iteration".
+                            patches_after_merge
+                                .into_iter()
+                                // Prepend the path of the directory of the `pkg.toml` file to the name of the patch:
+                                .map(|p| if let Some(current_dir) = path.parent() {
+                                    Ok(current_dir.join(p))
+                                } else {
+                                    Err(anyhow!("Path should point to path with parent, but doesn't: {}", path.display()))
+                                })
+                                .inspect(|patch| trace!("Patch: {:?}", patch))
+                                // If the patch file exists, use it (as config::Value).
+                                // Otherwise we have an error here, because we're referring to a non-existing file:
+                                .and_then_ok(|patch| if patch.exists() {
+                                    Ok(Some(patch))
+                                } else {
+                                    Err(anyhow!("Patch does not exist: {}", patch.display()))
+                                        .with_context(|| anyhow!("The patch is declared here: {}", path.display()))
+                                })
+                                .filter_map_ok(|o| o)
+                                .collect::<Result<Vec<_>>>()?
                         };
 
                         trace!("Patches after postprocessing merge: {:?}", patches);
