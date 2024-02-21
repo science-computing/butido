@@ -52,6 +52,7 @@ impl Repository {
         trace!("Loading files from filesystem");
         let fsr = FileSystemRepresentation::load(path.to_path_buf())?;
 
+        // Helper function to extract the `patches` array from a package config/definition:
         fn get_patches(config: &Config) -> Result<Vec<PathBuf>> {
             match config.get_array("patches") {
                 Ok(v) => v
@@ -86,46 +87,42 @@ impl Repository {
                     .inspect(|(path, _)| trace!("Loading layer at {}", path.display()))
                     .fold(Ok(Config::default()) as Result<_>, |config, (path, content)| {
                         let mut config = config?;
-                        let patches_before_merge = get_patches(&config)?;
 
+                        let patches_before_merge = get_patches(&config)?;
                         config.merge(config::File::from_str(content, config::FileFormat::Toml))
                             .with_context(|| anyhow!("Loading contents of {}", path.display()))?;
+                        let patches_after_merge = get_patches(&config)?;
 
-                        // get the patches that are in the `config` object after the merge
-                        let patches = get_patches(&config)?
-                            .into_iter()
-                            .map(|p| if let Some(current_dir) = path.parent() {
-                                Ok(current_dir.join(p))
-                            } else {
-                                Err(anyhow!("Path should point to path with parent, but doesn't: {}", path.display()))
-                            })
-                            .inspect(|patch| trace!("Patch: {:?}", patch))
-
-                            // if the patch file exists, use it (as config::Value).
-                            //
-                            // Otherwise we have an error here, because we're refering to a non-existing file.
-                            .and_then_ok(|patch| if patch.exists() {
-                                trace!("Path to patch exists: {}", patch.display());
-                                Ok(Some(patch))
-                            } else if patches_before_merge.iter().any(|pb| pb.file_name() == patch.file_name()) {
-                                // We have a patch already in the array that is named equal to the patch
-                                // we have in the fold iteration.
-                                // It seems like this patch was already in the list and we re-found it
-                                // because we loaded a "deeper" pkg.toml file.
-                                Ok(None)
-                            } else {
-                                trace!("Path to patch does not exist: {}", patch.display());
-                                Err(anyhow!("Patch does not exist: {}", patch.display()))
-                            })
-                            .filter_map_ok(|o| o)
-                            .collect::<Result<Vec<_>>>()?;
-
-                        // If we found any patches, use them. Otherwise use the array from before the merge
-                        // (which already has the correct pathes from the previous recursion).
-                        let patches = if !patches.is_empty() {
-                            patches
-                        } else {
+                        // TODO: Get rid of the unnecessarily complex handling of the `patches` configuration setting:
+                        // Ideally this would be handled by the `config` crate (this is
+                        // already the case for all other "settings" but in this case we also need
+                        // to prepend the corresponding directory path).
+                        let patches = if patches_before_merge == patches_after_merge {
                             patches_before_merge
+                        } else {
+                            // The patches have changed since the `config.merge()` of the next
+                            // `pkg.toml` file so we have to build the paths to the patch files
+                            // by prepending the path to the directory of the `pkg.toml` file since
+                            // `path` is only available in this "iteration".
+                            patches_after_merge
+                                .into_iter()
+                                // Prepend the path of the directory of the `pkg.toml` file to the name of the patch:
+                                .map(|p| if let Some(current_dir) = path.parent() {
+                                    Ok(current_dir.join(p))
+                                } else {
+                                    Err(anyhow!("Path should point to path with parent, but doesn't: {}", path.display()))
+                                })
+                                .inspect(|patch| trace!("Patch: {:?}", patch))
+                                // If the patch file exists, use it (as config::Value).
+                                // Otherwise we have an error here, because we're referring to a non-existing file:
+                                .and_then_ok(|patch| if patch.exists() {
+                                    Ok(Some(patch))
+                                } else {
+                                    Err(anyhow!("Patch does not exist: {}", patch.display()))
+                                        .with_context(|| anyhow!("The patch is declared here: {}", path.display()))
+                                })
+                                .filter_map_ok(|o| o)
+                                .collect::<Result<Vec<_>>>()?
                         };
 
                         trace!("Patches after postprocessing merge: {:?}", patches);
@@ -134,7 +131,17 @@ impl Repository {
                             .map(|p| p.display().to_string())
                             .map(config::Value::from)
                             .collect::<Vec<_>>();
-                        config.set_once("patches", config::Value::from(patches))?;
+                        {
+                            // Update the `patches` configuration setting:
+                            let mut patches_config = Config::new();
+                            patches_config.set("patches", config::Value::from(patches))?;
+                            config.merge(patches_config)?;
+                            // Ideally we'd use `config.set()` but that is a permanent override (so
+                            // subsequent `config.merge()` merges won't have an effect on
+                            // "patches"). There's also `config.set_once()` but that only lasts
+                            // until the next `config.merge()` and `config.set_default()` only sets
+                            // a default value.
+                        }
                         Ok(config)
                     })
                     .and_then(|c| c.try_into::<Package>().map_err(Error::from)
@@ -277,12 +284,17 @@ pub mod tests {
 
     #[test]
     fn test_load_example_pkg_repo() -> Result<()> {
-        fn assert_pkg(repo: &Repository, name: &str, version: &str) {
+        use crate::package::Package;
+
+        fn get_pkg(repo: &Repository, name: &str, version: &str) -> Package {
             let constraint =
                 PackageVersionConstraint::from_version(String::from("="), pversion(version));
-            let ps = repo.find_with_version(&pname(name), &constraint);
-            assert_eq!(ps.len(), 1, "Failed to find pkg: {name} ={version}");
-            let p = ps.first().unwrap();
+            let pkgs = repo.find_with_version(&pname(name), &constraint);
+            assert_eq!(pkgs.len(), 1, "Failed to find pkg: {name} ={version}");
+            (*pkgs.first().unwrap()).clone()
+        }
+        fn assert_pkg(repo: &Repository, name: &str, version: &str) {
+            let p = get_pkg(repo, name, version);
             assert_eq!(*p.name(), pname(name));
             assert_eq!(*p.version(), pversion(version));
             assert_eq!(p.sources().len(), 1);
@@ -299,6 +311,39 @@ pub mod tests {
         assert_pkg(&repo, "s", "19.0");
         assert_pkg(&repo, "s", "19.1");
         assert_pkg(&repo, "z", "26");
+
+        // Verify the paths of the patches (and "merging"):
+        // The patches are defined as follows:
+        // s/pkg.toml: patches = [ "./foo.patch" ]
+        // s/19.0/pkg.toml: patches = ["./foo.patch","s190.patch"]
+        // s/19.1/pkg.toml: - (no `patches` entry)
+        // s/19.2/pkg.toml: patches = ["../foo.patch"]
+        // s/19.3/pkg.toml: patches = ["s190.patch"]
+        let p = get_pkg(&repo, "s", "19.0");
+        // Ideally we'd normalize the `./` away:
+        assert_eq!(
+            p.patches(),
+            &vec![
+                PathBuf::from("examples/packages/repo/s/19.0/./foo.patch"),
+                PathBuf::from("examples/packages/repo/s/19.0/s190.patch")
+            ]
+        );
+        let p = get_pkg(&repo, "s", "19.1");
+        assert_eq!(
+            p.patches(),
+            &vec![PathBuf::from("examples/packages/repo/s/foo.patch")]
+        );
+        let p = get_pkg(&repo, "s", "19.2");
+        // We might want to normalize the `19.2/../` away:
+        assert_eq!(
+            p.patches(),
+            &vec![PathBuf::from("examples/packages/repo/s/19.2/../foo.patch")]
+        );
+        let p = get_pkg(&repo, "s", "19.3");
+        assert_eq!(
+            p.patches(),
+            &vec![PathBuf::from("examples/packages/repo/s/19.3/s193.patch")]
+        );
 
         Ok(())
     }
