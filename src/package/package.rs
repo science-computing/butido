@@ -9,6 +9,7 @@
 //
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::path::PathBuf;
 
 use getset::Getters;
@@ -97,6 +98,14 @@ impl Package {
             denied_images: None,
             phases: HashMap::new(),
             meta: None,
+        }
+    }
+
+    // A function to prepend the path of the base directory to the relative paths of the patches
+    // (it usually only makes sense to call this function once!):
+    pub fn set_patches_base_dir(&mut self, dir: &Path) {
+        for patch in self.patches.iter_mut() {
+            *patch = dir.join(patch.as_path());
         }
     }
 

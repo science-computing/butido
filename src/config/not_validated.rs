@@ -157,7 +157,7 @@ fn load_changelog() -> Result<std::collections::HashMap<String, String>> {
 // Helper function to check if the configuration should be compatible before loading (type checking) it:
 pub fn check_compatibility(config: &config::Config) -> Result<()> {
     // We don't use config.get_int() as it is petty lax and, e.g., converts `true` to `1`:
-    let compatibility = config.get_str("compatibility").context(
+    let compatibility = config.get_string("compatibility").context(
         "Make sure that the butido configuration is present and that \"compatibility\" is set",
     )?;
     // Parse the compatibility setting:
@@ -289,6 +289,8 @@ mod tests {
     use super::NotValidatedConfiguration;
     use super::CONFIGURATION_VERSION;
 
+    use anyhow::Result;
+
     #[test]
     // A test to guard against unnecessary runtime failures
     fn test_loading_changelog_toml() {
@@ -301,27 +303,30 @@ mod tests {
     }
 
     // A helper function to load and validate butido configuration files:
-    fn test_loading_configuration_file(file_path: &str) {
-        let mut config = config::Config::default();
-        assert!(config
-            .merge(config::File::with_name(file_path).required(true))
-            .is_ok());
+    fn test_loading_configuration_file(file_path: &str) -> Result<()> {
+        let config = config::Config::builder()
+            .add_source(config::File::with_name(file_path))
+            .build()?;
         assert!(check_compatibility(&config).is_ok());
-        let config = config.try_into::<NotValidatedConfiguration>();
+        let config = config.try_deserialize::<NotValidatedConfiguration>();
         assert!(config.is_ok(), "Config loading failed: {config:?}");
         let config = config.unwrap().validate_config(true);
         assert!(config.is_ok(), "Config validation failed: {config:?}");
+
+        Ok(())
     }
 
     #[test]
     // A test to ensure the example configuration file is up-to-date and valid
-    fn test_loading_example_configuration_file() {
-        test_loading_configuration_file("config.toml");
+    fn test_loading_example_configuration_file() -> Result<()> {
+        test_loading_configuration_file("config.toml")?;
+        Ok(())
     }
 
     #[test]
     // A test to ensure the example repo config file is up-to-date and valid
-    fn test_loading_example_repo_configuration_file() {
-        test_loading_configuration_file("examples/packages/repo/config.toml");
+    fn test_loading_example_repo_configuration_file() -> Result<()> {
+        test_loading_configuration_file("examples/packages/repo/config.toml")?;
+        Ok(())
     }
 }

@@ -128,10 +128,8 @@ async fn main() -> Result<()> {
         .workdir()
         .ok_or_else(|| anyhow!("Not a repository with working directory. Cannot do my job!"))?;
 
-    let mut config = ::config::Config::default();
-    config
-        .merge(::config::File::from(repo_path.join("config.toml")).required(true))
-        .context("Failed to load config.toml from repository")?;
+    let mut config_builder =
+        ::config::Config::builder().add_source(::config::File::from(repo_path.join("config.toml")));
 
     {
         let xdg = xdg::BaseDirectories::with_prefix("butido")?;
@@ -141,9 +139,7 @@ async fn main() -> Result<()> {
                 "Configuration file found with XDG: {}",
                 xdg_config.display()
             );
-            config
-                .merge(::config::File::from(xdg_config).required(false))
-                .context("Failed to load config.toml from XDG configuration directory")?;
+            config_builder = config_builder.add_source(::config::File::from(xdg_config));
         } else {
             debug!(
                 "No configuration file found with XDG: {}",
@@ -152,7 +148,11 @@ async fn main() -> Result<()> {
         }
     }
 
-    config.merge(::config::Environment::with_prefix("BUTIDO"))?;
+    config_builder = config_builder.add_source(::config::Environment::with_prefix("BUTIDO"));
+
+    let config = config_builder
+        .build()
+        .context("Failed to load and build the butido configuration")?;
 
     // Check the "compatibility" setting before loading (type checking) the configuration so that
     // we can better inform the users about required changes:
@@ -160,7 +160,7 @@ async fn main() -> Result<()> {
         .context("The butido configuration failed the compatibility check")?;
 
     let config = config
-        .try_into::<NotValidatedConfiguration>()
+        .try_deserialize::<NotValidatedConfiguration>()
         .context("Failed to load (type check) the butido configuration")?
         .validate()
         .context("Failed to validate the butido configuration")?;

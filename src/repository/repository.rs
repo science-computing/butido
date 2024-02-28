@@ -16,9 +16,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use resiter::AndThen;
-use resiter::FilterMap;
-use resiter::Map;
 use tracing::trace;
 
 use crate::package::Package;
@@ -52,22 +49,6 @@ impl Repository {
         trace!("Loading files from filesystem");
         let fsr = FileSystemRepresentation::load(path.to_path_buf())?;
 
-        // Helper function to extract the `patches` array from a package config/definition:
-        fn get_patches(config: &Config) -> Result<Vec<PathBuf>> {
-            match config.get_array("patches") {
-                Ok(v) => v
-                    .into_iter()
-                    .map(config::Value::into_str)
-                    .map_err(Error::from)
-                    .map_err(|e| e.context("patches must be strings"))
-                    .map_err(Error::from)
-                    .map_ok(PathBuf::from)
-                    .collect(),
-                Err(config::ConfigError::NotFound(_)) => Ok(Vec::with_capacity(0)),
-                Err(e) => Err(Error::from(e)),
-            }
-        }
-
         let leaf_files = fsr
             .files()
             .par_iter()
@@ -78,75 +59,69 @@ impl Repository {
                 Err(e) => Some(Err(e)),
             });
         progress.set_length(leaf_files.clone().count().try_into()?);
-        leaf_files.inspect(|r| trace!("Loading files for {:?}", r))
+        leaf_files
+            .inspect(|r| trace!("Loading files for {:?}", r))
             .map(|path| {
                 progress.inc(1);
                 let path = path?;
-                fsr.get_files_for(path)?
+                let config = fsr.get_files_for(path)?
                     .iter()
+                    // Load all "layers":
                     .inspect(|(path, _)| trace!("Loading layer at {}", path.display()))
-                    .fold(Ok(Config::default()) as Result<_>, |config, (path, content)| {
-                        let mut config = config?;
-
-                        let patches_before_merge = get_patches(&config)?;
-                        config.merge(config::File::from_str(content, config::FileFormat::Toml))
-                            .with_context(|| anyhow!("Loading contents of {}", path.display()))?;
-                        let patches_after_merge = get_patches(&config)?;
-
-                        // TODO: Get rid of the unnecessarily complex handling of the `patches` configuration setting:
-                        // Ideally this would be handled by the `config` crate (this is
-                        // already the case for all other "settings" but in this case we also need
-                        // to prepend the corresponding directory path).
-                        let patches = if patches_before_merge == patches_after_merge {
-                            patches_before_merge
-                        } else {
-                            // The patches have changed since the `config.merge()` of the next
-                            // `pkg.toml` file so we have to build the paths to the patch files
-                            // by prepending the path to the directory of the `pkg.toml` file since
-                            // `path` is only available in this "iteration".
-                            patches_after_merge
-                                .into_iter()
-                                // Prepend the path of the directory of the `pkg.toml` file to the name of the patch:
-                                .map(|p| if let Some(current_dir) = path.parent() {
-                                    Ok(current_dir.join(p))
-                                } else {
-                                    Err(anyhow!("Path should point to path with parent, but doesn't: {}", path.display()))
-                                })
-                                .inspect(|patch| trace!("Patch: {:?}", patch))
-                                // If the patch file exists, use it (as config::Value).
-                                // Otherwise we have an error here, because we're referring to a non-existing file:
-                                .and_then_ok(|patch| if patch.exists() {
-                                    Ok(Some(patch))
-                                } else {
-                                    Err(anyhow!("Patch does not exist: {}", patch.display()))
-                                        .with_context(|| anyhow!("The patch is declared here: {}", path.display()))
-                                })
-                                .filter_map_ok(|o| o)
-                                .collect::<Result<Vec<_>>>()?
-                        };
-
-                        trace!("Patches after postprocessing merge: {:?}", patches);
-                        let patches = patches
-                            .into_iter()
-                            .map(|p| p.display().to_string())
-                            .map(config::Value::from)
-                            .collect::<Vec<_>>();
-                        {
-                            // Update the `patches` configuration setting:
-                            let mut patches_config = Config::new();
-                            patches_config.set("patches", config::Value::from(patches))?;
-                            config.merge(patches_config)?;
-                            // Ideally we'd use `config.set()` but that is a permanent override (so
-                            // subsequent `config.merge()` merges won't have an effect on
-                            // "patches"). There's also `config.set_once()` but that only lasts
-                            // until the next `config.merge()` and `config.set_default()` only sets
-                            // a default value.
-                        }
-                        Ok(config)
+                    .fold(Config::builder(), |config_builder, (path, content)| {
+                        use crate::repository::pkg_toml_source::PkgTomlSource;
+                        config_builder.add_source(PkgTomlSource::new(path, (*content).to_string()))
                     })
-                    .and_then(|c| c.try_into::<Package>().map_err(Error::from)
-                        .with_context(|| anyhow!("Could not load package configuration: {}", path.display())))
-                    .map(|pkg| ((pkg.name().clone(), pkg.version().clone()), pkg))
+                    .build()?;
+
+                let patches_value = config.get_array("patches");
+                let mut pkg = config
+                    .try_deserialize::<Package>()
+                    .map_err(Error::from)
+                    .with_context(|| {
+                        anyhow!("Could not load package configuration: {}", path.display())
+                    })?;
+
+                if !pkg.patches().is_empty() {
+                    // We have to build the full relative paths to the patch files by
+                    // prepending the path to the directory of the `pkg.toml` file they've
+                    // been defined in so that they can be found later.
+                    let patches = patches_value.context(anyhow!(
+                        "Bug: Could not get the \"patches\" value for: {}",
+                        path.display()
+                    ))?;
+                    let first_patch_value = patches.first().ok_or(anyhow!(
+                        "Bug: Could not get the first \"patches\" entry for: {}",
+                        path.display()
+                    ))?;
+                    // Get the origin (path to the `pkg.toml` file) for the "patches"
+                    // setting (it must currently be the same for all array entries):
+                    let origin_path = first_patch_value.origin().map(PathBuf::from).ok_or(anyhow!(
+                        "Bug: Could not get the origin of the first \"patches\" entry for: {}",
+                        path.display()
+                    ))?;
+                    // Note: `parent()` only "Returns None if the path terminates in a root
+                    // or prefix, or if it’s the empty string." so this should never happen:
+                    let origin_dir_path = origin_path.parent().ok_or(anyhow!(
+                        "Bug: Could not get the origin's parent of the first \"patches\" entry for: {}",
+                        path.display()
+                    ))?;
+                    pkg.set_patches_base_dir(origin_dir_path);
+                    // Check if the patches exist:
+                    for patch in pkg.patches() {
+                        if !patch.exists() {
+                            return Err(anyhow!(
+                                "Patch does not exist: {}",
+                                patch.display()
+                            ))
+                            .with_context(|| {
+                                anyhow!("The patch is declared here: {}", path.display())
+                            });
+                        }
+                    }
+                }
+
+                Ok(((pkg.name().clone(), pkg.version().clone()), pkg))
             })
             .collect::<Result<BTreeMap<_, _>>>()
             .map(Repository::new)
