@@ -13,4 +13,3 @@ mod repository;
 pub use repository::*;
 
 mod fs;
-mod pkg_toml_source;
