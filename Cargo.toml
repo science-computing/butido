@@ -49,7 +49,7 @@ indicatif = "0.17"
 indoc = "2"
 itertools = "0.12"
 lazy_static = "1"
-parse-display = "0.8"
+parse-display = "0.9"
 pom = "3"
 ptree = { version = "0.4", default-features = false }
 rand = "0.8"
