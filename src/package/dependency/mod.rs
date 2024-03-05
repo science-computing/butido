@@ -36,7 +36,7 @@ pub trait ParseDependency {
 
 lazy_static! {
     pub(in crate::package::dependency)  static ref DEPENDENCY_PARSING_RE: Regex =
-        Regex::new("^(?P<name>[[:alpha:]]([[[:alnum:]]\\.\\-_])*) (?P<version>([\\*=><])?[[:alnum:]]([[[:alnum:]][[:punct:]]])*)$").unwrap();
+        Regex::new("^(?P<name>[[:alnum:]]([[[:alnum:]]\\.\\-_])*) (?P<version>([\\*=><])?[[:alnum:]]([[[:alnum:]][[:punct:]]])*)$").unwrap();
 }
 
 /// Helper function for the actual implementation of the ParseDependency trait.
@@ -135,6 +135,20 @@ mod tests {
         assert_eq!(
             c,
             PackageVersionConstraint::from_version(String::from("="), exact("0.123"))
+        );
+    }
+
+    #[test]
+    fn test_dependency_string_where_pkg_starts_with_number() {
+        let s = "7z =42";
+        let d = Dependency::from(String::from(s));
+
+        let (n, c) = d.parse_as_name_and_version().unwrap();
+
+        assert_eq!(n, name("7z"));
+        assert_eq!(
+            c,
+            PackageVersionConstraint::from_version(String::from("="), exact("42"))
         );
     }
 }
