@@ -35,6 +35,11 @@ pub trait ParseDependency {
 }
 
 lazy_static! {
+    // The following regex could be simplified significantly since we basically only need the space
+    // (" ") for splitting name and version (and both shouldn't be empty) - the rest of the
+    // validation could and probably should be done when parsing `name` and `version` (can make the
+    // errors more precise and we avoid that the regex diverges from the rest of the validation as
+    // it's already the case):
     pub(in crate::package::dependency)  static ref DEPENDENCY_PARSING_RE: Regex =
         Regex::new("^(?P<name>[[:alnum:]][[:alnum:]._-]*) (?P<version>[*=><]?[[:alnum:]][[:alnum:][:punct:]]*)$").unwrap();
 }
@@ -149,5 +154,12 @@ mod tests {
         dep_parse_expect_err("a\\ =42");
         dep_parse_expect_err("a =.0");
         dep_parse_expect_err("a =");
+        dep_parse_expect_err("");
+        dep_parse_expect_err(" ");
+        // Not supported yet:
+        dep_parse_expect_err("a *");
+        dep_parse_expect_err("a >2");
+        dep_parse_expect_err("a <2");
+        dep_parse_expect_err("a 42");
     }
 }
