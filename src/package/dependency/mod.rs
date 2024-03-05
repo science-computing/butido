@@ -36,7 +36,7 @@ pub trait ParseDependency {
 
 lazy_static! {
     pub(in crate::package::dependency)  static ref DEPENDENCY_PARSING_RE: Regex =
-        Regex::new("^(?P<name>[[:alnum:]]([[[:alnum:]]\\.\\-_])*) (?P<version>([\\*=><])?[[:alnum:]]([[[:alnum:]][[:punct:]]])*)$").unwrap();
+        Regex::new("^(?P<name>[[:alnum:]][[[:alnum:]]\\.\\-_]*) (?P<version>[\\*=><]?[[:alnum:]][[[:alnum:]][[:punct:]]]*)$").unwrap();
 }
 
 /// Helper function for the actual implementation of the ParseDependency trait.
