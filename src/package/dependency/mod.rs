@@ -84,12 +84,27 @@ mod tests {
     // helper functions
     //
 
-    fn name(s: &'static str) -> PackageName {
-        PackageName::from(String::from(s))
-    }
+    fn dep_parse_test(name: &'static str, version: &'static str) {
+        let name = name.to_string();
+        let version = version.to_string();
 
-    fn exact(s: &'static str) -> PackageVersion {
-        PackageVersion::from(String::from(s))
+        let dependency_specification = format!("{name} ={version}");
+        let dep = Dependency::from(dependency_specification.clone());
+        let (dep_name, dep_version_constraint) = dep.parse_as_name_and_version().unwrap();
+
+        let version_constraint = PackageVersionConstraint::from_version(
+            String::from("="),
+            PackageVersion::from(version),
+        );
+        assert_eq!(
+            dep_name,
+            PackageName::from(name),
+            "Name check failed for input: {dependency_specification}"
+        );
+        assert_eq!(
+            dep_version_constraint, version_constraint,
+            "Version constraint check failed for input: {dependency_specification}"
+        );
     }
 
     //
@@ -98,57 +113,21 @@ mod tests {
 
     #[test]
     fn test_dependency_conversion_1() {
-        let s = "vim =8.2";
-        let d = Dependency::from(String::from(s));
-
-        let (n, c) = d.parse_as_name_and_version().unwrap();
-
-        assert_eq!(n, name("vim"));
-        assert_eq!(
-            c,
-            PackageVersionConstraint::from_version(String::from("="), exact("8.2"))
-        );
+        dep_parse_test("vim", "8.2");
     }
 
     #[test]
     fn test_dependency_conversion_2() {
-        let s = "gtk15 =1b";
-        let d = Dependency::from(String::from(s));
-
-        let (n, c) = d.parse_as_name_and_version().unwrap();
-
-        assert_eq!(n, name("gtk15"));
-        assert_eq!(
-            c,
-            PackageVersionConstraint::from_version(String::from("="), exact("1b"))
-        );
+        dep_parse_test("gtk15", "1b");
     }
 
     #[test]
     fn test_dependency_string_with_punctuation() {
-        let s = "foo-bar1.2.3 =0.123";
-        let d = Dependency::from(String::from(s));
-
-        let (n, c) = d.parse_as_name_and_version().unwrap();
-
-        assert_eq!(n, name("foo-bar1.2.3"));
-        assert_eq!(
-            c,
-            PackageVersionConstraint::from_version(String::from("="), exact("0.123"))
-        );
+        dep_parse_test("foo-bar1.2.3", "0.123");
     }
 
     #[test]
     fn test_dependency_string_where_pkg_starts_with_number() {
-        let s = "7z =42";
-        let d = Dependency::from(String::from(s));
-
-        let (n, c) = d.parse_as_name_and_version().unwrap();
-
-        assert_eq!(n, name("7z"));
-        assert_eq!(
-            c,
-            PackageVersionConstraint::from_version(String::from("="), exact("42"))
-        );
+        dep_parse_test("7z", "42");
     }
 }
