@@ -107,6 +107,15 @@ mod tests {
         );
     }
 
+    fn dep_parse_expect_err(dependency_specification: &'static str) {
+        let dep = Dependency::from(dependency_specification.to_string());
+        let result = dep.parse_as_name_and_version();
+        assert!(
+            result.is_err(),
+            "Should not be able to parse this input: {dependency_specification}"
+        );
+    }
+
     //
     // tests
     //
@@ -129,5 +138,16 @@ mod tests {
     #[test]
     fn test_dependency_string_where_pkg_starts_with_number() {
         dep_parse_test("7z", "42");
+    }
+
+    #[test]
+    fn test_complex_dependency_parsing() {
+        dep_parse_test("0ad_", "42");
+        dep_parse_test("2048-cli_0.0", "42");
+
+        dep_parse_expect_err("0] =42");
+        dep_parse_expect_err("a\\ =42");
+        dep_parse_expect_err("a =.0");
+        dep_parse_expect_err("a =");
     }
 }
