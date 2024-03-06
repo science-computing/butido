@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::concat;
 use std::convert::TryFrom;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -30,6 +31,7 @@ use crate::source::*;
 use crate::util::progress::ProgressBars;
 
 const NUMBER_OF_MAX_CONCURRENT_DOWNLOADS: usize = 100;
+const APP_USER_AGENT: &str = concat! {env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")};
 
 /// A wrapper around the indicatif::ProgressBar
 ///
@@ -116,8 +118,9 @@ async fn perform_download(
 ) -> Result<()> {
     trace!("Downloading: {:?}", source);
 
-    let client_builder =
-        reqwest::Client::builder().redirect(reqwest::redirect::Policy::limited(10));
+    let client_builder = reqwest::Client::builder()
+        .user_agent(APP_USER_AGENT)
+        .redirect(reqwest::redirect::Policy::limited(10));
 
     let client_builder = if let Some(to) = timeout {
         client_builder.timeout(std::time::Duration::from_secs(to))
