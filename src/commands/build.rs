@@ -35,6 +35,7 @@ use tracing::{debug, info, trace, warn};
 use uuid::Uuid;
 
 use crate::config::*;
+use crate::db::models::{EnvVar, GitHash, Image, Job, Package, Submit};
 use crate::filestore::path::StoreRoot;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
@@ -49,6 +50,7 @@ use crate::package::Shebang;
 use crate::repository::Repository;
 use crate::schema;
 use crate::source::SourceCache;
+use crate::util::docker::resolve_image_name;
 use crate::util::progress::ProgressBars;
 use crate::util::EnvironmentVariableName;
 
@@ -63,9 +65,6 @@ pub async fn build(
     repo: Repository,
     repo_path: &Path,
 ) -> Result<()> {
-    use crate::db::models::{EnvVar, GitHash, Image, Job, Package, Submit};
-    use crate::util::docker::resolve_image_name;
-
     let git_repo = git2::Repository::open(repo_path)
         .with_context(|| anyhow!("Opening repository at {}", repo_path.display()))?;
 
