@@ -58,6 +58,7 @@ use clap::ArgMatches;
 #[rustversion::since(1.76)]
 use result_inspect as _;
 use tracing::{debug, error};
+use tracing_subscriber::layer::SubscriberExt;
 
 mod cli;
 mod commands;
@@ -98,17 +99,28 @@ async fn main() -> Result<()> {
         homepage: "atos.net/de/deutschland/sc".into(),
     });
 
-    tracing_subscriber::fmt::fmt()
+    let app = cli::cli();
+    let cli = app.get_matches();
+
+    let (chrome_layer, _guard) = match cli
+        .get_flag("tracing-chrome")
+        .then(|| tracing_chrome::ChromeLayerBuilder::new().build())
+    {
+        Some((chrome_layer, guard)) => (Some(chrome_layer), Some(guard)),
+        _ => (None, None),
+    };
+
+    let subscriber = tracing_subscriber::fmt::fmt()
         .with_env_filter(
             tracing_subscriber::filter::EnvFilter::builder()
                 .with_default_directive(tracing_subscriber::filter::LevelFilter::WARN.into())
                 .from_env_lossy(),
         )
-        .init();
-    debug!("Debugging enabled");
+        .finish()
+        .with(chrome_layer);
 
-    let app = cli::cli();
-    let cli = app.get_matches();
+    tracing::subscriber::set_global_default(subscriber)?;
+    debug!("Debugging enabled");
 
     // check if the version flag is set
     if cli.get_flag("version") {
