@@ -8,7 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::convert::TryFrom;
 use std::path::Component;
 
 use anyhow::anyhow;

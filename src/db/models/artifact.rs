@@ -17,7 +17,6 @@ use anyhow::Error;
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use diesel::PgConnection;
 
 use crate::db::models::Job;
 use crate::db::models::Release;

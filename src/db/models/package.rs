@@ -13,7 +13,6 @@ use std::ops::Deref;
 use anyhow::Error;
 use anyhow::Result;
 use diesel::prelude::*;
-use diesel::PgConnection;
 
 use crate::schema::packages;
 use crate::schema::packages::*;

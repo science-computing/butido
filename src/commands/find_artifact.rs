@@ -10,7 +10,6 @@
 
 //! Implementation of the 'find-artifact' subcommand
 
-use std::convert::TryFrom;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;

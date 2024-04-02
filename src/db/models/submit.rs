@@ -13,7 +13,6 @@ use anyhow::Error;
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use diesel::PgConnection;
 
 use crate::db::models::GitHash;
 use crate::db::models::Image;

@@ -319,8 +319,6 @@ mod tests {
     use crate::package::Dependency;
     use crate::util::docker::ImageName;
 
-    use indicatif::ProgressBar;
-
     #[test]
     fn test_add_package() {
         let mut btree = BTreeMap::new();

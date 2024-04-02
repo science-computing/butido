@@ -145,8 +145,6 @@ pub fn parser<'a>() -> PomParser<'a, u8, LogItem> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::Error;
-    use anyhow::Result;
 
     // Helper function for showing log item in error message in pretty
     fn prettify_item(e: &LogItem) -> String {

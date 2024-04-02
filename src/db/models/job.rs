@@ -12,7 +12,6 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use diesel::prelude::*;
-use diesel::PgConnection;
 use tracing::trace;
 
 use crate::db::models::{Endpoint, Image, Package, Submit};

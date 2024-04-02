@@ -10,7 +10,6 @@
 
 use anyhow::Result;
 use diesel::prelude::*;
-use diesel::PgConnection;
 
 use crate::db::models::EnvVar;
 use crate::db::models::Job;

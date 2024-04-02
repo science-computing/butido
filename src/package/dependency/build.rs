@@ -14,7 +14,6 @@ use serde::Serialize;
 
 use crate::package::dependency::condition::Condition;
 use crate::package::dependency::ParseDependency;
-use crate::package::dependency::StringEqual;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 
@@ -31,15 +30,6 @@ impl AsRef<str> for BuildDependency {
         match self {
             BuildDependency::Simple(name) => name,
             BuildDependency::Conditional { name, .. } => name,
-        }
-    }
-}
-
-impl StringEqual for BuildDependency {
-    fn str_equal(&self, s: &str) -> bool {
-        match self {
-            BuildDependency::Simple(name) => name == s,
-            BuildDependency::Conditional { name, .. } => name == s,
         }
     }
 }

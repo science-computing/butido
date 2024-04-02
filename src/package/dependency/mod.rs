@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::convert::TryFrom;
-
 use anyhow::anyhow;
 use anyhow::Result;
 use lazy_static::lazy_static;
@@ -25,10 +23,6 @@ mod runtime;
 pub use runtime::*;
 
 pub mod condition;
-
-pub trait StringEqual {
-    fn str_equal(&self, s: &str) -> bool;
-}
 
 pub trait ParseDependency {
     fn parse_as_name_and_version(&self) -> Result<(PackageName, PackageVersionConstraint)>;
@@ -82,7 +76,6 @@ pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_
 mod tests {
     use super::*;
 
-    use crate::package::PackageName;
     use crate::package::PackageVersion;
 
     //
