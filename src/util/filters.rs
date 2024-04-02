@@ -91,7 +91,6 @@ mod tests {
     use std::collections::BTreeMap;
 
     use resiter::Filter;
-    use resiter::Map;
 
     use crate::package::tests::package;
     use crate::package::tests::pname;

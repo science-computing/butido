@@ -76,7 +76,6 @@ pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_
 mod tests {
     use super::*;
 
-    use crate::package::PackageName;
     use crate::package::PackageVersion;
 
     //

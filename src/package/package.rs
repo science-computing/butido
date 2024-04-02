@@ -276,11 +276,7 @@ impl Dependencies {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::package::Dependencies;
-    use crate::package::HashType;
-    use crate::package::HashValue;
-    use crate::package::Source;
-    use crate::package::SourceHash;
+
     use url::Url;
 
     /// helper function for quick object construction
