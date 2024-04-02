@@ -16,8 +16,6 @@ use anyhow::Error;
 use anyhow::Result;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
-#[rustversion::before(1.76)]
-use result_inspect::ResultInspect;
 use tracing::trace;
 
 use crate::filestore::path::ArtifactPath;

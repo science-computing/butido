@@ -19,8 +19,6 @@ use anyhow::Error;
 use anyhow::Result;
 use futures::FutureExt;
 use getset::{CopyGetters, Getters};
-#[rustversion::before(1.76)]
-use result_inspect::ResultInspect;
 use shiplift::Container;
 use shiplift::Docker;
 use shiplift::ExecContainerOptions;

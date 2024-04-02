@@ -244,7 +244,6 @@ dependencies = [
  "regex",
  "reqwest",
  "resiter",
- "result-inspect",
  "rlimit",
  "rustversion",
  "serde",
@@ -1983,12 +1982,6 @@ name = "resiter"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cbc95d56eb1865f69288945759cc0879d60ee68168dce676730275804ad2b276"
-
-[[package]]
-name = "result-inspect"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7a950f8ecfa2029aec35fed979f0a412e593926f67bf771f7b98509b08db160"
 
 [[package]]
 name = "rlimit"
