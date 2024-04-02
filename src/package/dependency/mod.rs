@@ -26,10 +26,6 @@ pub use runtime::*;
 
 pub mod condition;
 
-pub trait StringEqual {
-    fn str_equal(&self, s: &str) -> bool;
-}
-
 pub trait ParseDependency {
     fn parse_as_name_and_version(&self) -> Result<(PackageName, PackageVersionConstraint)>;
 }
