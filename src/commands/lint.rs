@@ -10,7 +10,6 @@
 
 //! Implementation of the 'lint' subcommand
 
-use std::convert::TryFrom;
 use std::path::Path;
 
 use anyhow::anyhow;

@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use std::convert::TryFrom;
-
 use anyhow::anyhow;
 use anyhow::Result;
 use lazy_static::lazy_static;

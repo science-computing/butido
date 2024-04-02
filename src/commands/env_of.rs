@@ -10,8 +10,6 @@
 
 //! Implementation of the 'env-of' subcommand
 
-use std::convert::TryFrom;
-
 use anyhow::Result;
 use clap::ArgMatches;
 use tracing::trace;

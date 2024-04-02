@@ -10,8 +10,6 @@
 
 //! Implementation of the 'find-pkg' subcommand
 
-use std::convert::TryFrom;
-
 use anyhow::Context;
 use anyhow::Result;
 use clap::ArgMatches;

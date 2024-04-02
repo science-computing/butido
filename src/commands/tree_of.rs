@@ -10,8 +10,6 @@
 
 //! Implementation of the 'tree-of' subcommand
 
-use std::convert::TryFrom;
-
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;

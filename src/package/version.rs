@@ -51,7 +51,7 @@ impl PackageVersionConstraint {
     }
 }
 
-impl std::convert::TryFrom<String> for PackageVersionConstraint {
+impl TryFrom<String> for PackageVersionConstraint {
     type Error = anyhow::Error;
 
     fn try_from(s: String) -> Result<Self> {
@@ -59,7 +59,7 @@ impl std::convert::TryFrom<String> for PackageVersionConstraint {
     }
 }
 
-impl std::convert::TryFrom<&str> for PackageVersionConstraint {
+impl TryFrom<&str> for PackageVersionConstraint {
     type Error = anyhow::Error;
 
     fn try_from(s: &str) -> Result<Self> {
