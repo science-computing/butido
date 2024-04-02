@@ -298,7 +298,7 @@ mod tests {
         assert!(changelog.is_ok());
         let changelog = changelog.unwrap();
         for i in 0..=CONFIGURATION_VERSION {
-            assert!(changelog.get(&i.to_string()).is_some());
+            assert!(changelog.contains_key(&i.to_string()));
         }
     }
 
