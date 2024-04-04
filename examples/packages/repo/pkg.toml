@@ -12,7 +12,7 @@ download_manually = false
 [phases]
 
 sourcecheck.script = '''
-    filename="/inputs/src-{{this.sources.src.hash.hash}}.source"
+    filename="/inputs/src.source"
     [[ -e $filename ]] || {
         echo  "MISSING: $filename"
         {{state "ERR" "Missing input"}}
@@ -50,4 +50,3 @@ build.script = '''
 
     {{state "OK"}}
 '''
-
