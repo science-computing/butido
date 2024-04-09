@@ -31,6 +31,7 @@ use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
+use tracing::Instrument;
 use tracing::{debug, error, trace};
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
@@ -267,6 +268,14 @@ impl<'a> Orchestrator<'a> {
     }
 
     async fn run_tree(self) -> Result<(Vec<ArtifactPath>, HashMap<Uuid, Error>)> {
+        let prepare_span = tracing::debug_span!("run tree preparation");
+
+        // There is no async code until we drop this guard, so this is fine
+        //
+        // WARNING: If async/await code is added between this and `drop(prepare_span_guard)`, the
+        // traces from this span _will_ be wrong.
+        let prepare_span_guard = prepare_span.enter();
+
         let multibar = Arc::new({
             let mp = indicatif::MultiProgress::new();
             if self.progress_generator.hide() {
@@ -319,8 +328,8 @@ impl<'a> Orchestrator<'a> {
                 let (sender, receiver) = tokio::sync::mpsc::channel(100);
 
                 trace!(
-                    "Creating TaskPreparation object for job {}",
-                    jobdef.job.uuid()
+                    job_uuid = %jobdef.job.uuid(),
+                    "Creating TaskPreparation object for job"
                 );
                 let bar = self.progress_generator.bar()?;
                 let bar = multibar.add(bar);
@@ -389,6 +398,7 @@ impl<'a> Orchestrator<'a> {
                     .collect::<Result<Vec<Sender<JobResult>>>>()?;
 
                 trace!(
+                    job_uuid = %job.1.jobdef.job.uuid(),
                     "{:?} is depending on {}",
                     depending_on_job,
                     job.1.jobdef.job.uuid()
@@ -415,7 +425,7 @@ impl<'a> Orchestrator<'a> {
             .find(|j| j.3.borrow().is_none())
             .ok_or_else(|| anyhow!("Failed to find root task"))?;
         let root_job_id = root_job.1.jobdef.job.uuid();
-        trace!("Root job id = {}", root_job_id);
+        trace!(%root_job_id, "Root job id found");
         // Move the progress bar for the root task to the bottom to ensure that it will be visible
         // without having to scroll up (the MultiProgress implementation doesn't let us modify the
         // order so we have to remove and re-add it - it works despite the clone because
@@ -427,6 +437,10 @@ impl<'a> Orchestrator<'a> {
         // Create a sender and a receiver for the root of the tree
         let (root_sender, mut root_receiver) = tokio::sync::mpsc::channel(100);
 
+        // preparation ended
+        drop(prepare_span_guard);
+        drop(prepare_span);
+
         // Make all prepared jobs into real jobs and run them
         //
         // This maps each TaskPreparation with its sender and receiver to a JobTask and calls the
@@ -434,10 +448,11 @@ impl<'a> Orchestrator<'a> {
         //
         // The JobTask::run implementation handles the rest, we just have to wait for all futures
         // to succeed.
+        let run_span = tracing::debug_span!("run");
         let running_jobs = jobs
             .into_iter()
             .map(|prep| {
-                trace!("Creating JobTask for = {}", prep.1.jobdef.job.uuid());
+                trace!(parent: &run_span, job_uuid = %prep.1.jobdef.job.uuid(), "Creating JobTask");
                 // the sender is set or we need to use the root sender
                 let sender = prep
                     .3
@@ -445,13 +460,23 @@ impl<'a> Orchestrator<'a> {
                     .unwrap_or_else(|| vec![root_sender.clone()]);
                 JobTask::new(prep.0, prep.1, sender)
             })
-            .inspect(|task| trace!("Running: {}", task.jobdef.job.uuid()))
-            .map(|task| task.run())
+            .inspect(
+                |task| trace!(parent: &run_span, job_uuid = %task.jobdef.job.uuid(), "Running job"),
+            )
+            .map(|task| {
+                task.run()
+                    .instrument(tracing::debug_span!(parent: &run_span, "JobTask::run"))
+            })
             .collect::<futures::stream::FuturesUnordered<_>>();
         debug!("Built {} jobs", running_jobs.len());
 
-        running_jobs.collect::<Result<()>>().await?;
-        trace!("All jobs finished");
+        running_jobs
+            .collect::<Result<()>>()
+            .instrument(run_span.clone())
+            .await?;
+        trace!(parent: &run_span, "All jobs finished");
+        drop(run_span);
+
         match root_receiver.recv().await {
             None => Err(anyhow!("No result received...")),
             Some(Ok(results)) => {
@@ -588,10 +613,10 @@ impl<'a> JobTask<'a> {
     /// This function runs the job from this object on the scheduler as soon as all dependend jobs
     /// returned successfully.
     async fn run(mut self) -> Result<()> {
-        debug!("[{}]: Running", self.jobdef.job.uuid());
+        debug!(job_uuid = %self.jobdef.job.uuid(), "Running");
         debug!(
-            "[{}]: Waiting for dependencies = {:?}",
-            self.jobdef.job.uuid(),
+            job_uuid = %self.jobdef.job.uuid(),
+            "Waiting for dependencies = {:?}",
             {
                 self.jobdef
                     .dependencies
@@ -618,6 +643,7 @@ impl<'a> JobTask<'a> {
         };
 
         // as long as the job definition lists dependencies that are not in the received_dependencies list...
+        let dependency_receiving_span = tracing::debug_span!("receiving dependencies");
         while !all_dependencies_are_in(&self.jobdef.dependencies, &received_dependencies) {
             // Update the status bar message
             self.bar.set_message({
@@ -633,30 +659,32 @@ impl<'a> JobTask<'a> {
                     dep_len
                 )
             });
-            trace!("[{}]: Updated bar", self.jobdef.job.uuid());
+            trace!(job_uuid = %self.jobdef.job.uuid(), "Updated bar");
 
-            trace!("[{}]: receiving...", self.jobdef.job.uuid());
-            // receive from the receiver
-            let continue_receiving = self
-                .perform_receive(&mut received_dependencies, &mut received_errors)
-                .await?;
+            let continue_receiving = {
+                let recv_span = tracing::trace_span!(parent: &dependency_receiving_span, "receiving", job_uuid = %self.jobdef.job.uuid(), errors = tracing::field::Empty);
+                // receive from the receiver
+                let continue_receiving = self
+                    .perform_receive(&mut received_dependencies, &mut received_errors)
+                    .instrument(recv_span.clone())
+                    .await?;
+                recv_span.record(
+                    "errors",
+                    tracing::field::display(&received_errors.display_error_map()),
+                );
+                continue_receiving
+            };
 
-            trace!(
-                "[{}]: Received errors = {}",
-                self.jobdef.job.uuid(),
-                received_errors.display_error_map()
-            );
             // if there are any errors from child tasks
             if !received_errors.is_empty() {
                 // send them to the parent,...
                 //
                 // We only send to one parent, because it doesn't matter
                 // And we know that we have at least one sender
-                error!(
-                    "[{}]: Received errors = {}",
-                    self.jobdef.job.uuid(),
-                    received_errors.display_error_map()
-                );
+                error!(parent: &dependency_receiving_span,
+                       job_uuid = %self.jobdef.job.uuid(),
+                       errors = tracing::field::display(&received_errors.display_error_map()),
+                       "Received errors");
                 self.sender[0].send(Err(received_errors)).await;
 
                 // ... and stop operation, because the whole tree will fail anyways.
@@ -673,6 +701,7 @@ impl<'a> JobTask<'a> {
                 break;
             }
         }
+        drop(dependency_receiving_span);
 
         // Check if any of the received dependencies was built (and not reused).
         // If any dependency was built, we need to build as well.
@@ -729,14 +758,14 @@ impl<'a> JobTask<'a> {
                 .run()?;
 
             debug!(
-                "[{}]: Found {} replacement artifacts",
-                self.jobdef.job.uuid(),
-                replacement_artifacts.len()
+                job_uuid = %self.jobdef.job.uuid(),
+                replacement_artifacts_count = replacement_artifacts.len(),
+                "Found replacement artifacts",
             );
             trace!(
-                "[{}]: Found replacement artifacts: {:?}",
-                self.jobdef.job.uuid(),
-                replacement_artifacts
+                job_uuid = %self.jobdef.job.uuid(),
+                ?replacement_artifacts,
+                "Found replacement artifacts",
             );
             let mut artifacts = replacement_artifacts
                 .into_iter()
@@ -770,11 +799,7 @@ impl<'a> JobTask<'a> {
 
             if !artifacts.is_empty() {
                 received_dependencies.insert(*self.jobdef.job.uuid(), artifacts);
-                trace!(
-                    "[{}]: Sending to parent: {:?}",
-                    self.jobdef.job.uuid(),
-                    received_dependencies
-                );
+                trace!(job_uuid = %self.jobdef.job.uuid(), "Sending to parent: {:?}", received_dependencies);
                 for s in self.sender.iter() {
                     s.send(Ok(received_dependencies.clone()))
                         .await
@@ -809,8 +834,8 @@ impl<'a> JobTask<'a> {
             .cloned()
             .collect::<Vec<ArtifactPath>>();
         trace!(
-            "[{}]: Dependency artifacts = {:?}",
-            self.jobdef.job.uuid(),
+            job_uuid = %self.jobdef.job.uuid(),
+            "Dependency artifacts = {:?}",
             dependency_artifacts
         );
         self.bar.set_message(format!(
@@ -847,11 +872,7 @@ impl<'a> JobTask<'a> {
             .await?
         {
             Err(e) => {
-                trace!(
-                    "[{}]: Scheduler returned error = {:?}",
-                    self.jobdef.job.uuid(),
-                    e
-                );
+                trace!(job_uuid = %self.jobdef.job.uuid(), "Scheduler returned error = {:?}", e);
                 // ... and we send that to our parent
                 //
                 // We only send to one parent, because it doesn't matter anymore
@@ -874,8 +895,8 @@ impl<'a> JobTask<'a> {
             // it returns the database artifact objects it created!
             Ok(artifacts) => {
                 trace!(
-                    "[{}]: Scheduler returned artifacts = {:?}",
-                    self.jobdef.job.uuid(),
+                    job_uuid = %self.jobdef.job.uuid(),
+                    "Scheduler returned artifacts = {:?}",
                     artifacts
                 );
 
@@ -910,22 +931,22 @@ impl<'a> JobTask<'a> {
             Some(Ok(mut v)) => {
                 // The task we depend on succeeded and returned an
                 // (uuid of the job, [ArtifactPath])
-                trace!("[{}]: Received: {:?}", self.jobdef.job.uuid(), v);
+                trace!(job_uuid = %self.jobdef.job.uuid(), "Received: {:?}", v);
                 received_dependencies.extend(v);
                 Ok(true)
             }
             Some(Err(mut e)) => {
                 // The task we depend on failed
                 // we log that error for now
-                trace!("[{}]: Received: {:?}", self.jobdef.job.uuid(), e);
+                trace!(job_uuid = %self.jobdef.job.uuid(), "Received: {:?}", e);
                 received_errors.extend(e);
                 Ok(true)
             }
             None => {
                 // The task we depend on finished... we must check what we have now...
                 trace!(
-                    "[{}]: Received nothing, channel seems to be empty",
-                    self.jobdef.job.uuid()
+                    job_uuid = %self.jobdef.job.uuid(),
+                    "Received nothing, channel seems to be empty",
                 );
 
                 // If the channel was closed and there are already errors in the `received_errors`
@@ -933,8 +954,8 @@ impl<'a> JobTask<'a> {
                 // receiving
                 if !received_errors.is_empty() {
                     trace!(
-                        "[{}]: There are errors, stop receiving",
-                        self.jobdef.job.uuid()
+                        job_uuid = %self.jobdef.job.uuid(),
+                        "There are errors, stop receiving",
                     );
                     return Ok(false);
                 }
@@ -947,9 +968,8 @@ impl<'a> JobTask<'a> {
                     .iter()
                     .filter(|d| !received.contains(d))
                     .collect();
-                trace!(
-                    "[{}]: Missing dependencies = {:?}",
-                    self.jobdef.job.uuid(),
+                trace!(job_uuid = %self.jobdef.job.uuid(),
+                    "Missing dependencies = {:?}",
                     missing_deps
                 );
 

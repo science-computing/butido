@@ -31,10 +31,12 @@ use diesel::RunQueryDsl;
 use itertools::Itertools;
 use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
+use tracing::Instrument;
 use tracing::{debug, info, trace, warn};
 use uuid::Uuid;
 
 use crate::config::*;
+use crate::db::models::{EnvVar, GitHash, Image, Job, Package, Submit};
 use crate::filestore::path::StoreRoot;
 use crate::filestore::ReleaseStore;
 use crate::filestore::StagingStore;
@@ -49,6 +51,7 @@ use crate::package::Shebang;
 use crate::repository::Repository;
 use crate::schema;
 use crate::source::SourceCache;
+use crate::util::docker::resolve_image_name;
 use crate::util::progress::ProgressBars;
 use crate::util::EnvironmentVariableName;
 
@@ -63,8 +66,11 @@ pub async fn build(
     repo: Repository,
     repo_path: &Path,
 ) -> Result<()> {
-    use crate::db::models::{EnvVar, GitHash, Image, Job, Package, Submit};
-    use crate::util::docker::resolve_image_name;
+    let command_span = tracing::debug_span!("command-build");
+
+    let loading_span = tracing::debug_span!(parent: &command_span, "loading");
+    // There's no async code for a long time in this function, so this is safe.
+    let loading_span_guard = loading_span.enter();
 
     let git_repo = git2::Repository::open(repo_path)
         .with_context(|| anyhow!("Opening repository at {}", repo_path.display()))?;
@@ -181,6 +187,8 @@ pub async fn build(
         })
         .collect::<Result<Vec<_>>>()?;
 
+    drop(loading_span_guard);
+
     let (staging_store, staging_dir, submit_id) = {
         let bar_staging_loading = progressbars.bar()?;
 
@@ -188,6 +196,7 @@ pub async fn build(
             matches.get_one::<String>("staging_dir").map(PathBuf::from)
         {
             info!(
+                parent: &loading_span,
                 "Setting staging dir to {} for this run",
                 staging_dir.display()
             );
@@ -214,10 +223,14 @@ pub async fn build(
         };
 
         if !p.is_dir() {
-            tokio::fs::create_dir_all(&p).await?;
+            tokio::fs::create_dir_all(&p)
+                .instrument(
+                    tracing::trace_span!(parent: &loading_span, "Creating directories", path = ?p),
+                )
+                .await?;
         }
 
-        debug!("Loading staging directory: {}", p.display());
+        debug!(parent: &loading_span, "Loading staging directory: {}", p.display());
         let r = StagingStore::load(StoreRoot::new(p.clone())?, &bar_staging_loading);
         if r.is_ok() {
             bar_staging_loading.finish_with_message("Loaded staging successfully");
@@ -249,19 +262,20 @@ pub async fn build(
     let source_cache = SourceCache::new(config.source_cache_root().clone());
 
     if matches.get_flag("no_verification") {
-        warn!("No hash verification will be performed");
+        warn!(parent: &loading_span, "No hash verification will be performed");
     } else {
         crate::commands::source::verify_impl(
             dag.all_packages().into_iter(),
             &source_cache,
             &progressbars,
         )
+        .instrument(tracing::trace_span!(parent: &loading_span, "verify source hashes"))
         .await?;
     }
 
     // linting the package scripts
     if matches.get_flag("no_lint") {
-        warn!("No script linting will be performed!");
+        warn!(parent: &loading_span, "No script linting will be performed!");
     } else if let Some(linter) = crate::ui::find_linter_command(repo_root, config)? {
         let all_packages = dag.all_packages();
         let bar = progressbars.bar()?;
@@ -271,7 +285,7 @@ pub async fn build(
         let iter = all_packages.into_iter();
         crate::commands::util::lint_packages(iter, &linter, config, bar).await?;
     } else {
-        warn!("No linter set in configuration, no script linting will be performed!");
+        warn!(parent: &loading_span, "No linter set in configuration, no script linting will be performed!");
     } // linting
 
     dag.all_packages()
@@ -303,7 +317,10 @@ pub async fn build(
         })
         .collect::<Result<Vec<()>>>()?;
 
-    trace!("Setting up database jobs for Package, GitHash, Image");
+    drop(loading_span);
+    let submit_span = tracing::debug_span!(parent: &command_span, "submit");
+
+    trace!(parent: &submit_span, "Setting up database jobs for Package, GitHash, Image");
     let db_package = async { Package::create_or_fetch(&mut database_pool.get().unwrap(), package) };
     let db_githash =
         async { GitHash::create_or_fetch(&mut database_pool.get().unwrap(), &hash_str) };
@@ -322,14 +339,14 @@ pub async fn build(
             .await
     };
 
-    trace!("Running database jobs for Package, GitHash, Image");
+    trace!(parent: &submit_span, "Running database jobs for Package, GitHash, Image");
     let (db_package, db_githash, db_image, db_envs) =
         tokio::join!(db_package, db_githash, db_image, db_envs);
 
     let (db_package, db_githash, db_image, _) = (db_package?, db_githash?, db_image?, db_envs?);
 
-    trace!("Database jobs for Package, GitHash, Image finished successfully");
-    trace!("Creating Submit in database");
+    trace!(parent: &submit_span, "Database jobs for Package, GitHash, Image finished successfully");
+    trace!(parent: &submit_span, "Creating Submit in database");
     let submit = Submit::create(
         &mut database_pool.get().unwrap(),
         &now,
@@ -339,6 +356,7 @@ pub async fn build(
         &db_githash,
     )?;
     trace!(
+        parent: &submit_span,
         "Creating Submit in database finished successfully: {:?}",
         submit
     );
@@ -364,13 +382,16 @@ pub async fn build(
         writeln!(outlock, "On repo hash:    {}", mkgreen(&db_githash.hash))?;
     }
 
-    trace!("Setting up job sets");
+    trace!(parent: &submit_span, "Setting up job sets");
     let resources: Vec<JobResource> = additional_env.into_iter().map(JobResource::from).collect();
     let jobdag =
         crate::job::Dag::from_package_dag(dag, shebang, image_name, phases.clone(), resources);
-    trace!("Setting up job sets finished successfully");
+    trace!(parent: &submit_span, "Setting up job sets finished successfully");
+    drop(submit_span);
 
-    trace!("Setting up Orchestrator");
+    let build_span = tracing::debug_span!(parent: &command_span, "build");
+
+    trace!(parent: &build_span, "Setting up Orchestrator");
     let orch = OrchestratorSetup::builder()
         .progress_generator(progressbars)
         .endpoint_config(endpoint_configurations)
@@ -389,11 +410,12 @@ pub async fn build(
         .repository(git_repo)
         .build()
         .setup()
+        .instrument(build_span.clone())
         .await?;
 
-    info!("Running orchestrator...");
+    info!(parent: &build_span, "Running orchestrator...");
     let mut artifacts = vec![];
-    let errors = orch.run(&mut artifacts).await?;
+    let errors = orch.run(&mut artifacts).instrument(build_span).await?;
     let out = std::io::stdout();
     let mut outlock = out.lock();
 
