@@ -72,6 +72,7 @@ tokio-stream = "0.1"
 toml = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-chrome = "0.7.1"
 typed-builder = "0.18"
 unindent = "0.2"
 url = { version = "2", features = ["serde"] }

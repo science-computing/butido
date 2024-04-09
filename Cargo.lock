@@ -258,6 +258,7 @@ dependencies = [
  "tokio-stream",
  "toml 0.8.12",
  "tracing",
+ "tracing-chrome",
  "tracing-subscriber",
  "typed-builder",
  "unindent",
@@ -2736,6 +2737,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.57",
+]
+
+[[package]]
+name = "tracing-chrome"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "496b3cd5447f7ff527bbbf19b071ad542a000adf297d4127078b4dfdb931f41a"
+dependencies = [
+ "serde_json",
+ "tracing-core",
+ "tracing-subscriber",
 ]
 
 [[package]]

@@ -69,6 +69,13 @@ pub fn cli() -> Command {
             .help("Detailed version output with build information")
         )
 
+        .arg(Arg::new("tracing-chrome")
+            .action(ArgAction::SetTrue)
+            .required(false)
+            .long("tracing-chrome")
+            .help("Generate a chrome compatible trace file")
+        )
+
         .arg(Arg::new("hide_bars")
             .action(ArgAction::SetTrue)
             .required(false)
