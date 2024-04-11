@@ -95,18 +95,6 @@ fn normalize_relative_path(path: PathBuf) -> Result<PathBuf> {
     Ok(normalized_path)
 }
 
-// A helper function to normalize paths (absolute paths are normalized by normalizing only the
-// relative path after the "base" prefix to ensure one cannot use `..` to move above "base"):
-fn normalize_path(path: PathBuf, base: &PathBuf) -> Result<PathBuf> {
-    if path.is_absolute() {
-        let relpath = path.strip_prefix(base)?;
-        let relpath = normalize_relative_path(relpath.to_owned())?;
-        Ok(base.join(relpath))
-    } else {
-        normalize_relative_path(path)
-    }
-}
-
 impl Repository {
     fn new(inner: BTreeMap<(PackageName, PackageVersion), Package>) -> Self {
         Repository { inner }
@@ -183,9 +171,27 @@ impl Repository {
                             // `path` is only available in this "iteration".
                             patches_after_merge
                                 .into_iter()
-                                // Prepend the path of the directory of the `pkg.toml` file to the name of the patch:
                                 .map(|p| if let Some(current_dir) = path.parent() {
-                                    normalize_path(current_dir.join(p), &cwd)
+                                    // Prepend the path of the directory of the `pkg.toml` file to
+                                    // the name of the patch file:
+                                    let mut path = current_dir.join(p);
+                                    // Ensure that we use relative paths for the patches (the rest
+                                    // of the code that uses the patches doesn't work correctly
+                                    // with absolute paths):
+                                    if path.is_absolute() {
+                                        // We assume that cwd is part of the prefix (currently, the
+                                        // path comes from `git2::Repository::workdir()` and should
+                                        // always be absolute and start from cwd so this is fine):
+                                        path = path
+                                            .strip_prefix(&cwd)
+                                            .map(|p| p.to_owned())
+                                            .with_context(|| anyhow!("Cannot strip the prefix {} form path {}", cwd.display(), current_dir.display()))?;
+                                    }
+                                    if path.is_absolute() {
+                                        Err(anyhow!("The path {} is absolute but it should be a relative path.", path.display()))
+                                    } else {
+                                        normalize_relative_path(path)
+                                    }
                                 } else {
                                     Err(anyhow!("Path should point to path with parent, but doesn't: {}", path.display()))
                                 })
@@ -443,15 +449,6 @@ pub mod tests {
         assert_eq!(
             normalize_relative_path(PathBuf::from("./a//../b/"))?,
             PathBuf::from("b")
-        );
-
-        assert!(normalize_path(PathBuf::from("/root"), &PathBuf::from("/foo/bar")).is_err());
-        assert_eq!(
-            normalize_path(
-                PathBuf::from("/.//foo/bar//baz/../baz/./"),
-                &PathBuf::from("/foo/bar")
-            )?,
-            PathBuf::from("/foo/bar/baz")
         );
 
         Ok(())
