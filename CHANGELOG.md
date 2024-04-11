@@ -8,6 +8,8 @@ is too old (i.e., must be updated).
 
 ## Upcoming
 
+## v0.5.0
+
 ### Major/Breaking changes
 
 * The configuration must be updated, see `CHANGELOG.toml` for details.
