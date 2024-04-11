@@ -9,6 +9,7 @@
 //
 
 use std::collections::BTreeMap;
+use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -36,6 +37,62 @@ impl From<BTreeMap<(PackageName, PackageVersion), Package>> for Repository {
     fn from(inner: BTreeMap<(PackageName, PackageVersion), Package>) -> Self {
         Repository { inner }
     }
+}
+
+// A helper function to normalize relative Unix paths (ensures that one cannot escape using `..`):
+fn normalize_relative_path(path: PathBuf) -> Result<PathBuf> {
+    let mut normalized_path = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(_) => {
+                // "A Windows path prefix, e.g., C: or \\server\share."
+                // "Does not occur on Unix."
+                return Err(anyhow!(
+                    "The relative path \"{}\" starts with a Windows path prefix",
+                    path.display()
+                ));
+            }
+            Component::RootDir => {
+                // "The root directory component, appears after any prefix and before anything else.
+                // It represents a separator that designates that a path starts from root."
+                return Err(anyhow!(
+                    "The relative path \"{}\" starts from the root directory",
+                    path.display()
+                ));
+            }
+            Component::CurDir => {
+                // "A reference to the current directory, i.e., `.`."
+                // Also (from `Path.components()`): "Occurrences of . are normalized away, except
+                // if they are at the beginning of the path. For example, a/./b, a/b/, a/b/. and
+                // a/b all have a and b as components, but ./a/b starts with an additional CurDir
+                // component."
+                // -> May only occur as the first path component and we can ignore it / normalize
+                // it away (we should just ensure that it's not the only path component in which
+                // case the path would be empty).
+            }
+            Component::ParentDir => {
+                // "A reference to the parent directory, i.e., `..`."
+                if !normalized_path.pop() {
+                    return Err(anyhow!(
+                        "The relative path \"{}\" uses `..` to escape the base directory",
+                        path.display()
+                    ));
+                }
+            }
+            Component::Normal(component) => {
+                // "A normal component, e.g., a and b in a/b. This variant is the most common one,
+                // it represents references to files or directories."
+                normalized_path.push(component);
+            }
+        }
+    }
+
+    if normalized_path.parent().is_none() {
+        // Optional: Convert "" to ".":
+        normalized_path.push(Component::CurDir);
+    }
+
+    Ok(normalized_path)
 }
 
 impl Repository {
@@ -76,6 +133,7 @@ impl Repository {
             }
         }
 
+        let cwd = std::env::current_dir()?;
         let leaf_files = fsr
             .files()
             .par_iter()
@@ -113,9 +171,27 @@ impl Repository {
                             // `path` is only available in this "iteration".
                             patches_after_merge
                                 .into_iter()
-                                // Prepend the path of the directory of the `pkg.toml` file to the name of the patch:
                                 .map(|p| if let Some(current_dir) = path.parent() {
-                                    Ok(current_dir.join(p))
+                                    // Prepend the path of the directory of the `pkg.toml` file to
+                                    // the name of the patch file:
+                                    let mut path = current_dir.join(p);
+                                    // Ensure that we use relative paths for the patches (the rest
+                                    // of the code that uses the patches doesn't work correctly
+                                    // with absolute paths):
+                                    if path.is_absolute() {
+                                        // We assume that cwd is part of the prefix (currently, the
+                                        // path comes from `git2::Repository::workdir()` and should
+                                        // always be absolute and start from cwd so this is fine):
+                                        path = path
+                                            .strip_prefix(&cwd)
+                                            .map(|p| p.to_owned())
+                                            .with_context(|| anyhow!("Cannot strip the prefix {} form path {}", cwd.display(), current_dir.display()))?;
+                                    }
+                                    if path.is_absolute() {
+                                        Err(anyhow!("The path {} is absolute but it should be a relative path.", path.display()))
+                                    } else {
+                                        normalize_relative_path(path)
+                                    }
                                 } else {
                                     Err(anyhow!("Path should point to path with parent, but doesn't: {}", path.display()))
                                 })
@@ -125,11 +201,11 @@ impl Repository {
                                 .and_then_ok(|patch| if patch.exists() {
                                     Ok(Some(patch))
                                 } else {
-                                    Err(anyhow!("Patch does not exist: {}", patch.display()))
-                                        .with_context(|| anyhow!("The patch is declared here: {}", path.display()))
+                                    Err(anyhow!("The following patch does not exist: {}", patch.display()))
                                 })
                                 .filter_map_ok(|o| o)
-                                .collect::<Result<Vec<_>>>()?
+                                .collect::<Result<Vec<_>>>()
+                                .with_context(|| anyhow!("Could not process the patches declared here: {}", path.display()))?
                         };
 
                         trace!("Patches after postprocessing merge: {:?}", patches);
@@ -319,7 +395,8 @@ pub mod tests {
         assert_pkg(&repo, "s", "19.1");
         assert_pkg(&repo, "z", "26");
 
-        // Verify the paths of the patches (and "merging"):
+        // Verify the paths of the patches (and the base directory "merging"/joining logic plus the
+        // normalization of relative paths):
         // The patches are defined as follows:
         // s/pkg.toml: patches = [ "./foo.patch" ]
         // s/19.0/pkg.toml: patches = ["./foo.patch","s190.patch"]
@@ -327,11 +404,10 @@ pub mod tests {
         // s/19.2/pkg.toml: patches = ["../foo.patch"]
         // s/19.3/pkg.toml: patches = ["s190.patch"]
         let p = get_pkg(&repo, "s", "19.0");
-        // Ideally we'd normalize the `./` away:
         assert_eq!(
             p.patches(),
             &vec![
-                PathBuf::from("examples/packages/repo/s/19.0/./foo.patch"),
+                PathBuf::from("examples/packages/repo/s/19.0/foo.patch"),
                 PathBuf::from("examples/packages/repo/s/19.0/s190.patch")
             ]
         );
@@ -341,15 +417,38 @@ pub mod tests {
             &vec![PathBuf::from("examples/packages/repo/s/foo.patch")]
         );
         let p = get_pkg(&repo, "s", "19.2");
-        // We might want to normalize the `19.2/../` away:
         assert_eq!(
             p.patches(),
-            &vec![PathBuf::from("examples/packages/repo/s/19.2/../foo.patch")]
+            &vec![PathBuf::from("examples/packages/repo/s/foo.patch")]
         );
         let p = get_pkg(&repo, "s", "19.3");
         assert_eq!(
             p.patches(),
             &vec![PathBuf::from("examples/packages/repo/s/19.3/s193.patch")]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_relative_path_normalization() -> Result<()> {
+        assert!(normalize_relative_path(PathBuf::from("/root")).is_err());
+        assert!(normalize_relative_path(PathBuf::from("a/../../root")).is_err());
+        assert_eq!(
+            normalize_relative_path(PathBuf::from(""))?,
+            PathBuf::from(".")
+        );
+        assert_eq!(
+            normalize_relative_path(PathBuf::from("."))?,
+            PathBuf::from(".")
+        );
+        assert_eq!(
+            normalize_relative_path(PathBuf::from("./a//b/../b/./c/."))?,
+            PathBuf::from("a/b/c")
+        );
+        assert_eq!(
+            normalize_relative_path(PathBuf::from("./a//../b/"))?,
+            PathBuf::from("b")
         );
 
         Ok(())
