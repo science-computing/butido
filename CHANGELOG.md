@@ -13,6 +13,47 @@ is too old (i.e., must be updated).
 ### Major/Breaking changes
 
 * The configuration must be updated, see `CHANGELOG.toml` for details.
+  * The `compatibility` setting is now independent of the butido version and
+    will be used to output the required configuration changes
+* Butido now rejects unknown fields in its configuration source(s)
+  (`config.toml` files and environment variables) and package definitions
+  (`pkg.toml` files). This is done to detect typos/mistakes and requires
+  changes if such unknown/misspelled fields are present.
+* The "merging" of `patches` arrays in `pkg.toml` files has been fixed (the old
+  logic silently ignored a patch if a patch with the same name was declared in
+  an upper level/layer `pkg.toml` file)
+
+### Highlights
+
+* Lots of dependency updates (including security updates)
+  * All dependencies are up-to-date now (except for the `config` crate due to
+    breaking changes in `0.14.x` that currently prevent us from updating)
+  * Some deprecated/unmaintained crates have been replaced or dropped
+* CLI improvements and fixes (partly due to the clap update from version 3 to 4)
+  * Better / more consistent argument parsing
+  * Output tweaks/improvements
+  * Improved error messages (e.g., for dependency cycles and unsupported
+    version specifications)
+  * Support for short build image names
+  * More filtering options for DB commands
+  * Build dependencies are now marked with a star (`*`) in the `tree-of` output
+  * A new "release list" subcommand ("db releases" alias for convenience)
+* Fixed the default log level (info -> warn)
+* Source download improvements (warnings when downloading HTML files, no more
+  empty source files after failed downloads, a check for the HTTP status code
+  to avoid downloading "404 Not Found" HTML responses, and the User-Agent
+  header is now set)
+* The included example configuration and packages repo have been fixed (and new
+  CI tests should ensure that they remain valid)
+* It is now possible to depend on packages whose name starts with a number
+* The tracing has been improved (some spans and structured fields are now used)
+  and the `--tracing-chrome` flag has been added to generate `chrome://tracing`
+  compatible JSON files
+* Butido no longer crashes when `..` is used in paths of `patches` (`pkg.toml`)
+* Lots of cleanups, refactorings, new tests (+ CI improvements), and minor fixes
+* Various minor improvements (additional directory/filesystem checks, handling
+  of multiple release stores, etc.)
+* Minor documentation improvements (typos, fixes, additional comments, etc.)
 
 ## v0.4.0
 
