@@ -25,12 +25,12 @@ pub struct ContainerConfig {
     #[getset(get = "pub")]
     allowed_env: Vec<EnvironmentVariableName>,
 
-    /// Pass the current git author to the container
-    /// This can be used to the the "packager" name in a package, for example
+    /// Pass the current Git author to the container
+    /// This can be used for the "packager" name in a package, for example
     #[getset(get = "pub")]
     git_author: Option<EnvironmentVariableName>,
 
-    /// Pass the current git hash to the container
+    /// Pass the current Git hash to the container
     #[getset(get = "pub")]
     git_commit_hash: Option<EnvironmentVariableName>,
 }

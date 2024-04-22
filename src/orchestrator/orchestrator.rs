@@ -541,7 +541,7 @@ struct JobTask<'a> {
 ///
 /// This implementation is a bit of a hack.
 /// Because all `JobTask`s are `JobTask::run()` in parallel, but there is no IPC _between_ the
-/// tasks (there is IPC between childs and parents, but not between all JobTask objects), we never
+/// tasks (there is IPC between children and parents, but not between all JobTask objects), we never
 /// know whether any other task errored when the JobTask object is destructed.
 ///
 /// One way to implement this would be to add multi-cast IPC between all `JobTask` objects, with some
@@ -560,7 +560,7 @@ impl<'a> Drop for JobTask<'a> {
             // If there are dependencies, the error is probably from another task
             // If there are no dependencies, the error was caused by something else
             let errmsg = if self.jobdef.dependencies.is_empty() {
-                "error occured"
+                "error occurred"
             } else {
                 "error on other task"
             };
@@ -610,7 +610,7 @@ impl<'a> JobTask<'a> {
 
     /// Run the job
     ///
-    /// This function runs the job from this object on the scheduler as soon as all dependend jobs
+    /// This function runs the job from this object on the scheduler as soon as all dependent jobs
     /// returned successfully.
     async fn run(mut self) -> Result<()> {
         debug!(job_uuid = %self.jobdef.job.uuid(), "Running");
@@ -748,7 +748,7 @@ impl<'a> JobTask<'a> {
                 //    subcommand. In this case, there might be an artifact for this job in the
                 //    staging store. In this case, we want to use it as a replacement, of course.
                 //
-                // The fact that released artifacts are returned prefferably from this function
+                // The fact that released artifacts are returned preferably from this function
                 // call does not change anything, because if there is an artifact that's a released
                 // one that matches this job, we should use it anyways.
                 .staging_store(Some(&staging_store))
@@ -778,7 +778,7 @@ impl<'a> JobTask<'a> {
                 })
                 // We don't need duplicates here, so remove them by making the iterator unique
                 // If we have two artifacts that are the same, the one in the staging store will be
-                // preffered in the next step
+                // preferred in the next step
                 .unique_by(|tpl| tpl.0.artifact_path().clone())
                 // Fetch the artifact from the staging store, if there is one.
                 // If there is none, try the release store.
@@ -914,7 +914,7 @@ impl<'a> JobTask<'a> {
         Ok(())
     }
 
-    /// Performe a recv() call on the receiving side of the channel
+    /// Perform a recv() call on the receiving side of the channel
     ///
     /// Put the dependencies you received into the `received_dependencies`, the errors in the
     /// `received_errors`
@@ -977,7 +977,7 @@ impl<'a> JobTask<'a> {
                 if !missing_deps.is_empty() {
                     let missing: Vec<String> = missing_deps.iter().map(|u| u.to_string()).collect();
                     Err(anyhow!(
-                        "Childs finished, but dependencies still missing: {:?}",
+                        "Children finished, but dependencies still missing: {:?}",
                         missing
                     ))
                 } else {

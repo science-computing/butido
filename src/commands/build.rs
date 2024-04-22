@@ -116,7 +116,7 @@ pub async fn build(
         })
         .collect::<Vec<_>>();
     {
-        // Because we're loading always sequencially, to have a bit more spread over the endpoints,
+        // Because we're loading always sequentially, to have a bit more spread over the endpoints,
         // shuffle the endpoints here. Not a perfect solution, but a working one.
         use rand::seq::SliceRandom;
         let mut rng = rand::thread_rng();

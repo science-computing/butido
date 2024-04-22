@@ -58,7 +58,7 @@ pub fn cli() -> Command {
         .after_help(indoc::indoc!(r#"
             The following environment variables can be passed to butido:
 
-                RUST_LOG - to enable logging, for exact usage see the rust cookbook
+                RUST_LOG - to enable logging, for exact usage see the Rust cookbook
         "#))
 
         .arg(Arg::new("version")
@@ -73,7 +73,7 @@ pub fn cli() -> Command {
             .action(ArgAction::SetTrue)
             .required(false)
             .long("tracing-chrome")
-            .help("Generate a chrome compatible trace file")
+            .help("Generate a Chrome compatible trace file (trace-*.json)")
         )
 
         .arg(Arg::new("hide_bars")
@@ -90,7 +90,7 @@ pub fn cli() -> Command {
             .help("Override the database host")
             .long_help(indoc::indoc!(r#"
                 Override the database host set via configuration.
-                Can also be overriden via environment variable 'BUTIDO_DATABASE_HOST', but this setting has precedence.
+                Can also be overridden via environment variable 'BUTIDO_DATABASE_HOST', but this setting has precedence.
             "#))
         )
         .arg(Arg::new("database_port")
@@ -100,7 +100,7 @@ pub fn cli() -> Command {
             .help("Override the database port")
             .long_help(indoc::indoc!(r#"
                 Override the database port set via configuration.
-                Can also be overriden via environment 'BUTIDO_DATABASE_PORT', but this setting has precedence.
+                Can also be overridden via environment 'BUTIDO_DATABASE_PORT', but this setting has precedence.
             "#))
         )
         .arg(Arg::new("database_user")
@@ -110,7 +110,7 @@ pub fn cli() -> Command {
             .help("Override the database user")
             .long_help(indoc::indoc!(r#"
                 Override the database user set via configuration.
-                Can also be overriden via environment 'BUTIDO_DATABASE_USER', but this setting has precedence.
+                Can also be overridden via environment 'BUTIDO_DATABASE_USER', but this setting has precedence.
             "#))
         )
         .arg(Arg::new("database_password")
@@ -121,7 +121,7 @@ pub fn cli() -> Command {
             .help("Override the database password")
             .long_help(indoc::indoc!(r#"
                 Override the database password set via configuration.
-                Can also be overriden via environment 'BUTIDO_DATABASE_PASSWORD', but this setting has precedence.
+                Can also be overridden via environment 'BUTIDO_DATABASE_PASSWORD', but this setting has precedence.
             "#))
         )
         .arg(Arg::new("database_name")
@@ -131,7 +131,7 @@ pub fn cli() -> Command {
             .help("Override the database name")
             .long_help(indoc::indoc!(r#"
                 Override the database name set via configuration.
-                Can also be overriden via environment 'BUTIDO_DATABASE_NAME', but this setting has precedence.
+                Can also be overridden via environment 'BUTIDO_DATABASE_NAME', but this setting has precedence.
             "#))
         )
         .arg(Arg::new("database_connection_timeout")
@@ -141,7 +141,7 @@ pub fn cli() -> Command {
             .help("Override the database connection timeout")
             .long_help(indoc::indoc!(r#"
                 Override the database connection timeout set via configuration.
-                Can also be overriden via environment 'BUTIDO_DATABASE_CONNECTION_TIMEOUT', but this setting has precedence.
+                Can also be overridden via environment 'BUTIDO_DATABASE_CONNECTION_TIMEOUT', but this setting has precedence.
             "#))
         )
 
@@ -511,7 +511,7 @@ pub fn cli() -> Command {
         )
         .subcommand(Command::new("dependencies-of")
             .alias("depsof")
-            .about("List the depenendcies of a package")
+            .about("List the dependencies of a package")
             .arg(Arg::new("package_name")
                 .required(true)
                 .index(1)
@@ -522,7 +522,7 @@ pub fn cli() -> Command {
                 .required(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), e.g., '=1.0.0'")
             )
             .arg(Arg::new("dependency_type")
                 .required(false)
@@ -564,7 +564,7 @@ pub fn cli() -> Command {
                 .required(true)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), e.g., '=1.0.0'")
             )
         )
 
@@ -580,21 +580,21 @@ pub fn cli() -> Command {
                 .required(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), e.g., '=1.0.0'")
             )
             .arg(Arg::new("no_script_filter")
                 .action(ArgAction::SetTrue)
                 .long("no-script-filter")
                 .short('S')
                 .required(false)
-                .help("Don't check for script equality. Can cause unexact results.")
+                .help("Don't check for script equality. Can cause inexact results.")
             )
             .arg(Arg::new("staging_dir")
                 .required(false)
                 .long("staging-dir")
                 .value_name("PATH")
                 .value_parser(dir_exists_validator)
-                .help("Also consider this staging dir when searching for artifacts")
+                .help("Also consider this staging directory when searching for artifacts")
             )
             .arg(Arg::new("env_filter")
                 .required(false)
@@ -626,7 +626,7 @@ pub fn cli() -> Command {
                 .required(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), e.g., '=1.0.0'")
             )
 
             .arg(Arg::new("terse")
@@ -825,18 +825,18 @@ pub fn cli() -> Command {
                 )
             )
             .subcommand(Command::new("of")
-                .about("Get the pathes of the sources of a package")
+                .about("Get the paths of the sources of a package")
                 .arg(Arg::new("package_name")
                     .required(false)
                     .index(1)
                     .value_name("PKG")
-                    .help("Get the source file pathes for this package")
+                    .help("Get the source file paths for this package")
                 )
                 .arg(Arg::new("package_version")
                     .required(false)
                     .index(2)
                     .value_name("VERSION")
-                    .help("Get the source file pathes for the package in this version")
+                    .help("Get the source file paths for the package in this version")
                 )
             )
         )
@@ -927,7 +927,7 @@ pub fn cli() -> Command {
                     .action(ArgAction::SetTrue)
                     .required(false)
                     .long("non-interactive")
-                    .help("Dont be interactive (only with --update at the moment)")
+                    .help("Don't be interactive (only with --update at the moment)")
                     .requires("package_do_update")
                 )
                 .arg(Arg::new("quiet")
@@ -935,7 +935,7 @@ pub fn cli() -> Command {
                     .required(false)
                     .long("quiet")
                     .short('q')
-                    .help("Don't print pathes to released filesfiles  after releases are complete")
+                    .help("Don't print the paths to released files after releases are complete")
                 )
             )
 
@@ -953,7 +953,7 @@ pub fn cli() -> Command {
                 .required(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), e.g., '=1.0.0'")
             )
         )
 
@@ -969,7 +969,7 @@ pub fn cli() -> Command {
                 .required(false)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .help("A version constraint to search for (optional), E.G. '=1.0.0'")
+                .help("A version constraint to search for (optional), e.g., '=1.0.0'")
             )
             .arg(Arg::new("image")
                 .required(false)
@@ -1005,7 +1005,7 @@ pub fn cli() -> Command {
         )
 
         .subcommand(Command::new("endpoint")
-            .about("Endpoint maintentance commands")
+            .about("Endpoint maintenance commands")
             .arg(Arg::new("endpoint_name")
                 .required(false)
                 .index(1)
@@ -1251,7 +1251,7 @@ fn env_pass_validator(s: &str) -> Result<String, String> {
             Err(s)
         }
         Ok((k, v)) => {
-            debug!("Env pass valiation: '{}={}'", k, v);
+            debug!("Env pass validation: '{}={}'", k, v);
             Ok(s.to_owned())
         }
     }

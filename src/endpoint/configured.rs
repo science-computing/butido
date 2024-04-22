@@ -181,7 +181,7 @@ impl Endpoint {
                     .with_context(|| anyhow!("Getting API version of endpoint: {}", ep.name))?;
 
                 if !v.contains(&avail.api_version) {
-                    Err(anyhow!("Incompatible Docker API version on endpoint {}: Exepected: {}, Available: [{}]",
+                    Err(anyhow!("Incompatible Docker API version on endpoint {}: Expected: {}, Available: [{}]",
                             ep.name(), avail.api_version, v.join(", ")))
                 } else {
                     Ok(())
@@ -653,7 +653,7 @@ impl<'a> PreparedContainer<'a> {
                     .copy_file_into(destination, &buf)
                     .await
                     .map_err(Error::from)
-                    .inspect(|_| trace!("Copying patch {} successfull", patch.display()))
+                    .inspect(|_| trace!("Copying patch {} successful", patch.display()))
                     .with_context(|| {
                         anyhow!(
                             "Copying patch {} to container {}",
