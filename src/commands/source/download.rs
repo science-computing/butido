@@ -310,7 +310,10 @@ pub async fn download(
     } else {
         progressbar.lock().await.success().await;
     }
-
     debug!("r = {:?}", r);
+
+    let verify_result = super::verify(matches, config, repo, progressbars).await;
+    debug!("verify_result = {:?}", verify_result);
+
     r
 }
