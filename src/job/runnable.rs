@@ -50,9 +50,6 @@ pub struct RunnableJob {
 }
 
 impl RunnableJob {
-    // TODO: Drop the following clippy exception once we don't need to check against rustc 1.75
-    // anymore (a fix was already merged but it likely won't be backported to 1.75):
-    #[allow(clippy::map_identity)]
     pub fn build_from_job(
         job: &Job,
         source_cache: &SourceCache,
