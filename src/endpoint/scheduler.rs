@@ -462,31 +462,20 @@ impl<'a> LogReceiver<'a> {
 
         trace!("Finishing bar = {:?}", success);
         let finish_msg = match success {
-            Some(true) => format!(
-                "[{}/{} {} {} {}]: finished successfully",
-                self.endpoint_name,
-                self.container_id_chrs,
-                self.job.uuid(),
-                self.package_name,
-                self.package_version
-            ),
-            Some(false) => format!(
-                "[{}/{} {} {} {}]: finished with error",
-                self.endpoint_name,
-                self.container_id_chrs,
-                self.job.uuid(),
-                self.package_name,
-                self.package_version
-            ),
-            None => format!(
-                "[{}/{} {} {} {}]: finished",
-                self.endpoint_name,
-                self.container_id_chrs,
-                self.job.uuid(),
-                self.package_name,
-                self.package_version
-            ),
+            Some(true) => "finished successfully".green().to_string(),
+            Some(false) => "finished with error".red().to_string(),
+            None => "finished".to_string(),
         };
+
+        let finish_msg = format!(
+            "[{}/{} {} {} {}]: {}",
+            self.endpoint_name,
+            self.container_id_chrs,
+            self.job.uuid(),
+            self.package_name,
+            self.package_version,
+            finish_msg
+        );
         self.bar.finish_with_message(finish_msg);
 
         if let Some(mut lf) = logfile {

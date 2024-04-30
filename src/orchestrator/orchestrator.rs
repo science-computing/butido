@@ -20,6 +20,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use colored::Colorize;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel::PgConnection;
@@ -562,7 +563,7 @@ impl<'a> Drop for JobTask<'a> {
             let errmsg = if self.jobdef.dependencies.is_empty() {
                 "error occurred"
             } else {
-                "error on other task"
+                "inherited"
             };
 
             self.bar.finish_with_message(format!(
@@ -570,7 +571,7 @@ impl<'a> Drop for JobTask<'a> {
                 self.jobdef.job.uuid(),
                 self.jobdef.job.package().name(),
                 self.jobdef.job.package().version(),
-                msg = errmsg
+                msg = errmsg.yellow()
             ));
         }
     }
