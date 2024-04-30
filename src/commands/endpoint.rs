@@ -140,6 +140,7 @@ async fn stats(
             "Name",
             "Containers",
             "Images",
+            "Id",
             "Kernel",
             "Memory",
             "Memory limit",
@@ -173,6 +174,7 @@ async fn stats(
                 stat.name,
                 stat.containers.to_string(),
                 stat.images.to_string(),
+                stat.id.to_string(),
                 stat.kernel_version,
                 bytesize::ByteSize::b(stat.mem_total).to_string(),
                 stat.memory_limit.to_string(),
@@ -213,7 +215,15 @@ async fn containers_list(
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.get_flag("csv");
     let hdr = crate::commands::util::mk_header(
-        ["Endpoint", "Container id", "Image", "Created", "Status"].to_vec(),
+        [
+            "Endpoint",
+            "Container id",
+            "Image",
+            "Image id",
+            "Created",
+            "Status",
+        ]
+        .to_vec(),
     );
 
     let data = connect_to_endpoints(config, &endpoint_names)
@@ -247,10 +257,12 @@ async fn containers_list(
                         .unwrap_or(true)
                 })
                 .map(|stat| {
+                    // TODO: The output can become too wide (we should, e.g., try to shorten the IDs):
                     vec![
                         endpoint_name.as_ref().to_owned(),
                         stat.id,
                         stat.image,
+                        stat.image_id,
                         stat.created.to_string(),
                         stat.status,
                     ]
