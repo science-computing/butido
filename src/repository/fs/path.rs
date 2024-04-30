@@ -13,7 +13,7 @@ use std::path::Component;
 use anyhow::anyhow;
 use anyhow::Result;
 
-/// Helper type for filtering for pathes we need or dont need
+/// Helper type for filtering for paths we need or don't need
 ///
 /// We either have a directory, which has a name, or we have a pkg.toml file, which is of interest.
 /// All other files can be ignored and thus are not represented by this type.

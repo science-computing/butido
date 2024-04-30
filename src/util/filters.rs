@@ -27,7 +27,11 @@ pub fn build_package_filter_by_dependency_name(
 ) -> impl filters::failable::filter::FailableFilter<Package, Error = Error> {
     let n = name.clone(); // clone, so we can move into closure
     let filter_build_dep = move |p: &Package| -> Result<bool> {
-        trace!("Checking whether any build depenency of {:?} is '{}'", p, n);
+        trace!(
+            "Checking whether any build dependency of {:?} is '{}'",
+            p,
+            n
+        );
         Ok({
             check_build_dep
                 && p.dependencies()
@@ -46,7 +50,7 @@ pub fn build_package_filter_by_dependency_name(
     let n = name.clone(); // clone, so we can move into closure
     let filter_rt_dep = move |p: &Package| -> Result<bool> {
         trace!(
-            "Checking whether any runtime depenency of {:?} is '{}'",
+            "Checking whether any runtime dependency of {:?} is '{}'",
             p,
             n
         );

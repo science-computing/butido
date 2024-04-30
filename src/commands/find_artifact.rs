@@ -163,7 +163,7 @@ pub async fn find_artifact(
                         ((a, None), (b, None)) => a.cmp(b),
                     }
                 })
-                .unique_by(|tpl| tpl.0.clone()) // TODO: Dont clone()
+                .unique_by(|tpl| tpl.0.clone()) // TODO: Don't clone()
                 .try_for_each(|(path, releasetime)| {
                     if let Some(time) = releasetime {
                         writeln!(std::io::stdout(), "[{}] {}", time, path.display())

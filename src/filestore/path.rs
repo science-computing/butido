@@ -104,9 +104,9 @@ impl StoreRoot {
     /// Unpack a tar archive in this location
     ///
     /// This function unpacks the provided tar archive "butido-style" in the location pointed to by
-    /// `self` and returns the written pathes.
+    /// `self` and returns the written paths.
     ///
-    /// The function filteres out the "/output" directory (that's what is meant by "butido-style").
+    /// The function filters out the "/output" directory (that's what is meant by "butido-style").
     pub(in crate::filestore) fn unpack_archive_here<R>(
         &self,
         mut ar: tar::Archive<R>,

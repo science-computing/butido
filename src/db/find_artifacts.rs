@@ -50,7 +50,7 @@ use crate::util::EnvironmentVariableName;
 ///
 /// If the artifact was released, the return value contains a Some(NaiveDateTime), marking the date
 /// of the release.
-/// Releases are returned prefferably, if multiple equal pathes for an artifact are found.
+/// Releases are returned preferably, if multiple equal paths for an artifact are found.
 #[derive(typed_builder::TypedBuilder)]
 pub struct FindArtifacts<'a> {
     config: &'a Configuration,

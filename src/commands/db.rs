@@ -660,7 +660,7 @@ fn job(
     let parsed_log = crate::log::ParsedLog::from_str(&data.0.log_text)?;
     trace!("Parsed log = {:?}", parsed_log);
     let success = parsed_log.is_successfull();
-    trace!("log successfull = {:?}", success);
+    trace!("log successful = {:?}", success);
 
     if csv {
         let hdrs = crate::commands::util::mk_header(vec![
