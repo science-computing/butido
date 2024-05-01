@@ -89,12 +89,12 @@ pub const VERSION_LONG: &str = concatdoc! {"
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    human_panic::setup_panic!(Metadata {
-        name: env!("CARGO_PKG_NAME").into(),
-        version: env!("CARGO_PKG_VERSION").into(),
-        authors: "science-computing ag, opensoftware <opensoftware@science-computing.de>".into(),
-        homepage: "atos.net/de/deutschland/sc".into(),
-    });
+    human_panic::setup_panic!(human_panic::Metadata::new(
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION")
+    )
+    .authors("science-computing ag, opensoftware <opensoftware@science-computing.de>")
+    .homepage("atos.net/de/deutschland/sc"));
 
     let app = cli::cli();
     let cli = app.get_matches();
