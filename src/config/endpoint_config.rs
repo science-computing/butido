@@ -33,6 +33,12 @@ impl AsRef<str> for EndpointName {
     }
 }
 
+impl EndpointName {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
 /// Configuration of a single endpoint
 #[derive(Clone, Debug, Getters, CopyGetters, Deserialize)]
 pub struct Endpoint {

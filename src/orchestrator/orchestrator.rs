@@ -52,6 +52,8 @@ use crate::source::SourceCache;
 use crate::util::progress::ProgressBars;
 use crate::util::EnvironmentVariableName;
 
+const CONTAINER_ID_LENGTH: usize = 7;
+
 #[cfg_attr(doc, aquamarine::aquamarine)]
 /// The Orchestrator
 ///
@@ -566,9 +568,13 @@ impl<'a> Drop for JobTask<'a> {
                 "inherited"
             };
 
-            self.bar.finish_with_message(format!(
-                "[{} {} {}] Stopped, {msg}",
+            let max_endpoint_name_length = self.scheduler.max_endpoint_name_length();
+            self.bar.set_message(format!(
+                "{:-<max_endpoint_name_length$} {:-<CONTAINER_ID_LENGTH$} {} {} {} {} Stopped, {msg}",
+                "",
+                "",
                 self.jobdef.job.uuid(),
+                "\u{2588}\u{2588}".red(),
                 self.jobdef.job.package().name(),
                 self.jobdef.job.package().version(),
                 msg = errmsg.yellow()
@@ -584,9 +590,13 @@ impl<'a> JobTask<'a> {
         sender: Vec<Sender<JobResult>>,
     ) -> Self {
         let bar = prep.bar.clone();
+        let max_endpoint_name_length = prep.scheduler.max_endpoint_name_length();
         bar.set_message(format!(
-            "[{} {} {}]: Booting",
+            "{:-<max_endpoint_name_length$} {:-<CONTAINER_ID_LENGTH$} {} {} {} {} Booting",
+            "",
+            "",
             prep.jobdef.job.uuid(),
+            "\u{2588}\u{2588}".yellow(),
             prep.jobdef.job.package().name(),
             prep.jobdef.job.package().version()
         ));
@@ -645,21 +655,23 @@ impl<'a> JobTask<'a> {
 
         // as long as the job definition lists dependencies that are not in the received_dependencies list...
         let dependency_receiving_span = tracing::debug_span!("receiving dependencies");
+        let max_endpoint_name_length = self.scheduler.max_endpoint_name_length();
         while !all_dependencies_are_in(&self.jobdef.dependencies, &received_dependencies) {
             // Update the status bar message
-            self.bar.set_message({
-                format!(
-                    "[{} {} {}]: Waiting ({}/{})...",
-                    self.jobdef.job.uuid(),
-                    self.jobdef.job.package().name(),
-                    self.jobdef.job.package().version(),
-                    received_dependencies
-                        .iter()
-                        .filter(|(rd_uuid, _)| self.jobdef.dependencies.contains(rd_uuid))
-                        .count(),
-                    dep_len
-                )
-            });
+            self.bar.set_message(format!(
+                "{:-<max_endpoint_name_length$} {:-<CONTAINER_ID_LENGTH$} {} {} {} {} Waiting, ({}/{})",
+                "",
+                "",
+                self.jobdef.job.uuid(),
+                "\u{2588}\u{2588}".blue(),
+                self.jobdef.job.package().name(),
+                self.jobdef.job.package().version(),
+                received_dependencies
+                    .iter()
+                    .filter(|(rd_uuid, _)| self.jobdef.dependencies.contains(rd_uuid))
+                    .count(),
+                dep_len
+            ));
             trace!(job_uuid = %self.jobdef.job.uuid(), "Updated bar");
 
             let continue_receiving = {
@@ -689,9 +701,12 @@ impl<'a> JobTask<'a> {
                 self.sender[0].send(Err(received_errors)).await;
 
                 // ... and stop operation, because the whole tree will fail anyways.
-                self.bar.finish_with_message(format!(
-                    "[{} {} {}] Stopping, errors from child received",
+                self.bar.set_message(format!(
+                    "{:-<max_endpoint_name_length$} {:-<CONTAINER_ID_LENGTH$} {} {} {} {} Stopping, errors from child received",
+                    "",
+                    "",
                     self.jobdef.job.uuid(),
+                    "\u{2588}\u{2588}".yellow(),
                     self.jobdef.job.package().name(),
                     self.jobdef.job.package().version()
                 ));
@@ -814,9 +829,12 @@ impl<'a> JobTask<'a> {
                             )
                         })?;
                 }
-                self.bar.finish_with_message(format!(
-                    "[{} {} {}] Reusing artifact",
+                self.bar.set_message(format!(
+                    "{:-<max_endpoint_name_length$} {:-<CONTAINER_ID_LENGTH$} {} {} {} {} Reusing artifact",
+                    "",
+                    "",
                     self.jobdef.job.uuid(),
+                    "\u{2588}\u{2588}".white(),
                     self.jobdef.job.package().name(),
                     self.jobdef.job.package().version()
                 ));
@@ -840,8 +858,11 @@ impl<'a> JobTask<'a> {
             dependency_artifacts
         );
         self.bar.set_message(format!(
-            "[{} {} {}]: Preparing...",
+            "{:-<max_endpoint_name_length$} {:-<CONTAINER_ID_LENGTH$} {} {} {} {} Preparing...",
+            "",
+            "",
             self.jobdef.job.uuid(),
+            "\u{2588}\u{2588}".yellow(),
             self.jobdef.job.package().name(),
             self.jobdef.job.package().version()
         ));
@@ -857,8 +878,11 @@ impl<'a> JobTask<'a> {
         )?;
 
         self.bar.set_message(format!(
-            "[{} {} {}]: Scheduling...",
+            "{:-<max_endpoint_name_length$} {:-<CONTAINER_ID_LENGTH$} {} {} {} {}",
+            "",
+            "",
             self.jobdef.job.uuid(),
+            "\u{2588}\u{2588}".yellow(),
             self.jobdef.job.package().name(),
             self.jobdef.job.package().version()
         ));

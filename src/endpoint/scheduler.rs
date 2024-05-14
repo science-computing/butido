@@ -19,6 +19,7 @@ use colored::Colorize;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel::PgConnection;
+use getset::{CopyGetters, Getters};
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use tokio::io::AsyncWriteExt;
@@ -38,9 +39,12 @@ use crate::job::JobResource;
 use crate::job::RunnableJob;
 use crate::log::LogItem;
 
+#[derive(Getters, CopyGetters)]
 pub struct EndpointScheduler {
     log_dir: Option<PathBuf>,
     endpoints: Vec<Arc<Endpoint>>,
+    #[getset(get = "pub")]
+    max_endpoint_name_length: usize,
 
     staging_store: Arc<RwLock<StagingStore>>,
     release_stores: Vec<Arc<ReleaseStore>>,
@@ -58,10 +62,16 @@ impl EndpointScheduler {
         log_dir: Option<PathBuf>,
     ) -> Result<Self> {
         let endpoints = crate::endpoint::util::setup_endpoints(endpoints).await?;
+        let max_endpoint_name_length = endpoints
+            .iter()
+            .map(|ep| ep.name().len())
+            .max()
+            .unwrap_or(0);
 
         Ok(EndpointScheduler {
             log_dir,
             endpoints,
+            max_endpoint_name_length,
             staging_store,
             release_stores,
             db,
@@ -85,6 +95,7 @@ impl EndpointScheduler {
             log_dir: self.log_dir.clone(),
             bar,
             endpoint,
+            max_endpoint_name_length: self.max_endpoint_name_length,
             job,
             staging_store: self.staging_store.clone(),
             release_stores: self.release_stores.clone(),
@@ -128,6 +139,7 @@ impl EndpointScheduler {
 pub struct JobHandle {
     log_dir: Option<PathBuf>,
     endpoint: EndpointHandle,
+    max_endpoint_name_length: usize,
     job: RunnableJob,
     bar: ProgressBar,
     db: Pool<ConnectionManager<PgConnection>>,
@@ -185,6 +197,7 @@ impl JobHandle {
 
         let logres = LogReceiver {
             endpoint_name: endpoint_name.as_ref(),
+            max_endpoint_name_length: &self.max_endpoint_name_length,
             container_id_chrs: container_id.chars().take(7).collect(),
             package_name: &package.name,
             package_version: &package.version,
@@ -359,6 +372,7 @@ impl JobHandle {
 
 struct LogReceiver<'a> {
     endpoint_name: &'a str,
+    max_endpoint_name_length: &'a usize,
     container_id_chrs: String,
     package_name: &'a str,
     package_version: &'a str,
@@ -371,7 +385,6 @@ struct LogReceiver<'a> {
 impl<'a> LogReceiver<'a> {
     async fn join(mut self) -> Result<String> {
         let mut success = None;
-
         // Reserve a reasonable amount of elements.
         let mut accu = Vec::with_capacity(4096);
 
@@ -389,6 +402,7 @@ impl<'a> LogReceiver<'a> {
         // Having a timeout of 1 sec proofed to be too long to update the time field in the
         // progress bar secondly.
         let timeout_duration = std::time::Duration::from_millis(250);
+        let max_endpoint_name_length = self.max_endpoint_name_length;
 
         loop {
             // Timeout for receiving from the log receiver channel
@@ -422,10 +436,11 @@ impl<'a> LogReceiver<'a> {
                 LogItem::CurrentPhase(ref phasename) => {
                     trace!("Setting bar phase to {}", phasename);
                     self.bar.set_message(format!(
-                        "[{}/{} {} {} {}]: Phase: {}",
+                        "{:<max_endpoint_name_length$} {} {} {} {} {} {}",
                         self.endpoint_name,
                         self.container_id_chrs,
                         self.job.uuid(),
+                        "\u{2588}\u{2588}".yellow(),
                         self.package_name,
                         self.package_version,
                         phasename
@@ -434,10 +449,11 @@ impl<'a> LogReceiver<'a> {
                 LogItem::State(Ok(())) => {
                     trace!("Setting bar state to Ok");
                     self.bar.set_message(format!(
-                        "[{}/{} {} {} {}]: State Ok",
+                        "{:<max_endpoint_name_length$} {} {} {} {} {}",
                         self.endpoint_name,
                         self.container_id_chrs,
                         self.job.uuid(),
+                        "\u{2588}\u{2588}".green(),
                         self.package_name,
                         self.package_version
                     ));
@@ -446,10 +462,11 @@ impl<'a> LogReceiver<'a> {
                 LogItem::State(Err(ref e)) => {
                     trace!("Setting bar state to Err: {}", e);
                     self.bar.set_message(format!(
-                        "[{}/{} {} {} {}]: State Err: {}",
+                        "{:<max_endpoint_name_length$} {} {} {} {} {} {}",
                         self.endpoint_name,
                         self.container_id_chrs,
                         self.job.uuid(),
+                        "\u{2588}\u{2588}".red(),
                         self.package_name,
                         self.package_version,
                         e
@@ -462,19 +479,19 @@ impl<'a> LogReceiver<'a> {
 
         trace!("Finishing bar = {:?}", success);
         let finish_msg = match success {
-            Some(true) => "finished successfully".green().to_string(),
-            Some(false) => "finished with error".red().to_string(),
-            None => "finished".to_string(),
+            Some(true) => "\u{2588}\u{2588}".green(),
+            Some(false) => "\u{2588}\u{2588}".red(),
+            None => "\u{2588}\u{2588}".blue(),
         };
 
         let finish_msg = format!(
-            "[{}/{} {} {} {}]: {}",
+            "{:<max_endpoint_name_length$} {} {} {} {} {}",
             self.endpoint_name,
             self.container_id_chrs,
             self.job.uuid(),
+            finish_msg,
             self.package_name,
             self.package_version,
-            finish_msg
         );
         self.bar.finish_with_message(finish_msg);
 
