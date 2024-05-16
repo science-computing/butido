@@ -12,7 +12,7 @@ compatibility = 1
 # fit a 80 or 100 character wide terminal!
 #
 # This is also the default if the setting is not present.
-progress_format = "[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}"
+progress_format = "{elapsed_precise} {percent:>3}% {bar:5.cyan/blue} | {msg}"
 
 
 # The shebang line used when compiling the packaging scripts

@@ -13,7 +13,7 @@
 
 /// The default progress bar format
 pub fn default_progress_format() -> String {
-    String::from("[{elapsed_precise}] ({percent:>3}%): {bar:40.cyan/blue} | {msg}")
+    String::from("{elapsed_precise} {percent:>3}% {bar:5.cyan/blue} | {msg}")
 }
 
 /// The default spinner format
