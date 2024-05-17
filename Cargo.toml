@@ -43,7 +43,7 @@ futures = "0.3"
 getset = "0.1"
 git2 = "0.18"
 handlebars = { version = "5", features = ["no_logging"] }
-human-panic = "1"
+human-panic = "2"
 humantime = "2"
 indicatif = "0.17"
 indoc = "2"
