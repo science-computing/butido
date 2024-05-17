@@ -103,6 +103,6 @@ cd /tmp/butido-test-repo
 
 # License
 
-butido was developed for science+computing ag (an Atos company).
+butido was developed for science + computing AG (an Atos company).
 
 License: EPL-2.0
