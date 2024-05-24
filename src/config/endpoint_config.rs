@@ -40,7 +40,7 @@ pub struct Endpoint {
     #[getset(get = "pub")]
     uri: String,
 
-    /// The type of the endpoint
+    /// The type of the endpoint (either "socket" or "http")
     #[getset(get = "pub")]
     endpoint_type: EndpointType,
 
@@ -48,10 +48,14 @@ pub struct Endpoint {
     #[getset(get_copy = "pub")]
     maxjobs: usize,
 
+    /// Sets the networking mode for the containers.
+    /// Supported standard values are: "bridge", "host", "none", and "container:<name|id>". Any
+    /// other value is taken as a custom network's name to which this container should connect to.
+    /// (See https://docs.docker.com/engine/api/v1.45/#tag/Image/operation/ImageBuild)
     #[getset(get = "pub")]
     network_mode: Option<String>,
 
-    /// Duration length of timeout for connecting endpoint
+    /// Timeout in seconds for connecting to this endpoint
     #[getset(get = "pub")]
     timeout: Option<u64>,
 }

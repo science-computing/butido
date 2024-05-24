@@ -41,13 +41,13 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     log_dir: PathBuf,
 
-    /// Whether the script interpolation feature should be struct, i.e. missing variables result in
+    /// Whether the script interpolation feature should be strict, i.e. missing variables result in
     /// a failing interpolation. This should be `true` for most users.
     #[serde(default = "default_strict_script_interpolation")]
     #[getset(get = "pub")]
     strict_script_interpolation: bool,
 
-    /// The format of the progress bars
+    /// The format of the progress status output for various operations
     #[serde(default = "default_progress_format")]
     #[getset(get = "pub")]
     progress_format: String,
@@ -105,12 +105,12 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     source_cache_root: PathBuf,
 
-    /// The hostname used to connect to the database
+    /// The hostname/FQDN/IP used to connect to the database
     #[getset(get = "pub")]
     #[serde(rename = "database_host")]
     database_host: String,
 
-    /// The post used to connect to the database
+    /// The port used to connect to the database
     #[getset(get = "pub")]
     #[serde(rename = "database_port")]
     database_port: u16,
@@ -130,11 +130,12 @@ pub struct NotValidatedConfiguration {
     #[serde(rename = "database_name")]
     database_name: String,
 
-    /// The configuration for the Docker endpoints
+    /// The database connection timeout in seconds
     #[getset(get = "pub")]
     #[serde(rename = "database_connection_timeout")]
     database_connection_timeout: Option<u16>,
 
+    /// The configuration for the Docker endpoints and images
     #[getset(get = "pub")]
     docker: DockerConfig,
 
