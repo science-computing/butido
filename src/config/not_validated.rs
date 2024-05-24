@@ -122,6 +122,12 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     database_connection_timeout: Option<u16>,
 
+    /// The default limit for database queries (when listing tables with the `db` subcommand;
+    /// 0=unlimited (not recommended as it might result in OOM kills))
+    #[serde(default = "default_database_query_limit")]
+    #[getset(get = "pub")]
+    database_default_query_limit: usize,
+
     /// The configuration for the Docker endpoints and images
     #[getset(get = "pub")]
     docker: DockerConfig,

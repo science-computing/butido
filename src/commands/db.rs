@@ -51,15 +51,17 @@ pub fn db(
     config: &Configuration,
     matches: &ArgMatches,
 ) -> Result<()> {
+    let default_limit = config.database_default_query_limit();
+
     match matches.subcommand() {
         Some(("cli", matches)) => cli(db_connection_config, matches),
         Some(("setup", _matches)) => setup(db_connection_config),
-        Some(("artifacts", matches)) => artifacts(db_connection_config, matches),
+        Some(("artifacts", matches)) => artifacts(db_connection_config, matches, default_limit),
         Some(("envvars", matches)) => envvars(db_connection_config, matches),
         Some(("images", matches)) => images(db_connection_config, matches),
         Some(("submit", matches)) => submit(db_connection_config, matches),
-        Some(("submits", matches)) => submits(db_connection_config, matches),
-        Some(("jobs", matches)) => jobs(db_connection_config, config, matches),
+        Some(("submits", matches)) => submits(db_connection_config, matches, default_limit),
+        Some(("jobs", matches)) => jobs(db_connection_config, config, matches, default_limit),
         Some(("job", matches)) => job(db_connection_config, config, matches),
         Some(("log-of", matches)) => log_of(db_connection_config, matches),
         Some(("releases", matches)) => releases(db_connection_config, config, matches),
@@ -160,8 +162,26 @@ fn setup(conn_cfg: DbConnectionConfig<'_>) -> Result<()> {
         .map_err(|e| anyhow!(e))
 }
 
+/// Helper function to get the LIMIT for DB queries based on the default value and CLI parameters
+fn get_limit(matches: &ArgMatches, default_limit: &usize) -> Result<i64> {
+    let limit = matches
+        .get_one::<String>("limit")
+        .map(|s| s.parse::<usize>())
+        .transpose()?
+        .unwrap_or(*default_limit);
+    if limit == 0 {
+        Ok(i64::MAX)
+    } else {
+        Ok(i64::try_from(limit)?)
+    }
+}
+
 /// Implementation of the "db artifacts" subcommand
-fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
+fn artifacts(
+    conn_cfg: DbConnectionConfig<'_>,
+    matches: &ArgMatches,
+    default_limit: &usize,
+) -> Result<()> {
     use crate::schema::artifacts::dsl;
 
     let csv = matches.get_flag("csv");
@@ -169,10 +189,7 @@ fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<(
         .get_one::<String>("job_uuid")
         .map(|s| uuid::Uuid::parse_str(s.as_ref()))
         .transpose()?;
-    let limit = matches
-        .get_one::<String>("limit")
-        .map(|s| s.parse::<i64>())
-        .transpose()?;
+    let limit = get_limit(matches, default_limit)?;
 
     let hdrs = crate::commands::util::mk_header(vec!["Path", "Released", "Job"]);
     let mut conn = conn_cfg.establish_connection()?;
@@ -180,12 +197,10 @@ fn artifacts(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<(
         .order_by(schema::artifacts::id.desc()) // required for the --limit implementation
         .inner_join(schema::jobs::table)
         .left_join(schema::releases::table)
-        .into_boxed();
+        .into_boxed()
+        .limit(limit);
     if let Some(job_uuid) = job_uuid {
         query = query.filter(schema::jobs::dsl::uuid.eq(job_uuid))
-    };
-    if let Some(limit) = limit {
-        query = query.limit(limit)
     };
 
     let data = query
@@ -358,12 +373,13 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 }
 
 /// Implementation of the "db submits" subcommand
-fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
+fn submits(
+    conn_cfg: DbConnectionConfig<'_>,
+    matches: &ArgMatches,
+    default_limit: &usize,
+) -> Result<()> {
     let csv = matches.get_flag("csv");
-    let limit = matches
-        .get_one::<String>("limit")
-        .map(|s| s.parse::<i64>())
-        .transpose()?;
+    let limit = get_limit(matches, default_limit)?;
     let hdrs = crate::commands::util::mk_header(vec![
         "Time",
         "UUID",
@@ -406,13 +422,8 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
             .inner_join(
                 schema::packages::table.on(schema::jobs::package_id.eq(schema::packages::id)),
             )
-            .filter(schema::packages::name.eq(&pkgname));
-
-        let query = if let Some(limit) = limit {
-            query.limit(limit)
-        } else {
-            query
-        };
+            .filter(schema::packages::name.eq(&pkgname))
+            .limit(limit);
 
         // Only load the IDs of the submits, so we can later use them to filter the submits
         let submit_ids = query.select(schema::submits::id).load::<i32>(&mut conn)?;
@@ -428,26 +439,12 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
             .load::<(models::Submit, models::Package)>(&mut conn)?
     } else if let Some(pkgname) = matches.get_one::<String>("for_pkg") {
         // Get all submits _for_ the package
-        let query = query
-            .inner_join({
-                schema::packages::table
-                    .on(schema::submits::requested_package_id.eq(schema::packages::id))
-            })
-            .filter(schema::packages::dsl::name.eq(&pkgname));
-
-        if let Some(limit) = limit {
-            query.limit(limit)
-        } else {
-            query
-        }
-        .select((schema::submits::all_columns, schema::packages::all_columns))
-        .load::<(models::Submit, models::Package)>(&mut conn)?
-    } else if let Some(limit) = limit {
         query
             .inner_join({
                 schema::packages::table
                     .on(schema::submits::requested_package_id.eq(schema::packages::id))
             })
+            .filter(schema::packages::dsl::name.eq(&pkgname))
             .select((schema::submits::all_columns, schema::packages::all_columns))
             .limit(limit)
             .load::<(models::Submit, models::Package)>(&mut conn)?
@@ -458,6 +455,7 @@ fn submits(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()>
                     .on(schema::submits::requested_package_id.eq(schema::packages::id))
             })
             .select((schema::submits::all_columns, schema::packages::all_columns))
+            .limit(limit)
             .load::<(models::Submit, models::Package)>(&mut conn)?
     };
 
@@ -491,6 +489,7 @@ fn jobs(
     conn_cfg: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
+    default_limit: &usize,
 ) -> Result<()> {
     let csv = matches.get_flag("csv");
     let hdrs = crate::commands::util::mk_header(vec![
@@ -559,14 +558,6 @@ fn jobs(
         sel = sel.filter(schema::submits::dsl::submit_time.gt(datetime))
     }
 
-    if let Some(limit) = matches
-        .get_one::<String>("limit")
-        .map(|s| s.parse::<i64>())
-        .transpose()?
-    {
-        sel = sel.limit(limit)
-    }
-
     if let Some(ep_name) = matches.get_one::<String>("endpoint") {
         sel = sel.filter(schema::endpoints::name.eq(ep_name))
     }
@@ -580,8 +571,11 @@ fn jobs(
         image_short_name_map.insert(image.name.clone(), image.short_name.clone());
     }
 
+    let limit = get_limit(matches, default_limit)?;
+
     let data = sel
         .order_by(schema::jobs::id.desc()) // required for the --limit implementation
+        .limit(limit)
         .load::<(
             models::Job,
             models::Submit,

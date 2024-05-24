@@ -204,7 +204,7 @@ pub fn cli() -> Command {
                     .long("limit")
                     .short('L')
                     .value_name("LIMIT")
-                    .help("Only list LIMIT artifacts")
+                    .help("List newest LIMIT artifacts (0=unlimited)")
                 )
             )
 
@@ -265,7 +265,7 @@ pub fn cli() -> Command {
                     .long("limit")
                     .short('L')
                     .value_name("LIMIT")
-                    .help("Only list LIMIT submits")
+                    .help("List newest LIMIT submits (0=unlimited)")
                 )
                 .arg(Arg::new("for-commit")
                     .required(false)
@@ -319,7 +319,7 @@ pub fn cli() -> Command {
                     .long("limit")
                     .short('L')
                     .value_name("LIMIT")
-                    .help("Only list newest LIMIT jobs instead of all")
+                    .help("List newest LIMIT jobs (0=unlimited)")
                 )
 
                 .arg(arg_older_than_date("List only jobs older than DATE"))
