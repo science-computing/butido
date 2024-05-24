@@ -52,12 +52,6 @@ pub struct NotValidatedConfiguration {
     #[getset(get = "pub")]
     progress_format: String,
 
-    /// The format of the spinners in the CLI
-    #[serde(default = "default_spinner_format")]
-    #[getset(get = "pub")]
-    #[allow(unused)]
-    spinner_format: String,
-
     /// The format used to print a package
     ///
     /// This is handlebars syntax
