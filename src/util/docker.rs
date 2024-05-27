@@ -51,6 +51,7 @@ impl AsRef<str> for ImageName {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ContainerImage {
     pub name: ImageName,
     pub short_name: ImageName,

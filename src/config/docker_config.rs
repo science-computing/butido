@@ -19,6 +19,7 @@ use crate::util::docker::ContainerImage;
 
 /// Configuration of the Docker daemon interfacing functionality
 #[derive(Debug, Getters, CopyGetters, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DockerConfig {
     /// The required Docker version
     ///

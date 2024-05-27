@@ -35,6 +35,7 @@ impl AsRef<str> for EndpointName {
 
 /// Configuration of a single endpoint
 #[derive(Clone, Debug, Getters, CopyGetters, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Endpoint {
     /// The URI where the endpoint is reachable
     #[getset(get = "pub")]

@@ -47,8 +47,7 @@ images = [
 [docker.endpoints.testhostname]
 uri           = "http://0.0.0.0:8095" # the URI of the endpoint. Either http or socket path
 endpoint_type = "http" # either "http" or "socket"
-speed         = 1 # currently ignored, but required to be present
-maxjobs       = 1 # currently ignored, but required to be present
+maxjobs       = 1 # Maximum number of jobs which are allowed on this endpoint
 
 
 [containers]
