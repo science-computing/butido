@@ -166,11 +166,7 @@ fn setup(conn_cfg: DbConnectionConfig<'_>) -> Result<()> {
 
 /// Helper function to get the LIMIT for DB queries based on the default value and CLI parameters
 fn get_limit(matches: &ArgMatches, default_limit: &usize) -> Result<i64> {
-    let limit = matches
-        .get_one::<String>("limit")
-        .map(|s| s.parse::<usize>())
-        .transpose()?
-        .unwrap_or(*default_limit);
+    let limit = *matches.get_one::<usize>("limit").unwrap_or(default_limit);
     if limit == 0 {
         Ok(i64::MAX)
     } else {

@@ -57,7 +57,7 @@ pub fn cli() -> Command {
                 .short('L')
                 .value_name("LIMIT")
                 .help("List newest LIMIT releases (0=unlimited)")
-                .value_parser(parse_usize),
+                .value_parser(clap::value_parser!(usize)),
         );
 
     Command::new("butido")
@@ -214,7 +214,7 @@ pub fn cli() -> Command {
                     .short('L')
                     .value_name("LIMIT")
                     .help("List newest LIMIT artifacts (0=unlimited)")
-                    .value_parser(parse_usize)
+                    .value_parser(clap::value_parser!(usize))
                 )
             )
 
@@ -276,7 +276,7 @@ pub fn cli() -> Command {
                     .short('L')
                     .value_name("LIMIT")
                     .help("List newest LIMIT submits (0=unlimited)")
-                    .value_parser(parse_usize)
+                    .value_parser(clap::value_parser!(usize))
                 )
                 .arg(Arg::new("for-commit")
                     .required(false)
@@ -331,7 +331,7 @@ pub fn cli() -> Command {
                     .short('L')
                     .value_name("LIMIT")
                     .help("List newest LIMIT jobs (0=unlimited)")
-                    .value_parser(parse_usize)
+                    .value_parser(clap::value_parser!(usize))
                 )
 
                 .arg(arg_older_than_date("List only jobs older than DATE"))
@@ -1111,7 +1111,7 @@ pub fn cli() -> Command {
                         .long("limit")
                         .value_name("LIMIT")
                         .help("Only list LIMIT processes for each container")
-                        .value_parser(parse_usize)
+                        .value_parser(clap::value_parser!(usize))
                     )
                 )
             )
@@ -1352,12 +1352,6 @@ fn parse_date_from_string(s: &str) -> std::result::Result<String, String> {
                 .map_err(|e| e.to_string())
                 .map(|_| ())
         })
-        .map(|_| s.to_owned())
-}
-
-fn parse_usize(s: &str) -> std::result::Result<String, String> {
-    usize::from_str(s)
-        .map_err(|e| e.to_string())
         .map(|_| s.to_owned())
 }
 

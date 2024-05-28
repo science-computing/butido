@@ -13,7 +13,6 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::ops::Deref;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -340,10 +339,7 @@ async fn containers_top(
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let limit = matches
-        .get_one::<String>("limit")
-        .map(|s| usize::from_str(s.as_ref()))
-        .transpose()?;
+    let limit = matches.get_one::<usize>("limit");
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.get_flag("csv");
@@ -398,7 +394,7 @@ async fn containers_top(
         .inspect(|(cid, _top)| trace!("Processing top of container: {}", cid))
         .map(|(container_id, top)| {
             let processes = if let Some(limit) = limit {
-                top.processes.into_iter().take(limit).collect()
+                top.processes.into_iter().take(*limit).collect()
             } else {
                 top.processes
             };
