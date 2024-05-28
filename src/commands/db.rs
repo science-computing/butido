@@ -64,7 +64,9 @@ pub fn db(
         Some(("jobs", matches)) => jobs(db_connection_config, config, matches, default_limit),
         Some(("job", matches)) => job(db_connection_config, config, matches),
         Some(("log-of", matches)) => log_of(db_connection_config, matches),
-        Some(("releases", matches)) => releases(db_connection_config, config, matches),
+        Some(("releases", matches)) => {
+            releases(db_connection_config, config, matches, default_limit)
+        }
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -826,9 +828,11 @@ pub fn releases(
     conn_cfg: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
+    default_limit: &usize,
 ) -> Result<()> {
     let csv = matches.get_flag("csv");
     let mut conn = conn_cfg.establish_connection()?;
+    let limit = get_limit(matches, default_limit)?;
     let header = crate::commands::util::mk_header(["Package", "Version", "Date", "Path"].to_vec());
     let mut query = schema::jobs::table
         .inner_join(schema::packages::table)
@@ -840,9 +844,8 @@ pub fn releases(
             schema::release_stores::table
                 .on(schema::release_stores::id.eq(schema::releases::release_store_id)),
         )
-        .order_by(schema::packages::dsl::name.asc())
-        .then_order_by(schema::packages::dsl::version.asc())
-        .then_order_by(schema::releases::release_date.asc())
+        .order_by(schema::releases::id.desc()) // required for the --limit implementation
+        .limit(limit)
         .into_boxed();
 
     if let Some(date) = crate::commands::util::get_date_filter("older_than", matches)? {

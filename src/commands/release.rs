@@ -35,7 +35,8 @@ pub async fn release(
 ) -> Result<()> {
     match matches.subcommand() {
         Some(("list", matches)) => {
-            crate::commands::db::releases(db_connection_config, config, matches)
+            let default_limit = config.database_default_query_limit();
+            crate::commands::db::releases(db_connection_config, config, matches, default_limit)
         }
         Some(("new", matches)) => new_release(db_connection_config, config, matches).await,
         Some(("rm", matches)) => rm_release(db_connection_config, config, matches).await,
