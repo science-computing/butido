@@ -29,15 +29,15 @@ use crate::util::EnvironmentVariableName;
 ///
 #[derive(Serialize, Deserialize, Getters, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Condition {
-    #[serde(rename = "has_env", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[getset(get = "pub")]
     pub(super) has_env: Option<OneOrMore<EnvironmentVariableName>>,
 
-    #[serde(rename = "env_eq", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[getset(get = "pub")]
     pub(super) env_eq: Option<BTreeMap<EnvironmentVariableName, String>>,
 
-    #[serde(rename = "in_image", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[getset(get = "pub")]
     pub(super) in_image: Option<OneOrMore<String>>,
 }

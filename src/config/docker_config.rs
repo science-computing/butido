@@ -19,6 +19,7 @@ use crate::util::docker::ContainerImage;
 
 /// Configuration of the Docker daemon interfacing functionality
 #[derive(Debug, Getters, CopyGetters, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DockerConfig {
     /// The required Docker version
     ///
@@ -42,9 +43,12 @@ pub struct DockerConfig {
     #[getset(get = "pub")]
     docker_api_versions: Option<Vec<String>>,
 
+    /// List of container images that are allowed for builds.
+    /// An example: `{ name = "local:debian12-default", short_name ="deb12" }`
     #[getset(get = "pub")]
     images: Vec<ContainerImage>,
 
+    /// A map of endpoints (name -> settings) that are used as container hosts to run builds on
     #[getset(get = "pub")]
     endpoints: HashMap<EndpointName, Endpoint>,
 }
