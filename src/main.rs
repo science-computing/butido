@@ -93,8 +93,9 @@ async fn main() -> Result<()> {
         env!("CARGO_PKG_NAME"),
         env!("CARGO_PKG_VERSION")
     )
-    .authors("science-computing ag, opensoftware <opensoftware@science-computing.de>")
-    .homepage("atos.net/de/deutschland/sc"));
+    .authors("science + computing AG, openSoftware <opensoftware@science-computing.de>")
+    .homepage("https://github.com/science-computing/butido")
+    .support("- Via https://github.com/science-computing/butido/issues or mail to opensoftware@science-computing.de"));
 
     let app = cli::cli();
     let cli = app.get_matches();
