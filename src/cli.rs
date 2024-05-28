@@ -56,7 +56,8 @@ pub fn cli() -> Command {
                 .long("limit")
                 .short('L')
                 .value_name("LIMIT")
-                .help("List newest LIMIT releases (0=unlimited)"),
+                .help("List newest LIMIT releases (0=unlimited)")
+                .value_parser(parse_usize),
         );
 
     Command::new("butido")
@@ -213,6 +214,7 @@ pub fn cli() -> Command {
                     .short('L')
                     .value_name("LIMIT")
                     .help("List newest LIMIT artifacts (0=unlimited)")
+                    .value_parser(parse_usize)
                 )
             )
 
@@ -274,6 +276,7 @@ pub fn cli() -> Command {
                     .short('L')
                     .value_name("LIMIT")
                     .help("List newest LIMIT submits (0=unlimited)")
+                    .value_parser(parse_usize)
                 )
                 .arg(Arg::new("for-commit")
                     .required(false)
@@ -328,6 +331,7 @@ pub fn cli() -> Command {
                     .short('L')
                     .value_name("LIMIT")
                     .help("List newest LIMIT jobs (0=unlimited)")
+                    .value_parser(parse_usize)
                 )
 
                 .arg(arg_older_than_date("List only jobs older than DATE"))
