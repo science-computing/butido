@@ -32,7 +32,7 @@ use diesel_migrations::EmbeddedMigrations;
 use diesel_migrations::HarnessWithOutput;
 use diesel_migrations::MigrationHarness;
 use itertools::Itertools;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, trace};
 
 use crate::commands::util::get_date_filter;
 use crate::config::Configuration;
@@ -879,28 +879,23 @@ pub fn releases(
             models::ReleaseStore,
         )>(&mut conn)?
         .into_iter()
-        .filter_map(|(art, pack, rel, rstore)| {
+        .map(|(art, pack, rel, rstore)| {
             let p = config
                 .releases_directory()
-                .join(rstore.store_name)
-                .join(art.path);
+                .join(&rstore.store_name)
+                .join(&art.path);
 
-            if p.is_file() {
-                Some(vec![
-                    pack.name,
-                    pack.version,
-                    rel.release_date.to_string(),
-                    p.display().to_string(),
-                ])
-            } else {
-                warn!(
-                    "Released file for {} {} not found: {}",
-                    pack.name,
-                    pack.version,
-                    p.display()
-                );
-                None
-            }
+            vec![
+                pack.name,
+                pack.version,
+                rel.release_date.to_string(),
+                if p.is_file() {
+                    p.display().to_string()
+                } else {
+                    let relative_path = PathBuf::from(rstore.store_name).join(art.path);
+                    format!("{} is not available locally", relative_path.display())
+                },
+            ]
         })
         .collect::<Vec<Vec<_>>>();
 
