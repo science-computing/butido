@@ -150,10 +150,8 @@ async fn stop(matches: &ArgMatches, container: Container<'_>) -> Result<()> {
     container
         .stop({
             matches
-                .get_one::<String>("timeout")
-                .map(|s| s.parse::<u64>())
-                .transpose()?
-                .map(std::time::Duration::from_secs)
+                .get_one::<u64>("timeout")
+                .map(|t| std::time::Duration::from_secs(*t))
         })
         .await
         .map_err(Error::from)

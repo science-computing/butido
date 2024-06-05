@@ -451,10 +451,8 @@ async fn containers_stop(
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
 
     let stop_timeout = matches
-        .get_one::<String>("timeout")
-        .map(|s| s.parse::<u64>())
-        .transpose()?
-        .map(std::time::Duration::from_secs);
+        .get_one::<u64>("timeout")
+        .map(|s| std::time::Duration::from_secs(*s));
 
     let stats = connect_to_endpoints(config, &endpoint_names)
         .await?

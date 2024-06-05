@@ -205,11 +205,7 @@ pub async fn download(
     progressbars: ProgressBars,
 ) -> Result<()> {
     let force = matches.get_flag("force");
-    let timeout = matches
-        .get_one::<String>("timeout")
-        .map(|s| s.parse::<u64>())
-        .transpose()
-        .context("Parsing timeout argument to integer")?;
+    let timeout = matches.get_one::<u64>("timeout").copied();
     let cache = PathBuf::from(config.source_cache_root());
     let sc = SourceCache::new(cache);
     let pname = matches

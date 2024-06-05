@@ -9,7 +9,6 @@
 //
 
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use clap::crate_authors;
 use clap::Arg;
@@ -147,11 +146,12 @@ pub fn cli() -> Command {
             .required(false)
             .long("db-timeout")
             .value_name("TIMEOUT")
-            .help("Override the database connection timeout")
+            .help("Override the database connection timeout (in seconds)")
             .long_help(indoc::indoc!(r#"
                 Override the database connection timeout set via configuration.
                 Can also be overridden via environment 'BUTIDO_DATABASE_CONNECTION_TIMEOUT', but this setting has precedence.
             "#))
+            .value_parser(clap::value_parser!(u16))
         )
 
         .subcommand(Command::new("generate-completions")
@@ -834,6 +834,7 @@ pub fn cli() -> Command {
                     .long("timeout")
                     .value_name("TIMEOUT")
                     .help("Set timeout for download in seconds")
+                    .value_parser(clap::value_parser!(u64))
                 )
             )
             .subcommand(Command::new("of")
@@ -1069,7 +1070,7 @@ pub fn cli() -> Command {
                         .short('t')
                         .value_name("TIMEOUT")
                         .help("Timeout in seconds")
-                        .value_parser(parse_u64)
+                        .value_parser(clap::value_parser!(u64))
                     )
                 )
                 .subcommand(Command::new("list")
@@ -1153,7 +1154,8 @@ pub fn cli() -> Command {
                         .required(false)
                         .long("timeout")
                         .value_name("DURATION")
-                        .help("Timeout")
+                        .help("Timeout in seconds")
+                        .value_parser(clap::value_parser!(u64))
                     )
                 )
                 .subcommand(Command::new("exec")
@@ -1352,12 +1354,6 @@ fn parse_date_from_string(s: &str) -> std::result::Result<String, String> {
                 .map_err(|e| e.to_string())
                 .map(|_| ())
         })
-        .map(|_| s.to_owned())
-}
-
-fn parse_u64(s: &str) -> std::result::Result<String, String> {
-    u64::from_str(s)
-        .map_err(|e| e.to_string())
         .map(|_| s.to_owned())
 }
 
