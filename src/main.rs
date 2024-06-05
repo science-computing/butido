@@ -54,6 +54,7 @@ use anyhow::Error;
 use anyhow::Result;
 use aquamarine as _;
 use clap::ArgMatches;
+use rustversion as _; // This crate is (occasionally) required (e.g., when we need version specific Clippy overrides)
 use tracing::{debug, error};
 use tracing_subscriber::layer::SubscriberExt;
 
