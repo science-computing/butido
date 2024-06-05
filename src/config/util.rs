@@ -111,6 +111,11 @@ pub fn default_build_error_lines() -> usize {
     10
 }
 
+/// The default value for the database connection timeout (in seconds)
+pub fn default_database_connection_timeout() -> u16 {
+    30
+}
+
 /// The default value for the number of results/rows that should be returned for DB queries that
 /// list things (LIMIT)
 pub fn default_database_query_limit() -> usize {

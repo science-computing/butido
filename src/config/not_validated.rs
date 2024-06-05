@@ -120,7 +120,8 @@ pub struct NotValidatedConfiguration {
 
     /// The database connection timeout in seconds
     #[getset(get = "pub")]
-    database_connection_timeout: Option<u16>,
+    #[serde(default = "default_database_connection_timeout")]
+    database_connection_timeout: u16,
 
     /// The default limit for database queries (when listing tables with the `db` subcommand;
     /// 0=unlimited (not recommended as it might result in OOM kills))

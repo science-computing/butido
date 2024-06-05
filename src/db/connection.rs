@@ -74,12 +74,8 @@ impl<'a> DbConnectionConfig<'a> {
                 .get_one::<String>("database_name")
                 .unwrap_or_else(|| config.database_name()),
             database_connection_timeout: {
-                cli.get_one::<u16>("database_connection_timeout")
-                    .map(|x| *x)
-                    .unwrap_or_else(|| {
-                        // hardcoded default of 30 seconds database timeout
-                        config.database_connection_timeout().unwrap_or(30)
-                    })
+                *cli.get_one::<u16>("database_connection_timeout")
+                    .unwrap_or_else(|| config.database_connection_timeout())
             },
         })
     }
