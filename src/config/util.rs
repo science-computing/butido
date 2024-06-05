@@ -110,3 +110,9 @@ pub fn default_script_shebang() -> String {
 pub fn default_build_error_lines() -> usize {
     10
 }
+
+/// The default value for the number of results/rows that should be returned for DB queries that
+/// list things (LIMIT)
+pub fn default_database_query_limit() -> usize {
+    10
+}
