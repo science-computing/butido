@@ -61,10 +61,8 @@ impl<'a> DbConnectionConfig<'a> {
                 .get_one::<String>("database_host")
                 .unwrap_or_else(|| config.database_host()),
             database_port: {
-                cli.get_one::<String>("database_port")
-                    .map(|s| s.parse::<u16>())
-                    .transpose()?
-                    .unwrap_or_else(|| *config.database_port())
+                *cli.get_one::<u16>("database_port")
+                    .unwrap_or_else(|| config.database_port())
             },
             database_user: cli
                 .get_one::<String>("database_user")

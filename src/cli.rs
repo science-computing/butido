@@ -110,6 +110,7 @@ pub fn cli() -> Command {
                 Override the database port set via configuration.
                 Can also be overridden via environment 'BUTIDO_DATABASE_PORT', but this setting has precedence.
             "#))
+            .value_parser(clap::value_parser!(u16))
         )
         .arg(Arg::new("database_user")
             .required(false)
@@ -1035,6 +1036,7 @@ pub fn cli() -> Command {
                     .value_name("N")
                     .default_value("10")
                     .help("How often to ping")
+                    .value_parser(clap::value_parser!(u64))
                 )
                 .arg(Arg::new("ping_sleep")
                     .required(false)
@@ -1042,6 +1044,7 @@ pub fn cli() -> Command {
                     .value_name("N")
                     .default_value("1")
                     .help("How long to sleep between pings")
+                    .value_parser(clap::value_parser!(u64))
                 )
             )
             .subcommand(Command::new("stats")

@@ -70,16 +70,8 @@ async fn ping(
     config: &Configuration,
     progress_generator: ProgressBars,
 ) -> Result<()> {
-    let n_pings = matches
-        .get_one::<String>("ping_n")
-        .map(|s| s.parse::<u64>())
-        .transpose()?
-        .unwrap(); // safe by clap
-    let sleep = matches
-        .get_one::<String>("ping_sleep")
-        .map(|s| s.parse::<u64>())
-        .transpose()?
-        .unwrap(); // safe by clap
+    let n_pings = *matches.get_one::<u64>("ping_n").unwrap(); // safe by clap
+    let sleep = *matches.get_one::<u64>("ping_sleep").unwrap(); // safe by clap
     let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
     let multibar = Arc::new({
         let mp = indicatif::MultiProgress::new();
