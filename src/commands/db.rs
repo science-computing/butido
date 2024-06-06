@@ -183,10 +183,7 @@ fn artifacts(
     use crate::schema::artifacts::dsl;
 
     let csv = matches.get_flag("csv");
-    let job_uuid = matches
-        .get_one::<String>("job_uuid")
-        .map(|s| uuid::Uuid::parse_str(s.as_ref()))
-        .transpose()?;
+    let job_uuid = matches.get_one::<uuid::Uuid>("job_uuid");
     let limit = get_limit(matches, default_limit)?;
 
     let hdrs = crate::commands::util::mk_header(vec!["Path", "Released", "Job"]);
@@ -269,14 +266,9 @@ fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 /// Implementation of the "db submit" subcommand
 fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let mut conn = conn_cfg.establish_connection()?;
-    let submit_id = matches
-        .get_one::<String>("submit")
-        .map(|s| uuid::Uuid::from_str(s.as_ref()))
-        .transpose()
-        .context("Parsing submit UUID")?
-        .unwrap(); // safe by clap
+    let submit_id = matches.get_one::<uuid::Uuid>("submit").unwrap(); // safe by clap
 
-    let submit = models::Submit::with_id(&mut conn, &submit_id)
+    let submit = models::Submit::with_id(&mut conn, submit_id)
         .with_context(|| anyhow!("Loading submit '{}' from DB", submit_id))?;
 
     let githash = models::GitHash::with_id(&mut conn, submit.repo_hash_id)
@@ -504,11 +496,7 @@ fn jobs(
         .inner_join(schema::images::table)
         .into_boxed();
 
-    if let Some(submit_uuid) = matches
-        .get_one::<String>("submit_uuid")
-        .map(|s| uuid::Uuid::parse_str(s.as_ref()))
-        .transpose()?
-    {
+    if let Some(submit_uuid) = matches.get_one::<uuid::Uuid>("submit_uuid") {
         sel = sel.filter(schema::submits::uuid.eq(submit_uuid))
     }
 
@@ -628,11 +616,7 @@ fn job(
     let show_script = matches.get_flag("show_script");
     let csv = matches.get_flag("csv");
     let mut conn = conn_cfg.establish_connection()?;
-    let job_uuid = matches
-        .get_one::<String>("job_uuid")
-        .map(|s| uuid::Uuid::parse_str(s.as_ref()))
-        .transpose()?
-        .unwrap();
+    let job_uuid = matches.get_one::<uuid::Uuid>("job_uuid").unwrap();
 
     let data = schema::jobs::table
         .filter(schema::jobs::dsl::uuid.eq(job_uuid))
@@ -796,11 +780,7 @@ fn job(
 /// Implementation of the subcommand "db log-of"
 fn log_of(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
     let mut conn = conn_cfg.establish_connection()?;
-    let job_uuid = matches
-        .get_one::<String>("job_uuid")
-        .map(|s| uuid::Uuid::parse_str(s.as_ref()))
-        .transpose()?
-        .unwrap();
+    let job_uuid = matches.get_one::<uuid::Uuid>("job_uuid").unwrap();
     let out = std::io::stdout();
     let mut lock = out.lock();
 

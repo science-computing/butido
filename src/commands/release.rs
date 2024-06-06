@@ -66,11 +66,7 @@ async fn new_release(
     debug!("Release called for: {:?} {:?}", pname, pvers);
 
     let pool = db_connection_config.establish_pool()?;
-    let submit_uuid = matches
-        .get_one::<String>("submit_uuid")
-        .map(|s| uuid::Uuid::parse_str(s.as_ref()))
-        .transpose()?
-        .unwrap(); // safe by clap
+    let submit_uuid = matches.get_one::<uuid::Uuid>("submit_uuid").unwrap(); // safe by clap
     debug!("Release called for submit: {:?}", submit_uuid);
 
     let submit = crate::schema::submits::dsl::submits

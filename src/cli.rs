@@ -208,6 +208,7 @@ pub fn cli() -> Command {
                     .short('J')
                     .value_name("JOB UUID")
                     .help("Print only artifacts for a certain job")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
                 .arg(Arg::new("limit")
                     .required(false)
@@ -246,6 +247,7 @@ pub fn cli() -> Command {
                     .index(1)
                     .value_name("SUBMIT")
                     .help("The Submit to show details about")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
             )
 
@@ -308,6 +310,7 @@ pub fn cli() -> Command {
                     .short('S')
                     .value_name("UUID")
                     .help("Only list jobs of a certain submit")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
 
                 .arg(Arg::new("image")
@@ -370,6 +373,7 @@ pub fn cli() -> Command {
                     .index(1)
                     .value_name("UUID")
                     .help("The job to show")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
 
                 .arg(Arg::new("show_log")
@@ -408,6 +412,7 @@ pub fn cli() -> Command {
                     .index(1)
                     .value_name("UUID")
                     .help("The id of the Job")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
             )
             .subcommand(releases_list_command.clone())
@@ -897,6 +902,7 @@ pub fn cli() -> Command {
                     .index(1)
                     .value_name("SUBMIT")
                     .help("The submit uuid from which to release a package")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
                 .arg(Arg::new("release_store_name")
                     .required(true)
