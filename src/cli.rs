@@ -49,6 +49,14 @@ pub fn cli() -> Command {
                 .short('p')
                 .value_name("PKG")
                 .help("Only list releases for package PKG"),
+        )
+        .arg(
+            Arg::new("limit")
+                .required(false)
+                .long("limit")
+                .short('L')
+                .value_name("LIMIT")
+                .help("List newest LIMIT releases (0=unlimited)"),
         );
 
     Command::new("butido")

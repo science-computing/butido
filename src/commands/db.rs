@@ -32,7 +32,7 @@ use diesel_migrations::EmbeddedMigrations;
 use diesel_migrations::HarnessWithOutput;
 use diesel_migrations::MigrationHarness;
 use itertools::Itertools;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, trace};
 
 use crate::commands::util::get_date_filter;
 use crate::config::Configuration;
@@ -64,7 +64,9 @@ pub fn db(
         Some(("jobs", matches)) => jobs(db_connection_config, config, matches, default_limit),
         Some(("job", matches)) => job(db_connection_config, config, matches),
         Some(("log-of", matches)) => log_of(db_connection_config, matches),
-        Some(("releases", matches)) => releases(db_connection_config, config, matches),
+        Some(("releases", matches)) => {
+            releases(db_connection_config, config, matches, default_limit)
+        }
         Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
         None => Err(anyhow!("No subcommand")),
     }
@@ -826,9 +828,11 @@ pub fn releases(
     conn_cfg: DbConnectionConfig<'_>,
     config: &Configuration,
     matches: &ArgMatches,
+    default_limit: &usize,
 ) -> Result<()> {
     let csv = matches.get_flag("csv");
     let mut conn = conn_cfg.establish_connection()?;
+    let limit = get_limit(matches, default_limit)?;
     let header = crate::commands::util::mk_header(["Package", "Version", "Date", "Path"].to_vec());
     let mut query = schema::jobs::table
         .inner_join(schema::packages::table)
@@ -840,9 +844,8 @@ pub fn releases(
             schema::release_stores::table
                 .on(schema::release_stores::id.eq(schema::releases::release_store_id)),
         )
-        .order_by(schema::packages::dsl::name.asc())
-        .then_order_by(schema::packages::dsl::version.asc())
-        .then_order_by(schema::releases::release_date.asc())
+        .order_by(schema::releases::id.desc()) // required for the --limit implementation
+        .limit(limit)
         .into_boxed();
 
     if let Some(date) = crate::commands::util::get_date_filter("older_than", matches)? {
@@ -876,28 +879,23 @@ pub fn releases(
             models::ReleaseStore,
         )>(&mut conn)?
         .into_iter()
-        .filter_map(|(art, pack, rel, rstore)| {
+        .map(|(art, pack, rel, rstore)| {
             let p = config
                 .releases_directory()
-                .join(rstore.store_name)
-                .join(art.path);
+                .join(&rstore.store_name)
+                .join(&art.path);
 
-            if p.is_file() {
-                Some(vec![
-                    pack.name,
-                    pack.version,
-                    rel.release_date.to_string(),
-                    p.display().to_string(),
-                ])
-            } else {
-                warn!(
-                    "Released file for {} {} not found: {}",
-                    pack.name,
-                    pack.version,
-                    p.display()
-                );
-                None
-            }
+            vec![
+                pack.name,
+                pack.version,
+                rel.release_date.to_string(),
+                if p.is_file() {
+                    p.display().to_string()
+                } else {
+                    let relative_path = PathBuf::from(rstore.store_name).join(art.path);
+                    format!("{} is not available locally", relative_path.display())
+                },
+            ]
         })
         .collect::<Vec<Vec<_>>>();
 
