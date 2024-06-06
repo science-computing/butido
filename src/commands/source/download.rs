@@ -314,5 +314,8 @@ pub async fn download(
     }
 
     debug!("r = {:?}", r);
+
+    super::verify(matches, config, repo, progressbars).await?;
+
     r
 }
