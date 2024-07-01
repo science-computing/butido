@@ -9,7 +9,6 @@
 //
 
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use clap::crate_authors;
 use clap::Arg;
@@ -56,7 +55,8 @@ pub fn cli() -> Command {
                 .long("limit")
                 .short('L')
                 .value_name("LIMIT")
-                .help("List newest LIMIT releases (0=unlimited)"),
+                .help("List newest LIMIT releases (0=unlimited)")
+                .value_parser(clap::value_parser!(usize)),
         );
 
     Command::new("butido")
@@ -110,6 +110,7 @@ pub fn cli() -> Command {
                 Override the database port set via configuration.
                 Can also be overridden via environment 'BUTIDO_DATABASE_PORT', but this setting has precedence.
             "#))
+            .value_parser(clap::value_parser!(u16))
         )
         .arg(Arg::new("database_user")
             .required(false)
@@ -146,11 +147,12 @@ pub fn cli() -> Command {
             .required(false)
             .long("db-timeout")
             .value_name("TIMEOUT")
-            .help("Override the database connection timeout")
+            .help("Override the database connection timeout (in seconds)")
             .long_help(indoc::indoc!(r#"
                 Override the database connection timeout set via configuration.
                 Can also be overridden via environment 'BUTIDO_DATABASE_CONNECTION_TIMEOUT', but this setting has precedence.
             "#))
+            .value_parser(clap::value_parser!(u16))
         )
 
         .subcommand(Command::new("generate-completions")
@@ -206,6 +208,7 @@ pub fn cli() -> Command {
                     .short('J')
                     .value_name("JOB UUID")
                     .help("Print only artifacts for a certain job")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
                 .arg(Arg::new("limit")
                     .required(false)
@@ -213,6 +216,7 @@ pub fn cli() -> Command {
                     .short('L')
                     .value_name("LIMIT")
                     .help("List newest LIMIT artifacts (0=unlimited)")
+                    .value_parser(clap::value_parser!(usize))
                 )
             )
 
@@ -243,6 +247,7 @@ pub fn cli() -> Command {
                     .index(1)
                     .value_name("SUBMIT")
                     .help("The Submit to show details about")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
             )
 
@@ -274,6 +279,7 @@ pub fn cli() -> Command {
                     .short('L')
                     .value_name("LIMIT")
                     .help("List newest LIMIT submits (0=unlimited)")
+                    .value_parser(clap::value_parser!(usize))
                 )
                 .arg(Arg::new("for-commit")
                     .required(false)
@@ -304,6 +310,7 @@ pub fn cli() -> Command {
                     .short('S')
                     .value_name("UUID")
                     .help("Only list jobs of a certain submit")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
 
                 .arg(Arg::new("image")
@@ -328,6 +335,7 @@ pub fn cli() -> Command {
                     .short('L')
                     .value_name("LIMIT")
                     .help("List newest LIMIT jobs (0=unlimited)")
+                    .value_parser(clap::value_parser!(usize))
                 )
 
                 .arg(arg_older_than_date("List only jobs older than DATE"))
@@ -365,6 +373,7 @@ pub fn cli() -> Command {
                     .index(1)
                     .value_name("UUID")
                     .help("The job to show")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
 
                 .arg(Arg::new("show_log")
@@ -403,6 +412,7 @@ pub fn cli() -> Command {
                     .index(1)
                     .value_name("UUID")
                     .help("The id of the Job")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
             )
             .subcommand(releases_list_command.clone())
@@ -830,6 +840,7 @@ pub fn cli() -> Command {
                     .long("timeout")
                     .value_name("TIMEOUT")
                     .help("Set timeout for download in seconds")
+                    .value_parser(clap::value_parser!(u64))
                 )
             )
             .subcommand(Command::new("of")
@@ -891,6 +902,7 @@ pub fn cli() -> Command {
                     .index(1)
                     .value_name("SUBMIT")
                     .help("The submit uuid from which to release a package")
+                    .value_parser(uuid::Uuid::parse_str)
                 )
                 .arg(Arg::new("release_store_name")
                     .required(true)
@@ -1030,6 +1042,7 @@ pub fn cli() -> Command {
                     .value_name("N")
                     .default_value("10")
                     .help("How often to ping")
+                    .value_parser(clap::value_parser!(u64))
                 )
                 .arg(Arg::new("ping_sleep")
                     .required(false)
@@ -1037,6 +1050,7 @@ pub fn cli() -> Command {
                     .value_name("N")
                     .default_value("1")
                     .help("How long to sleep between pings")
+                    .value_parser(clap::value_parser!(u64))
                 )
             )
             .subcommand(Command::new("stats")
@@ -1065,7 +1079,7 @@ pub fn cli() -> Command {
                         .short('t')
                         .value_name("TIMEOUT")
                         .help("Timeout in seconds")
-                        .value_parser(parse_u64)
+                        .value_parser(clap::value_parser!(u64))
                     )
                 )
                 .subcommand(Command::new("list")
@@ -1107,7 +1121,7 @@ pub fn cli() -> Command {
                         .long("limit")
                         .value_name("LIMIT")
                         .help("Only list LIMIT processes for each container")
-                        .value_parser(parse_usize)
+                        .value_parser(clap::value_parser!(usize))
                     )
                 )
             )
@@ -1149,7 +1163,8 @@ pub fn cli() -> Command {
                         .required(false)
                         .long("timeout")
                         .value_name("DURATION")
-                        .help("Timeout")
+                        .help("Timeout in seconds")
+                        .value_parser(clap::value_parser!(u64))
                     )
                 )
                 .subcommand(Command::new("exec")
@@ -1348,18 +1363,6 @@ fn parse_date_from_string(s: &str) -> std::result::Result<String, String> {
                 .map_err(|e| e.to_string())
                 .map(|_| ())
         })
-        .map(|_| s.to_owned())
-}
-
-fn parse_usize(s: &str) -> std::result::Result<String, String> {
-    usize::from_str(s)
-        .map_err(|e| e.to_string())
-        .map(|_| s.to_owned())
-}
-
-fn parse_u64(s: &str) -> std::result::Result<String, String> {
-    u64::from_str(s)
-        .map_err(|e| e.to_string())
         .map(|_| s.to_owned())
 }
 

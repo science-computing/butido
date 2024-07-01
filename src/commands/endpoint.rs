@@ -13,7 +13,6 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::ops::Deref;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -71,16 +70,8 @@ async fn ping(
     config: &Configuration,
     progress_generator: ProgressBars,
 ) -> Result<()> {
-    let n_pings = matches
-        .get_one::<String>("ping_n")
-        .map(|s| s.parse::<u64>())
-        .transpose()?
-        .unwrap(); // safe by clap
-    let sleep = matches
-        .get_one::<String>("ping_sleep")
-        .map(|s| s.parse::<u64>())
-        .transpose()?
-        .unwrap(); // safe by clap
+    let n_pings = *matches.get_one::<u64>("ping_n").unwrap(); // safe by clap
+    let sleep = *matches.get_one::<u64>("ping_sleep").unwrap(); // safe by clap
     let endpoints = connect_to_endpoints(config, &endpoint_names).await?;
     let multibar = Arc::new({
         let mp = indicatif::MultiProgress::new();
@@ -340,10 +331,7 @@ async fn containers_top(
     matches: &ArgMatches,
     config: &Configuration,
 ) -> Result<()> {
-    let limit = matches
-        .get_one::<String>("limit")
-        .map(|s| usize::from_str(s.as_ref()))
-        .transpose()?;
+    let limit = matches.get_one::<usize>("limit");
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.get_flag("csv");
@@ -398,7 +386,7 @@ async fn containers_top(
         .inspect(|(cid, _top)| trace!("Processing top of container: {}", cid))
         .map(|(container_id, top)| {
             let processes = if let Some(limit) = limit {
-                top.processes.into_iter().take(limit).collect()
+                top.processes.into_iter().take(*limit).collect()
             } else {
                 top.processes
             };
@@ -455,10 +443,8 @@ async fn containers_stop(
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
 
     let stop_timeout = matches
-        .get_one::<String>("timeout")
-        .map(|s| s.parse::<u64>())
-        .transpose()?
-        .map(std::time::Duration::from_secs);
+        .get_one::<u64>("timeout")
+        .map(|s| std::time::Duration::from_secs(*s));
 
     let stats = connect_to_endpoints(config, &endpoint_names)
         .await?
