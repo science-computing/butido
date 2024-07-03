@@ -21,7 +21,7 @@ use crate::package::Dag;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
-use crate::util::docker::resolve_image_name;
+use crate::util::docker::ImageNameLookup;
 use crate::util::EnvironmentVariableName;
 
 /// Implementation of the "tree_of" subcommand
@@ -36,9 +36,10 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
+    let image_name_lookup = ImageNameLookup::create(config.docker().images());
     let image_name = matches
         .get_one::<String>("image")
-        .map(|s| resolve_image_name(s, config.docker().images()))
+        .map(|s| image_name_lookup.expand(s))
         .transpose()?;
 
     let additional_env = matches

@@ -10,7 +10,6 @@
 
 //! Implementation of the 'db' subcommand
 
-use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
@@ -41,7 +40,7 @@ use crate::db::DbConnectionConfig;
 use crate::log::JobResult;
 use crate::package::Script;
 use crate::schema;
-use crate::util::docker::resolve_image_name;
+use crate::util::docker::ImageNameLookup;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
@@ -500,9 +499,10 @@ fn jobs(
         sel = sel.filter(schema::submits::uuid.eq(submit_uuid))
     }
 
+    let image_name_lookup = ImageNameLookup::create(config.docker().images());
     if let Some(image_name) = matches
         .get_one::<String>("image")
-        .map(|s| resolve_image_name(s, config.docker().images()))
+        .map(|s| image_name_lookup.expand(s))
         .transpose()?
     {
         sel = sel.filter(schema::images::name.eq(image_name.as_ref().to_string()))
@@ -552,12 +552,9 @@ fn jobs(
         sel = sel.filter(schema::packages::name.eq(pkg_name))
     }
 
-    let mut image_short_name_map = HashMap::new();
-    for image in config.docker().images() {
-        image_short_name_map.insert(image.name.clone(), image.short_name.clone());
-    }
-
     let limit = get_limit(matches, default_limit)?;
+
+    let image_name_lookup = ImageNameLookup::create(config.docker().images());
 
     let data = sel
         .order_by(schema::jobs::id.desc()) // required for the --limit implementation
@@ -576,7 +573,6 @@ fn jobs(
                 .map(|b| if b { "yes" } else { "no" })
                 .map(String::from)
                 .unwrap_or_else(|| String::from("?"));
-            let image_name = crate::util::docker::ImageName::from(image.name);
 
             Ok(vec![
                 submit.uuid.to_string(),
@@ -586,10 +582,7 @@ fn jobs(
                 success,
                 package.name,
                 package.version,
-                image_short_name_map
-                    .get(&image_name)
-                    .unwrap_or(&image_name)
-                    .to_string(),
+                image_name_lookup.shorten(&image.name),
             ])
         })
         .collect::<Result<Vec<_>>>()?;
