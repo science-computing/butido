@@ -499,7 +499,7 @@ fn jobs(
         sel = sel.filter(schema::submits::uuid.eq(submit_uuid))
     }
 
-    let image_name_lookup = ImageNameLookup::create(config.docker().images());
+    let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
     if let Some(image_name) = matches
         .get_one::<String>("image")
         .map(|s| image_name_lookup.expand(s))
@@ -554,7 +554,7 @@ fn jobs(
 
     let limit = get_limit(matches, default_limit)?;
 
-    let image_name_lookup = ImageNameLookup::create(config.docker().images());
+    let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
 
     let data = sel
         .order_by(schema::jobs::id.desc()) // required for the --limit implementation

@@ -36,7 +36,7 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
 
-    let image_name_lookup = ImageNameLookup::create(config.docker().images());
+    let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
     let image_name = matches
         .get_one::<String>("image")
         .map(|s| image_name_lookup.expand(s))

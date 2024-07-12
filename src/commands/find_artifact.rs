@@ -63,7 +63,7 @@ pub async fn find_artifact(
         .transpose()?
         .unwrap_or_default();
 
-    let image_name_lookup = ImageNameLookup::create(config.docker().images());
+    let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
     let image_name = matches
         .get_one::<String>("image")
         .map(|s| image_name_lookup.expand(s))

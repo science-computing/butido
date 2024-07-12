@@ -84,7 +84,7 @@ pub async fn build(
             .unwrap_or_else(|| config.shebang().clone())
     });
 
-    let image_name_lookup = ImageNameLookup::create(config.docker().images());
+    let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
     let image_name = matches
         .get_one::<String>("image")
         .map(|s| image_name_lookup.expand(s))

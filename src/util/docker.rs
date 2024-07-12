@@ -11,10 +11,10 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
-use tracing::warn;
 
 #[derive(
     parse_display::Display,
@@ -63,33 +63,38 @@ pub struct ImageNameLookup {
 }
 
 impl ImageNameLookup {
-    pub fn create(available_images: &Vec<ContainerImage>) -> Self {
+    pub fn create(available_images: &[ContainerImage]) -> Result<Self> {
         let mut long2short = HashMap::new();
         let mut short2long = HashMap::new();
-        for image in available_images {
-            if long2short
-                .insert(image.name.clone(), image.short_name.clone())
-                .is_some()
-            {
-                warn!(
-                "The image name \"{0}\" is specified multiple times in the configured `images` list",
-                image.name
-            );
+        let mut all_names = HashMap::new(); // Optional (to check for name collisions)
+        for (idx, image) in available_images.iter().enumerate() {
+            if let Some(duplicate) = all_names.insert(image.name.clone(), idx) {
+                return Err(anyhow!(
+                    "The image full name \"{0}\" is specified multiple times in the configured `images` list (either as short or full name)",
+                    image.name
+                )).with_context(|| anyhow!(
+                    "The configured container image with index {idx} ({:?}) collides with the previous definition at index {duplicate} ({:?})",
+                    available_images.get(idx),
+                    available_images.get(duplicate))
+                );
             }
-            if short2long
-                .insert(image.short_name.clone(), image.name.clone())
-                .is_some()
-            {
-                warn!(
-                "The image short name \"{0}\" is specified multiple times in the configured `images` list",
-                image.short_name
-            );
+            if let Some(duplicate) = all_names.insert(image.short_name.clone(), idx) {
+                return Err(anyhow!(
+                    "The image short name \"{0}\" is specified multiple times in the configured `images` list (either as short or full name)",
+                    image.short_name
+                )).with_context(|| anyhow!(
+                    "The configured container image with index {idx} ({:?}) collides with the previous definition at index {duplicate} ({:?})",
+                    available_images.get(idx),
+                    available_images.get(duplicate))
+                );
             }
+            long2short.insert(image.name.clone(), image.short_name.clone());
+            short2long.insert(image.short_name.clone(), image.name.clone());
         }
-        ImageNameLookup {
+        Ok(ImageNameLookup {
             long2short,
             short2long,
-        }
+        })
     }
 
     // To convert a user-supplied image name into an expanded image name:
