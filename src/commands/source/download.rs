@@ -20,7 +20,7 @@ use clap::ArgMatches;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
-use tracing::{debug, info, trace, warn};
+use tracing::{info, trace, warn};
 
 use crate::config::*;
 use crate::package::PackageName;
@@ -305,13 +305,12 @@ pub async fn download(
 
     if r.is_err() {
         progressbar.lock().await.error().await;
+        return r;
     } else {
         progressbar.lock().await.success().await;
     }
 
-    debug!("r = {:?}", r);
-
     super::verify(matches, config, repo, progressbars).await?;
 
-    r
+    Ok(())
 }
