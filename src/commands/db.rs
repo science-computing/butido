@@ -58,7 +58,7 @@ pub fn db(
         Some(("artifacts", matches)) => artifacts(db_connection_config, matches, default_limit),
         Some(("envvars", matches)) => envvars(db_connection_config, matches),
         Some(("images", matches)) => images(db_connection_config, matches),
-        Some(("submit", matches)) => submit(db_connection_config, matches),
+        Some(("submit", matches)) => submit(db_connection_config, config, matches),
         Some(("submits", matches)) => submits(db_connection_config, matches, default_limit),
         Some(("jobs", matches)) => jobs(db_connection_config, config, matches, default_limit),
         Some(("job", matches)) => job(db_connection_config, config, matches),
@@ -263,7 +263,11 @@ fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 }
 
 /// Implementation of the "db submit" subcommand
-fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
+fn submit(
+    conn_cfg: DbConnectionConfig<'_>,
+    config: &Configuration,
+    matches: &ArgMatches,
+) -> Result<()> {
     let mut conn = conn_cfg.establish_connection()?;
     let submit_id = matches.get_one::<uuid::Uuid>("submit").unwrap(); // safe by clap
 
@@ -321,6 +325,8 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
         n_jobs_err = jobs_err.to_string().red(),
     )?;
 
+    let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
+
     let header = crate::commands::util::mk_header(
         [
             "Job",
@@ -354,7 +360,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
                 package.version.cyan(),
                 job.container_hash.normal(),
                 endpoint.name.normal(),
-                image.name.normal(),
+                image_name_lookup.shorten(&image.name).normal(),
             ])
         })
         .collect::<Result<Vec<Vec<colored::ColoredString>>>>()?;
