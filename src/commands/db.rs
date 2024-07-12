@@ -59,7 +59,7 @@ pub fn db(
         Some(("envvars", matches)) => envvars(db_connection_config, matches),
         Some(("images", matches)) => images(db_connection_config, matches),
         Some(("submit", matches)) => submit(db_connection_config, config, matches),
-        Some(("submits", matches)) => submits(db_connection_config, matches, default_limit),
+        Some(("submits", matches)) => submits(db_connection_config, config, matches, default_limit),
         Some(("jobs", matches)) => jobs(db_connection_config, config, matches, default_limit),
         Some(("job", matches)) => job(db_connection_config, config, matches),
         Some(("log-of", matches)) => log_of(db_connection_config, matches),
@@ -370,6 +370,7 @@ fn submit(
 /// Implementation of the "db submits" subcommand
 fn submits(
     conn_cfg: DbConnectionConfig<'_>,
+    config: &Configuration,
     matches: &ArgMatches,
     default_limit: &usize,
 ) -> Result<()> {
@@ -398,7 +399,9 @@ fn submits(
     };
 
     let query = if let Some(image) = matches.get_one::<String>("image") {
-        query.filter(schema::images::name.eq(image))
+        let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
+        let image = image_name_lookup.expand(image)?;
+        query.filter(schema::images::name.eq(image.as_ref().to_string()))
     } else {
         query
     };
