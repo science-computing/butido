@@ -10,7 +10,6 @@
 
 //! Implementation of the 'db' subcommand
 
-use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
@@ -41,7 +40,7 @@ use crate::db::DbConnectionConfig;
 use crate::log::JobResult;
 use crate::package::Script;
 use crate::schema;
-use crate::util::docker::resolve_image_name;
+use crate::util::docker::ImageNameLookup;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
@@ -59,8 +58,8 @@ pub fn db(
         Some(("artifacts", matches)) => artifacts(db_connection_config, matches, default_limit),
         Some(("envvars", matches)) => envvars(db_connection_config, matches),
         Some(("images", matches)) => images(db_connection_config, matches),
-        Some(("submit", matches)) => submit(db_connection_config, matches),
-        Some(("submits", matches)) => submits(db_connection_config, matches, default_limit),
+        Some(("submit", matches)) => submit(db_connection_config, config, matches),
+        Some(("submits", matches)) => submits(db_connection_config, config, matches, default_limit),
         Some(("jobs", matches)) => jobs(db_connection_config, config, matches, default_limit),
         Some(("job", matches)) => job(db_connection_config, config, matches),
         Some(("log-of", matches)) => log_of(db_connection_config, matches),
@@ -264,7 +263,11 @@ fn images(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 }
 
 /// Implementation of the "db submit" subcommand
-fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> {
+fn submit(
+    conn_cfg: DbConnectionConfig<'_>,
+    config: &Configuration,
+    matches: &ArgMatches,
+) -> Result<()> {
     let mut conn = conn_cfg.establish_connection()?;
     let submit_id = matches.get_one::<uuid::Uuid>("submit").unwrap(); // safe by clap
 
@@ -322,6 +325,8 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
         n_jobs_err = jobs_err.to_string().red(),
     )?;
 
+    let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
+
     let header = crate::commands::util::mk_header(
         [
             "Job",
@@ -355,7 +360,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
                 package.version.cyan(),
                 job.container_hash.normal(),
                 endpoint.name.normal(),
-                image.name.normal(),
+                image_name_lookup.shorten(&image.name).normal(),
             ])
         })
         .collect::<Result<Vec<Vec<colored::ColoredString>>>>()?;
@@ -365,6 +370,7 @@ fn submit(conn_cfg: DbConnectionConfig<'_>, matches: &ArgMatches) -> Result<()> 
 /// Implementation of the "db submits" subcommand
 fn submits(
     conn_cfg: DbConnectionConfig<'_>,
+    config: &Configuration,
     matches: &ArgMatches,
     default_limit: &usize,
 ) -> Result<()> {
@@ -393,7 +399,9 @@ fn submits(
     };
 
     let query = if let Some(image) = matches.get_one::<String>("image") {
-        query.filter(schema::images::name.eq(image))
+        let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
+        let image = image_name_lookup.expand(image)?;
+        query.filter(schema::images::name.eq(image.as_ref().to_string()))
     } else {
         query
     };
@@ -500,9 +508,10 @@ fn jobs(
         sel = sel.filter(schema::submits::uuid.eq(submit_uuid))
     }
 
+    let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
     if let Some(image_name) = matches
         .get_one::<String>("image")
-        .map(|s| resolve_image_name(s, config.docker().images()))
+        .map(|s| image_name_lookup.expand(s))
         .transpose()?
     {
         sel = sel.filter(schema::images::name.eq(image_name.as_ref().to_string()))
@@ -552,12 +561,9 @@ fn jobs(
         sel = sel.filter(schema::packages::name.eq(pkg_name))
     }
 
-    let mut image_short_name_map = HashMap::new();
-    for image in config.docker().images() {
-        image_short_name_map.insert(image.name.clone(), image.short_name.clone());
-    }
-
     let limit = get_limit(matches, default_limit)?;
+
+    let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
 
     let data = sel
         .order_by(schema::jobs::id.desc()) // required for the --limit implementation
@@ -576,7 +582,6 @@ fn jobs(
                 .map(|b| if b { "yes" } else { "no" })
                 .map(String::from)
                 .unwrap_or_else(|| String::from("?"));
-            let image_name = crate::util::docker::ImageName::from(image.name);
 
             Ok(vec![
                 submit.uuid.to_string(),
@@ -586,10 +591,7 @@ fn jobs(
                 success,
                 package.name,
                 package.version,
-                image_short_name_map
-                    .get(&image_name)
-                    .unwrap_or(&image_name)
-                    .to_string(),
+                image_name_lookup.shorten(&image.name),
             ])
         })
         .collect::<Result<Vec<_>>>()?;

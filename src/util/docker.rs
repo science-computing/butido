@@ -11,10 +11,10 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
-use tracing::warn;
 
 #[derive(
     parse_display::Display,
@@ -57,29 +57,83 @@ pub struct ContainerImage {
     pub short_name: ImageName,
 }
 
-// To convert a user-supplied image name into an expanded image name:
-pub fn resolve_image_name(name: &str, available_images: &Vec<ContainerImage>) -> Result<ImageName> {
-    let mut images = HashMap::new();
-    for image in available_images {
-        if images.insert(&image.name, &image.name).is_some() {
-            warn!(
-                "The image name \"{0}\" is specified multiple times in the configured `images` list",
-                image.name
-            );
+pub struct ImageNameLookup {
+    long2short: HashMap<ImageName, ImageName>,
+    short2long: HashMap<ImageName, ImageName>,
+}
+
+impl ImageNameLookup {
+    pub fn create(available_images: &[ContainerImage]) -> Result<Self> {
+        let mut long2short = HashMap::new();
+        let mut short2long = HashMap::new();
+        let mut all_names = HashMap::new(); // Optional (to check for name collisions)
+        for (idx, image) in available_images.iter().enumerate() {
+            if let Some(duplicate) = all_names.insert(image.name.clone(), idx) {
+                return Err(anyhow!(
+                    "The image full name \"{0}\" is specified multiple times in the configured `images` list (either as short or full name)",
+                    image.name
+                )).with_context(|| anyhow!(
+                    "The configured container image with index {idx} ({:?}) collides with the previous definition at index {duplicate} ({:?})",
+                    available_images.get(idx),
+                    available_images.get(duplicate))
+                );
+            }
+            if let Some(duplicate) = all_names.insert(image.short_name.clone(), idx) {
+                return Err(anyhow!(
+                    "The image short name \"{0}\" is specified multiple times in the configured `images` list (either as short or full name)",
+                    image.short_name
+                )).with_context(|| anyhow!(
+                    "The configured container image with index {idx} ({:?}) collides with the previous definition at index {duplicate} ({:?})",
+                    available_images.get(idx),
+                    available_images.get(duplicate))
+                );
+            }
+            long2short.insert(image.name.clone(), image.short_name.clone());
+            short2long.insert(image.short_name.clone(), image.name.clone());
         }
-        if images.insert(&image.short_name, &image.name).is_some() {
-            warn!(
-                "The image short name \"{0}\" is specified multiple times in the configured `images` list",
-                image.short_name
-            );
+        Ok(ImageNameLookup {
+            long2short,
+            short2long,
+        })
+    }
+
+    // To convert a user-supplied image name into an expanded image name:
+    pub fn expand(&self, image_name: &str) -> Result<ImageName> {
+        let image_name = ImageName::from(image_name.to_string());
+        if self.long2short.contains_key(&image_name) {
+            // It already is a valid long/expanded image name:
+            Ok(ImageName::from(image_name.to_string()))
+        } else if let Some(image_name) = self.short2long.get(&image_name) {
+            Ok(ImageName::from(image_name.to_string()))
+        } else {
+            // It is neither a valid short name nor a valid long name:
+            let available_long_names = self
+                .long2short
+                .clone()
+                .into_keys()
+                .map(|name| name.0.to_string());
+            let available_short_names = self
+                .short2long
+                .clone()
+                .into_keys()
+                .map(|name| name.0.to_string());
+            let mut available_images = available_long_names
+                .chain(available_short_names)
+                .collect::<Vec<_>>();
+            available_images.sort_unstable();
+            let available_images = available_images.join(",");
+            Err(anyhow!("Failed to resolve the requested container image name \"{image_name}\". The available images are: {available_images}"))
         }
     }
-    images.get(&ImageName::from(name.to_string())).cloned().ok_or_else(|| {
-        let mut available_images = images.into_keys().map(|name| name.0.to_string()).collect::<Vec<_>>();
-        available_images.sort_unstable();
-        let available_images = available_images.join(",");
-        anyhow!("Failed to resolve the requested container image name \"{name}\". The available images are: {available_images}")
-    }).cloned()
+
+    // To try to shorten an image name based on the currently configured short names:
+    pub fn shorten(&self, image_name: &str) -> String {
+        let image_name = ImageName::from(image_name.to_string());
+        self.long2short
+            .get(&image_name)
+            .unwrap_or(&image_name)
+            .to_string()
+    }
 }
 
 #[derive(

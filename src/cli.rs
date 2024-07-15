@@ -289,6 +289,7 @@ pub fn cli() -> Command {
                 )
                 .arg(Arg::new("image")
                     .required(false)
+                    .short('I')
                     .long("image")
                     .value_name("IMAGE")
                     .help("Limit listed submits to submits on IMAGE")
@@ -1100,6 +1101,7 @@ pub fn cli() -> Command {
 
                     .arg(Arg::new("filter_image")
                         .required(false)
+                        .short('I')
                         .long("image")
                         .value_name("IMAGE")
                         .help("List only containers of IMAGE")

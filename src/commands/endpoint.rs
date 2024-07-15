@@ -27,6 +27,7 @@ use tracing::{debug, info, trace};
 use crate::config::Configuration;
 use crate::config::EndpointName;
 use crate::endpoint::Endpoint;
+use crate::util::docker::ImageNameLookup;
 use crate::util::progress::ProgressBars;
 
 pub async fn endpoint(
@@ -201,7 +202,12 @@ async fn containers_list(
     config: &Configuration,
 ) -> Result<()> {
     let list_stopped = matches.get_flag("list_stopped");
-    let filter_image = matches.get_one::<String>("filter_image");
+    let filter_image = if let Some(image) = matches.get_one::<String>("filter_image") {
+        let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
+        Some(image_name_lookup.expand(image)?.as_ref().to_string())
+    } else {
+        None
+    };
     let older_than_filter = crate::commands::util::get_date_filter("older_than", matches)?;
     let newer_than_filter = crate::commands::util::get_date_filter("newer_than", matches)?;
     let csv = matches.get_flag("csv");
@@ -234,7 +240,12 @@ async fn containers_list(
             tpl.1
                 .into_iter()
                 .filter(|stat| list_stopped || stat.state != "exited")
-                .filter(|stat| filter_image.map(|fim| *fim == stat.image).unwrap_or(true))
+                .filter(|stat| {
+                    filter_image
+                        .as_ref()
+                        .map(|fim| *fim == stat.image)
+                        .unwrap_or(true)
+                })
                 .filter(|stat| {
                     older_than_filter
                         .as_ref()

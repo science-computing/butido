@@ -51,7 +51,7 @@ use crate::package::Shebang;
 use crate::repository::Repository;
 use crate::schema;
 use crate::source::SourceCache;
-use crate::util::docker::resolve_image_name;
+use crate::util::docker::ImageNameLookup;
 use crate::util::progress::ProgressBars;
 use crate::util::EnvironmentVariableName;
 
@@ -84,9 +84,10 @@ pub async fn build(
             .unwrap_or_else(|| config.shebang().clone())
     });
 
+    let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
     let image_name = matches
         .get_one::<String>("image")
-        .map(|s| resolve_image_name(s, config.docker().images()))
+        .map(|s| image_name_lookup.expand(s))
         .unwrap()?; // safe by clap
 
     debug!("Getting repository HEAD");
