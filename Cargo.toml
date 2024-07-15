@@ -26,7 +26,7 @@ maintenance = { status = "passively-maintained" }
 [dependencies]
 anyhow = "1"
 aquamarine = "0.5"
-ascii_table = "4"
+ascii_table = { version = "4", features = ["color_codes", "wide_characters"] }
 bytesize = "1"
 chrono = "0.4"
 clap = { version = "4", features = ["cargo"] }
