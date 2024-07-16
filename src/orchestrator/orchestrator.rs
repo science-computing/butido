@@ -569,7 +569,7 @@ impl<'a> Drop for JobTask<'a> {
             };
 
             let max_endpoint_name_length = self.scheduler.max_endpoint_name_length();
-            self.bar.set_message(format!(
+            self.bar.finish_with_message(format!(
                 "{:-<max_endpoint_name_length$} {:-<CONTAINER_ID_LENGTH$} {} {} {} {} Stopped, {msg}",
                 "",
                 "",
@@ -701,7 +701,7 @@ impl<'a> JobTask<'a> {
                 self.sender[0].send(Err(received_errors)).await;
 
                 // ... and stop operation, because the whole tree will fail anyways.
-                self.bar.set_message(format!(
+                self.bar.finish_with_message(format!(
                     "{:-<max_endpoint_name_length$} {:-<CONTAINER_ID_LENGTH$} {} {} {} {} Stopping, errors from child received",
                     "",
                     "",
@@ -829,7 +829,7 @@ impl<'a> JobTask<'a> {
                             )
                         })?;
                 }
-                self.bar.set_message(format!(
+                self.bar.finish_with_message(format!(
                     "{:-<max_endpoint_name_length$} {:-<CONTAINER_ID_LENGTH$} {} {} {} {} Reusing artifact",
                     "",
                     "",
