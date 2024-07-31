@@ -85,11 +85,10 @@ async fn ping(
     endpoints
         .iter()
         .map(|endpoint| {
-            let bar = progress_generator.bar().map(|bar| {
+            let bar = progress_generator.bar().inspect(|bar| {
                 bar.set_length(n_pings);
                 bar.set_message(format!("Pinging {}", endpoint.name()));
                 multibar.add(bar.clone());
-                bar
             });
 
             async move {
@@ -156,9 +155,8 @@ async fn stats(
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Result<Vec<_>>>()
         .await
-        .map_err(|e| {
+        .inspect_err(|_| {
             bar.finish_with_message("Fetching stats errored");
-            e
         })?
         .into_iter()
         .map(|stat| {
