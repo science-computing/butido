@@ -51,7 +51,7 @@ itertools = "0.13"
 lazy_static = "1"
 parse-display = "0.9"
 pom = "3"
-ptree = { version = "0.4", default-features = false }
+ptree = { version = "0.5", default-features = false }
 rand = "0.8"
 rayon = "1"
 regex = "1"

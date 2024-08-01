@@ -1963,9 +1963,9 @@ dependencies = [
 
 [[package]]
 name = "ptree"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0de80796b316aec75344095a6d2ef68ec9b8f573b9e7adc821149ba3598e270"
+checksum = "709c3b241d6a6ccc1933b1c6d7d997fae2b3dff8981f6780eac67df03c32f3ef"
 dependencies = [
  "serde",
 ]
