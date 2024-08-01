@@ -42,7 +42,7 @@ filters = "0.4"
 futures = "0.3"
 getset = "0.1"
 git2 = "0.19"
-handlebars = { version = "5", features = ["no_logging"] }
+handlebars = { version = "6", features = ["no_logging"] }
 human-panic = "2"
 humantime = "2"
 indicatif = "0.17"
