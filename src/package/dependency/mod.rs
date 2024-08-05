@@ -139,6 +139,24 @@ mod tests {
     }
 
     #[test]
+    fn test_dependency_version_without_constraint() {
+        let name = "foobar";
+        let version_constraint = "1.42.37";
+
+        let dep = Dependency::from(format!("{name} {version_constraint}"));
+        let (dep_name, dep_version_constraint) = dep.parse_as_name_and_version().unwrap();
+
+        assert_eq!(dep_name, PackageName::from(name.to_string()));
+        assert_eq!(
+            dep_version_constraint,
+            PackageVersionConstraint::from_version(
+                String::from("="),
+                PackageVersion::from(version_constraint.to_string()),
+            )
+        );
+    }
+
+    #[test]
     fn test_complex_dependency_parsing() {
         dep_parse_test("0ad_", "42");
         dep_parse_test("2048-cli_0.0", "42");
@@ -153,6 +171,5 @@ mod tests {
         dep_parse_expect_err("a *");
         dep_parse_expect_err("a >2");
         dep_parse_expect_err("a <2");
-        dep_parse_expect_err("a 42");
     }
 }

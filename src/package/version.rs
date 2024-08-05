@@ -28,9 +28,13 @@ pub struct PackageVersionConstraint {
 
 impl PackageVersionConstraint {
     fn parser<'a>() -> PomParser<'a, u8, Self> {
-        (pom::parser::sym(b'=') + PackageVersion::parser())
+        (pom::parser::sym(b'=').opt() + PackageVersion::parser())
             .convert(|(constraint, version)| {
-                String::from_utf8(vec![constraint]).map(|c| (c, version))
+                if let Some(c) = constraint {
+                    String::from_utf8(vec![c]).map(|c| (c, version))
+                } else {
+                    Ok(("=".to_string(), version))
+                }
             })
             .map(|(constraint, version)| PackageVersionConstraint {
                 constraint,
@@ -66,7 +70,7 @@ impl TryFrom<&str> for PackageVersionConstraint {
         PackageVersionConstraint::parser()
             .parse(s.as_bytes())
             .context(anyhow!("Failed to parse the following package version constraint: {}", s))
-            .context("A package version constraint must have a comparator (only `=` is currently supported) and a version string, like so: =0.1.0")
+            .context("A package version constraint must have a version and an optional comparator (only `=` is currently supported, which is also the default), e.g.: =0.1.0")
             .map_err(Error::from)
     }
 }
@@ -126,6 +130,10 @@ mod tests {
 
     #[test]
     fn test_parse_version_1() {
+        assert!(PackageVersion::parser().parse(b"1").is_ok());
+        assert!(PackageVersion::parser().parse(b"1.42").is_ok());
+        assert!(PackageVersion::parser().parse(b"1.42.37").is_ok());
+
         assert!(PackageVersion::parser().parse(b"").is_err());
         assert!(PackageVersion::parser().parse(b"=").is_err());
         assert!(PackageVersion::parser().parse(b"*1").is_err());
@@ -137,6 +145,10 @@ mod tests {
         assert!(PackageVersion::parser().parse(b"=a1").is_err());
         assert!(PackageVersion::parser().parse(b"a").is_err());
 
+        assert!(PackageVersionConstraint::parser().parse(b"1").is_ok());
+        assert!(PackageVersionConstraint::parser().parse(b"1.42").is_ok());
+        assert!(PackageVersionConstraint::parser().parse(b"1.42.37").is_ok());
+
         assert!(PackageVersionConstraint::parser().parse(b"").is_err());
         assert!(PackageVersionConstraint::parser().parse(b"=").is_err());
         assert!(PackageVersionConstraint::parser().parse(b"*1").is_err());
@@ -146,7 +158,6 @@ mod tests {
         assert!(PackageVersionConstraint::parser().parse(b"=.a").is_err());
         assert!(PackageVersionConstraint::parser().parse(b"=.1").is_err());
         assert!(PackageVersionConstraint::parser().parse(b"=a1").is_err());
-        assert!(PackageVersionConstraint::parser().parse(b"1").is_err());
         assert!(PackageVersionConstraint::parser().parse(b"a").is_err());
     }
 
