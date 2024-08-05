@@ -150,7 +150,7 @@ mod tests {
         assert_eq!(
             dep_version_constraint,
             PackageVersionConstraint::from_version(
-                String::from("="),
+                String::from(""),
                 PackageVersion::from(version_constraint.to_string()),
             )
         );

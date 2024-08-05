@@ -33,7 +33,7 @@ impl PackageVersionConstraint {
                 if let Some(c) = constraint {
                     String::from_utf8(vec![c]).map(|c| (c, version))
                 } else {
-                    Ok(("=".to_string(), version))
+                    Ok(("".to_string(), version))
                 }
             })
             .map(|(constraint, version)| PackageVersionConstraint {
@@ -43,7 +43,21 @@ impl PackageVersionConstraint {
     }
 
     pub fn matches(&self, v: &PackageVersion) -> bool {
-        self.version == *v
+        use semver::{Version, VersionReq};
+        match self.constraint.as_str() {
+            "" => {
+                let constraint =
+                    VersionReq::parse(&(self.constraint.clone() + self.version.as_str())).unwrap();
+                let version = Version::parse(v.as_str()).unwrap();
+
+                constraint.matches(&version)
+            }
+            "=" => self.version == *v,
+            _ => panic!(
+                "Internal error: Unsupported version constraint: {} (version: {})",
+                self.constraint, self.version
+            ),
+        }
     }
 
     #[cfg(test)]

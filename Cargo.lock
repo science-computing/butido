@@ -258,6 +258,7 @@ dependencies = [
  "resiter",
  "rlimit",
  "rustversion",
+ "semver",
  "serde",
  "serde_json",
  "sha1",
