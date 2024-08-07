@@ -63,28 +63,28 @@ impl ProgressWrapper {
 
     async fn inc_download_count(&mut self) {
         self.download_count += 1;
-        self.set_message().await;
+        self.show_progress().await;
         let bar = self.bar.lock().await;
         bar.inc_length(1);
     }
 
     async fn inc_download_bytes(&mut self, bytes: u64) {
         self.sum_bytes += bytes;
-        self.set_message().await;
+        self.show_progress().await;
     }
 
     async fn finish_one_download(&mut self) {
         self.finished_downloads += 1;
         self.bar.lock().await.inc(1);
-        self.set_message().await;
+        self.show_progress().await;
     }
 
     async fn add_bytes(&mut self, len: usize) {
         self.current_bytes += len;
-        self.set_message().await;
+        self.show_progress().await;
     }
 
-    async fn set_message(&self) {
+    async fn show_progress(&self) {
         let bar = self.bar.lock().await;
         bar.set_message(format!("Downloading ({current_bytes}/{sum_bytes} bytes, {dlfinished}/{dlsum} downloads finished)",
                 current_bytes = self.current_bytes,
