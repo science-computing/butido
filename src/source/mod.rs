@@ -14,6 +14,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use getset::Getters;
 use tracing::trace;
 use url::Url;
 
@@ -37,11 +38,14 @@ impl SourceCache {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Getters)]
 pub struct SourceEntry {
     cache_root: PathBuf,
+    #[getset(get = "pub")]
     package_name: PackageName,
+    #[getset(get = "pub")]
     package_version: PackageVersion,
+    #[getset(get = "pub")]
     package_source_name: String,
     package_source: Source,
 }
@@ -71,6 +75,10 @@ impl SourceEntry {
         self.source_file_directory().join({
             (self.package_source_name.as_ref() as &std::path::Path).with_extension("source")
         })
+    }
+
+    pub fn path_as_string(&self) -> String {
+        self.path().to_string_lossy().to_string()
     }
 
     pub fn url(&self) -> &Url {
