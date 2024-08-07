@@ -843,6 +843,42 @@ pub fn cli() -> Command {
                     .help("Set timeout for download in seconds")
                     .value_parser(clap::value_parser!(u64))
                 )
+
+                .arg(Arg::new("recursive")
+                    .action(ArgAction::SetTrue)
+                    .required(false)
+                    .long("recursive")
+                    .help("Download the sources and all the dependency sources")
+                )
+
+                .arg(Arg::new("image")
+                    .required(false)
+                    .value_name("IMAGE NAME")
+                    .short('I')
+                    .long("image")
+                    .help("Name of the Docker image to use")
+                    .long_help(indoc::indoc!(r#"
+                        Name of the Docker image to use.
+
+                        Required because tree might look different on different images because of
+                        conditions on dependencies.
+                    "#))
+                )
+
+                .arg(Arg::new("env")
+                    .required(false)
+                    .action(ArgAction::Append)
+                    .short('E')
+                    .long("env")
+                    .value_parser(env_pass_validator)
+                    .help("Additional env to be passed when building packages")
+                    .long_help(indoc::indoc!(r#"
+                        Additional env to be passed when building packages.
+
+                        Required because tree might look different on different images because of
+                        conditions on dependencies.
+                    "#))
+                )
             )
             .subcommand(Command::new("of")
                 .about("Get the paths of the sources of a package")
