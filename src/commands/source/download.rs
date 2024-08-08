@@ -17,9 +17,9 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
+use futures::stream::{FuturesUnordered, StreamExt};
 use tokio::io::AsyncWriteExt;
-use tokio::sync::Mutex;
-use tokio_stream::StreamExt;
+use tokio::sync::{Mutex, Semaphore};
 use tracing::{info, trace, warn};
 
 use crate::config::*;
@@ -31,6 +31,14 @@ use crate::util::progress::ProgressBars;
 
 const NUMBER_OF_MAX_CONCURRENT_DOWNLOADS: usize = 100;
 const APP_USER_AGENT: &str = concat! {env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")};
+
+#[derive(Clone, Debug)]
+enum DownloadResult {
+    Forced,
+    Skipped,
+    Succeeded,
+    MarkedManual,
+}
 
 /// A wrapper around the indicatif::ProgressBar
 ///
@@ -91,22 +99,6 @@ impl ProgressWrapper {
                 sum_bytes = self.sum_bytes,
                 dlfinished = self.finished_downloads,
                 dlsum = self.download_count));
-    }
-
-    async fn success(&self) {
-        let bar = self.bar.lock().await;
-        bar.finish_with_message(format!(
-            "Succeeded {}/{} downloads",
-            self.finished_downloads, self.download_count
-        ));
-    }
-
-    async fn error(&self) {
-        let bar = self.bar.lock().await;
-        bar.finish_with_message(format!(
-            "At least one download of {} failed",
-            self.download_count
-        ));
     }
 }
 
@@ -197,6 +189,45 @@ async fn perform_download(
     file.flush().await.map_err(Error::from).map(|_| ())
 }
 
+async fn download_source_entry(
+    source: &SourceEntry,
+    download_sema: Arc<Semaphore>,
+    progressbar: Arc<Mutex<ProgressWrapper>>,
+    force: bool,
+    timeout: Option<u64>,
+) -> Result<DownloadResult> {
+    let source_path_exists = source.path().exists();
+    if !source_path_exists && source.download_manually() {
+        return Ok(DownloadResult::MarkedManual);
+    }
+
+    if source_path_exists && !force {
+        info!("Source already exists: {}", source.path().display());
+        return Ok(DownloadResult::Skipped);
+    }
+
+    {
+        if source_path_exists && force {
+            source.remove_file().await?;
+        }
+
+        // perform the download
+        progressbar.lock().await.inc_download_count().await;
+        {
+            let permit = download_sema.acquire_owned().await?;
+            perform_download(source, progressbar.clone(), timeout).await?;
+            drop(permit);
+        }
+        progressbar.lock().await.finish_one_download().await;
+
+        if source_path_exists && force {
+            Ok(DownloadResult::Forced)
+        } else {
+            Ok(DownloadResult::Succeeded)
+        }
+    }
+}
+
 // Implementation of the 'source download' subcommand
 pub async fn download(
     matches: &ArgMatches,
@@ -260,55 +291,22 @@ pub async fn download(
         }
     }
 
-    let r = r
+    let r: Vec<(SourceEntry, Result<DownloadResult>)> = r
         .flat_map(|p| {
             sc.sources_for(p).into_iter().map(|source| {
                 let download_sema = download_sema.clone();
                 let progressbar = progressbar.clone();
                 async move {
-                    let source_path_exists = source.path().exists();
-                    if !source_path_exists && source.download_manually() {
-                        return Err(anyhow!(
-                            "Cannot download source that is marked for manual download"
-                        ))
-                        .context(anyhow!("Creating source: {}", source.path().display()))
-                        .context(anyhow!("Downloading source: {}", source.url()))
-                        .map_err(Error::from);
-                    }
-
-                    if source_path_exists && !force {
-                        Err(anyhow!("Source exists: {}", source.path().display()))
-                    } else {
-                        if source_path_exists
-                        /* && force is implied by 'if' above*/
-                        {
-                            source.remove_file().await?;
-                        }
-
-                        progressbar.lock().await.inc_download_count().await;
-                        {
-                            let permit = download_sema.acquire_owned().await?;
-                            perform_download(&source, progressbar.clone(), timeout).await?;
-                            drop(permit);
-                        }
-                        progressbar.lock().await.finish_one_download().await;
-                        Ok(())
-                    }
+                    let download_result =
+                        download_source_entry(&source, download_sema, progressbar, force, timeout)
+                            .await;
+                    (source, download_result)
                 }
             })
         })
-        .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Vec<Result<()>>>()
-        .await
-        .into_iter()
-        .collect::<Result<()>>();
-
-    if r.is_err() {
-        progressbar.lock().await.error().await;
-        return r;
-    } else {
-        progressbar.lock().await.success().await;
-    }
+        .collect::<FuturesUnordered<_>>()
+        .collect()
+        .await;
 
     super::verify(matches, config, repo, progressbars).await?;
 
