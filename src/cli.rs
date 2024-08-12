@@ -583,7 +583,7 @@ pub fn cli() -> Command {
                 .required(true)
                 .index(2)
                 .value_name("VERSION_CONSTRAINT")
-                .help("A version constraint to search for, e.g., '=1.0.0'")
+                .help("The version of the package")
             )
         )
 

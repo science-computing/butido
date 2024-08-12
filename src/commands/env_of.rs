@@ -15,7 +15,7 @@ use clap::ArgMatches;
 use tracing::trace;
 
 use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
+use crate::package::PackageVersion;
 use crate::repository::Repository;
 
 /// Implementation of the "env_of" subcommand
@@ -32,7 +32,7 @@ pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
         let constraint = matches
             .get_one::<String>("package_version_constraint")
             .map(|s| s.to_owned())
-            .map(PackageVersionConstraint::try_from)
+            .map(PackageVersion::try_from)
             .unwrap()?;
         trace!(
             "Checking for package with name = {} and version = {:?}",
@@ -40,8 +40,9 @@ pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
             constraint
         );
 
-        crate::util::filters::build_package_filter_by_name(name)
-            .and(crate::util::filters::build_package_filter_by_version_constraint(constraint))
+        crate::util::filters::build_package_filter_by_name(name).and(
+            crate::util::filters::build_package_filter_by_version(constraint),
+        )
     };
 
     let mut stdout = std::io::stdout();
