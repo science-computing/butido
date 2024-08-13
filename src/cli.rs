@@ -880,7 +880,7 @@ pub fn cli() -> Command {
                 )
 
                 .arg(Arg::new("package_name")
-                    .required(false)
+                    .required(true)
                     .index(1)
                     .value_name("PKG")
                     .help("The name of the package")
@@ -888,7 +888,7 @@ pub fn cli() -> Command {
                 )
 
                 .arg(Arg::new("package_version")
-                    .required(false)
+                    .required(true)
                     .index(2)
                     .value_name("VERSION")
                     .help("The exact version of the package (string match)")
