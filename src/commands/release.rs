@@ -119,6 +119,10 @@ async fn new_release(
     };
     debug!("Artifacts = {:?}", arts);
 
+    if arts.is_empty() {
+        return Err(anyhow!("No matching artifacts found to release"));
+    }
+
     arts.iter()
         .filter_map(|art| {
             art.path_buf()
