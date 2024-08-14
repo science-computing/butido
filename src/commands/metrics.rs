@@ -128,24 +128,27 @@ pub async fn metrics(
             r#"
         Butido release {release}
 
-        {configured_endpoints} configured endpoints
-        {configured_images} configured images
-        {configured_release_stores} configured release stores
-        {configured_phases} configured phases
+        Configuration:
+        - {configured_endpoints} endpoints
+        - {configured_images} images
+        - {configured_release_stores} release stores
+        - {configured_phases} phases
 
-        {nfiles} files in repository
-        {repo_packages} packages in repository
+        Repository:
+        - {nfiles} files
+        - {repo_packages} packages
 
-        {n_artifacts} artifacts in database
-        {n_endpoints} endpoints in database
-        {n_envvars} envvars in database
-        {n_githashes} githashes in database
-        {n_images} images in database
-        {n_jobs} jobs in database
-        {n_packages} packages in database
-        {n_releasestores} releasestores in database
-        {n_releases} releases in database
-        {n_submits} submits in database
+        Database:
+        - {n_artifacts} artifacts
+        - {n_endpoints} endpoints
+        - {n_envvars} envvars
+        - {n_githashes} githashes
+        - {n_images} images
+        - {n_jobs} jobs
+        - {n_packages} packages
+        - {n_releasestores} releasestores
+        - {n_releases} releases
+        - {n_submits} submits
     "#,
             release = clap::crate_version!(),
             configured_endpoints = config.docker().endpoints().len(),
