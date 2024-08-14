@@ -47,7 +47,7 @@ pub fn cli() -> Command {
                 .long("package")
                 .short('p')
                 .value_name("PKG")
-                .help("Only list releases for package PKG"),
+                .help("List only releases for package PKG"),
         )
         .arg(
             Arg::new("limit")
@@ -412,7 +412,7 @@ pub fn cli() -> Command {
                     .required(true)
                     .index(1)
                     .value_name("UUID")
-                    .help("The id of the Job")
+                    .help("The job to print the log of")
                     .value_parser(uuid::Uuid::parse_str)
                 )
             )
@@ -957,7 +957,7 @@ pub fn cli() -> Command {
                 .required(false)
                 .index(1)
                 .value_name("NAME")
-                .help("Package name to lint (if not present, every package will be linted")
+                .help("Package name to lint (if not present, every package will be linted)")
             )
             .arg(Arg::new("package_version")
                 .required(false)
@@ -973,7 +973,7 @@ pub fn cli() -> Command {
                 .required(true)
                 .index(1)
                 .value_name("NAME")
-                .help("Package name to lint (if not present, every package will be linted")
+                .help("Package name to print the dependency tree of")
             )
             .arg(Arg::new("package_version")
                 .required(false)
