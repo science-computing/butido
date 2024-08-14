@@ -128,10 +128,10 @@ pub async fn metrics(
             r#"
         Butido release {release}
 
-        {configured_endpoints} Configured endpoints
-        {configured_images} Configured images
-        {configured_release_stores} Configured release stores
-        {configured_phases} Configures phases
+        {configured_endpoints} configured endpoints
+        {configured_images} configured images
+        {configured_release_stores} configured release stores
+        {configured_phases} configured phases
 
         {nfiles} files in repository
         {repo_packages} packages in repository
