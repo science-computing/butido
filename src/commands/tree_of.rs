@@ -13,11 +13,15 @@
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
+use petgraph::dot::Dot;
+use petgraph::graph::DiGraph;
 use resiter::AndThen;
 
 use crate::config::Configuration;
 use crate::package::condition::ConditionData;
 use crate::package::Dag;
+use crate::package::DependencyType;
+use crate::package::Package;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
@@ -54,7 +58,10 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
         env: &additional_env,
     };
 
-    repo.packages()
+    let dot = matches.get_flag("dot");
+
+    let package_dags = repo
+        .packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| {
             pvers
@@ -62,12 +69,43 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
                 .map(|v| v.matches(p.version()))
                 .unwrap_or(true)
         })
-        .map(|package| Dag::for_root_package(package.clone(), &repo, None, &condition_data))
-        .and_then_ok(|tree| {
-            let stdout = std::io::stdout();
-            let mut outlock = stdout.lock();
+        .map(|package| Dag::for_root_package(package.clone(), &repo, None, &condition_data));
 
-            ptree::write_tree(&tree.display(), &mut outlock).map_err(Error::from)
-        })
-        .collect::<Result<()>>()
+    if dot {
+        package_dags
+            .and_then_ok(|dag| {
+                let petgraph: DiGraph<Package, DependencyType> = (*dag.dag()).clone().into();
+
+                let dot = Dot::with_attr_getters(
+                    &petgraph,
+                    &[
+                        petgraph::dot::Config::EdgeNoLabel,
+                        petgraph::dot::Config::NodeNoLabel,
+                    ],
+                    &|_, er| {
+                        format!(
+                            "{} ",
+                            match er.weight() {
+                                DependencyType::Build => "style = \"dotted\"",
+                                _ => "",
+                            }
+                        )
+                    },
+                    &|_, node| format!("label = \"{}\" ", node.1.clone().display_name_version()),
+                );
+
+                println!("{:?}", dot);
+                Ok(())
+            })
+            .collect::<Result<()>>()
+    } else {
+        package_dags
+            .and_then_ok(|tree| {
+                let stdout = std::io::stdout();
+                let mut outlock = stdout.lock();
+
+                ptree::write_tree(&tree.display(), &mut outlock).map_err(Error::from)
+            })
+            .collect::<Result<()>>()
+    }
 }

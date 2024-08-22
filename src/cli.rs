@@ -1019,6 +1019,12 @@ pub fn cli() -> Command {
                     conditions on dependencies.
                 "#))
             )
+            .arg(Arg::new("dot")
+                .action(ArgAction::SetTrue)
+                .required(false)
+                .long("dot")
+                .help("Output the dependency DAG in the Graphviz DOT format")
+            )
         )
 
         .subcommand(Command::new("metrics")

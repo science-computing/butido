@@ -100,6 +100,10 @@ impl Package {
         }
     }
 
+    pub fn display_name_version(self) -> String {
+        format!("{} {}", self.name, self.version)
+    }
+
     #[cfg(test)]
     pub fn set_dependencies(&mut self, dependencies: Dependencies) {
         self.dependencies = dependencies;

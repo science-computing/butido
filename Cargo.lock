@@ -255,6 +255,7 @@ dependencies = [
  "itertools 0.13.0",
  "lazy_static",
  "parse-display",
+ "petgraph",
  "pom",
  "ptree",
  "rand",
