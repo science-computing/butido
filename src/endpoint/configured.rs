@@ -396,6 +396,7 @@ impl From<shiplift::rep::Image> for Image {
     }
 }
 
+#[derive(Clone)]
 pub struct EndpointHandle(Arc<Endpoint>);
 
 impl EndpointHandle {
