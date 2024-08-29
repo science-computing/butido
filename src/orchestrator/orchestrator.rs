@@ -13,6 +13,7 @@
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::process::ExitCode;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -32,8 +33,9 @@ use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
+use tokio_util::sync::CancellationToken;
 use tracing::Instrument;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace};
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
 
@@ -265,12 +267,26 @@ impl Borrow<ArtifactPath> for ProducedArtifact {
 
 impl<'a> Orchestrator<'a> {
     pub async fn run(self, output: &mut Vec<ArtifactPath>) -> Result<HashMap<Uuid, Error>> {
-        let (results, errors) = self.run_tree().await?;
+        let token = CancellationToken::new();
+        let cloned_token = token.clone();
+
+        tokio::spawn(async move {
+            info!("Received the ctl-c signal, stopping...");
+            tokio::signal::ctrl_c().await.unwrap();
+            token.cancel();
+            ExitCode::from(1)
+        });
+
+        let (results, errors) = self.run_tree(cloned_token).await?;
+
         output.extend(results);
         Ok(errors)
     }
 
-    async fn run_tree(self) -> Result<(Vec<ArtifactPath>, HashMap<Uuid, Error>)> {
+    async fn run_tree(
+        self,
+        token: CancellationToken,
+    ) -> Result<(Vec<ArtifactPath>, HashMap<Uuid, Error>)> {
         let prepare_span = tracing::debug_span!("run tree preparation");
 
         // There is no async code until we drop this guard, so this is fine
@@ -452,45 +468,55 @@ impl<'a> Orchestrator<'a> {
         // The JobTask::run implementation handles the rest, we just have to wait for all futures
         // to succeed.
         let run_span = tracing::debug_span!("run");
-        let running_jobs = jobs
-            .into_iter()
-            .map(|prep| {
-                trace!(parent: &run_span, job_uuid = %prep.1.jobdef.job.uuid(), "Creating JobTask");
-                // the sender is set or we need to use the root sender
-                let sender = prep
-                    .3
-                    .into_inner()
-                    .unwrap_or_else(|| vec![root_sender.clone()]);
-                JobTask::new(prep.0, prep.1, sender)
-            })
-            .inspect(
-                |task| trace!(parent: &run_span, job_uuid = %task.jobdef.job.uuid(), "Running job"),
-            )
-            .map(|task| {
-                task.run()
-                    .instrument(tracing::debug_span!(parent: &run_span, "JobTask::run"))
-            })
-            .collect::<futures::stream::FuturesUnordered<_>>();
-        debug!("Built {} jobs", running_jobs.len());
 
-        running_jobs
-            .collect::<Result<()>>()
-            .instrument(run_span.clone())
-            .await?;
-        trace!(parent: &run_span, "All jobs finished");
-        drop(run_span);
-
-        match root_receiver.recv().await {
-            None => Err(anyhow!("No result received...")),
-            Some(Ok(results)) => {
-                let results = results
-                    .into_iter()
-                    .flat_map(|tpl| tpl.1.into_iter())
-                    .map(ProducedArtifact::unpack)
-                    .collect();
-                Ok((results, HashMap::with_capacity(0)))
+        tokio::select! {
+            _ = token.cancelled() => {
+                anyhow::bail!("Received Control-C signal");
             }
-            Some(Err(errors)) => Ok((vec![], errors)),
+            r = async {
+                let running_jobs = jobs
+                        .into_iter()
+                        .map(|prep| {
+                            trace!(parent: &run_span, job_uuid = %prep.1.jobdef.job.uuid(), "Creating JobTask");
+                            // the sender is set or we need to use the root sender
+                            let sender = prep
+                                .3
+                                .into_inner()
+                                .unwrap_or_else(|| vec![root_sender.clone()]);
+                            JobTask::new(prep.0, prep.1, sender)
+                        })
+                        .inspect(
+                            |task| trace!(parent: &run_span, job_uuid = %task.jobdef.job.uuid(), "Running job"),
+                        )
+                        .map(|task| {
+                            task.run()
+                                .instrument(tracing::debug_span!(parent: &run_span, "JobTask::run"))
+                        })
+                        .collect::<futures::stream::FuturesUnordered<_>>();
+                debug!("Built {} jobs", running_jobs.len());
+
+                running_jobs
+                    .collect::<Result<()>>()
+                    .instrument(run_span.clone())
+                    .await?;
+                trace!(parent: &run_span, "All jobs finished");
+                drop(run_span);
+
+                match root_receiver.recv().await {
+                    None => Err(anyhow!("No result received...")),
+                    Some(Ok(results)) => {
+                        let results = results
+                            .into_iter()
+                            .flat_map(|tpl| tpl.1.into_iter())
+                            .map(ProducedArtifact::unpack)
+                            .collect();
+                        Ok((results, HashMap::with_capacity(0)))
+                    }
+                    Some(Err(errors)) => Ok((vec![], errors)),
+                }
+            } => {
+                r
+            }
         }
     }
 }
