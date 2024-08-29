@@ -275,6 +275,7 @@ dependencies = [
  "terminal_size",
  "tokio",
  "tokio-stream",
+ "tokio-util",
  "toml 0.8.19",
  "tracing",
  "tracing-chrome",
