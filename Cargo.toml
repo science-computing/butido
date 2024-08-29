@@ -68,7 +68,8 @@ shiplift = "0.7"
 syntect = "5"
 tar = "0.4"
 terminal_size = "0.4"
-tokio = { version = "1", features = ["macros", "fs", "process", "io-util", "time"] }
+tokio = { version = "1", features = ["macros", "fs", "process", "io-util", "signal", "time"] }
+tokio-util = "0.7"
 tokio-stream = "0.1"
 toml = "0.8"
 tracing = "0.1"

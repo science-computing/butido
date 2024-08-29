@@ -28,7 +28,7 @@ use crate::util::docker::ImageName;
 use crate::util::EnvironmentVariableName;
 
 /// A job configuration that can be run. All inputs are clear here.
-#[derive(Debug, Getters)]
+#[derive(Clone, Debug, Getters)]
 pub struct RunnableJob {
     #[getset(get = "pub")]
     uuid: Uuid,
