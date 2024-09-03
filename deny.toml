@@ -1,5 +1,10 @@
+# Documentation for this configuration file:
+# https://embarkstudios.github.io/cargo-deny/checks/cfg.html
+
+# GitHub link: https://github.com/EmbarkStudios/cargo-deny
+
 [licenses]
-# List of explictly allowed licenses
+# List of explicitly allowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
 # [possible values: any SPDX 3.7 short identifier (+ optional exception)].
 allow = [
