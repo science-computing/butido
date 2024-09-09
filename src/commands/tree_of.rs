@@ -60,6 +60,8 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
 
     let dot = matches.get_flag("dot");
 
+    let serial_buildorder = matches.get_flag("serial-buildorder");
+
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| {
@@ -92,6 +94,19 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
                 );
 
                 println!("{:?}", dot);
+                Ok(())
+            } else if serial_buildorder {
+                let petgraph: DiGraph<Package, DependencyType> = (*dag.dag()).clone().into();
+
+                let topo_sorted = petgraph::algo::toposort(&petgraph, None)
+                    .map_err(|_| Error::msg("Cyclic dependency found!"))?;
+
+                for node in topo_sorted.iter().rev() {
+                    let package = petgraph.node_weight(*node).unwrap();
+                    println!("{}", package.clone().display_name_version());
+                }
+                println!();
+
                 Ok(())
             } else {
                 let stdout = std::io::stdout();
