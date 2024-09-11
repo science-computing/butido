@@ -100,7 +100,7 @@ impl Package {
         }
     }
 
-    pub fn display_name_version(self) -> String {
+    pub fn display_name_version(&self) -> String {
         format!("{} {}", self.name, self.version)
     }
 

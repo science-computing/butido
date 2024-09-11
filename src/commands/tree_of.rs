@@ -60,8 +60,7 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
 
     let dot = matches.get_flag("dot");
 
-    let package_dags = repo
-        .packages()
+    repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| {
             pvers
@@ -69,11 +68,9 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
                 .map(|v| v.matches(p.version()))
                 .unwrap_or(true)
         })
-        .map(|package| Dag::for_root_package(package.clone(), &repo, None, &condition_data));
-
-    if dot {
-        package_dags
-            .and_then_ok(|dag| {
+        .map(|package| Dag::for_root_package(package.clone(), &repo, None, &condition_data))
+        .and_then_ok(|dag| {
+            if dot {
                 let petgraph: DiGraph<Package, DependencyType> = (*dag.dag()).clone().into();
 
                 let dot = Dot::with_attr_getters(
@@ -87,25 +84,21 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
                             "{} ",
                             match er.weight() {
                                 DependencyType::Build => "style = \"dotted\"",
-                                _ => "",
+                                DependencyType::Runtime => "",
                             }
                         )
                     },
-                    &|_, node| format!("label = \"{}\" ", node.1.clone().display_name_version()),
+                    &|_, node| format!("label = \"{}\" ", node.1.display_name_version()),
                 );
 
                 println!("{:?}", dot);
                 Ok(())
-            })
-            .collect::<Result<()>>()
-    } else {
-        package_dags
-            .and_then_ok(|tree| {
+            } else {
                 let stdout = std::io::stdout();
                 let mut outlock = stdout.lock();
 
-                ptree::write_tree(&tree.display(), &mut outlock).map_err(Error::from)
-            })
-            .collect::<Result<()>>()
-    }
+                ptree::write_tree(&dag.display(), &mut outlock).map_err(Error::from)
+            }
+        })
+        .collect::<Result<()>>()
 }
