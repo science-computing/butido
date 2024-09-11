@@ -7,7 +7,6 @@ runtime = []
 
 [sources.src]
 hash.type = "sha1"
-download_manually = false
 
 [phases]
 
