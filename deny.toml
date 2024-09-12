@@ -64,4 +64,9 @@ ignore = [
     # https://github.com/trishume/syntect/issues/537 is resolved (replace
     # yaml-rust with yaml-rust2):
     { id = "RUSTSEC-2024-0320", reason = "Only an informative advisory that the crate is unmaintained and the maintainer unreachable" },
+    # Ignore an "INFO Unmaintained" advisory for the proc-macro-error crate
+    # that the "aquamarine" crate uses. This can be removed once
+    # https://github.com/mersinvald/aquamarine/issues/45 is resolved (Move away
+    # from proc-macro-error):
+    { id = "RUSTSEC-2024-0370", reason = "Only an informative advisory that the crate is unmaintained and the maintainer unreachable" },
 ]
