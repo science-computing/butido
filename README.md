@@ -1,3 +1,13 @@
+# WARNING:
+The staging branch contains unstable and untested code.
+It is intended for development and testing purposes only.
+Do not use this branch in production environments.
+
+The branch is also subject to force pushes and rebasing.
+The history of this branch can change at any time,
+which can lead to conflicts and other issues.
+
+
 # BUTIDO
 
 "butido" could stand for "but i do", "BUild Things In DOcker" or
