@@ -40,7 +40,7 @@ pub struct DbConnectionConfig<'a> {
     database_connection_timeout: u16,
 }
 
-impl<'a> std::fmt::Debug for DbConnectionConfig<'a> {
+impl std::fmt::Debug for DbConnectionConfig<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,

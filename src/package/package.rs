@@ -138,7 +138,7 @@ impl std::fmt::Debug for Package {
 pub struct DebugPackage<'a>(&'a Package);
 
 #[cfg(debug_assertions)]
-impl<'a> std::fmt::Debug for DebugPackage<'a> {
+impl std::fmt::Debug for DebugPackage<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         writeln!(
             f,
