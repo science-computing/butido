@@ -108,7 +108,7 @@ pub fn handlebars_for_package_printing(format: &str) -> Result<Handlebars> {
     Ok(hb)
 }
 
-impl<'a, P: Borrow<Package>> PreparePrintPackage<'a, P> {
+impl<P: Borrow<Package>> PreparePrintPackage<'_, P> {
     pub fn into_displayable(self) -> Result<PrintablePackage> {
         let script = ScriptBuilder::new(&Shebang::from(self.config.shebang().clone()))
             .build(
