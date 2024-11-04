@@ -79,7 +79,7 @@ unindent = "0.2"
 url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["serde", "v4"] }
 walkdir = "2"
-which = "6"
+which = "7"
 xdg = "2"
 
 [build-dependencies]
