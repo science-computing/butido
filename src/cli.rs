@@ -1024,6 +1024,24 @@ pub fn cli() -> Command {
                 .required(false)
                 .long("dot")
                 .help("Output the dependency DAG in the Graphviz DOT format")
+                .conflicts_with("serial-buildorder")
+            )
+            .arg(Arg::new("serial-buildorder")
+                .action(ArgAction::SetTrue)
+                .required(false)
+                .long("serial-buildorder")
+                .help("Output the dependencies in a serial build order (flattened tree)")
+                .long_help(indoc::indoc!(r#"
+                    A serial build order ensures that dependencies are built one at a time
+                    in a specific sequence. This approach follows a reversed topological ordering,
+                    where dependencies (or children) are listed and built first. Each dependency
+                    must be fully built before the next one begins, ensuring all components are
+                    available when needed.
+
+                    Keep in mind that the actual build order remains parallel, this serialized
+                    output is mainly useful for debugging purposes.
+                "#))
+                .conflicts_with("dot")
             )
         )
 
