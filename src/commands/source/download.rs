@@ -8,29 +8,51 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
+use std::collections::HashSet;
 use std::concat;
+use std::fmt;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::anyhow;
-use anyhow::Context;
-use anyhow::Error;
-use anyhow::Result;
+use anyhow::{anyhow, Context, Error, Result};
+use ascii_table::{Align, AsciiTable};
 use clap::ArgMatches;
+use futures::stream::{FuturesOrdered, StreamExt};
+use regex::Regex;
 use tokio::io::AsyncWriteExt;
-use tokio::sync::Mutex;
-use tokio_stream::StreamExt;
-use tracing::{info, trace, warn};
+use tokio::sync::{Mutex, Semaphore};
+use tracing::{debug, error, info, trace, warn};
 
-use crate::config::*;
-use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
+use crate::config::Configuration;
+use crate::package::condition::ConditionData;
+use crate::package::{Dag, Package, PackageName, PackageVersionConstraint};
 use crate::repository::Repository;
-use crate::source::*;
+use crate::source::{SourceCache, SourceEntry};
+use crate::util::docker::ImageNameLookup;
 use crate::util::progress::ProgressBars;
+use crate::util::EnvironmentVariableName;
 
 const NUMBER_OF_MAX_CONCURRENT_DOWNLOADS: usize = 100;
 const APP_USER_AGENT: &str = concat! {env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")};
+
+#[derive(Clone, Debug)]
+enum DownloadResult {
+    Forced,
+    Skipped,
+    Succeeded,
+    MarkedManual,
+}
+
+impl fmt::Display for DownloadResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            DownloadResult::Forced => write!(f, "forced"),
+            DownloadResult::Skipped => write!(f, "skipped"),
+            DownloadResult::Succeeded => write!(f, "succeeded"),
+            DownloadResult::MarkedManual => write!(f, "marked manual"),
+        }
+    }
+}
 
 /// A wrapper around the indicatif::ProgressBar
 ///
@@ -63,28 +85,28 @@ impl ProgressWrapper {
 
     async fn inc_download_count(&mut self) {
         self.download_count += 1;
-        self.set_message().await;
+        self.show_progress().await;
         let bar = self.bar.lock().await;
         bar.inc_length(1);
     }
 
     async fn inc_download_bytes(&mut self, bytes: u64) {
         self.sum_bytes += bytes;
-        self.set_message().await;
+        self.show_progress().await;
     }
 
     async fn finish_one_download(&mut self) {
         self.finished_downloads += 1;
         self.bar.lock().await.inc(1);
-        self.set_message().await;
+        self.show_progress().await;
     }
 
     async fn add_bytes(&mut self, len: usize) {
         self.current_bytes += len;
-        self.set_message().await;
+        self.show_progress().await;
     }
 
-    async fn set_message(&self) {
+    async fn show_progress(&self) {
         let bar = self.bar.lock().await;
         let current_mbytes = (self.current_bytes as f64) / 1_000_000_f64;
         let sum_mbytes = (self.sum_bytes as f64) / 1_000_000_f64;
@@ -96,22 +118,12 @@ impl ProgressWrapper {
             dlsum = self.download_count
         ));
     }
+}
 
-    async fn success(&self) {
-        let bar = self.bar.lock().await;
-        bar.finish_with_message(format!(
-            "Succeeded {}/{} downloads",
-            self.finished_downloads, self.download_count
-        ));
-    }
-
-    async fn error(&self) {
-        let bar = self.bar.lock().await;
-        bar.finish_with_message(format!(
-            "At least one download of {} failed",
-            self.download_count
-        ));
-    }
+struct DownloadJob {
+    package: Package,
+    source_entry: SourceEntry,
+    download_result: Result<DownloadResult>,
 }
 
 async fn perform_download(
@@ -201,6 +213,77 @@ async fn perform_download(
     file.flush().await.map_err(Error::from).map(|_| ())
 }
 
+async fn download_source_entry(
+    source: &SourceEntry,
+    download_sema: Arc<Semaphore>,
+    progressbar: Arc<Mutex<ProgressWrapper>>,
+    force: bool,
+    timeout: Option<u64>,
+) -> Result<DownloadResult> {
+    let source_path_exists = source.path().exists();
+    if !source_path_exists && source.download_manually() {
+        return Ok(DownloadResult::MarkedManual);
+    }
+
+    if source_path_exists && !force {
+        info!("Source already exists: {}", source.path().display());
+        return Ok(DownloadResult::Skipped);
+    }
+
+    {
+        if source_path_exists && force {
+            source.remove_file().await?;
+        }
+
+        // perform the download
+        progressbar.lock().await.inc_download_count().await;
+        {
+            let permit = download_sema.acquire_owned().await?;
+            perform_download(source, progressbar.clone(), timeout).await?;
+            drop(permit);
+        }
+        progressbar.lock().await.finish_one_download().await;
+
+        if source_path_exists && force {
+            Ok(DownloadResult::Forced)
+        } else {
+            Ok(DownloadResult::Succeeded)
+        }
+    }
+}
+
+fn find_packages(
+    repo: &Repository,
+    pname: Option<PackageName>,
+    pvers: Option<PackageVersionConstraint>,
+    matching_regexp: Option<Regex>,
+) -> Result<Vec<&Package>, anyhow::Error> {
+    let packages: Vec<&Package> = repo.packages()
+        .filter(|p| {
+            match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
+                (None, None, None) => true,
+                (Some(pname), None, None) => p.name() == pname,
+                (Some(pname), Some(vers), None) => p.name() == pname && vers.matches(p.version()),
+                (None, None, Some(regex)) => regex.is_match(p.name()),
+                (_, _, _) => {
+                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
+                },
+            }
+        })
+        .collect();
+
+    if packages.is_empty() {
+        return match (pname, pvers, matching_regexp) {
+            (Some(pname), None, None) => Err(anyhow!("{} not found", pname)),
+            (Some(pname), Some(vers), None) => Err(anyhow!("{} {} not found", pname, vers)),
+            (None, None, Some(regex)) => Err(anyhow!("{} regex not found", regex)),
+            (_, _, _) => panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex."),
+        };
+    }
+
+    Ok(packages)
+}
+
 // Implementation of the 'source download' subcommand
 pub async fn download(
     matches: &ArgMatches,
@@ -209,6 +292,7 @@ pub async fn download(
     progressbars: ProgressBars,
 ) -> Result<()> {
     let force = matches.get_flag("force");
+    let recursive = matches.get_flag("recursive");
     let timeout = matches.get_one::<u64>("timeout").copied();
     let cache = PathBuf::from(config.source_cache_root());
     let sc = SourceCache::new(cache);
@@ -233,88 +317,160 @@ pub async fn download(
         NUMBER_OF_MAX_CONCURRENT_DOWNLOADS,
     ));
 
-    let mut r = repo.packages()
-        .filter(|p| {
-            match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
-                (None, None, None)              => true,
-                (Some(pname), None, None)       => p.name() == pname,
-                (Some(pname), Some(vers), None) => p.name() == pname && vers.matches(p.version()),
-                (None, None, Some(regex))       => regex.is_match(p.name()),
+    let found_packages = find_packages(&repo, pname, pvers, matching_regexp)?;
 
-                (_, _, _) => {
-                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
-                },
-            }
-        }).peekable();
+    let packages_to_download: HashSet<Package> = match recursive {
+        true => {
+            debug!("Finding package dependencies recursively");
 
-    // check if the iterator is empty
-    if r.peek().is_none() {
-        let pname = matches.get_one::<String>("package_name");
-        let pvers = matches.get_one::<String>("package_version");
-        let matching_regexp = matches.get_one::<String>("matching");
+            let image_name_lookup = ImageNameLookup::create(config.docker().images())?;
+            let image_name = matches
+                .get_one::<String>("image")
+                .map(|s| image_name_lookup.expand(s))
+                .transpose()?;
 
-        match (pname, pvers, matching_regexp) {
-            (Some(pname), None, None) => return Err(anyhow!("{} not found", pname)),
-            (Some(pname), Some(vers), None) => return Err(anyhow!("{} {} not found", pname, vers)),
-            (None, None, Some(regex)) => return Err(anyhow!("{} regex not found", regex)),
+            let additional_env = matches
+                .get_many::<String>("env")
+                .unwrap_or_default()
+                .map(AsRef::as_ref)
+                .map(crate::util::env::parse_to_env)
+                .collect::<Result<Vec<(EnvironmentVariableName, String)>>>()?;
 
-            (_, _, _) => {
-                panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
-            }
+            let condition_data = ConditionData {
+                image_name: image_name.as_ref(),
+                env: &additional_env,
+            };
+
+            let dependencies: Vec<Package> = found_packages
+                .iter()
+                .flat_map(|package| {
+                    Dag::for_root_package((*package).clone(), &repo, None, &condition_data)
+                        .map(|d| d.dag().graph().node_weights().cloned().collect::<Vec<_>>())
+                        .unwrap()
+                })
+                .collect();
+
+            HashSet::from_iter(dependencies)
         }
-    }
+        false => HashSet::from_iter(found_packages.into_iter().cloned()),
+    };
 
-    let r = r
+    let download_results: Vec<(SourceEntry, Result<DownloadResult>)> = packages_to_download
+        .iter()
         .flat_map(|p| {
+            //download the sources and wait for all packages to finish
             sc.sources_for(p).into_iter().map(|source| {
                 let download_sema = download_sema.clone();
                 let progressbar = progressbar.clone();
                 async move {
-                    let source_path_exists = source.path().exists();
-                    if !source_path_exists && source.download_manually() {
-                        return Err(anyhow!(
-                            "Cannot download source that is marked for manual download"
-                        ))
-                        .context(anyhow!("Creating source: {}", source.path().display()))
-                        .context(anyhow!("Downloading source: {}", source.url()))
-                        .map_err(Error::from);
-                    }
-
-                    if source_path_exists && !force {
-                        Err(anyhow!("Source exists: {}", source.path().display()))
-                    } else {
-                        if source_path_exists
-                        /* && force is implied by 'if' above*/
-                        {
-                            source.remove_file().await?;
-                        }
-
-                        progressbar.lock().await.inc_download_count().await;
-                        {
-                            let permit = download_sema.acquire_owned().await?;
-                            perform_download(&source, progressbar.clone(), timeout).await?;
-                            drop(permit);
-                        }
-                        progressbar.lock().await.finish_one_download().await;
-                        Ok(())
-                    }
+                    let download_result =
+                        download_source_entry(&source, download_sema, progressbar, force, timeout)
+                            .await;
+                    (source, download_result)
                 }
             })
         })
-        .collect::<futures::stream::FuturesUnordered<_>>()
-        .collect::<Vec<Result<()>>>()
-        .await
-        .into_iter()
-        .collect::<Result<()>>();
+        .collect::<FuturesOrdered<_>>()
+        .collect()
+        .await;
 
-    if r.is_err() {
-        progressbar.lock().await.error().await;
-        return r;
-    } else {
-        progressbar.lock().await.success().await;
+    let mut r: Vec<DownloadJob> = download_results
+        .into_iter()
+        .zip(packages_to_download)
+        .map(|r| {
+            let download_result = r.0;
+            let package = r.1;
+            DownloadJob {
+                package,
+                source_entry: download_result.0,
+                download_result: download_result.1,
+            }
+        })
+        .collect();
+
+    {
+        let mut ascii_table = AsciiTable::default();
+        ascii_table.set_max_width(
+            terminal_size::terminal_size()
+                .map(|tpl| tpl.0 .0 as usize)
+                .unwrap_or(80),
+        );
+        ascii_table.column(0).set_header("#").set_align(Align::Left);
+        ascii_table
+            .column(1)
+            .set_header("Package name")
+            .set_align(Align::Left);
+        ascii_table
+            .column(2)
+            .set_header("Version")
+            .set_align(Align::Left);
+        ascii_table
+            .column(3)
+            .set_header("Source name")
+            .set_align(Align::Left);
+        ascii_table
+            .column(4)
+            .set_header("Status")
+            .set_align(Align::Left);
+        ascii_table
+            .column(5)
+            .set_header("Path")
+            .set_align(Align::Left);
+
+        let numbers: Vec<usize> = (0..r.len()).map(|n| n + 1).collect();
+        r.sort_by(|a, b| {
+            a.source_entry
+                .package_name()
+                .partial_cmp(b.source_entry.package_name())
+                .unwrap()
+        });
+        let source_paths: Vec<String> = r.iter().map(|v| v.source_entry.path_as_string()).collect();
+
+        let data: Vec<Vec<&dyn fmt::Display>> = r
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                debug!("source_entry: {:#?}", v.source_entry);
+                let n = &numbers[i];
+                let mut row: Vec<&dyn fmt::Display> = vec![
+                    n,
+                    v.source_entry.package_name(),
+                    v.source_entry.package_version(),
+                    v.source_entry.package_source_name(),
+                ];
+                if v.download_result.is_ok() {
+                    let result = v.download_result.as_ref().unwrap() as &dyn fmt::Display;
+                    row.push(result);
+                } else {
+                    row.push(&"failed");
+                }
+                row.push(&source_paths[i]);
+                row
+            })
+            .collect();
+
+        ascii_table.print(data);
     }
 
-    super::verify(matches, config, repo, progressbars).await?;
+    for p in &r {
+        if p.download_result.is_err() {
+            error!("{}: {:?}", p.source_entry.package_name(), p.download_result);
+        }
+    }
+
+    let packages_to_verify = r.iter().filter_map(|j| {
+        if let Ok(r) = &j.download_result {
+            match r {
+                DownloadResult::MarkedManual => None,
+                _ => Some(&j.package),
+            }
+        } else {
+            None
+        }
+    });
+
+    let sc = SourceCache::new(config.source_cache_root().clone());
+    super::verify_impl(packages_to_verify, &sc, &progressbars).await?;
 
     Ok(())
 }
