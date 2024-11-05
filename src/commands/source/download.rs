@@ -233,38 +233,8 @@ pub async fn download(
         NUMBER_OF_MAX_CONCURRENT_DOWNLOADS,
     ));
 
-    let mut r = repo.packages()
-        .filter(|p| {
-            match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
-                (None, None, None)              => true,
-                (Some(pname), None, None)       => p.name() == pname,
-                (Some(pname), Some(vers), None) => p.name() == pname && vers.matches(p.version()),
-                (None, None, Some(regex))       => regex.is_match(p.name()),
-
-                (_, _, _) => {
-                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
-                },
-            }
-        }).peekable();
-
-    // check if the iterator is empty
-    if r.peek().is_none() {
-        let pname = matches.get_one::<String>("package_name");
-        let pvers = matches.get_one::<String>("package_version");
-        let matching_regexp = matches.get_one::<String>("matching");
-
-        match (pname, pvers, matching_regexp) {
-            (Some(pname), None, None) => return Err(anyhow!("{} not found", pname)),
-            (Some(pname), Some(vers), None) => return Err(anyhow!("{} {} not found", pname, vers)),
-            (None, None, Some(regex)) => return Err(anyhow!("{} regex not found", regex)),
-
-            (_, _, _) => {
-                panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
-            }
-        }
-    }
-
-    let r = r
+    let r = repo
+        .search_packages(&pname, &pvers, &matching_regexp)?
         .flat_map(|p| {
             sc.sources_for(p).into_iter().map(|source| {
                 let download_sema = download_sema.clone();
