@@ -277,7 +277,7 @@ impl Repository {
         pname: &'a Option<PackageName>,
         pvers: &'a Option<PackageVersionConstraint>,
         matching_regexp: &'a Option<Regex>,
-    ) -> Result<impl Iterator<Item = &Package> + 'a> {
+    ) -> Result<impl Iterator<Item = &'a Package> + 'a> {
         let mut r = self.inner.values()
         .filter(move |p| {
             match (pname, pvers, matching_regexp) {
