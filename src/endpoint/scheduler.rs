@@ -382,7 +382,7 @@ struct LogReceiver<'a> {
     bar: ProgressBar,
 }
 
-impl<'a> LogReceiver<'a> {
+impl LogReceiver<'_> {
     async fn join(mut self) -> Result<String> {
         let mut success = None;
         // Reserve a reasonable amount of elements.

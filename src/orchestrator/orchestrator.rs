@@ -263,7 +263,7 @@ impl Borrow<ArtifactPath> for ProducedArtifact {
     }
 }
 
-impl<'a> Orchestrator<'a> {
+impl Orchestrator<'_> {
     pub async fn run(self, output: &mut Vec<ArtifactPath>) -> Result<HashMap<Uuid, Error>> {
         let (results, errors) = self.run_tree().await?;
         output.extend(results);
