@@ -8,9 +8,9 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use daggy::Dag as DaggyDag;
-use daggy::Walker;
 use getset::Getters;
+use petgraph::acyclic::Acyclic;
+use petgraph::graph::DiGraph;
 use uuid::Uuid;
 
 use crate::job::Job;
@@ -24,7 +24,7 @@ use crate::util::docker::ImageName;
 #[derive(Debug, Getters)]
 pub struct Dag {
     #[getset(get = "pub")]
-    dag: DaggyDag<Job, DependencyType>,
+    dag: Acyclic<DiGraph<Job, DependencyType>>,
 }
 
 impl Dag {
@@ -46,17 +46,17 @@ impl Dag {
         };
 
         Dag {
-            dag: dag.dag().map(build_job, |_, e| (*e).clone()),
+            dag: Acyclic::<_>::try_from_graph(dag.dag().map(build_job, |_, e| (*e).clone()))
+                .unwrap(), // The dag.dag() is already acyclic so this cannot fail
         }
     }
 
     pub fn iter(&'_ self) -> impl Iterator<Item = JobDefinition> + '_ {
-        self.dag.graph().node_indices().map(move |idx| {
-            let job = self.dag.graph().node_weight(idx).unwrap(); // TODO
-            let children = self.dag.children(idx);
+        self.dag.node_indices().map(move |idx| {
+            let job = self.dag.node_weight(idx).unwrap(); // TODO
+            let children = self.dag.neighbors_directed(idx, petgraph::Outgoing);
             let children_uuids = children
-                .iter(&self.dag)
-                .filter_map(|(_, node_idx)| self.dag.graph().node_weight(node_idx))
+                .filter_map(|node_idx| self.dag.node_weight(node_idx))
                 .map(Job::uuid)
                 .cloned()
                 .collect();

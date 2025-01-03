@@ -34,7 +34,6 @@ clap_complete = "4"
 colored = "2"
 config = { version = "0.15", default-features = false, features = [ "toml" ] }
 csv = "1"
-daggy = { version = "0.8", features = [ "serde" ] }
 dialoguer = "0.11"
 diesel = { version = "2", features = ["postgres", "chrono", "uuid", "serde_json", "r2d2"] }
 diesel_migrations = "2"

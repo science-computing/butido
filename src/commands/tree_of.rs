@@ -14,14 +14,12 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use petgraph::dot::Dot;
-use petgraph::graph::DiGraph;
 use resiter::AndThen;
 
 use crate::config::Configuration;
 use crate::package::condition::ConditionData;
 use crate::package::Dag;
 use crate::package::DependencyType;
-use crate::package::Package;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
@@ -73,10 +71,8 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
         .map(|package| Dag::for_root_package(package.clone(), &repo, None, &condition_data))
         .and_then_ok(|dag| {
             if dot {
-                let petgraph: DiGraph<Package, DependencyType> = (*dag.dag()).clone().into();
-
                 let dot = Dot::with_attr_getters(
-                    &petgraph,
+                    dag.dag(),
                     &[
                         petgraph::dot::Config::EdgeNoLabel,
                         petgraph::dot::Config::NodeNoLabel,
@@ -96,13 +92,11 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
                 println!("{:?}", dot);
                 Ok(())
             } else if serial_buildorder {
-                let petgraph: DiGraph<Package, DependencyType> = (*dag.dag()).clone().into();
-
-                let topo_sorted = petgraph::algo::toposort(&petgraph, None)
+                let topo_sorted = petgraph::algo::toposort(dag.dag(), None)
                     .map_err(|_| Error::msg("Cyclic dependency found!"))?;
 
                 for node in topo_sorted.iter().rev() {
-                    let package = petgraph.node_weight(*node).unwrap();
+                    let package = dag.dag().node_weight(*node).unwrap();
                     println!("{}", package.display_name_version());
                 }
                 println!();
