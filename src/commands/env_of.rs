@@ -29,19 +29,19 @@ pub async fn env_of(matches: &ArgMatches, repo: Repository) -> Result<()> {
             .map(|s| s.to_owned())
             .map(PackageName::from)
             .unwrap();
-        let constraint = matches
-            .get_one::<String>("package_version_constraint")
+        let version = matches
+            .get_one::<String>("package_version")
             .map(|s| s.to_owned())
             .map(PackageVersion::try_from)
             .unwrap()?;
         trace!(
             "Checking for package with name = {} and version = {:?}",
             name,
-            constraint
+            version
         );
 
         crate::util::filters::build_package_filter_by_name(name).and(
-            crate::util::filters::build_package_filter_by_version(constraint),
+            crate::util::filters::build_package_filter_by_version(version),
         )
     };
 
