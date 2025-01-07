@@ -12,6 +12,7 @@
 
 use std::io::Write;
 
+use anyhow::Context;
 use anyhow::Result;
 use clap::ArgMatches;
 use futures::stream::StreamExt;
@@ -21,6 +22,7 @@ use tracing::trace;
 use crate::commands::util::getbool;
 use crate::config::*;
 use crate::package::PackageName;
+use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
 use crate::ui::*;
 
@@ -39,8 +41,20 @@ pub async fn dependencies_of(
             .map(PackageName::from)
             .unwrap();
         trace!("Checking for package with name = {}", name);
+        let version_constraint = matches
+            .get_one::<String>("package_version_constraint")
+            .map(|s| s.to_owned())
+            .map(PackageVersionConstraint::try_from)
+            .transpose()
+            .context("Parsing package version constraint")?;
+        trace!(
+            "Checking for package with version constraint = {:?}",
+            version_constraint
+        );
 
-        crate::util::filters::build_package_filter_by_name(name)
+        crate::util::filters::build_package_filter_by_name(name).and(
+            crate::util::filters::build_package_filter_by_version_constraint(version_constraint),
+        )
     };
 
     let format = config.package_print_format();
