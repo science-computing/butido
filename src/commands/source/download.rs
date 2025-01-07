@@ -213,7 +213,7 @@ pub async fn download(
         .map(|s| s.to_owned())
         .map(PackageName::from);
     let pvers = matches
-        .get_one::<String>("package_version")
+        .get_one::<String>("package_version_constraint")
         .map(|s| s.to_owned())
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
@@ -245,8 +245,9 @@ pub async fn download(
 
     // check if the iterator is empty
     if r.peek().is_none() {
+        // TODO: Duplication:
         let pname = matches.get_one::<String>("package_name");
-        let pvers = matches.get_one::<String>("package_version");
+        let pvers = matches.get_one::<String>("package_version_constraint");
         let matching_regexp = matches.get_one::<String>("matching");
 
         match (pname, pvers, matching_regexp) {
