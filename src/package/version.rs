@@ -46,8 +46,15 @@ impl PackageVersionConstraint {
         use semver::{Version, VersionReq};
         match self.constraint.as_str() {
             "" => {
+                // We default to `Op::Exact` (=) to enable partial version specification
+                // (e.g., only the major and minor or only the major version):
+                // https://docs.rs/semver/latest/semver/enum.Op.html#opexact
+                // Our own implementation of "=" (s. below) allows only a single version to match
+                // while `semver::Op::Exact` can result in multiple versions matching if only a
+                // "partial" version is provided.
+                let default_constraint = String::from("=");
                 let constraint =
-                    VersionReq::parse(&(self.constraint.clone() + self.version.as_str())).unwrap();
+                    VersionReq::parse(&(default_constraint + self.version.as_str())).unwrap();
                 let version = Version::parse(v.as_str()).unwrap();
 
                 constraint.matches(&version)
