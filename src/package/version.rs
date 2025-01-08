@@ -15,6 +15,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use pom::parser::Parser as PomParser;
+use regex::Regex;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -55,7 +56,16 @@ impl PackageVersionConstraint {
                 let default_constraint = String::from("=");
                 let constraint =
                     VersionReq::parse(&(default_constraint + self.version.as_str())).unwrap();
-                let version = Version::parse(v.as_str()).unwrap();
+                let version = Version::parse(v.as_str())
+                    .with_context(|| anyhow!("Failed to parse the package version as semver::Version"))
+                    .or_else(|eo| v.clone().try_into().map_err(|e: Error| e.context(eo)))
+                    .with_context(|| anyhow!("Also failed to parse the package version using our own SemVer converter"))
+                    .unwrap_or_else(|e| panic!(
+                        "Failed to parse the package version \"{}\" as SemVer to check if it matches \"{}\". Error: {:#}",
+                        v,
+                        constraint,
+                        e
+                    ));
 
                 constraint.matches(&version)
             }
@@ -134,6 +144,56 @@ impl AsRef<str> for PackageVersion {
 impl From<String> for PackageVersion {
     fn from(s: String) -> Self {
         PackageVersion(s)
+    }
+}
+
+impl TryInto<semver::Version> for PackageVersion {
+    type Error = anyhow::Error;
+
+    // TODO: Improve or replace this spaghetti code that we only use as a fallback (the unwrap()s
+    // should be safe as long as the static regex guarantees the assumptions):
+    fn try_into(self) -> Result<semver::Version> {
+        // Warning: This regex must remain identical to the one in the parser below!:
+        let version_regex =
+            Regex::new("^([[:digit:]]+)(?:([[:digit:]]+)|[-_.]|[[:alpha:]]+)*$").unwrap();
+        // This regex is based on PackageVersion::parser() below. We use capture groups to extract
+        // the numbers and the "(?:exp)" syntax is for a non-capturing group.
+
+        if let Some(captures) = version_regex.captures(&self.0) {
+            // For debugging: println!("{:?}", captures);
+            let mut captures = captures.iter();
+            // Ignore the full match (index 0):
+            captures.next();
+            // The first match must be present and be a positive number if the regex matched!:
+            let major = captures.next().unwrap().unwrap().as_str().parse()?;
+
+            // Try to extract the minor and patch versions:
+            let mut versions = Vec::<u64>::new();
+            for match_group in captures {
+                // The unwrap() should be safe as the match group only exists if there is a match:
+                let match_str = match_group.unwrap().as_str();
+                versions.push(match_str.parse()?);
+            }
+
+            // Return what is hopefully the corresponding SemVer (the minor and patch version
+            // default to zero if they couldn't be extracted from PackageVersion):
+            Ok(semver::Version::new(
+                major,
+                *versions.first().unwrap_or(&0),
+                *versions.get(1).unwrap_or(&0),
+            ))
+        } else {
+            Err(anyhow!(
+                "The regex \"{}\" for parsing the PackageVersion didn't match",
+                version_regex
+            ))
+        }
+        .with_context(|| {
+            anyhow!(
+                "The PackageVersion \"{}\" couldn't be converted into a semver::Version",
+                self
+            )
+        })
     }
 }
 
