@@ -31,7 +31,7 @@ use crate::package::condition::ConditionData;
 use crate::package::dependency::ParseDependency;
 use crate::package::Package;
 use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
+use crate::package::PackageVersion;
 use crate::repository::Repository;
 
 #[derive(Debug, Getters)]
@@ -63,12 +63,12 @@ impl Dag {
             dependency: &D,
             dependency_type: DependencyType,
             conditional_data: &ConditionData<'_>,
-        ) -> Result<(bool, PackageName, PackageVersionConstraint, DependencyType)> {
+        ) -> Result<(bool, PackageName, PackageVersion, DependencyType)> {
             // Check whether the condition of the dependency matches our data
             let take = dependency.check_condition(conditional_data)?;
             let (name, version) = dependency.parse_as_name_and_version()?;
 
-            // (dependency check result, name of the dependency, version constraint of the
+            // (dependency check result, name of the dependency, version of the
             // dependency, and type (build/runtime))
             Ok((take, name, version, dependency_type))
         }
@@ -83,7 +83,7 @@ impl Dag {
         fn get_package_dependencies<'a>(
             package: &'a Package,
             conditional_data: &'a ConditionData<'_>,
-        ) -> impl Iterator<Item = Result<(PackageName, PackageVersionConstraint, DependencyType)>> + 'a
+        ) -> impl Iterator<Item = Result<(PackageName, PackageVersion, DependencyType)>> + 'a
         {
             trace!("Collecting the dependencies of {package:?} {conditional_data:?}");
             package
@@ -121,16 +121,16 @@ impl Dag {
             conditional_data: &ConditionData<'_>,
         ) -> Result<()> {
             get_package_dependencies(p, conditional_data)
-                .and_then_ok(|(name, constr, kind)| {
+                .and_then_ok(|(name, version, kind)| {
                     trace!(
                         "Processing the following dependency of {} {}: {} {} {:?}",
                         p.name(),
                         p.version(),
                         name,
-                        constr,
+                        version,
                         kind
                     );
-                    let packs = repo.find_with_version(&name, &constr);
+                    let packs = repo.find_with_version(&name, &version);
                     trace!(
                         "Found the following matching packages in the repo: {:?}",
                         packs
@@ -141,7 +141,7 @@ impl Dag {
                             p.name(),
                             p.version(),
                             name,
-                            constr
+                            version
                         ));
                     }
 
@@ -154,10 +154,11 @@ impl Dag {
                     }) {
                         // TODO: It should be sufficient to process a single package of `packs`.
                         // The `packs` vector contains a list of all packages in the repo that
-                        // match the dependency specification (PackageName and
-                        // PackageVersionConstraint). All packages must have the same name so only
-                        // the version can differ -> we could simply pick the package with the most
-                        // recent version and optionally omit a warning (or even abort with an error).
+                        // match the dependency specification (PackageName and PackageVersion).
+                        // TODO: Support PackageVersionConstraint: All packages must have the same
+                        // name so only the version can differ -> we could simply pick the package
+                        // with the most recent version and optionally omit a warning (or even
+                        // abort with an error).
                         packs.into_iter().try_for_each(|p| {
                             let _ = progress.as_ref().map(|p| p.tick());
 
@@ -186,11 +187,11 @@ impl Dag {
         ) -> Result<()> {
             for (package, idx) in mappings {
                 get_package_dependencies(package, conditional_data)
-                    .and_then_ok(|(dep_name, dep_constr, dep_kind)| {
+                    .and_then_ok(|(dep_name, dep_version, dep_kind)| {
                         mappings
                             .iter()
                             .filter(|(pkg, _)| {
-                                *pkg.name() == dep_name && dep_constr.matches(pkg.version())
+                                *pkg.name() == dep_name && *pkg.version() == dep_version
                             })
                             .try_for_each(|(dep, dep_idx)| {
                                 dag.add_edge(*idx, *dep_idx, dep_kind.clone())

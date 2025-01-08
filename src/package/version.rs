@@ -86,6 +86,7 @@ impl PackageVersionConstraint {
     }
 
     #[cfg(test)]
+    #[allow(unused)]
     pub fn from_version(constraint: String, version: PackageVersion) -> Self {
         PackageVersionConstraint {
             constraint,
