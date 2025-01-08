@@ -153,47 +153,59 @@ impl TryInto<semver::Version> for PackageVersion {
     // TODO: Improve or replace this spaghetti code that we only use as a fallback (the unwrap()s
     // should be safe as long as the static regex guarantees the assumptions):
     fn try_into(self) -> Result<semver::Version> {
-        // Warning: This regex must remain identical to the one in the parser below!:
-        let version_regex =
-            Regex::new("^([[:digit:]]+)(?:([[:digit:]]+)|[-_.]|[[:alpha:]]+)*$").unwrap();
-        // This regex is based on PackageVersion::parser() below. We use capture groups to extract
-        // the numbers and the "(?:exp)" syntax is for a non-capturing group.
+        // Warning: This regex must remain compatible to the one in the PackageVersion::parser below!:
+        let version_regex = Regex::new("^(?:([[:digit:]]+)|[-_.]|[[:alpha:]]+)").unwrap();
+        // This regex is based on PackageVersion::parser() below. We use a capture group to extract
+        // the numbers and the "(?:exp)" syntax is for a non-capturing group. If it matches we'll
+        // have the entire match in \0 and if it's a number it'll be in \1.
 
-        if let Some(captures) = version_regex.captures(&self.0) {
+        // Our input (version string):
+        let mut version_str = self.0.as_str();
+        // Our results (extracted version numbers):
+        let mut versions = Vec::<u64>::new();
+
+        // This loop is dangerous... Ensure that the match gets removed from version_str in every
+        // iteration to avoid an endless loop!
+        while let Some(captures) = version_regex.captures(version_str) {
             // For debugging: println!("{:?}", captures);
-            let mut captures = captures.iter();
-            // Ignore the full match (index 0):
-            captures.next();
-            // The first match must be present and be a positive number if the regex matched!:
-            let major = captures.next().unwrap().unwrap().as_str().parse()?;
 
-            // Try to extract the minor and patch versions:
-            let mut versions = Vec::<u64>::new();
-            for match_group in captures {
-                // The unwrap() should be safe as the match group only exists if there is a match:
-                let match_str = match_group.unwrap().as_str();
-                versions.push(match_str.parse()?);
+            let match_str = captures.get(0).unwrap().as_str(); // Unwrap safe as \0 always exists
+            version_str = &version_str[match_str.len()..];
+
+            if let Some(version_match) = captures.get(1) {
+                // We have a non-empty (version) number match
+                let version = version_match.as_str().parse()?;
+                versions.push(version);
             }
+        }
 
+        if version_str.is_empty() {
             // Return what is hopefully the corresponding SemVer (the minor and patch version
             // default to zero if they couldn't be extracted from PackageVersion):
             Ok(semver::Version::new(
-                major,
                 *versions.first().unwrap_or(&0),
                 *versions.get(1).unwrap_or(&0),
+                *versions.get(2).unwrap_or(&0),
             ))
         } else {
+            // We couldn't parse the entire version string -> report an error:
             Err(anyhow!(
-                "The regex \"{}\" for parsing the PackageVersion didn't match",
-                version_regex
+                "The following rest of the package version couldn't be parsed: {}",
+                version_str
             ))
+            .with_context(|| {
+                anyhow!(
+                    "The regex \"{}\" for parsing the PackageVersion didn't match",
+                    version_regex
+                )
+            })
+            .with_context(|| {
+                anyhow!(
+                    "The PackageVersion \"{}\" couldn't be converted into a semver::Version",
+                    self
+                )
+            })
         }
-        .with_context(|| {
-            anyhow!(
-                "The PackageVersion \"{}\" couldn't be converted into a semver::Version",
-                self
-            )
-        })
     }
 }
 
