@@ -28,13 +28,27 @@ pub struct PackageVersionConstraint {
 }
 
 impl PackageVersionConstraint {
+    fn get_default_constraint() -> String {
+        // We default to `Op::Exact` (=) to enable partial version specification
+        // (e.g., only the major and minor or only the major version):
+        // https://docs.rs/semver/latest/semver/enum.Op.html#opexact
+        // Our own implementation of "=" (s. below) allows only a single version to match
+        // while `semver::Op::Exact` can result in multiple versions matching if only a
+        // "partial" version is provided.
+        String::from("=")
+    }
+
     fn parser<'a>() -> PomParser<'a, u8, Self> {
         (pom::parser::sym(b'=').opt() + PackageVersion::parser())
             .convert(|(constraint, version)| {
                 if let Some(c) = constraint {
-                    String::from_utf8(vec![c]).map(|c| (c, version))
+                    String::from_utf8(vec![c])
+                        .map(|c| (c, version))
+                        .map_err(Error::from)
                 } else {
-                    Ok(("".to_string(), version))
+                    semver::VersionReq::parse(&(Self::get_default_constraint() + &version))
+                        .map(|_| ("".to_string(), version))
+                        .map_err(Error::from)
                 }
             })
             .map(|(constraint, version)| PackageVersionConstraint {
@@ -47,15 +61,9 @@ impl PackageVersionConstraint {
         use semver::{Version, VersionReq};
         match self.constraint.as_str() {
             "" => {
-                // We default to `Op::Exact` (=) to enable partial version specification
-                // (e.g., only the major and minor or only the major version):
-                // https://docs.rs/semver/latest/semver/enum.Op.html#opexact
-                // Our own implementation of "=" (s. below) allows only a single version to match
-                // while `semver::Op::Exact` can result in multiple versions matching if only a
-                // "partial" version is provided.
-                let default_constraint = String::from("=");
                 let constraint =
-                    VersionReq::parse(&(default_constraint + self.version.as_str())).unwrap();
+                    VersionReq::parse(&(Self::get_default_constraint() + self.version.as_str()))
+                        .unwrap();
                 let version = Version::parse(v.as_str())
                     .with_context(|| anyhow!("Failed to parse the package version as semver::Version"))
                     .or_else(|eo| v.clone().try_into().map_err(|e: Error| e.context(eo)))
