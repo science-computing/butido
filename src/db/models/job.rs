@@ -92,7 +92,6 @@ impl Job {
                 .filter(uuid.eq(job_uuid))
                 .first::<Job>(conn)
                 .with_context(|| format!("Finding created job in database: {job_uuid}"))
-                .map_err(Error::from)
         })
     }
 

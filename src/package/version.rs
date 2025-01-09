@@ -119,7 +119,6 @@ impl TryFrom<&str> for PackageVersionConstraint {
             .parse(s.as_bytes())
             .context(anyhow!("Failed to parse the following package version constraint: {}", s))
             .context("A package version constraint must have a version and an optional comparator (only `=` is currently supported, which is also the default), e.g.: =0.1.0")
-            .map_err(Error::from)
     }
 }
 

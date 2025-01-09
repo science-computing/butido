@@ -12,6 +12,9 @@
 //! configuration and having to use default values.
 
 /// The default progress bar format
+// Ignore a false positive Clippy warning (we pass this format string to
+// `indicatif::ProgressBars` as `bar_template` instead of evaluating it here):
+#[rustversion::attr(since(1.83), allow(clippy::literal_string_with_formatting_args))]
 pub fn default_progress_format() -> String {
     String::from("{elapsed_precise} {percent:>3}% {bar:5.cyan/blue} | {msg}")
 }

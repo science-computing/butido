@@ -12,7 +12,6 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use tracing::trace;
 use url::Url;
@@ -140,6 +139,5 @@ impl SourceEntry {
             .open(&p)
             .await
             .with_context(|| anyhow!("Creating file: {}", p.display()))
-            .map_err(Error::from)
     }
 }

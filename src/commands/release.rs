@@ -207,7 +207,6 @@ async fn new_release(
                     .with_context(|| {
                         anyhow!("Copying {} to {}", art_path.display(), dest_path.display())
                     })
-                    .map_err(Error::from)
                     .and_then(|_| {
                         debug!("Updating {:?} to set released = true", art);
                         let rel = crate::db::models::Release::create(

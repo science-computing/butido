@@ -246,8 +246,7 @@ pub async fn download(
                             "Cannot download source that is marked for manual download"
                         ))
                         .context(anyhow!("Creating source: {}", source.path().display()))
-                        .context(anyhow!("Downloading source: {}", source.url()))
-                        .map_err(Error::from);
+                        .context(anyhow!("Downloading source: {}", source.url()));
                     }
 
                     if source_path_exists && !force {

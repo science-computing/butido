@@ -159,7 +159,6 @@ pub fn mk_package_name_regex(regex: &str) -> Result<Regex> {
     builder
         .build()
         .with_context(|| anyhow!("Failed to build regex from '{}'", regex))
-        .map_err(Error::from)
 }
 
 /// Make a header column for the ascii_table crate
@@ -259,7 +258,6 @@ pub fn get_date_filter(
                 .checked_sub_signed(dur)
                 .ok_or_else(|| anyhow!("Time calculation would overflow"))
                 .with_context(|| anyhow!("Cannot subtract {} from 'now'", dur))
-                .map_err(Error::from)
         })
         .transpose()
 }

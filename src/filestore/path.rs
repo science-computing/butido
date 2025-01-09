@@ -206,9 +206,7 @@ impl<'a> FullArtifactPath<'a> {
     pub async fn read(self) -> Result<Vec<u8>> {
         tokio::fs::read(self.joined())
             .await
-            .map(Vec::from)
             .with_context(|| anyhow!("Reading artifact from path {}", self.0.display()))
-            .map_err(Error::from)
     }
 }
 

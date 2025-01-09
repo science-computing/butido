@@ -123,7 +123,6 @@ impl Endpoint {
             crate::config::EndpointType::Http => shiplift::Uri::from_str(ep.uri())
                 .map(shiplift::Docker::host)
                 .with_context(|| anyhow!("Connecting to {}", ep.uri()))
-                .map_err(Error::from)
                 .map(|docker| {
                     Endpoint::builder()
                         .name(ep_name.clone())
@@ -596,7 +595,6 @@ impl<'a> PreparedContainer<'a> {
                             container.id()
                         )
                     })
-                    .map_err(Error::from)
             })
             .collect::<futures::stream::FuturesUnordered<_>>()
             .collect::<Result<()>>()
@@ -608,7 +606,6 @@ impl<'a> PreparedContainer<'a> {
                 )
             })
             .with_context(|| anyhow!("Copying sources to container {}", container.id()))
-            .map_err(Error::from)
     }
 
     async fn copy_patches_to_container(container: &Container<'_>, job: &RunnableJob) -> Result<()> {
@@ -655,15 +652,12 @@ impl<'a> PreparedContainer<'a> {
                             container.id()
                         )
                     })
-                    .map_err(Error::from)
             })
             .collect::<futures::stream::FuturesUnordered<_>>()
             .collect::<Result<()>>()
             .await
-            .map_err(Error::from)
             .inspect(|_| trace!("Copied all patches"))
             .with_context(|| anyhow!("Copying patches to container {}", container.id()))
-            .map_err(Error::from)
     }
 
     async fn copy_artifacts_to_container(
@@ -746,8 +740,7 @@ impl<'a> PreparedContainer<'a> {
                             container.id(),
                             destination.display()
                         )
-                    })
-                    .map_err(Error::from);
+                    });
                 drop(art); // ensure `art` is moved into closure
                 r
             });
@@ -767,7 +760,6 @@ impl<'a> PreparedContainer<'a> {
                 )
             })
             .with_context(|| anyhow!("Copying artifacts to container {}", container.id()))
-            .map_err(Error::from)
             .map(|_| ())
     }
 
@@ -778,7 +770,6 @@ impl<'a> PreparedContainer<'a> {
             .await
             .inspect(|_| trace!("Successfully copied script to container {}", container.id()))
             .with_context(|| anyhow!("Copying the script into container {}", container.id()))
-            .map_err(Error::from)
     }
 
     pub async fn start(self) -> Result<StartedContainer<'a>> {
@@ -877,7 +868,6 @@ impl<'a> StartedContainer<'a> {
                             .with_context(|| anyhow!("Sending log to log sink"))
                             .map(|_| exited_successfully)
                     })
-                    .map_err(Error::from)
                 })
                 .collect::<Result<Vec<_>>>()
                 .map(|r| {
@@ -964,7 +954,6 @@ impl ExecutedContainer<'_> {
                                 self.create_info.id
                             )
                         })
-                        .map_err(Error::from)
                     });
 
                 let mut writelock = staging_store.write().await;
