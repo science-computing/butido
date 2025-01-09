@@ -18,6 +18,7 @@ use pom::parser::Parser as PomParser;
 use regex::Regex;
 use serde::Deserialize;
 use serde::Serialize;
+use tracing::info;
 
 use crate::util::parser::*;
 
@@ -47,8 +48,15 @@ impl PackageVersionConstraint {
                         .map_err(Error::from)
                 } else {
                     semver::VersionReq::parse(&(Self::get_default_constraint() + &version))
-                        .map(|_| ("".to_string(), version))
+                        .map(|_| ("".to_string(), version.clone()))
                         .map_err(Error::from)
+                        // TODO: Drop this (for backward compatibility, we temporarily fallback to
+                        // the old behaviour (as if the constraint `=` was specified) if the
+                        // provided version cannot be parsed by the semver crate - this is required
+                        // for somewhat "exotic" versions like the old OpenSSL 1.1.1w, web browsers
+                        // with a fourth version number, or (unstable) releases based on the date):
+                        .inspect_err(|e| info!("Couldn't parse version \"{version}\" as SemVer ({e}) -> falling back to strict version matching (={version})"))
+                        .map_or(Ok(("=".to_string(), version)), Ok)
                 }
             })
             .map(|(constraint, version)| PackageVersionConstraint {
