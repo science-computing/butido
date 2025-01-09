@@ -8,7 +8,7 @@ authors = [
   "Michael Weiss <michael.weiss@eviden.com>", # @primeos-work
 ]
 edition = "2021"
-rust-version = "1.78.0" # MSRV
+rust-version = "1.80.0" # MSRV
 license = "EPL-2.0"
 
 description = "Linux package tool utilizing Docker, PostgreSQL, and TOML"
@@ -25,14 +25,14 @@ maintenance = { status = "passively-maintained" }
 
 [dependencies]
 anyhow = "1"
-aquamarine = "0.5"
+aquamarine = "0.6"
 ascii_table = { version = "4", features = ["color_codes", "wide_characters"] }
 bytesize = "1"
 chrono = "0.4"
 clap = { version = "4", features = ["cargo"] }
 clap_complete = "4"
 colored = "2"
-config = { version = "0.13", default-features = false, features = [ "toml" ] }
+config = { version = "0.15", default-features = false, features = [ "toml" ] }
 csv = "1"
 daggy = { version = "0.8", features = [ "serde" ] }
 dialoguer = "0.11"
@@ -47,9 +47,10 @@ human-panic = "2"
 humantime = "2"
 indicatif = "0.17"
 indoc = "2"
-itertools = "0.13"
+itertools = "0.14"
 lazy_static = "1"
-parse-display = "0.9"
+parse-display = "0.10"
+petgraph = "0.6"
 pom = "3"
 ptree = { version = "0.5", default-features = false }
 rand = "0.8"
@@ -67,19 +68,19 @@ sha2 = "0.10"
 shiplift = "0.7"
 syntect = "5"
 tar = "0.4"
-terminal_size = "0.3"
+terminal_size = "0.4"
 tokio = { version = "1", features = ["macros", "fs", "process", "io-util", "time"] }
 tokio-stream = "0.1"
 toml = "0.8"
 tracing = "0.1"
 tracing-chrome = "0.7"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-typed-builder = "0.19"
+typed-builder = "0.20"
 unindent = "0.2"
 url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["serde", "v4"] }
 walkdir = "2"
-which = "6"
+which = "7"
 xdg = "2"
 
 [build-dependencies]

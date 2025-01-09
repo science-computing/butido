@@ -17,6 +17,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use regex::Regex;
 use resiter::AndThen;
 use resiter::FilterMap;
 use resiter::Map;
@@ -25,6 +26,7 @@ use tracing::trace;
 use crate::package::Package;
 use crate::package::PackageName;
 use crate::package::PackageVersion;
+use crate::package::PackageVersionConstraint;
 
 /// A repository represents a collection of packages
 pub struct Repository {
@@ -268,6 +270,44 @@ impl Repository {
 
     pub fn packages(&self) -> impl Iterator<Item = &Package> {
         self.inner.values()
+    }
+
+    pub fn search_packages<'a>(
+        &'a self,
+        pname: &'a Option<PackageName>,
+        pvers: &'a Option<PackageVersionConstraint>,
+        matching_regexp: &'a Option<Regex>,
+    ) -> Result<impl Iterator<Item = &'a Package> + 'a> {
+        let mut r = self.inner.values()
+        .filter(move |p| {
+            match (pname, pvers, matching_regexp) {
+                (None, None, None)              => true,
+                (Some(pname), None, None)       => p.name() == pname,
+                (Some(pname), Some(vers), None) => p.name() == pname && vers.matches(p.version()),
+                (None, None, Some(regex))       => regex.is_match(p.name()),
+
+                (_, _, _) => {
+                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
+                },
+            }
+        }).peekable();
+
+        // check if the iterator is empty
+        if r.peek().is_none() {
+            match (pname, pvers, matching_regexp) {
+                (Some(pname), None, None) => return Err(anyhow!("{} not found", pname)),
+                (Some(pname), Some(vers), None) => {
+                    return Err(anyhow!("{} {} not found", pname, vers))
+                }
+                (None, None, Some(regex)) => return Err(anyhow!("{} regex not found", regex)),
+
+                (_, _, _) => {
+                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
+                }
+            }
+        }
+
+        Ok(r)
     }
 }
 

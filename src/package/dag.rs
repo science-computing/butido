@@ -264,7 +264,7 @@ impl Dag {
 #[derive(Clone)]
 pub struct DagDisplay<'a>(&'a Dag, daggy::NodeIndex, Option<daggy::EdgeIndex>);
 
-impl<'a> TreeItem for DagDisplay<'a> {
+impl TreeItem for DagDisplay<'_> {
     type Child = Self;
 
     fn write_self<W: Write>(&self, f: &mut W, _: &Style) -> IoResult<()> {

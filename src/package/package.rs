@@ -100,6 +100,10 @@ impl Package {
         }
     }
 
+    pub fn display_name_version(&self) -> String {
+        format!("{} {}", self.name, self.version)
+    }
+
     #[cfg(test)]
     pub fn set_dependencies(&mut self, dependencies: Dependencies) {
         self.dependencies = dependencies;
@@ -134,7 +138,7 @@ impl std::fmt::Debug for Package {
 pub struct DebugPackage<'a>(&'a Package);
 
 #[cfg(debug_assertions)]
-impl<'a> std::fmt::Debug for DebugPackage<'a> {
+impl std::fmt::Debug for DebugPackage<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         writeln!(
             f,

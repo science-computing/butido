@@ -543,10 +543,7 @@ impl<'a> PreparedContainer<'a> {
         Ok(create_info)
     }
 
-    async fn copy_source_to_container<'ca>(
-        container: &Container<'ca>,
-        job: &RunnableJob,
-    ) -> Result<()> {
+    async fn copy_source_to_container(container: &Container<'_>, job: &RunnableJob) -> Result<()> {
         use tokio::io::AsyncReadExt;
 
         job.package_sources()
@@ -614,10 +611,7 @@ impl<'a> PreparedContainer<'a> {
             .map_err(Error::from)
     }
 
-    async fn copy_patches_to_container<'ca>(
-        container: &Container<'ca>,
-        job: &RunnableJob,
-    ) -> Result<()> {
+    async fn copy_patches_to_container(container: &Container<'_>, job: &RunnableJob) -> Result<()> {
         use tokio::io::AsyncReadExt;
 
         debug!(
@@ -672,8 +666,8 @@ impl<'a> PreparedContainer<'a> {
             .map_err(Error::from)
     }
 
-    async fn copy_artifacts_to_container<'ca>(
-        container: &Container<'ca>,
+    async fn copy_artifacts_to_container(
+        container: &Container<'_>,
         job: &RunnableJob,
         staging_store: Arc<RwLock<StagingStore>>,
         release_stores: &[Arc<ReleaseStore>],
@@ -777,10 +771,7 @@ impl<'a> PreparedContainer<'a> {
             .map(|_| ())
     }
 
-    async fn copy_script_to_container<'ca>(
-        container: &Container<'ca>,
-        script: &Script,
-    ) -> Result<()> {
+    async fn copy_script_to_container(container: &Container<'_>, script: &Script) -> Result<()> {
         let script_path = PathBuf::from(crate::consts::SCRIPT_PATH);
         container
             .copy_file_into(script_path, script.as_ref().as_bytes())
@@ -932,7 +923,7 @@ pub struct ExecutedContainer<'a> {
     exit_info: Option<(bool, Option<String>)>,
 }
 
-impl<'a> ExecutedContainer<'a> {
+impl ExecutedContainer<'_> {
     pub fn container_hash(&self) -> ContainerHash {
         ContainerHash::from(self.create_info.id.clone())
     }

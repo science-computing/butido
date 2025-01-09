@@ -86,11 +86,15 @@ impl ProgressWrapper {
 
     async fn set_message(&self) {
         let bar = self.bar.lock().await;
-        bar.set_message(format!("Downloading ({current_bytes}/{sum_bytes} bytes, {dlfinished}/{dlsum} downloads finished)",
-                current_bytes = self.current_bytes,
-                sum_bytes = self.sum_bytes,
-                dlfinished = self.finished_downloads,
-                dlsum = self.download_count));
+        let current_mbytes = (self.current_bytes as f64) / 1_000_000_f64;
+        let sum_mbytes = (self.sum_bytes as f64) / 1_000_000_f64;
+        bar.set_message(format!(
+            "Downloading ({:.2}/{:.2} MB, {dlfinished}/{dlsum} downloads finished)",
+            current_mbytes,
+            sum_mbytes,
+            dlfinished = self.finished_downloads,
+            dlsum = self.download_count
+        ));
     }
 
     async fn success(&self) {
@@ -229,39 +233,8 @@ pub async fn download(
         NUMBER_OF_MAX_CONCURRENT_DOWNLOADS,
     ));
 
-    let mut r = repo.packages()
-        .filter(|p| {
-            match (pname.as_ref(), pvers.as_ref(), matching_regexp.as_ref()) {
-                (None, None, None)              => true,
-                (Some(pname), None, None)       => p.name() == pname,
-                (Some(pname), Some(vers), None) => p.name() == pname && vers.matches(p.version()),
-                (None, None, Some(regex))       => regex.is_match(p.name()),
-
-                (_, _, _) => {
-                    panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
-                },
-            }
-        }).peekable();
-
-    // check if the iterator is empty
-    if r.peek().is_none() {
-        // TODO: Duplication:
-        let pname = matches.get_one::<String>("package_name");
-        let pvers = matches.get_one::<String>("package_version_constraint");
-        let matching_regexp = matches.get_one::<String>("matching");
-
-        match (pname, pvers, matching_regexp) {
-            (Some(pname), None, None) => return Err(anyhow!("{} not found", pname)),
-            (Some(pname), Some(vers), None) => return Err(anyhow!("{} {} not found", pname, vers)),
-            (None, None, Some(regex)) => return Err(anyhow!("{} regex not found", regex)),
-
-            (_, _, _) => {
-                panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
-            }
-        }
-    }
-
-    let r = r
+    let r = repo
+        .search_packages(&pname, &pvers, &matching_regexp)?
         .flat_map(|p| {
             sc.sources_for(p).into_iter().map(|source| {
                 let download_sema = download_sema.clone();

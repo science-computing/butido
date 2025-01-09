@@ -13,11 +13,15 @@
 use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
+use petgraph::dot::Dot;
+use petgraph::graph::DiGraph;
 use resiter::AndThen;
 
 use crate::config::Configuration;
 use crate::package::condition::ConditionData;
 use crate::package::Dag;
+use crate::package::DependencyType;
+use crate::package::Package;
 use crate::package::PackageName;
 use crate::package::PackageVersionConstraint;
 use crate::repository::Repository;
@@ -54,6 +58,10 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
         env: &additional_env,
     };
 
+    let dot = matches.get_flag("dot");
+
+    let serial_buildorder = matches.get_flag("serial-buildorder");
+
     repo.packages()
         .filter(|p| pname.as_ref().map(|n| p.name() == n).unwrap_or(true))
         .filter(|p| {
@@ -63,11 +71,49 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
                 .unwrap_or(true)
         })
         .map(|package| Dag::for_root_package(package.clone(), &repo, None, &condition_data))
-        .and_then_ok(|tree| {
-            let stdout = std::io::stdout();
-            let mut outlock = stdout.lock();
+        .and_then_ok(|dag| {
+            if dot {
+                let petgraph: DiGraph<Package, DependencyType> = (*dag.dag()).clone().into();
 
-            ptree::write_tree(&tree.display(), &mut outlock).map_err(Error::from)
+                let dot = Dot::with_attr_getters(
+                    &petgraph,
+                    &[
+                        petgraph::dot::Config::EdgeNoLabel,
+                        petgraph::dot::Config::NodeNoLabel,
+                    ],
+                    &|_, er| {
+                        format!(
+                            "{} ",
+                            match er.weight() {
+                                DependencyType::Build => "style = \"dotted\"",
+                                DependencyType::Runtime => "",
+                            }
+                        )
+                    },
+                    &|_, node| format!("label = \"{}\" ", node.1.display_name_version()),
+                );
+
+                println!("{:?}", dot);
+                Ok(())
+            } else if serial_buildorder {
+                let petgraph: DiGraph<Package, DependencyType> = (*dag.dag()).clone().into();
+
+                let topo_sorted = petgraph::algo::toposort(&petgraph, None)
+                    .map_err(|_| Error::msg("Cyclic dependency found!"))?;
+
+                for node in topo_sorted.iter().rev() {
+                    let package = petgraph.node_weight(*node).unwrap();
+                    println!("{}", package.display_name_version());
+                }
+                println!();
+
+                Ok(())
+            } else {
+                let stdout = std::io::stdout();
+                let mut outlock = stdout.lock();
+
+                ptree::write_tree(&dag.display(), &mut outlock).map_err(Error::from)
+            }
         })
         .collect::<Result<()>>()
 }

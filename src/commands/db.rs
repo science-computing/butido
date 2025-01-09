@@ -491,7 +491,7 @@ fn jobs(
 ) -> Result<()> {
     let csv = matches.get_flag("csv");
     let hdrs = crate::commands::util::mk_header(vec![
-        "Submit", "Job", "Time", "Host", "Ok?", "Package", "Version", "Distro",
+        "Submit", "Job", "Time", "Host", "Ok?", "Package", "Version", "Distro", "Type",
     ]);
     let mut conn = conn_cfg.establish_connection()?;
     let older_than_filter = get_date_filter("older_than", matches)?;
@@ -502,6 +502,7 @@ fn jobs(
         .inner_join(schema::endpoints::table)
         .inner_join(schema::packages::table)
         .inner_join(schema::images::table)
+        .left_outer_join(schema::artifacts::table)
         .into_boxed();
 
     if let Some(submit_uuid) = matches.get_one::<uuid::Uuid>("submit_uuid") {
@@ -574,14 +575,25 @@ fn jobs(
             models::Endpoint,
             models::Package,
             models::Image,
+            Option<models::Artifact>,
         )>(&mut conn)?
         .into_iter()
         .rev() // required for the --limit implementation
-        .map(|(job, submit, ep, package, image)| {
+        .map(|(job, submit, ep, package, image, artifact)| {
             let success = is_job_successfull(&job)?
                 .map(|b| if b { "yes" } else { "no" })
                 .map(String::from)
                 .unwrap_or_else(|| String::from("?"));
+            let artifact_type = if let Some(artifact) = artifact {
+                artifact
+                    .path
+                    .split(".")
+                    .last()
+                    .map(str::to_uppercase)
+                    .unwrap_or(String::from("?"))
+            } else {
+                String::from("-")
+            };
 
             Ok(vec![
                 submit.uuid.to_string(),
@@ -592,6 +604,7 @@ fn jobs(
                 package.name,
                 package.version,
                 image_name_lookup.shorten(&image.name),
+                artifact_type,
             ])
         })
         .collect::<Result<Vec<_>>>()?;

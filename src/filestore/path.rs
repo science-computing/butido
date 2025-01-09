@@ -215,7 +215,7 @@ impl<'a> FullArtifactPath<'a> {
 #[derive(Debug)]
 pub struct FullArtifactPathDisplay<'a>(&'a StoreRoot, &'a ArtifactPath);
 
-impl<'a> std::fmt::Display for FullArtifactPathDisplay<'a> {
+impl std::fmt::Display for FullArtifactPathDisplay<'_> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(fmt, "{}/{}", self.0.display(), self.1.display())
     }

@@ -17,12 +17,20 @@ use serde::Serialize;
 use tracing::trace;
 use url::Url;
 
+fn default_download_manually() -> bool {
+    false
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Source {
     #[getset(get = "pub")]
     url: Url,
     #[getset(get = "pub")]
     hash: SourceHash,
+
+    // This is only required for some special packages that cannot be downloaded automatically for
+    // various reasons so it defaults to `false`:
+    #[serde(default = "default_download_manually")]
     #[getset(get = "pub")]
     download_manually: bool,
 }

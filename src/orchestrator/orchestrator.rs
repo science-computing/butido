@@ -263,7 +263,7 @@ impl Borrow<ArtifactPath> for ProducedArtifact {
     }
 }
 
-impl<'a> Orchestrator<'a> {
+impl Orchestrator<'_> {
     pub async fn run(self, output: &mut Vec<ArtifactPath>) -> Result<HashMap<Uuid, Error>> {
         let (results, errors) = self.run_tree().await?;
         output.extend(results);
@@ -557,7 +557,7 @@ struct JobTask<'a> {
 /// runtime stops running it because some other `JobTask` errored.
 ///
 /// In the latter case, we cleanup by telling the progressbar to finish.
-impl<'a> Drop for JobTask<'a> {
+impl Drop for JobTask<'_> {
     fn drop(&mut self) {
         if !self.bar.is_finished() {
             // If there are dependencies, the error is probably from another task

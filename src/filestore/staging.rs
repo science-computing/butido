@@ -63,8 +63,6 @@ impl StagingStore {
                 if self.0.root_path().is_dir(&path) {
                     None
                 } else {
-                    // Clippy doesn't detect this properly
-                    #[allow(clippy::redundant_clone)]
                     ArtifactPath::new(path.to_path_buf())
                         .inspect(|r| trace!("Loaded from path {} = {:?}", path.display(), r))
                         .with_context(|| anyhow!("Loading from path: {}", path.display()))
