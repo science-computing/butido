@@ -151,7 +151,7 @@ impl AsRef<str> for PackageVersion {
 
 impl From<String> for PackageVersion {
     fn from(s: String) -> Self {
-        PackageVersion(s)
+        PackageVersion(s.trim_start_matches('=').to_string())
     }
 }
 
