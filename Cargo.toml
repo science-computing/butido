@@ -49,7 +49,7 @@ indoc = "2"
 itertools = "0.14"
 lazy_static = "1"
 parse-display = "0.10"
-petgraph = "0.6"
+petgraph = "0.7"
 pom = "3"
 ptree = { version = "0.5", default-features = false }
 rand = "0.8"
