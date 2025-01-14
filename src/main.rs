@@ -41,7 +41,6 @@
     while_true
 )]
 #![allow(macro_use_extern_crate)]
-#![allow(unstable_name_collisions)] // TODO: Remove me with the next rustc update (probably)
 
 #[macro_use]
 extern crate diesel;
