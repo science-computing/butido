@@ -15,12 +15,15 @@ use std::io::Write;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
-use daggy::Walker;
 use getset::Getters;
 use indicatif::ProgressBar;
 use itertools::Itertools;
+use petgraph::acyclic::Acyclic;
+use petgraph::data::Build;
+use petgraph::graph::DiGraph;
+use petgraph::graph::EdgeIndex;
+use petgraph::graph::NodeIndex;
 use ptree::Style;
 use ptree::TreeItem;
 use resiter::AndThen;
@@ -37,10 +40,10 @@ use crate::repository::Repository;
 #[derive(Debug, Getters)]
 pub struct Dag {
     #[getset(get = "pub")]
-    dag: daggy::Dag<Package, DependencyType>,
+    dag: Acyclic<DiGraph<Package, DependencyType>>,
 
     #[getset(get = "pub")]
-    root_idx: daggy::NodeIndex,
+    root_idx: NodeIndex,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -114,8 +117,8 @@ impl Dag {
         /// and adds corresponding nodes to the DAG. The edges are added later in `add_edges()`.
         fn add_sub_packages<'a>(
             repo: &'a Repository,
-            mappings: &mut HashMap<&'a Package, daggy::NodeIndex>,
-            dag: &mut daggy::Dag<&'a Package, DependencyType>,
+            mappings: &mut HashMap<&'a Package, NodeIndex>,
+            dag: &mut Acyclic<DiGraph<&'a Package, DependencyType>>,
             p: &'a Package,
             progress: Option<&ProgressBar>,
             conditional_data: &ConditionData<'_>,
@@ -181,8 +184,8 @@ impl Dag {
         // TODO: It seems easier and more efficient to do this in `add_sub_packages` as well (it
         // makes that function more complex but doing it separately is weird).
         fn add_edges(
-            mappings: &HashMap<&Package, daggy::NodeIndex>,
-            dag: &mut daggy::Dag<&Package, DependencyType>,
+            mappings: &HashMap<&Package, NodeIndex>,
+            dag: &mut Acyclic<DiGraph<&Package, DependencyType>>,
             conditional_data: &ConditionData<'_>,
         ) -> Result<()> {
             for (package, idx) in mappings {
@@ -194,9 +197,14 @@ impl Dag {
                                 *pkg.name() == dep_name && *pkg.version() == dep_version
                             })
                             .try_for_each(|(dep, dep_idx)| {
-                                dag.add_edge(*idx, *dep_idx, dep_kind.clone())
+                                dag.try_add_edge(*idx, *dep_idx, dep_kind.clone())
                                     .map(|_| ())
-                                    .map_err(Error::from)
+                                    // Only debug formatting is available for the error and for
+                                    // cycles it is quite useless (the context below is much more
+                                    // helpful than, e.g., "Cycle(Cycle(NodeIndex(0)))") but we'll
+                                    // include it for completeness and in case of the other errors
+                                    // that could theoretically occur:
+                                    .map_err(|e| anyhow!(format!("{e:?}")))
                                     .with_context(|| {
                                         anyhow!(
                                             "Failed to add package dependency DAG edge \
@@ -216,7 +224,7 @@ impl Dag {
         }
 
         // Create an empty DAG and use the above helper functions to compute the dependency graph:
-        let mut dag: daggy::Dag<&Package, DependencyType> = daggy::Dag::new();
+        let mut dag = Acyclic::<DiGraph<&Package, DependencyType>>::new();
         let mut mappings = HashMap::new();
 
         trace!("Building the package dependency DAG for package {:?}", p);
@@ -235,10 +243,11 @@ impl Dag {
         trace!("Finished building the package DAG");
 
         Ok(Dag {
-            dag: dag.map(
+            dag: Acyclic::<_>::try_from_graph(dag.map(
                 |_, p: &&Package| -> Package { (*p).clone() },
                 |_, e| (*e).clone(),
-            ),
+            ))
+            .unwrap(), // The dag is already acyclic so this cannot fail
             root_idx,
         })
     }
@@ -250,9 +259,8 @@ impl Dag {
     /// The order of the packages is _NOT_ guaranteed by the implementation
     pub fn all_packages(&self) -> Vec<&Package> {
         self.dag
-            .graph()
             .node_indices()
-            .filter_map(|idx| self.dag.graph().node_weight(idx))
+            .filter_map(|idx| self.dag.node_weight(idx))
             .collect()
     }
 
@@ -262,7 +270,7 @@ impl Dag {
 }
 
 #[derive(Clone)]
-pub struct DagDisplay<'a>(&'a Dag, daggy::NodeIndex, Option<daggy::EdgeIndex>);
+pub struct DagDisplay<'a>(&'a Dag, NodeIndex, Option<EdgeIndex>);
 
 impl TreeItem for DagDisplay<'_> {
     type Child = Self;
@@ -271,7 +279,6 @@ impl TreeItem for DagDisplay<'_> {
         let p = self
             .0
             .dag
-            .graph()
             .node_weight(self.1)
             .ok_or_else(|| anyhow!("Error finding node: {:?}", self.1))
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
@@ -282,7 +289,6 @@ impl TreeItem for DagDisplay<'_> {
             Some(edge_idx) => self
                 .0
                 .dag
-                .graph()
                 .edge_weight(edge_idx)
                 .ok_or_else(|| anyhow!("Error finding edge: {:?}", self.2))
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
@@ -296,12 +302,16 @@ impl TreeItem for DagDisplay<'_> {
     }
 
     fn children(&self) -> Cow<[Self::Child]> {
-        let c = self.0.dag.children(self.1);
-        Cow::from(
-            c.iter(&self.0.dag)
-                .map(|(edge_idx, node_idx)| DagDisplay(self.0, node_idx, Some(edge_idx)))
-                .collect::<Vec<_>>(),
-        )
+        let mut children_walker = self
+            .0
+            .dag
+            .neighbors_directed(self.1, petgraph::Outgoing)
+            .detach();
+        let mut children = Vec::<Self::Child>::new();
+        while let Some((edge_idx, node_idx)) = children_walker.next(&self.0.dag) {
+            children.push(DagDisplay(self.0, node_idx, Some(edge_idx)));
+        }
+        Cow::from(children)
     }
 }
 

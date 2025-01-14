@@ -221,7 +221,6 @@ dependencies = [
  "colored",
  "config",
  "csv",
- "daggy",
  "dialoguer",
  "diesel",
  "diesel_migrations",
@@ -526,16 +525,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5efa2b3d7902f4b634a20cae3c9c4e6209dc4779feb6863329607560143efa70"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "daggy"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91a9304e55e9d601a39ae4deaba85406d5c0980e106f65afcf0460e9af1e7602"
-dependencies = [
- "petgraph",
- "serde",
 ]
 
 [[package]]
