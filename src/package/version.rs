@@ -14,6 +14,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use once_cell::sync::Lazy;
 use pom::parser::Parser as PomParser;
 use regex::Regex;
 use serde::Deserialize;
@@ -170,7 +171,8 @@ impl TryInto<semver::Version> for PackageVersion {
     // should be safe as long as the static regex guarantees the assumptions):
     fn try_into(self) -> Result<semver::Version> {
         // Warning: This regex must remain compatible to the one in the PackageVersion::parser below!:
-        let version_regex = Regex::new("^(?:([[:digit:]]+)|[-_.]|[[:alpha:]]+)").unwrap();
+        static VERSION_REGEX: Lazy<Regex> =
+            Lazy::new(|| Regex::new("^(?:([[:digit:]]+)|[-_.]|[[:alpha:]]+)").unwrap());
         // This regex is based on PackageVersion::parser() below. We use a capture group to extract
         // the numbers and the "(?:exp)" syntax is for a non-capturing group. If it matches we'll
         // have the entire match in \0 and if it's a number it'll be in \1.
@@ -182,7 +184,7 @@ impl TryInto<semver::Version> for PackageVersion {
 
         // This loop is dangerous... Ensure that the match gets removed from version_str in every
         // iteration to avoid an endless loop!
-        while let Some(captures) = version_regex.captures(version_str) {
+        while let Some(captures) = VERSION_REGEX.captures(version_str) {
             // For debugging: println!("{:?}", captures);
 
             let match_str = captures.get(0).unwrap().as_str(); // Unwrap safe as \0 always exists
@@ -212,7 +214,7 @@ impl TryInto<semver::Version> for PackageVersion {
             .with_context(|| {
                 anyhow!(
                     "The regex \"{}\" for parsing the PackageVersion didn't match",
-                    version_regex
+                    Lazy::force(&VERSION_REGEX)
                 )
             })
             .with_context(|| {
