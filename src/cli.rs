@@ -62,7 +62,7 @@ pub fn cli() -> Command {
     Command::new("butido")
         .author(crate_authors!())
         .disable_version_flag(true)
-        .about("Generic Build Orchestration System for building Linux packages with Docker")
+        .about("Generic build orchestration system for building Linux packages with Docker")
         .after_help(indoc::indoc!(r#"
             The following environment variables can be passed to butido:
 
@@ -246,7 +246,7 @@ pub fn cli() -> Command {
                     .required(true)
                     .index(1)
                     .value_name("SUBMIT")
-                    .help("The Submit to show details about")
+                    .help("The submit to show details about")
                     .value_parser(uuid::Uuid::parse_str)
                 )
             )
