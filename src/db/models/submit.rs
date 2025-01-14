@@ -80,6 +80,5 @@ impl Submit {
             .filter(submits::uuid.eq(submit_id))
             .first::<Submit>(database_connection)
             .context("Loading submit")
-            .map_err(Error::from)
     }
 }

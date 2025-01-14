@@ -275,8 +275,7 @@ impl JobHandle {
                     &endpoint_uri,
                     &container_id,
                 )
-            })
-            .map_err(Error::from);
+            });
 
         if res.is_err() {
             trace!("Error was returned from script");
@@ -524,7 +523,6 @@ impl LogReceiver<'_> {
                     .await
                     .map(tokio::io::BufWriter::new)
                     .with_context(|| anyhow!("Opening {}", path.display()))
-                    .map_err(Error::from)
             })
         } else {
             None

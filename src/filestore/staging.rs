@@ -12,7 +12,6 @@ use std::fmt::Debug;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use futures::stream::Stream;
 use indicatif::ProgressBar;
@@ -54,7 +53,6 @@ impl StagingStore {
                 trace!("Unpacking archive to {}", dest.display());
                 dest.unpack_archive_here(tar::Archive::new(&bytes[..]))
                     .context("Unpacking TAR")
-                    .map_err(Error::from)
             })
             .context("Concatenating the output bytestream")?
             .into_iter()

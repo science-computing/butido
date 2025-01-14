@@ -53,6 +53,5 @@ impl GitHash {
             .find(git_hash_id)
             .first::<_>(database_connection)
             .context("Loading GitHash")
-            .map_err(Error::from)
     }
 }

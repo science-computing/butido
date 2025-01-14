@@ -385,7 +385,6 @@ async fn containers_top(
                 .top(None)
                 .await
                 .with_context(|| anyhow!("Fetching 'top' for {}", stat.id))
-                .map_err(Error::from)
                 .map(|top| (stat.id, top))
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
