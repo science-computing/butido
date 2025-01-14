@@ -15,7 +15,7 @@ use serde::Serialize;
 use crate::package::dependency::condition::Condition;
 use crate::package::dependency::ParseDependency;
 use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
+use crate::package::PackageVersion;
 
 /// A dependency that is packaged and is required during runtime
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -48,7 +48,7 @@ impl From<String> for Dependency {
 }
 
 impl ParseDependency for Dependency {
-    fn parse_as_name_and_version(&self) -> Result<(PackageName, PackageVersionConstraint)> {
+    fn parse_as_name_and_version(&self) -> Result<(PackageName, PackageVersion)> {
         crate::package::dependency::parse_package_dependency_string_into_name_and_version(
             self.as_ref(),
         )

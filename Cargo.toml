@@ -60,6 +60,7 @@ reqwest = { version = "0.12", features = [ "stream" ] }
 resiter = "0.5"
 rlimit = "0.10"
 rustversion = "1"
+semver = "1"
 serde = "1"
 serde_json = "1"
 sha1 = "0.10"

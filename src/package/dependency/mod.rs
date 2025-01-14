@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::package::PackageName;
-use crate::package::PackageVersionConstraint;
+use crate::package::PackageVersion;
 
 mod build;
 pub use build::*;
@@ -25,7 +25,7 @@ pub use runtime::*;
 pub mod condition;
 
 pub trait ParseDependency {
-    fn parse_as_name_and_version(&self) -> Result<(PackageName, PackageVersionConstraint)>;
+    fn parse_as_name_and_version(&self) -> Result<(PackageName, PackageVersion)>;
 }
 
 lazy_static! {
@@ -43,12 +43,12 @@ lazy_static! {
 /// TODO: Reimplement using pom crate
 pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_and_version(
     s: &str,
-) -> Result<(PackageName, PackageVersionConstraint)> {
+) -> Result<(PackageName, PackageVersion)> {
     let caps = crate::package::dependency::DEPENDENCY_PARSING_RE
         .captures(s)
         .ok_or_else(|| {
             anyhow!(
-                "Could not parse into package name and package version constraint: '{}'",
+                "Could not parse into package name and package version: '{}'",
                 s
             )
         })?;
@@ -63,13 +63,14 @@ pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_
         .map(|m| String::from(m.as_str()))
         .ok_or_else(|| anyhow!("Could not parse version: '{}'", s))?;
 
-    let v = PackageVersionConstraint::try_from(vers).map_err(|e| {
+    // TODO: This is here temporarily to keep the version validation:
+    let _ = crate::package::PackageVersionConstraint::try_from(vers.clone()).map_err(|e| {
         e.context(anyhow!(
             "Could not parse the following package dependency string: {}",
             s
         ))
     })?;
-    Ok((PackageName::from(name), v))
+    Ok((PackageName::from(name), PackageVersion::from(vers)))
 }
 
 #[cfg(test)]
@@ -88,20 +89,17 @@ mod tests {
 
         let dependency_specification = format!("{name} ={version}");
         let dep = Dependency::from(dependency_specification.clone());
-        let (dep_name, dep_version_constraint) = dep.parse_as_name_and_version().unwrap();
+        let (dep_name, dep_version) = dep.parse_as_name_and_version().unwrap();
 
-        let version_constraint = PackageVersionConstraint::from_version(
-            String::from("="),
-            PackageVersion::from(version),
-        );
+        let version = PackageVersion::from(version);
         assert_eq!(
             dep_name,
             PackageName::from(name),
             "Name check failed for input: {dependency_specification}"
         );
         assert_eq!(
-            dep_version_constraint, version_constraint,
-            "Version constraint check failed for input: {dependency_specification}"
+            dep_version, version,
+            "Version check failed for input: {dependency_specification}"
         );
     }
 
@@ -139,6 +137,21 @@ mod tests {
     }
 
     #[test]
+    fn test_dependency_version_with_constraint() {
+        let name = "foobar";
+        let version_constraint = "=1.42.37";
+
+        let dep = Dependency::from(format!("{name} {version_constraint}"));
+        let (dep_name, dep_version) = dep.parse_as_name_and_version().unwrap();
+
+        assert_eq!(dep_name, PackageName::from(name.to_string()));
+        assert_eq!(
+            dep_version,
+            PackageVersion::from(version_constraint.to_string()),
+        );
+    }
+
+    #[test]
     fn test_complex_dependency_parsing() {
         dep_parse_test("0ad_", "42");
         dep_parse_test("2048-cli_0.0", "42");
@@ -153,6 +166,5 @@ mod tests {
         dep_parse_expect_err("a *");
         dep_parse_expect_err("a >2");
         dep_parse_expect_err("a <2");
-        dep_parse_expect_err("a 42");
     }
 }

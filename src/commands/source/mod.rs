@@ -64,7 +64,7 @@ pub async fn verify(
         .map(|s| s.to_owned())
         .map(PackageName::from);
     let pvers = matches
-        .get_one::<String>("package_version")
+        .get_one::<String>("package_version_constraint")
         .map(|s| s.to_owned())
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
@@ -180,7 +180,7 @@ pub async fn url(matches: &ArgMatches, repo: Repository) -> Result<()> {
         .map(|s| s.to_owned())
         .map(PackageName::from);
     let pvers = matches
-        .get_one::<String>("package_version")
+        .get_one::<String>("package_version_constraint")
         .map(|s| s.to_owned())
         .map(PackageVersionConstraint::try_from)
         .transpose()?;
@@ -216,7 +216,7 @@ async fn of(matches: &ArgMatches, config: &Configuration, repo: Repository) -> R
         .map(|s| s.to_owned())
         .map(PackageName::from);
     let pvers = matches
-        .get_one::<String>("package_version")
+        .get_one::<String>("package_version_constraint")
         .map(|s| s.to_owned())
         .map(PackageVersionConstraint::try_from)
         .transpose()?;

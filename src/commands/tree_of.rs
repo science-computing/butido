@@ -35,7 +35,7 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
         .map(|s| s.to_owned())
         .map(PackageName::from);
     let pvers = matches
-        .get_one::<String>("package_version")
+        .get_one::<String>("package_version_constraint")
         .map(|s| s.to_owned())
         .map(PackageVersionConstraint::try_from)
         .transpose()?;

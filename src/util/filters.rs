@@ -16,6 +16,7 @@ use tracing::trace;
 
 use crate::package::Package;
 use crate::package::PackageName;
+use crate::package::PackageVersion;
 use crate::package::PackageVersionConstraint;
 use crate::package::ParseDependency;
 
@@ -79,12 +80,28 @@ pub fn build_package_filter_by_name(name: PackageName) -> impl filters::filter::
     }
 }
 
-pub fn build_package_filter_by_version_constraint(
-    constraint: PackageVersionConstraint,
+pub fn build_package_filter_by_version(
+    version: PackageVersion,
 ) -> impl filters::filter::Filter<Package> {
     move |p: &Package| {
-        trace!("Checking {:?} -> version matches {:?}", p, constraint);
-        constraint.matches(p.version())
+        trace!("Checking {:?} -> version == {}", p, version);
+        *p.version() == version
+    }
+}
+
+pub fn build_package_filter_by_version_constraint(
+    version_constraint: Option<PackageVersionConstraint>,
+) -> impl filters::filter::Filter<Package> {
+    move |p: &Package| {
+        trace!(
+            "Checking {:?} -> version matches constraint: {:?}",
+            p,
+            version_constraint
+        );
+        version_constraint
+            .as_ref()
+            .map(|v| v.matches(p.version()))
+            .unwrap_or(true)
     }
 }
 

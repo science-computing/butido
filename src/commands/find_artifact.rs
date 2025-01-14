@@ -50,8 +50,7 @@ pub async fn find_artifact(
         .map(|s| s.to_owned())
         .map(PackageVersionConstraint::try_from)
         .transpose()
-        .context("Parsing package version constraint")
-        .context("A valid package version constraint looks like this: '=1.0.0'")?;
+        .context("Parsing package version constraint")?;
 
     let env_filter = matches
         .get_many::<String>("env_filter")

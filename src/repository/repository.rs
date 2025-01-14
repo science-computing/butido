@@ -259,11 +259,11 @@ impl Repository {
     pub fn find_with_version<'a>(
         &'a self,
         name: &PackageName,
-        vc: &PackageVersionConstraint,
+        version: &PackageVersion,
     ) -> Vec<&'a Package> {
         self.inner
             .iter()
-            .filter(|((n, v), _)| n == name && vc.matches(v))
+            .filter(|((n, v), _)| n == name && v == version)
             .map(|(_, p)| p)
             .collect()
     }
@@ -393,9 +393,9 @@ pub mod tests {
 
         let repo = Repository::from(btree);
 
-        let constraint = PackageVersionConstraint::from_version(String::from("="), pversion("2"));
+        let version = pversion("=2");
 
-        let ps = repo.find_with_version(&pname("a"), &constraint);
+        let ps = repo.find_with_version(&pname("a"), &version);
         assert_eq!(ps.len(), 1);
 
         let p = ps.first().unwrap();
@@ -409,9 +409,8 @@ pub mod tests {
         use crate::package::Package;
 
         fn get_pkg(repo: &Repository, name: &str, version: &str) -> Package {
-            let constraint =
-                PackageVersionConstraint::from_version(String::from("="), pversion(version));
-            let pkgs = repo.find_with_version(&pname(name), &constraint);
+            let version = pversion(version);
+            let pkgs = repo.find_with_version(&pname(name), &version);
             assert_eq!(pkgs.len(), 1, "Failed to find pkg: {name} ={version}");
             (*pkgs.first().unwrap()).clone()
         }
