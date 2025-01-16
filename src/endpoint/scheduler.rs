@@ -25,7 +25,7 @@ use itertools::Itertools;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::RwLock;
-use tracing::trace;
+use tracing::{debug, error, info, trace};
 use uuid::Uuid;
 
 use crate::db::models as dbmodels;
@@ -95,6 +95,7 @@ impl EndpointScheduler {
             log_dir: self.log_dir.clone(),
             bar,
             endpoint,
+            container_id: None,
             max_endpoint_name_length: self.max_endpoint_name_length,
             job,
             staging_store: self.staging_store.clone(),
@@ -136,9 +137,11 @@ impl EndpointScheduler {
     }
 }
 
+#[derive(Clone)]
 pub struct JobHandle {
     log_dir: Option<PathBuf>,
     endpoint: EndpointHandle,
+    container_id: Option<String>,
     max_endpoint_name_length: usize,
     job: RunnableJob,
     bar: ProgressBar,
@@ -155,7 +158,7 @@ impl std::fmt::Debug for JobHandle {
 }
 
 impl JobHandle {
-    pub async fn run(self) -> Result<Result<Vec<ArtifactPath>>> {
+    pub async fn run(mut self) -> Result<Result<Vec<ArtifactPath>>> {
         let (log_sender, log_receiver) = tokio::sync::mpsc::unbounded_channel::<LogItem>();
         let endpoint_uri = self.endpoint.uri().clone();
         let endpoint_name = self.endpoint.name().clone();
@@ -181,6 +184,7 @@ impl JobHandle {
             )
             .await?;
         let container_id = prepared_container.create_info().id.clone();
+        self.container_id = Some(container_id.clone());
         let running_container = prepared_container
             .start()
             .await
@@ -202,12 +206,11 @@ impl JobHandle {
             package_name: &package.name,
             package_version: &package.version,
             log_dir: self.log_dir.as_ref(),
-            job: self.job,
+            job: &self.job,
             log_receiver,
             bar: self.bar.clone(),
         }
         .join();
-        drop(self.bar);
 
         let (run_container, logres) = tokio::join!(running_container, logres);
         let log =
@@ -369,6 +372,39 @@ impl JobHandle {
     }
 }
 
+impl Drop for JobHandle {
+    fn drop(&mut self) {
+        if let Some(container_id) = self.container_id.clone() {
+            debug!("Cleaning up JobHandle with job UUID: {}", self.job.uuid());
+            let docker = self.endpoint.docker().clone();
+
+            tokio::spawn(async move {
+                let container = docker.containers().get(&container_id);
+                debug!("Killing container with ID: {container_id}");
+
+                let container_info = container.inspect().await.unwrap();
+                if container_info.state.running {
+                    // We are killing the container here, since stopping the container can take ages
+                    // and wouldn't bring any benefit here
+                    match container.kill(None).await {
+                        Ok(_) => info!("Killed container with ID: {}", container_id),
+                        Err(e) => {
+                            error!(
+                                "Failed to stop container with ID: {}\nError: {}",
+                                container_id, e
+                            )
+                        }
+                    }
+                } else {
+                    debug!("Container with ID {} isn't running anymore", container_id);
+                }
+            });
+        } else {
+            debug!("No container ID set, skipping cleanup");
+        }
+    }
+}
+
 struct LogReceiver<'a> {
     endpoint_name: &'a str,
     max_endpoint_name_length: &'a usize,
@@ -376,7 +412,7 @@ struct LogReceiver<'a> {
     package_name: &'a str,
     package_version: &'a str,
     log_dir: Option<&'a PathBuf>,
-    job: RunnableJob,
+    job: &'a RunnableJob,
     log_receiver: UnboundedReceiver<LogItem>,
     bar: ProgressBar,
 }
