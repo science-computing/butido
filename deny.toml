@@ -65,11 +65,4 @@ ignore = [
     # https://github.com/trishume/syntect/issues/537 is resolved (replace
     # yaml-rust with yaml-rust2):
     { id = "RUSTSEC-2024-0320", reason = "Only an informative advisory that the crate is unmaintained and the maintainer unreachable" },
-
-    # Ignore an "INFO Unmaintained" advisory for the instant crate
-    # that the "indicatif" crate uses. This can be removed once
-    # https://github.com/console-rs/indicatif/issues/665 is resolved
-    # (The dependency instant is no longer maintained -
-    # consider switching to web-time instead):
-    { id = "RUSTSEC-2024-0384", reason = "Only an informative advisory that the crate is unmaintained and the author recommends using the maintained web-time crate instead." },
 ]
