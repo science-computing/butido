@@ -40,7 +40,7 @@ diesel_migrations = "2"
 filters = "0.4"
 futures = "0.3"
 getset = "0.1"
-git2 = "0.19"
+git2 = "0.20"
 handlebars = { version = "6", features = ["no_logging"] }
 human-panic = "2"
 humantime = "2"
