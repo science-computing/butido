@@ -31,7 +31,7 @@ bytesize = "1"
 chrono = "0.4"
 clap = { version = "4", features = ["cargo"] }
 clap_complete = "4"
-colored = "2"
+colored = "3"
 config = { version = "0.15", default-features = false, features = [ "toml" ] }
 csv = "1"
 dialoguer = "0.11"
