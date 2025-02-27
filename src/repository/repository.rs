@@ -45,10 +45,10 @@ pub fn normalize_relative_path(path: PathBuf) -> Result<PathBuf> {
             Component::Prefix(_) => {
                 // "A Windows path prefix, e.g., C: or \\server\share."
                 // "Does not occur on Unix."
-                return Err(anyhow!(
+                anyhow::bail!(
                     "The relative path \"{}\" starts with a Windows path prefix",
                     path.display()
-                ));
+                )
             }
             Component::RootDir => {
                 // "The root directory component, appears after any prefix and before anything else.
@@ -71,10 +71,10 @@ pub fn normalize_relative_path(path: PathBuf) -> Result<PathBuf> {
             Component::ParentDir => {
                 // "A reference to the parent directory, i.e., `..`."
                 if !normalized_path.pop() {
-                    return Err(anyhow!(
+                    anyhow::bail!(
                         "The relative path \"{}\" uses `..` to escape the base directory",
                         path.display()
-                    ));
+                    )
                 }
             }
             Component::Normal(component) => {
@@ -149,19 +149,19 @@ impl Repository {
                         "Bug: Could not get the \"patches\" value for: {}",
                         path.display()
                     ))?;
-                    let first_patch_value = patches.first().ok_or(anyhow!(
+                    let first_patch_value = patches.first().ok_or_else(|| anyhow!(
                         "Bug: Could not get the first \"patches\" entry for: {}",
                         path.display()
                     ))?;
                     // Get the origin (path to the `pkg.toml` file) for the "patches"
                     // setting (it must currently be the same for all array entries):
-                    let origin_path = first_patch_value.origin().map(PathBuf::from).ok_or(anyhow!(
+                    let origin_path = first_patch_value.origin().map(PathBuf::from).ok_or_else(|| anyhow!(
                         "Bug: Could not get the origin of the first \"patches\" entry for: {}",
                         path.display()
                     ))?;
                     // Note: `parent()` only "Returns None if the path terminates in a root
                     // or prefix, or if it’s the empty string." so this should never happen:
-                    let origin_dir_path = origin_path.parent().ok_or(anyhow!(
+                    let origin_dir_path = origin_path.parent().ok_or_else(|| anyhow!(
                         "Bug: Could not get the origin's parent of the first \"patches\" entry for: {}",
                         path.display()
                     ))?;
@@ -250,9 +250,9 @@ impl Repository {
             match (pname, pvers, matching_regexp) {
                 (Some(pname), None, None) => return Err(anyhow!("{} not found", pname)),
                 (Some(pname), Some(vers), None) => {
-                    return Err(anyhow!("{} {} not found", pname, vers))
+                    anyhow::bail!("{} {} not found", pname, vers)
                 }
-                (None, None, Some(regex)) => return Err(anyhow!("{} regex not found", regex)),
+                (None, None, Some(regex)) => anyhow::bail!("{} regex not found", regex),
 
                 (_, _, _) => {
                     panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
