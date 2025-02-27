@@ -45,10 +45,10 @@ pub fn normalize_relative_path(path: PathBuf) -> Result<PathBuf> {
             Component::Prefix(_) => {
                 // "A Windows path prefix, e.g., C: or \\server\share."
                 // "Does not occur on Unix."
-                return Err(anyhow!(
+                anyhow::bail!(
                     "The relative path \"{}\" starts with a Windows path prefix",
                     path.display()
-                ));
+                )
             }
             Component::RootDir => {
                 // "The root directory component, appears after any prefix and before anything else.
@@ -71,10 +71,10 @@ pub fn normalize_relative_path(path: PathBuf) -> Result<PathBuf> {
             Component::ParentDir => {
                 // "A reference to the parent directory, i.e., `..`."
                 if !normalized_path.pop() {
-                    return Err(anyhow!(
+                    anyhow::bail!(
                         "The relative path \"{}\" uses `..` to escape the base directory",
                         path.display()
-                    ));
+                    )
                 }
             }
             Component::Normal(component) => {
@@ -250,9 +250,9 @@ impl Repository {
             match (pname, pvers, matching_regexp) {
                 (Some(pname), None, None) => return Err(anyhow!("{} not found", pname)),
                 (Some(pname), Some(vers), None) => {
-                    return Err(anyhow!("{} {} not found", pname, vers))
+                    anyhow::bail!("{} {} not found", pname, vers)
                 }
-                (None, None, Some(regex)) => return Err(anyhow!("{} regex not found", regex)),
+                (None, None, Some(regex)) => anyhow::bail!("{} regex not found", regex),
 
                 (_, _, _) => {
                     panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")
