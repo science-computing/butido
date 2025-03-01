@@ -27,7 +27,7 @@ maintenance = { status = "passively-maintained" }
 anyhow = "1"
 aquamarine = "0.6"
 ascii_table = { version = "4", features = ["color_codes", "wide_characters"] }
-bytesize = "1"
+bytesize = "2"
 chrono = "0.4"
 clap = { version = "4", features = ["cargo"] }
 clap_complete = "4"
