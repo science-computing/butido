@@ -231,9 +231,7 @@ impl NotValidatedConfiguration {
 
         // Double-check the compatibility (mainly to avoid "error: field `compatibility` is never read")
         if self.compatibility != CONFIGURATION_VERSION {
-            return Err(anyhow!(
-                "The provided configuration is not compatible with this butido binary"
-            ));
+            anyhow::bail!("The provided configuration is not compatible with this butido binary");
         }
 
         // Error if the configured directories are missing or no directories:
@@ -243,14 +241,12 @@ impl NotValidatedConfiguration {
         check_directory_exists(&self.source_cache_root, "source_cache")?;
 
         if self.release_stores.is_empty() {
-            return Err(anyhow!(
-                "You need at least one release store in 'release_stores'"
-            ));
+            anyhow::bail!("You need at least one release store in 'release_stores'");
         }
 
         // Error if there are no phases configured
         if self.available_phases.is_empty() {
-            return Err(anyhow!("No phases configured"));
+            anyhow::bail!("No phases configured");
         }
 
         // Error if script highlighting theme is not valid
@@ -269,7 +265,7 @@ impl NotValidatedConfiguration {
             .any(|allowed_theme| configured_theme == *allowed_theme);
 
             if !allowed_theme_present {
-                return Err(anyhow!("Theme not known: {}", configured_theme));
+                anyhow::bail!("Theme not known: {}", configured_theme);
             }
         }
 

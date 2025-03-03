@@ -158,10 +158,10 @@ pub async fn build(
     // We only support building one package per call.
     // Everything else is invalid
     if packages.len() > 1 {
-        return Err(anyhow!(
+        anyhow::bail!(
             "Found multiple packages ({}). Cannot decide which one to build",
             packages.len()
-        ));
+        );
     }
     let package = *packages
         .first()
@@ -294,23 +294,23 @@ pub async fn build(
         .map(|pkg| {
             if let Some(allowlist) = pkg.allowed_images() {
                 if !allowlist.contains(&image_name) {
-                    return Err(anyhow!(
+                    anyhow::bail!(
                         "Package {} {} is only allowed on: {}",
                         pkg.name(),
                         pkg.version(),
                         allowlist.iter().join(", ")
-                    ));
+                    );
                 }
             }
 
             if let Some(deniedlist) = pkg.denied_images() {
                 if deniedlist.iter().any(|denied| image_name == *denied) {
-                    return Err(anyhow!(
+                    anyhow::bail!(
                         "Package {} {} is not allowed to be built on {}",
                         pkg.name(),
                         pkg.version(),
                         image_name
-                    ));
+                    );
                 }
             }
 

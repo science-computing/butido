@@ -139,13 +139,13 @@ impl Dag {
                         packs
                     );
                     if packs.is_empty() {
-                        return Err(anyhow!(
+                        anyhow::bail!(
                             "Couldn't find the following dependency of {} {} in the repo: {} {}",
                             p.name(),
                             p.version(),
                             name,
                             version
-                        ));
+                        );
                     }
 
                     // Check if we already created a DAG node for any of the matching packages and
