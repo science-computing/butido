@@ -53,10 +53,10 @@ pub fn normalize_relative_path(path: PathBuf) -> Result<PathBuf> {
             Component::RootDir => {
                 // "The root directory component, appears after any prefix and before anything else.
                 // It represents a separator that designates that a path starts from root."
-                return Err(anyhow!(
+                anyhow::bail!(
                     "The relative path \"{}\" starts from the root directory",
                     path.display()
-                ));
+                );
             }
             Component::CurDir => {
                 // "A reference to the current directory, i.e., `.`."
@@ -248,7 +248,7 @@ impl Repository {
         // check if the iterator is empty
         if r.peek().is_none() {
             match (pname, pvers, matching_regexp) {
-                (Some(pname), None, None) => return Err(anyhow!("{} not found", pname)),
+                (Some(pname), None, None) => anyhow::bail!("{} not found", pname),
                 (Some(pname), Some(vers), None) => {
                     anyhow::bail!("{} {} not found", pname, vers)
                 }

@@ -53,10 +53,10 @@ async fn new_release(
     let print_released_file_pathes = !matches.get_flag("quiet");
     let release_store_name = matches.get_one::<String>("release_store_name").unwrap(); // safe by clap
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
-        return Err(anyhow!(
+        anyhow::bail!(
             "Release directory does not exist or does not point to directory: {}",
             config.releases_directory().display()
-        ));
+        );
     }
 
     let pname = matches.get_one::<String>("package_name");
@@ -120,7 +120,7 @@ async fn new_release(
     debug!("Artifacts = {:?}", arts);
 
     if arts.is_empty() {
-        return Err(anyhow!("No matching artifacts found to release"));
+        anyhow::bail!("No matching artifacts found to release");
     }
 
     arts.iter()
@@ -169,7 +169,7 @@ async fn new_release(
                 Err(anyhow!("Not a file: {}", art_path.display()))
             } else {
                 if dest_path.exists() && !do_update {
-                    return Err(anyhow!("Does already exist: {}", dest_path.display()));
+                    anyhow::bail!("Does already exist: {}", dest_path.display());
                 } else if dest_path.exists() && do_update {
                     writeln!(
                         std::io::stderr(),
@@ -181,10 +181,10 @@ async fn new_release(
                             .with_prompt("Continue?")
                             .interact()?
                     {
-                        return Err(anyhow!(
+                        anyhow::bail!(
                             "Does already exist: {} and update was denied",
                             dest_path.display()
-                        ));
+                        );
                     }
                 }
 
@@ -250,16 +250,13 @@ pub async fn rm_release(
 ) -> Result<()> {
     let release_store_name = matches.get_one::<String>("release_store_name").unwrap(); // safe by clap
     if !(config.releases_directory().exists() && config.releases_directory().is_dir()) {
-        return Err(anyhow!(
+        anyhow::bail!(
             "Release directory does not exist or does not point to directory: {}",
             config.releases_directory().display()
-        ));
+        );
     }
     if !config.release_stores().contains(release_store_name) {
-        return Err(anyhow!(
-            "Unknown release store name: {}",
-            release_store_name
-        ));
+        anyhow::bail!("Unknown release store name: {}", release_store_name);
     }
 
     let pname = matches.get_one::<String>("package_name").unwrap(); // safe by clap
@@ -297,7 +294,7 @@ pub async fn rm_release(
         .join(release_store_name)
         .join(&artifact.path);
     if !artifact_path.is_file() {
-        return Err(anyhow!("Not a file: {}", artifact_path.display()));
+        anyhow::bail!("Not a file: {}", artifact_path.display());
     }
 
     writeln!(

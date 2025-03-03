@@ -45,10 +45,7 @@ pub async fn container(
         .collect::<Vec<_>>();
 
     if relevant_endpoints.len() > 1 {
-        return Err(anyhow!(
-            "Found more than one container for id {}",
-            container_id
-        ));
+        anyhow::bail!("Found more than one container for id {}", container_id);
     }
 
     let relevant_endpoint = relevant_endpoints

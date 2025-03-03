@@ -126,24 +126,24 @@ fn all_phases_available(pkg: &Package, available_phases: &[PhaseName]) -> Result
         .iter()
         .find(|name| !available_phases.contains(name))
     {
-        return Err(anyhow!(
+        anyhow::bail!(
             "Phase '{}' available in {} {}, but not in config",
             phase.as_str(),
             pkg.name(),
             pkg.version()
-        ));
+        );
     }
 
     if let Some(phase) = available_phases
         .iter()
         .find(|name| !package_phasenames.contains(name))
     {
-        return Err(anyhow!(
+        anyhow::bail!(
             "Phase '{}' not configured in {} {}",
             phase.as_str(),
             pkg.name(),
             pkg.version()
-        ));
+        );
     }
 
     Ok(())

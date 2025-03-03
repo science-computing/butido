@@ -109,10 +109,7 @@ impl SourceEntry {
 
         if !self.cache_root.is_dir() {
             trace!("Cache root does not exist: {}", self.cache_root.display());
-            return Err(anyhow!(
-                "Cache root {} does not exist!",
-                self.cache_root.display()
-            ));
+            anyhow::bail!("Cache root {} does not exist!", self.cache_root.display());
         }
 
         {

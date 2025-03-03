@@ -135,10 +135,10 @@ impl Package {
             }
             if path.is_absolute() {
                 // The stripping of root_dir in the previous if branch didn't work:
-                return Err(anyhow!(
+                anyhow::bail!(
                     "Bug: The path {} is absolute but it should be a relative path.",
                     path.display()
-                ));
+                );
             } else {
                 *patch = normalize_relative_path(path)?;
             }
