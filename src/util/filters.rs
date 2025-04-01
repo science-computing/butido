@@ -25,7 +25,7 @@ pub fn build_package_filter_by_dependency_name(
     name: &PackageName,
     check_build_dep: bool,
     check_runtime_dep: bool,
-) -> impl filters::failable::filter::FailableFilter<Package, Error = Error> {
+) -> impl filters::failable::filter::FailableFilter<Package, Error = Error> + use<> {
     let n = name.clone(); // clone, so we can move into closure
     let filter_build_dep = move |p: &Package| -> Result<bool> {
         trace!(

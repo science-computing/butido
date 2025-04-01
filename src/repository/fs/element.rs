@@ -26,7 +26,7 @@ impl Element {
     pub fn get_map_mut(&mut self) -> Option<&mut HashMap<PathComponent, Element>> {
         match self {
             Element::File(_) => None,
-            Element::Dir(ref mut hm) => Some(hm),
+            Element::Dir(hm) => Some(hm),
         }
     }
 }

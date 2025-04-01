@@ -79,7 +79,7 @@ impl StoreRoot {
 
     pub(in crate::filestore) fn find_artifacts_recursive(
         &self,
-    ) -> impl Iterator<Item = Result<ArtifactPath>> {
+    ) -> impl Iterator<Item = Result<ArtifactPath>> + use<> {
         trace!("Loading artifacts from directory: {:?}", self.0);
         let root = self.0.clone();
         walkdir::WalkDir::new(&self.0)

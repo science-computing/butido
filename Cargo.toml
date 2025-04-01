@@ -7,7 +7,7 @@ authors = [
   "Nico Steinle <nico.steinle@eviden.com>", # @ammernico
   "Michael Weiss <michael.weiss@eviden.com>", # @primeos-work
 ]
-edition = "2021"
+edition = "2024"
 rust-version = "1.85.0" # MSRV
 license = "EPL-2.0"
 
