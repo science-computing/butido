@@ -98,6 +98,7 @@ impl ImageNameLookup {
     }
 
     // To convert a user-supplied image name into an expanded image name:
+    #[rustversion::attr(all(since(1.87), before(1.88)), allow(clippy::map_entry))]
     pub fn expand(&self, image_name: &str) -> Result<ImageName> {
         let image_name = ImageName::from(image_name.to_string());
         if self.long2short.contains_key(&image_name) {
