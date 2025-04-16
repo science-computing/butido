@@ -31,7 +31,7 @@ where
 {
     stream
         .map(|r| r.map(TtyChunkBuf::from))
-        .map_err(|e| futures::io::Error::new(futures::io::ErrorKind::Other, e))
+        .map_err(futures::io::Error::other)
         .into_async_read()
         .lines()
 }

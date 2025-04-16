@@ -281,7 +281,7 @@ impl TreeItem for DagDisplay<'_> {
             .dag
             .node_weight(self.1)
             .ok_or_else(|| anyhow!("Error finding node: {:?}", self.1))
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            .map_err(std::io::Error::other)?;
         let dependency_type = match self.2 {
             // Only the root package has no edge and we pretend it's a runtime dependency as we
             // only mark build time dependencies in the output:
@@ -291,7 +291,7 @@ impl TreeItem for DagDisplay<'_> {
                 .dag
                 .edge_weight(edge_idx)
                 .ok_or_else(|| anyhow!("Error finding edge: {:?}", self.2))
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
+                .map_err(std::io::Error::other)?,
         };
         let extra_info = match dependency_type {
             // We mark build time dependencies with a star:
