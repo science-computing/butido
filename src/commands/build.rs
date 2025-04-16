@@ -304,7 +304,7 @@ pub async fn build(
             }
 
             if let Some(deniedlist) = pkg.denied_images() {
-                if deniedlist.iter().any(|denied| image_name == *denied) {
+                if deniedlist.contains(&image_name) {
                     anyhow::bail!(
                         "Package {} {} is not allowed to be built on {}",
                         pkg.name(),
