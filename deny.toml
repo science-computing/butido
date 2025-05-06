@@ -15,7 +15,6 @@ allow = [
     "MIT",
     "MPL-2.0",
     "Unicode-3.0",
-    "Unicode-DFS-2016",
     "Zlib"
 ]
 
