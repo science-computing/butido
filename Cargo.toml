@@ -82,7 +82,7 @@ url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["serde", "v4"] }
 walkdir = "2"
 which = "7"
-xdg = "2"
+xdg = "3"
 
 [build-dependencies]
 anyhow = "1"
