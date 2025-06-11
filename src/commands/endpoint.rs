@@ -40,15 +40,7 @@ pub async fn endpoint(
         .map(|s| s.to_owned())
         .map(EndpointName::from)
         .map(|ep| vec![ep])
-        .unwrap_or_else(|| {
-            config
-                .docker()
-                .endpoints()
-                .iter()
-                .map(|(ep_name, _)| ep_name)
-                .cloned()
-                .collect()
-        });
+        .unwrap_or_else(|| config.docker().endpoints().keys().cloned().collect());
 
     match matches.subcommand() {
         Some(("ping", matches)) => ping(endpoint_names, matches, config, progress_generator).await,

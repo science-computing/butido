@@ -78,10 +78,7 @@ impl PackageVersionConstraint {
                     .or_else(|eo| v.clone().try_into().map_err(|e: Error| e.context(eo)))
                     .with_context(|| anyhow!("Also failed to parse the package version using our own SemVer converter"))
                     .unwrap_or_else(|e| panic!(
-                        "Failed to parse the package version \"{}\" as SemVer to check if it matches \"{}\". Error: {:#}",
-                        v,
-                        constraint,
-                        e
+                        "Failed to parse the package version \"{v}\" as SemVer to check if it matches \"{constraint}\". Error: {e:#}",
                     ));
 
                 constraint.matches(&version)
