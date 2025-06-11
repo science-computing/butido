@@ -89,7 +89,7 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
                     &|_, node| format!("label = \"{}\" ", node.1.display_name_version()),
                 );
 
-                println!("{:?}", dot);
+                println!("{dot:?}");
                 Ok(())
             } else if serial_buildorder {
                 let topo_sorted = petgraph::algo::toposort(dag.dag(), None)
