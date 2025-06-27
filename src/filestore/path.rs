@@ -73,7 +73,7 @@ impl StoreRoot {
         self.0.join(subpath).is_dir()
     }
 
-    pub fn display(&self) -> std::path::Display {
+    pub fn display(&self) -> std::path::Display<'_> {
         self.0.display()
     }
 
@@ -164,7 +164,7 @@ impl ArtifactPath {
         ArtifactPath(root)
     }
 
-    pub fn display(&self) -> std::path::Display {
+    pub fn display(&self) -> std::path::Display<'_> {
         self.0.display()
     }
 

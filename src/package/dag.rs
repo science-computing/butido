@@ -264,7 +264,7 @@ impl Dag {
             .collect()
     }
 
-    pub fn display(&self) -> DagDisplay {
+    pub fn display(&self) -> DagDisplay<'_> {
         DagDisplay(self, self.root_idx, None)
     }
 }
@@ -301,7 +301,7 @@ impl TreeItem for DagDisplay<'_> {
         write!(f, "{}{} {}", extra_info, p.name(), p.version())
     }
 
-    fn children(&self) -> Cow<[Self::Child]> {
+    fn children(&self) -> Cow<'_, [Self::Child]> {
         let mut children_walker = self
             .0
             .dag
