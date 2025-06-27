@@ -54,7 +54,7 @@ use anyhow::Result;
 use aquamarine as _;
 use clap::ArgMatches;
 use rustversion as _; // This crate is (occasionally) required (e.g., when we need version specific Clippy overrides)
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use tracing_subscriber::layer::SubscriberExt;
 
 mod cli;
@@ -142,19 +142,24 @@ async fn main() -> Result<()> {
         ::config::Config::builder().add_source(::config::File::from(repo_path.join("config.toml")));
 
     {
-        let xdg = xdg::BaseDirectories::with_prefix("butido")?;
-        let xdg_config_file = xdg.find_config_file("config.toml");
-        if let Some(xdg_config) = xdg_config_file {
+        let xdg = xdg::BaseDirectories::with_prefix("butido");
+        let xdg_config_file_name = "config.toml";
+        if let Some(xdg_config_file_path) = xdg.find_config_file(xdg_config_file_name) {
             debug!(
                 "Configuration file found with XDG: {}",
-                xdg_config.display()
+                xdg_config_file_path.display()
             );
-            config_builder = config_builder.add_source(::config::File::from(xdg_config));
-        } else {
+            config_builder = config_builder.add_source(::config::File::from(xdg_config_file_path));
+        } else if let Some(xdg_config_home) = xdg.get_config_home() {
+            // Returns the user-specific configuration directory (set by XDG_CONFIG_HOME or
+            // default fallback, plus the prefix and profile if configured). Is guaranteed to
+            // not return None unless no HOME could be found.
             debug!(
-                "No configuration file found with XDG: {}",
-                xdg.get_config_home().display()
+                "No configuration file found with XDG at the following path: {}",
+                xdg_config_home.join(xdg_config_file_name).display()
             );
+        } else {
+            warn!("No HOME directory found! Cannot load the user specific butido configuration.");
         }
     }
 
