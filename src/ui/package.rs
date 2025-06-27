@@ -101,7 +101,7 @@ pub struct PreparePrintPackage<'a, P: Borrow<Package>> {
     i: usize,
 }
 
-pub fn handlebars_for_package_printing(format: &str) -> Result<Handlebars> {
+pub fn handlebars_for_package_printing(format: &str) -> Result<Handlebars<'_>> {
     let mut hb = Handlebars::new();
     hb.register_escape_fn(handlebars::no_escape);
     hb.register_template_string("package", format)?;

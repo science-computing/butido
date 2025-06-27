@@ -51,7 +51,7 @@ impl Dag {
         }
     }
 
-    pub fn iter(&'_ self) -> impl Iterator<Item = JobDefinition> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = JobDefinition<'_>> {
         self.dag.node_indices().map(move |idx| {
             let job = self.dag.node_weight(idx).unwrap(); // TODO
             let children = self.dag.neighbors_directed(idx, petgraph::Outgoing);
