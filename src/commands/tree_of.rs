@@ -14,6 +14,7 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::ArgMatches;
 use petgraph::dot::Dot;
+use petgraph::visit::EdgeRef;
 use resiter::AndThen;
 
 use crate::config::Configuration;
@@ -97,7 +98,21 @@ pub async fn tree_of(matches: &ArgMatches, repo: Repository, config: &Configurat
 
                 for node in topo_sorted.iter().rev() {
                     let package = dag.dag().node_weight(*node).unwrap();
-                    println!("{}", package.display_name_version());
+
+                    // Check incoming edges to determine if it's a build dependency
+                    let is_build_dependency = dag
+                        .dag()
+                        .edges_directed(*node, petgraph::Direction::Incoming)
+                        .any(|edge| {
+                            let dep_type = dag.dag().edge_weight(edge.id()).unwrap();
+                            *dep_type == DependencyType::Build
+                        });
+
+                    println!(
+                        "{}{}",
+                        if is_build_dependency { "*" } else { "" },
+                        package.display_name_version()
+                    );
                 }
                 println!();
 
