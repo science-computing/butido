@@ -292,26 +292,26 @@ pub async fn build(
     dag.all_packages()
         .into_iter()
         .map(|pkg| {
-            if let Some(allowlist) = pkg.allowed_images() {
-                if !allowlist.contains(&image_name) {
-                    anyhow::bail!(
-                        "Package {} {} is only allowed on: {}",
-                        pkg.name(),
-                        pkg.version(),
-                        allowlist.iter().join(", ")
-                    );
-                }
+            if let Some(allowlist) = pkg.allowed_images()
+                && !allowlist.contains(&image_name)
+            {
+                anyhow::bail!(
+                    "Package {} {} is only allowed on: {}",
+                    pkg.name(),
+                    pkg.version(),
+                    allowlist.iter().join(", ")
+                );
             }
 
-            if let Some(deniedlist) = pkg.denied_images() {
-                if deniedlist.contains(&image_name) {
-                    anyhow::bail!(
-                        "Package {} {} is not allowed to be built on {}",
-                        pkg.name(),
-                        pkg.version(),
-                        image_name
-                    );
-                }
+            if let Some(deniedlist) = pkg.denied_images()
+                && deniedlist.contains(&image_name)
+            {
+                anyhow::bail!(
+                    "Package {} {} is not allowed to be built on {}",
+                    pkg.name(),
+                    pkg.version(),
+                    image_name
+                );
             }
 
             Ok(())
@@ -458,10 +458,10 @@ pub async fn build(
         let lines = crate::log::ParsedLog::from_str(&data.0.log_text)?
             .into_iter()
             .map(|line_item| {
-                if let LogItem::CurrentPhase(ref p) = line_item {
-                    if !error_catched {
-                        last_phase = Some(p.clone());
-                    }
+                if let LogItem::CurrentPhase(ref p) = line_item
+                    && !error_catched
+                {
+                    last_phase = Some(p.clone());
                 }
 
                 if let LogItem::State(_) = line_item {
