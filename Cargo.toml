@@ -8,7 +8,7 @@ authors = [
   "Michael Weiss <michael.weiss@eviden.com>", # @primeos-work
 ]
 edition = "2024"
-rust-version = "1.85.0" # MSRV
+rust-version = "1.88.0" # MSRV
 license = "EPL-2.0"
 
 description = "Linux package tool utilizing Docker, PostgreSQL, and TOML"
@@ -76,7 +76,7 @@ toml = "0.9"
 tracing = "0.1"
 tracing-chrome = "0.7"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-typed-builder = "0.22"
+typed-builder = "0.23"
 unindent = "0.2"
 url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["serde", "v4"] }

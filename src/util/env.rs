@@ -18,11 +18,11 @@ pub fn parse_to_env(s: &str) -> Result<(EnvironmentVariableName, String)> {
     Ok((
         EnvironmentVariableName::from(
             *v.first()
-                .ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?,
+                .ok_or_else(|| anyhow!("Environment variable has no key: {s}"))?,
         ),
         String::from(
             *v.get(1)
-                .ok_or_else(|| anyhow!("Environment variable has no key: {}", s))?,
+                .ok_or_else(|| anyhow!("Environment variable has no key: {s}"))?,
         ),
     ))
 }

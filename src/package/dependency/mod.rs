@@ -46,28 +46,22 @@ pub(in crate::package::dependency) fn parse_package_dependency_string_into_name_
 ) -> Result<(PackageName, PackageVersion)> {
     let caps = crate::package::dependency::DEPENDENCY_PARSING_RE
         .captures(s)
-        .ok_or_else(|| {
-            anyhow!(
-                "Could not parse into package name and package version: '{}'",
-                s
-            )
-        })?;
+        .ok_or_else(|| anyhow!("Could not parse into package name and package version: '{s}'"))?;
 
     let name = caps
         .name("name")
         .map(|m| String::from(m.as_str()))
-        .ok_or_else(|| anyhow!("Could not parse name: '{}'", s))?;
+        .ok_or_else(|| anyhow!("Could not parse name: '{s}'"))?;
 
     let vers = caps
         .name("version")
         .map(|m| String::from(m.as_str()))
-        .ok_or_else(|| anyhow!("Could not parse version: '{}'", s))?;
+        .ok_or_else(|| anyhow!("Could not parse version: '{s}'"))?;
 
     // TODO: This is here temporarily to keep the version validation:
     let _ = crate::package::PackageVersionConstraint::try_from(vers.clone()).map_err(|e| {
         e.context(anyhow!(
-            "Could not parse the following package dependency string: {}",
-            s
+            "Could not parse the following package dependency string: {s}"
         ))
     })?;
     Ok((PackageName::from(name), PackageVersion::from(vers)))

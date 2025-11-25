@@ -214,9 +214,9 @@ impl JobHandle {
 
         let (run_container, logres) = tokio::join!(running_container, logres);
         let log =
-            logres.with_context(|| anyhow!("Collecting logs for job on '{}'", endpoint_name))?;
+            logres.with_context(|| anyhow!("Collecting logs for job on '{endpoint_name}'"))?;
         let run_container = run_container
-            .with_context(|| anyhow!("Running container {} failed", container_id))
+            .with_context(|| anyhow!("Running container {container_id} failed"))
             .with_context(|| {
                 Self::create_job_run_error(
                     &job_id,
@@ -269,7 +269,7 @@ impl JobHandle {
         trace!("Found result for job {}: {:?}", job_id, res);
         let (paths, res) = res.unpack();
         let res = res
-            .with_context(|| anyhow!("Error during running job on '{}'", endpoint_name))
+            .with_context(|| anyhow!("Error during running job on '{endpoint_name}'"))
             .with_context(|| {
                 Self::create_job_run_error(
                     &job.uuid,
@@ -296,7 +296,7 @@ impl JobHandle {
             r.push({
                 staging_read
                     .get(p)
-                    .ok_or_else(|| anyhow!("Artifact not in store: {:?}", p))?
+                    .ok_or_else(|| anyhow!("Artifact not in store: {p:?}"))?
                     .clone()
             });
         }

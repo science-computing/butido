@@ -159,7 +159,7 @@ pub fn check_compatibility(config: &config::Config) -> Result<()> {
     let compatibility = compatibility
         .parse::<u16>()
         .with_context(|| {
-            anyhow!("Failed to parse the value of the compatibility setting ({}) into a number (str -> u16)", compatibility)
+            anyhow!("Failed to parse the value of the compatibility setting ({compatibility}) into a number (str -> u16)")
         })
         .context("The format of the \"compatibility\" setting has changed from a string to a number")
         .context("Set \"compatibility\" to 0 to get a summary of the required changes")?;
@@ -173,9 +173,7 @@ pub fn check_compatibility(config: &config::Config) -> Result<()> {
         ))
         .with_context(|| {
             anyhow!(
-                "The expected configuration version is {} while the provided configuration has a compatibility setting of {}",
-                CONFIGURATION_VERSION,
-                compatibility,
+                "The expected configuration version is {CONFIGURATION_VERSION} while the provided configuration has a compatibility setting of {compatibility}",
             )
         });
 
@@ -265,7 +263,7 @@ impl NotValidatedConfiguration {
             .any(|allowed_theme| configured_theme == *allowed_theme);
 
             if !allowed_theme_present {
-                anyhow::bail!("Theme not known: {}", configured_theme);
+                anyhow::bail!("Theme not known: {configured_theme}");
             }
         }
 

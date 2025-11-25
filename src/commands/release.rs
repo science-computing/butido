@@ -40,7 +40,7 @@ pub async fn release(
         }
         Some(("new", matches)) => new_release(db_connection_config, config, matches).await,
         Some(("rm", matches)) => rm_release(db_connection_config, config, matches).await,
-        Some((other, _matches)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        Some((other, _matches)) => Err(anyhow!("Unknown subcommand: {other}")),
         None => Err(anyhow!("Missing subcommand")),
     }
 }
@@ -256,7 +256,7 @@ pub async fn rm_release(
         );
     }
     if !config.release_stores().contains(release_store_name) {
-        anyhow::bail!("Unknown release store name: {}", release_store_name);
+        anyhow::bail!("Unknown release store name: {release_store_name}");
     }
 
     let pname = matches.get_one::<String>("package_name").unwrap(); // safe by clap

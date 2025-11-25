@@ -47,7 +47,7 @@ pub async fn source(
             crate::commands::source::download::download(matches, config, repo, progressbars).await
         }
         Some(("of", matches)) => of(matches, config, repo).await,
-        Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        Some((other, _)) => Err(anyhow!("Unknown subcommand: {other}")),
         None => Err(anyhow!("No subcommand")),
     }
 }

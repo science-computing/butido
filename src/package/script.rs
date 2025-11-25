@@ -135,7 +135,7 @@ impl<'a> HighlightedScript<'a> {
         LinesWithEndings::from(&self.script.0)
             .map(move |line| -> Result<String> {
                 h.highlight_line(line, &self.ps)
-                    .with_context(|| anyhow!("Could not highlight the following line: {}", line))
+                    .with_context(|| anyhow!("Could not highlight the following line: {line}"))
                     .map(|r| as_24_bit_terminal_escaped(&r[..], true) + reset_all_attributes)
             })
             .collect::<Result<Vec<String>>>()
