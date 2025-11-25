@@ -664,6 +664,8 @@ impl<'a> PreparedContainer<'a> {
             .with_context(|| anyhow!("Copying patches to container {}", container.id()))
     }
 
+    // Ignore a false postitive Clippy lint:
+    #[rustversion::attr(since(1.92), allow(clippy::redundant_iter_cloned))]
     async fn copy_artifacts_to_container(
         container: &Container<'_>,
         job: &RunnableJob,
