@@ -52,7 +52,7 @@ pub async fn endpoint(
         }
         Some(("containers", matches)) => containers(endpoint_names, matches, config).await,
         Some(("images", matches)) => images(endpoint_names, matches, config).await,
-        Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        Some((other, _)) => Err(anyhow!("Unknown subcommand: {other}")),
         None => Err(anyhow!("No subcommand")),
     }
 }
@@ -181,7 +181,7 @@ async fn containers(
         Some(("prune", matches)) => containers_prune(endpoint_names, matches, config).await,
         Some(("top", matches)) => containers_top(endpoint_names, matches, config).await,
         Some(("stop", matches)) => containers_stop(endpoint_names, matches, config).await,
-        Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        Some((other, _)) => Err(anyhow!("Unknown subcommand: {other}")),
         None => Err(anyhow!("No subcommand")),
     }
 }
@@ -504,7 +504,7 @@ async fn images(
     match matches.subcommand() {
         Some(("list", matches)) => images_list(endpoint_names, matches, config).await,
         Some(("verify-present", matches)) => images_present(endpoint_names, matches, config).await,
-        Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        Some((other, _)) => Err(anyhow!("Unknown subcommand: {other}")),
         None => Err(anyhow!("No subcommand")),
     }
 }

@@ -211,7 +211,7 @@ pub async fn build(
                 .context("Parsing staging dir name to UUID")?;
             let uuid = Uuid::parse_str(&uuid)
                 .context("Parsing directory name as UUID")
-                .with_context(|| anyhow!("Seems not to be a submit UUID: {}", uuid))?;
+                .with_context(|| anyhow!("Seems not to be a submit UUID: {uuid}"))?;
 
             (uuid, staging_dir)
         } else {

@@ -179,8 +179,7 @@ impl FileSystemRepresentation {
                 }
                 Some(Element::Dir(hm)) => curr_hm = hm, // Move into the subtree
                 None => anyhow::bail!(
-                    "Path component '{:?}' was not loaded in map, this is most likely a bug",
-                    elem
+                    "Path component '{elem:?}' was not loaded in map, this is most likely a bug"
                 ),
             }
         }
@@ -225,8 +224,7 @@ impl FileSystemRepresentation {
                     curr_hm = hm;
                 }
                 None => anyhow::bail!(
-                    "Path component '{:?}' was not loaded in map, this is most likely a bug",
-                    elem
+                    "Path component '{elem:?}' was not loaded in map, this is most likely a bug"
                 ),
             }
         }

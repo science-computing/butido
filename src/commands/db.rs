@@ -66,7 +66,7 @@ pub fn db(
         Some(("releases", matches)) => {
             releases(db_connection_config, config, matches, default_limit)
         }
-        Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        Some((other, _)) => Err(anyhow!("Unknown subcommand: {other}")),
         None => Err(anyhow!("No subcommand")),
     }
 }
@@ -97,8 +97,8 @@ fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Re
                     } else {
                         Err(anyhow!("psql did not exit successfully")).with_context(|| {
                             match String::from_utf8(out.stderr) {
-                                Ok(log) => anyhow!("{}", log),
-                                Err(e) => anyhow!("Cannot parse log into valid UTF-8: {}", e),
+                                Ok(log) => anyhow!("{log}"),
+                                Err(e) => anyhow!("Cannot parse log into valid UTF-8: {e}"),
                             }
                         })
                     }
@@ -129,8 +129,8 @@ fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Re
                     } else {
                         Err(anyhow!("pgcli did not exit successfully")).with_context(|| {
                             match String::from_utf8(out.stderr) {
-                                Ok(log) => anyhow!("{}", log),
-                                Err(e) => anyhow!("Cannot parse log into valid UTF-8: {}", e),
+                                Ok(log) => anyhow!("{log}"),
+                                Err(e) => anyhow!("Cannot parse log into valid UTF-8: {e}"),
                             }
                         })
                     }
@@ -147,7 +147,7 @@ fn cli(db_connection_config: DbConnectionConfig<'_>, matches: &ArgMatches) -> Re
         .map(|(path, s)| match s {
             "psql" => Ok(Box::new(Psql(path)) as Box<dyn PgCliCommand>),
             "pgcli" => Ok(Box::new(PgCli(path)) as Box<dyn PgCliCommand>),
-            prog => Err(anyhow!("Unsupported pg CLI program: {}", prog)),
+            prog => Err(anyhow!("Unsupported pg CLI program: {prog}")),
         })
         .next()
         .transpose()?
@@ -272,7 +272,7 @@ fn submit(
     let submit_id = matches.get_one::<uuid::Uuid>("submit").unwrap(); // safe by clap
 
     let submit = models::Submit::with_id(&mut conn, submit_id)
-        .with_context(|| anyhow!("Loading submit '{}' from DB", submit_id))?;
+        .with_context(|| anyhow!("Loading submit '{submit_id}' from DB"))?;
 
     let githash = models::GitHash::with_id(&mut conn, submit.repo_hash_id)
         .with_context(|| anyhow!("Loading GitHash '{}' from DB", submit.repo_hash_id))?;
@@ -282,7 +282,7 @@ fn submit(
         .filter(schema::submits::uuid.eq(&submit_id))
         .select(schema::jobs::all_columns)
         .load::<models::Job>(&mut conn)
-        .with_context(|| anyhow!("Loading jobs for submit = {}", submit_id))?;
+        .with_context(|| anyhow!("Loading jobs for submit = {submit_id}"))?;
 
     let n_jobs = jobs.len();
     let (jobs_unknown, jobs_success, jobs_err) = {

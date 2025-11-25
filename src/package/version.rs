@@ -115,7 +115,7 @@ impl TryFrom<&str> for PackageVersionConstraint {
     fn try_from(s: &str) -> Result<Self> {
         PackageVersionConstraint::parser()
             .parse(s.as_bytes())
-            .context(anyhow!("Failed to parse the following package version constraint: {}", s))
+            .context(anyhow!("Failed to parse the following package version constraint: {s}"))
             .context("A package version constraint must have a version and an optional comparator (only `=` is currently supported, which is also the default), e.g.: =0.1.0")
     }
 }
@@ -205,8 +205,7 @@ impl TryInto<semver::Version> for PackageVersion {
         } else {
             // We couldn't parse the entire version string -> report an error:
             Err(anyhow!(
-                "The following rest of the package version couldn't be parsed: {}",
-                version_str
+                "The following rest of the package version couldn't be parsed: {version_str}"
             ))
             .with_context(|| {
                 anyhow!(
@@ -216,8 +215,7 @@ impl TryInto<semver::Version> for PackageVersion {
             })
             .with_context(|| {
                 anyhow!(
-                    "The PackageVersion \"{}\" couldn't be converted into a semver::Version",
-                    self
+                    "The PackageVersion \"{self}\" couldn't be converted into a semver::Version"
                 )
             })
         }

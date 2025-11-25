@@ -45,12 +45,12 @@ pub async fn container(
         .collect::<Vec<_>>();
 
     if relevant_endpoints.len() > 1 {
-        anyhow::bail!("Found more than one container for id {}", container_id);
+        anyhow::bail!("Found more than one container for id {container_id}");
     }
 
     let relevant_endpoint = relevant_endpoints
         .first()
-        .ok_or_else(|| anyhow!("Found no container for id {}", container_id))?;
+        .ok_or_else(|| anyhow!("Found no container for id {container_id}"))?;
 
     let container = relevant_endpoint
         .get_container_by_id(container_id)
@@ -116,7 +116,7 @@ pub async fn container(
             }
         }
         Some(("inspect", _)) => inspect(container).await,
-        Some((other, _)) => Err(anyhow!("Unknown subcommand: {}", other)),
+        Some((other, _)) => Err(anyhow!("Unknown subcommand: {other}")),
         None => Err(anyhow!("No subcommand")),
     }
 }

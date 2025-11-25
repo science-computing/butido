@@ -158,7 +158,7 @@ pub fn mk_package_name_regex(regex: &str) -> Result<Regex> {
 
     builder
         .build()
-        .with_context(|| anyhow!("Failed to build regex from '{}'", regex))
+        .with_context(|| anyhow!("Failed to build regex from '{regex}'"))
 }
 
 /// Make a header column for the ascii_table crate
@@ -257,7 +257,7 @@ pub fn get_date_filter(
             chrono::offset::Local::now()
                 .checked_sub_signed(dur)
                 .ok_or_else(|| anyhow!("Time calculation would overflow"))
-                .with_context(|| anyhow!("Cannot subtract {} from 'now'", dur))
+                .with_context(|| anyhow!("Cannot subtract {dur} from 'now'"))
         })
         .transpose()
 }

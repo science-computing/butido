@@ -535,12 +535,7 @@ impl<'a> PreparedContainer<'a> {
             .containers()
             .create(&builder_opts)
             .await
-            .with_context(|| {
-                anyhow!(
-                    "Creating container with builder options = {:?}",
-                    builder_opts
-                )
-            })
+            .with_context(|| anyhow!("Creating container with builder options = {builder_opts:?}"))
             .with_context(|| anyhow!("Creating container on '{}'", endpoint.name))?;
         trace!("Create info = {:?}", create_info);
         Ok(create_info)
@@ -721,7 +716,7 @@ impl<'a> PreparedContainer<'a> {
                             }
                         }
                         found.ok_or_else(|| {
-                            anyhow!("Not found in staging or release store: {:?}", art)
+                            anyhow!("Not found in staging or release store: {art:?}")
                         })?
                     }
                 }

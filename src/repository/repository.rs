@@ -248,11 +248,11 @@ impl Repository {
         // check if the iterator is empty
         if r.peek().is_none() {
             match (pname, pvers, matching_regexp) {
-                (Some(pname), None, None) => anyhow::bail!("{} not found", pname),
+                (Some(pname), None, None) => anyhow::bail!("{pname} not found"),
                 (Some(pname), Some(vers), None) => {
-                    anyhow::bail!("{} {} not found", pname, vers)
+                    anyhow::bail!("{pname} {vers} not found")
                 }
-                (None, None, Some(regex)) => anyhow::bail!("{} regex not found", regex),
+                (None, None, Some(regex)) => anyhow::bail!("{regex} regex not found"),
 
                 (_, _, _) => {
                     panic!("This should not be possible, either we select packages by name and (optionally) version, or by regex.")

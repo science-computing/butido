@@ -81,7 +81,7 @@ impl RunnableJob {
                         name
                     );
                     if !config.containers().allowed_env().contains(name) {
-                        Err(anyhow!("Environment variable name not allowed: {}", name))
+                        Err(anyhow!("Environment variable name not allowed: {name}"))
                     } else {
                         Ok(())
                     }

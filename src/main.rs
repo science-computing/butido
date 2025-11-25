@@ -296,7 +296,7 @@ async fn main() -> Result<()> {
         Some((other, _)) => {
             error!("Unknown subcommand: {}", other);
             error!("Use --help to find available subcommands");
-            anyhow::bail!("Unknown subcommand: {}", other);
+            anyhow::bail!("Unknown subcommand: {other}");
         }
         None => {
             error!("No subcommand.");

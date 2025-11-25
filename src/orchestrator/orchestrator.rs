@@ -1028,8 +1028,7 @@ impl<'a> JobTask<'a> {
                 if !missing_deps.is_empty() {
                     let missing: Vec<String> = missing_deps.iter().map(|u| u.to_string()).collect();
                     Err(anyhow!(
-                        "Children finished, but dependencies still missing: {:?}",
-                        missing
+                        "Children finished, but dependencies still missing: {missing:?}"
                     ))
                 } else {
                     // all dependencies are received
