@@ -177,7 +177,7 @@ pub fn mk_header(vec: Vec<&str>) -> Vec<ascii_table::Column> {
 /// or, if stdout is a pipe, print it nicely parseable
 ///
 /// If `csv` is `true`, convert the data to CSV and print that instead.
-pub fn display_data<D: Display>(
+pub fn display_data<D: Display + std::convert::AsRef<str>>(
     headers: Vec<ascii_table::Column>,
     data: Vec<Vec<D>>,
     csv: bool,
@@ -204,17 +204,17 @@ pub fn display_data<D: Display>(
             .and_then(|text| writeln!(lock, "{text}").map_err(Error::from))
     } else if std::io::stdout().is_terminal() {
         let mut ascii_table = ascii_table::AsciiTable::default();
-        ascii_table.set_max_width(
+        ascii_table.set_max_width(ascii_table::Width::Fixed(
             terminal_size::terminal_size()
                 .map(|tpl| tpl.0 .0 as usize) // an ugly interface indeed!
                 .unwrap_or(80),
-        );
+        ));
 
         headers.into_iter().enumerate().for_each(|(i, c)| {
             *ascii_table.column(i) = c;
         });
 
-        ascii_table.print(data);
+        ascii_table.println(data);
         Ok(())
     } else {
         let out = std::io::stdout();
