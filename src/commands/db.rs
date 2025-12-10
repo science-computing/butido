@@ -349,7 +349,7 @@ fn submit(
             let endpoint = models::Endpoint::fetch_for_job(&mut conn, job)?
                 .ok_or_else(|| anyhow!("Endpoint for job {} not found", job.uuid))?;
 
-            Ok(vec![
+            Ok([
                 job.uuid.to_string().cyan(),
                 match is_job_successfull(job)? {
                     Some(true) => "Success".green(),
@@ -361,9 +361,12 @@ fn submit(
                 job.container_hash.normal(),
                 endpoint.name.normal(),
                 image_name_lookup.shorten(&image.name).normal(),
-            ])
+            ]
+            .iter()
+            .map(ToString::to_string)
+            .collect())
         })
-        .collect::<Result<Vec<Vec<colored::ColoredString>>>>()?;
+        .collect::<Result<Vec<Vec<String>>>>()?;
     crate::commands::util::display_data(header, data, false)
 }
 
