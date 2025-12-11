@@ -26,7 +26,7 @@ maintenance = { status = "passively-maintained" }
 [dependencies]
 anyhow = "1"
 aquamarine = "0.6"
-ascii_table = { version = "5", features = ["color_codes", "wide_characters"] }
+ascii_table = { version = "5", features = ["auto_table_width", "color_codes", "wide_characters"] }
 bytesize = "2"
 chrono = "0.4"
 clap = { version = "4", features = ["cargo"] }
@@ -68,7 +68,6 @@ sha2 = "0.10"
 shiplift = "0.7"
 syntect = "5"
 tar = "0.4"
-terminal_size = "0.4"
 tokio = { version = "1", features = ["macros", "fs", "process", "io-util", "signal", "time"] }
 tokio-util = "0.7"
 tokio-stream = "0.1"
