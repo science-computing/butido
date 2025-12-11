@@ -203,12 +203,7 @@ pub fn display_data<D: Display + std::convert::AsRef<str>>(
             .and_then(|t| String::from_utf8(t).map_err(Error::from))
             .and_then(|text| writeln!(lock, "{text}").map_err(Error::from))
     } else if std::io::stdout().is_terminal() {
-        let mut ascii_table = ascii_table::AsciiTable::default();
-        ascii_table.set_max_width(ascii_table::Width::Fixed(
-            terminal_size::terminal_size()
-                .map(|tpl| tpl.0 .0 as usize) // an ugly interface indeed!
-                .unwrap_or(80),
-        ));
+        let mut ascii_table = ascii_table::AsciiTable::new();
 
         headers.into_iter().enumerate().for_each(|(i, c)| {
             *ascii_table.column(i) = c;
