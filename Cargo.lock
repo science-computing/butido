@@ -112,6 +112,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2bcff894f0b9ba3bdd4c497c3c39df9662a0eedddf33e872ab29a3bda7167119"
 dependencies = [
  "regex",
+ "termize",
  "unicode-width",
 ]
 
@@ -253,7 +254,6 @@ dependencies = [
  "shiplift",
  "syntect",
  "tar",
- "terminal_size",
  "tokio",
  "tokio-stream",
  "tokio-util",
@@ -2969,13 +2969,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "terminal_size"
-version = "0.4.3"
+name = "termize"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60b8cb979cb11c32ce1603f8137b22262a9d131aaa5c37b5678025f22b8becd0"
+checksum = "61946f539e9ff67cbc8df5b2e9823d84e0d58d74e342707c2dfb85405995827b"
 dependencies = [
- "rustix",
- "windows-sys 0.60.2",
+ "libc",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
