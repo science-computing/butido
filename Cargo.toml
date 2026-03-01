@@ -58,7 +58,7 @@ rayon = "1"
 regex = "1"
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "charset", "http2", "system-proxy", "stream"] }
 resiter = "0.5"
-rlimit = "0.10"
+rlimit = "0.11"
 rustversion = "1"
 semver = "1"
 serde = "1"
