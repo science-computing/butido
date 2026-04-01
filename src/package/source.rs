@@ -129,7 +129,10 @@ impl HashType {
 
                     m.update(&buffer[..count]);
                 }
-                Ok(HashValue(format!("{:x}", m.finalize())))
+                Ok(HashValue(format!(
+                    "{:x}",
+                    base16ct::HexDisplay(&m.finalize())
+                )))
             }
             HashType::Sha256 => {
                 use sha2::Digest;
