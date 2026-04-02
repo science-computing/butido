@@ -152,7 +152,7 @@ impl HashType {
 
                     m.update(&buffer[..count]);
                 }
-                let h = format!("{:x}", m.finalize());
+                let h = format!("{:x}", base16ct::HexDisplay(&m.finalize()));
                 trace!("Hash = {:?}", h);
                 Ok(HashValue(h))
             }
@@ -174,7 +174,7 @@ impl HashType {
 
                     m.update(&buffer[..count]);
                 }
-                let h = format!("{:x}", m.finalize());
+                let h = format!("{:x}", base16ct::HexDisplay(&m.finalize()));
                 trace!("Hash = {:?}", h);
                 Ok(HashValue(h))
             }
