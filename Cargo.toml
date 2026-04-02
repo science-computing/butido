@@ -27,6 +27,7 @@ maintenance = { status = "passively-maintained" }
 anyhow = "1"
 aquamarine = "0.6"
 ascii_table = { version = "5", features = ["auto_table_width", "color_codes", "wide_characters"] }
+base16ct = "1"
 bytesize = "2"
 chrono = "0.4"
 clap = { version = "4", features = ["cargo"] }
@@ -63,7 +64,7 @@ rustversion = "1"
 semver = "1"
 serde = "1"
 serde_json = "1"
-sha1 = "0.10"
+sha1 = "0.11"
 sha2 = "0.10"
 shiplift = "0.7"
 syntect = "5"
