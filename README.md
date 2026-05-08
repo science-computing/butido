@@ -97,12 +97,12 @@ cd /tmp/butido-test-repo
 - Original author: Matthias Beyer <mail@beyermatthias.de> @matthiasbeyer
 - Active maintainers: See `authors` in Cargo.toml
 - Passive maintainers
-  - Erdmut Pfeifer <erdmut.pfeifer@eviden.com> @ErdmutPfeifer
-  - Christoph Prokop <christoph.prokop@eviden.com> @christophprokop
+  - Erdmut Pfeifer <erdmut.pfeifer@bull.com> @ErdmutPfeifer
+  - Christoph Prokop <christoph.prokop@bull.com> @christophprokop
 
 
 # License
 
-butido was developed for science + computing AG (an Atos company).
+butido was developed for science + computing AG (a Bull business).
 
 License: EPL-2.0
