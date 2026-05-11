@@ -423,6 +423,7 @@ pub async fn build(
     if !artifacts.is_empty() {
         writeln!(outlock, "Packages created:")?;
     }
+    artifacts.sort_by_key(|a| a.as_ref().to_string_lossy().to_lowercase());
     artifacts.into_iter().try_for_each(|artifact_path| {
         writeln!(outlock, "{}", staging_dir.join(artifact_path).display()).map_err(Error::from)
     })?;
