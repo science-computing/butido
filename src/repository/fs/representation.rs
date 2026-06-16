@@ -162,7 +162,7 @@ impl FileSystemRepresentation {
             anyhow!(
                 "The path `{}` doesn't include the repo root `{}`",
                 path.display(),
-                &self.root.display()
+                self.root.display()
             )
         })?;
         let mut curr_hm = &self.elements;
@@ -203,7 +203,7 @@ impl FileSystemRepresentation {
             anyhow!(
                 "The path `{}` doesn't include the repo root `{}`",
                 path.display(),
-                &self.root.display()
+                self.root.display()
             )
         })?;
         let mut curr_hm = &self.elements;
