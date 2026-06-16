@@ -142,7 +142,7 @@ async fn perform_download(
 
     let response = match client.execute(request).await {
         Ok(resp) => resp,
-        Err(e) => return Err(e).with_context(|| anyhow!("Downloading '{}'", &source.url())),
+        Err(e) => return Err(e).with_context(|| anyhow!("Downloading '{}'", source.url())),
     };
 
     if response.status() != reqwest::StatusCode::OK {
@@ -151,7 +151,7 @@ async fn perform_download(
             response.status(),
             reqwest::StatusCode::OK
         ))
-        .with_context(|| anyhow!("Downloading \"{}\" failed", &source.url()));
+        .with_context(|| anyhow!("Downloading \"{}\" failed", source.url()));
     }
 
     progress
