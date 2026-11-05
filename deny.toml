@@ -9,7 +9,7 @@
 # [possible values: any SPDX 3.7 short identifier (+ optional exception)].
 allow = [
     "Apache-2.0",
-    "BSD-2-Clause",
+    "Apache-2.0 WITH LLVM-exception",
     "BSD-3-Clause",
     "EPL-2.0",
     "MIT",
