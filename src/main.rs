@@ -16,7 +16,6 @@
     explicit_outlives_requirements,
     improper_ctypes,
     keyword_idents,
-    no_mangle_generic_items,
     non_ascii_idents,
     non_camel_case_types,
     non_shorthand_field_patterns,
