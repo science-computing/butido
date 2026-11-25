@@ -12,7 +12,6 @@ rust-version = "1.95.0" # MSRV
 license = "EPL-2.0"
 
 description = "Linux package tool utilizing Docker, PostgreSQL, and TOML"
-homepage    = "https://github.com/science-computing/butido"
 repository  = "https://github.com/science-computing/butido"
 readme      = "README.md"
 keywords    = ["docker", "postgres", "linux", "packaging", "packages"]
@@ -86,5 +85,4 @@ xdg = "3"
 
 [build-dependencies]
 anyhow = "1"
-git_info = "0.1"
 vergen = { version = "8", features = ["build", "cargo", "git", "gitcl"] }
