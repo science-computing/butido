@@ -9,6 +9,7 @@
 //
 
 use std::ops::Deref;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -105,14 +106,14 @@ impl TryFrom<String> for PackageVersionConstraint {
     type Error = anyhow::Error;
 
     fn try_from(s: String) -> Result<Self> {
-        Self::try_from(&s as &str)
+        s.parse()
     }
 }
 
-impl TryFrom<&str> for PackageVersionConstraint {
-    type Error = anyhow::Error;
+impl FromStr for PackageVersionConstraint {
+    type Err = anyhow::Error;
 
-    fn try_from(s: &str) -> Result<Self> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         PackageVersionConstraint::parser()
             .parse(s.as_bytes())
             .context(anyhow!("Failed to parse the following package version constraint: {s}"))
