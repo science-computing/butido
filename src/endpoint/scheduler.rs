@@ -29,6 +29,7 @@ use tracing::{debug, error, info, trace};
 use uuid::Uuid;
 
 use crate::db::models as dbmodels;
+use crate::endpoint::Container;
 use crate::endpoint::Endpoint;
 use crate::endpoint::EndpointConfiguration;
 use crate::endpoint::EndpointHandle;
@@ -379,24 +380,30 @@ impl Drop for JobHandle {
             let docker = self.endpoint.docker().clone();
 
             tokio::spawn(async move {
-                let container = docker.containers().get(&container_id);
+                let container = Container::new(&docker, &container_id);
                 debug!("Killing container with ID: {container_id}");
 
-                let container_info = container.inspect().await.unwrap();
-                if container_info.state.running {
-                    // We are killing the container here, since stopping the container can take ages
-                    // and wouldn't bring any benefit here
-                    match container.kill(None).await {
-                        Ok(_) => info!("Killed container with ID: {}", container_id),
-                        Err(e) => {
-                            error!(
-                                "Failed to stop container with ID: {}\nError: {}",
-                                container_id, e
-                            )
+                if let Ok(container_info) = container.inspect().await {
+                    if container_info
+                        .state
+                        .as_ref()
+                        .and_then(|s| s.running)
+                        .unwrap_or(false)
+                    {
+                        // We are killing the container here, since stopping the container can take ages
+                        // and wouldn't bring any benefit here
+                        match container.kill(None).await {
+                            Ok(_) => info!("Killed container with ID: {}", container_id),
+                            Err(e) => {
+                                error!(
+                                    "Failed to stop container with ID: {}\nError: {}",
+                                    container_id, e
+                                )
+                            }
                         }
+                    } else {
+                        debug!("Container with ID {} isn't running anymore", container_id);
                     }
-                } else {
-                    debug!("Container with ID {} isn't running anymore", container_id);
                 }
             });
         } else {

@@ -320,7 +320,6 @@ async fn containers_prune(
                 .ok_or_else(|| anyhow!("Failed to find existing container {}", stat.id))?
                 .delete()
                 .await
-                .map_err(Error::from)
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Result<()>>()
@@ -489,7 +488,6 @@ async fn containers_stop(
                 .ok_or_else(|| anyhow!("Failed to find existing container {}", stat.id))?
                 .stop(stop_timeout)
                 .await
-                .map_err(Error::from)
         })
         .collect::<futures::stream::FuturesUnordered<_>>()
         .collect::<Result<()>>()

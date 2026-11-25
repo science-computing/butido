@@ -8,21 +8,24 @@
 // SPDX-License-Identifier: EPL-2.0
 //
 
-use shiplift::tty::TtyChunk;
+use bollard::container::LogOutput;
+use bytes::Bytes;
 
 #[allow(clippy::enum_variant_names)]
 pub enum TtyChunkBuf {
-    StdIn(Vec<u8>),
-    StdOut(Vec<u8>),
-    StdErr(Vec<u8>),
+    StdIn(Bytes),
+    StdOut(Bytes),
+    StdErr(Bytes),
+    Console(Bytes),
 }
 
-impl From<TtyChunk> for TtyChunkBuf {
-    fn from(c: TtyChunk) -> Self {
+impl From<LogOutput> for TtyChunkBuf {
+    fn from(c: LogOutput) -> Self {
         match c {
-            TtyChunk::StdIn(buffer) => TtyChunkBuf::StdIn(buffer),
-            TtyChunk::StdOut(buffer) => TtyChunkBuf::StdOut(buffer),
-            TtyChunk::StdErr(buffer) => TtyChunkBuf::StdErr(buffer),
+            LogOutput::StdIn { message } => TtyChunkBuf::StdIn(message),
+            LogOutput::StdOut { message } => TtyChunkBuf::StdOut(message),
+            LogOutput::StdErr { message } => TtyChunkBuf::StdErr(message),
+            LogOutput::Console { message } => TtyChunkBuf::Console(message),
         }
     }
 }
@@ -33,6 +36,7 @@ impl AsRef<[u8]> for TtyChunkBuf {
             TtyChunkBuf::StdIn(buffer) => buffer.as_ref(),
             TtyChunkBuf::StdOut(buffer) => buffer.as_ref(),
             TtyChunkBuf::StdErr(buffer) => buffer.as_ref(),
+            TtyChunkBuf::Console(buffer) => buffer.as_ref(),
         }
     }
 }

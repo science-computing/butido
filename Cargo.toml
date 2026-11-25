@@ -28,6 +28,8 @@ anyhow = "1"
 aquamarine = "0.6"
 ascii_table = { version = "5", features = ["auto_table_width", "color_codes", "wide_characters"] }
 base16ct = "1"
+bollard = { version = "0.21", features = ["chrono"] }
+bytes = "1"
 bytesize = "2"
 chrono = "0.4"
 clap = { version = "4", features = ["cargo"] }
@@ -66,10 +68,9 @@ serde = "1"
 serde_json = "1"
 sha1 = "0.11"
 sha2 = "0.11"
-shiplift = "0.7"
 syntect = "5"
 tar = "0.4"
-tokio = { version = "1", features = ["macros", "fs", "process", "io-util", "signal", "time"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs", "process", "io-util", "signal", "time"] }
 tokio-util = "0.7"
 tokio-stream = "0.1"
 toml = "1.0"
