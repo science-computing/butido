@@ -233,7 +233,6 @@ dependencies = [
  "futures",
  "getset",
  "git2",
- "git_info",
  "handlebars",
  "human-panic",
  "humantime",
@@ -1049,12 +1048,6 @@ dependencies = [
  "libgit2-sys",
  "log",
 ]
-
-[[package]]
-name = "git_info"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9525474359e360de19580a77590f3491c94d57b1ef2b8bd468877a83cbc7f4cb"
 
 [[package]]
 name = "h2"
