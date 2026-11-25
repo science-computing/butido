@@ -9,19 +9,19 @@
 //
 
 use std::fmt::{Debug, Formatter};
-use std::path::PathBuf;
-use std::str::FromStr;
+use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use bollard::Docker;
 use futures::FutureExt;
+use futures::Stream;
+use futures::TryStreamExt;
 use getset::{CopyGetters, Getters};
-use shiplift::Container;
-use shiplift::Docker;
-use shiplift::ExecContainerOptions;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
@@ -119,29 +119,33 @@ impl Endpoint {
     }
 
     fn setup_endpoint(ep_name: &EndpointName, ep: &crate::config::Endpoint) -> Result<Endpoint> {
+        let timeout = ep.timeout().unwrap_or(120);
         match ep.endpoint_type() {
-            crate::config::EndpointType::Http => shiplift::Uri::from_str(ep.uri())
-                .map(shiplift::Docker::host)
-                .with_context(|| anyhow!("Connecting to {}", ep.uri()))
-                .map(|docker| {
-                    Endpoint::builder()
-                        .name(ep_name.clone())
-                        .uri(ep.uri().clone())
-                        .docker(docker)
-                        .num_max_jobs(ep.maxjobs())
-                        .network_mode(ep.network_mode().clone())
-                        .build()
-                }),
+            crate::config::EndpointType::Http => {
+                let docker =
+                    Docker::connect_with_http(ep.uri(), timeout, bollard::API_DEFAULT_VERSION)
+                        .with_context(|| anyhow!("Connecting to {}", ep.uri()))?;
+                Ok(Endpoint::builder()
+                    .name(ep_name.clone())
+                    .uri(ep.uri().clone())
+                    .docker(docker)
+                    .num_max_jobs(ep.maxjobs())
+                    .network_mode(ep.network_mode().clone())
+                    .build())
+            }
 
-            crate::config::EndpointType::Socket => Ok({
-                Endpoint::builder()
+            crate::config::EndpointType::Socket => {
+                let docker =
+                    Docker::connect_with_socket(ep.uri(), timeout, bollard::API_DEFAULT_VERSION)
+                        .with_context(|| anyhow!("Connecting to socket {}", ep.uri()))?;
+                Ok(Endpoint::builder()
                     .name(ep_name.clone())
                     .uri(ep.uri().clone())
                     .num_max_jobs(ep.maxjobs())
                     .network_mode(ep.network_mode().clone())
-                    .docker(shiplift::Docker::unix(ep.uri()))
-                    .build()
-            }),
+                    .docker(docker)
+                    .build())
+            }
         }
     }
 
@@ -155,11 +159,12 @@ impl Endpoint {
                     .await
                     .with_context(|| anyhow!("Getting version of endpoint: {}", ep.name))?;
 
-                if !v.contains(&avail.version) {
+                let avail_version = avail.version.as_deref().unwrap_or("");
+                if !v.iter().any(|ver| ver == avail_version) {
                     Err(anyhow!(
                         "Incompatible Docker version on endpoint {}: Expected: {}, Available: [{}]",
                         ep.name(),
-                        avail.version,
+                        avail_version,
                         v.join(", ")
                     ))
                 } else {
@@ -179,9 +184,14 @@ impl Endpoint {
                     .await
                     .with_context(|| anyhow!("Getting API version of endpoint: {}", ep.name))?;
 
-                if !v.contains(&avail.api_version) {
-                    Err(anyhow!("Incompatible Docker API version on endpoint {}: Expected: {}, Available: [{}]",
-                            ep.name(), avail.api_version, v.join(", ")))
+                let avail_api_version = avail.api_version.as_deref().unwrap_or("");
+                if !v.iter().any(|ver| ver == avail_api_version) {
+                    Err(anyhow!(
+                        "Incompatible Docker API version on endpoint {}: Expected: {}, Available: [{}]",
+                        ep.name(),
+                        avail_api_version,
+                        v.join(", ")
+                    ))
                 } else {
                     Ok(())
                 }
@@ -190,23 +200,18 @@ impl Endpoint {
     }
 
     async fn check_images_available(imgs: &[ImageName], ep: &Endpoint) -> Result<()> {
-        use shiplift::ImageListOptions;
-
         trace!("Checking availability of images: {:?}", imgs);
+        let list_options = bollard::query_parameters::ListImagesOptions {
+            all: true,
+            ..Default::default()
+        };
         let available_names = ep
             .docker()
-            .images()
-            .list(&ImageListOptions::builder().all().build())
+            .list_images(Some(list_options))
             .await
             .with_context(|| anyhow!("Listing images on endpoint: {}", ep.name))?
             .into_iter()
-            .flat_map(|image_rep| {
-                image_rep
-                    .repo_tags
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(ImageName::from)
-            })
+            .flat_map(|image_rep| image_rep.repo_tags.into_iter().map(ImageName::from))
             .collect::<Vec<ImageName>>();
 
         trace!("Available images = {:?}", available_names);
@@ -267,13 +272,11 @@ impl Endpoint {
     }
 
     pub async fn container_stats(&self) -> Result<Vec<ContainerStat>> {
+        let options = bollard::query_parameters::ListContainersOptionsBuilder::default()
+            .all(true)
+            .build();
         self.docker
-            .containers()
-            .list(&{
-                shiplift::builder::ContainerListOptions::builder()
-                    .all()
-                    .build()
-            })
+            .list_containers(Some(options))
             .await
             .map_err(Error::from)
             .map(|containers| containers.into_iter().map(ContainerStat::from).collect())
@@ -291,7 +294,7 @@ impl Endpoint {
 
     pub async fn get_container_by_id(&self, id: &str) -> Result<Option<Container<'_>>> {
         if self.has_container_with_id(id).await? {
-            Ok(Some(self.docker.containers().get(id)))
+            Ok(Some(Container::new(&self.docker, id)))
         } else {
             Ok(None)
         }
@@ -301,17 +304,23 @@ impl Endpoint {
         &self,
         name_filter: Option<&str>,
     ) -> Result<impl Iterator<Item = Image> + use<>> {
-        let mut listopts = shiplift::builder::ImageListOptions::builder();
-
+        let mut filters = std::collections::HashMap::new();
         if let Some(name) = name_filter {
-            listopts.filter_name(name);
-        } else {
-            listopts.all();
+            filters.insert("reference".to_string(), vec![name.to_string()]);
         }
 
+        let options = bollard::query_parameters::ListImagesOptions {
+            all: name_filter.is_none(),
+            filters: if filters.is_empty() {
+                None
+            } else {
+                Some(filters)
+            },
+            ..Default::default()
+        };
+
         self.docker
-            .images()
-            .list(&listopts.build())
+            .list_images(Some(options))
             .await
             .map_err(Error::from)
             .map(|v| v.into_iter().map(Image::from))
@@ -320,8 +329,8 @@ impl Endpoint {
 
 /// Helper type to store endpoint statistics
 ///
-/// Currently, this can only be generated from a shiplift::rep::Info, but it does not hold all
-/// values the shiplift::rep::Info type holds, because some of these are not relevant for us.
+/// Currently, this can only be generated from a bollard::models::SystemInfo, but it does not hold all
+/// values the bollard::models::SystemInfo type holds, because some of these are not relevant for us.
 ///
 /// Later, this might hold endpoint stats from other endpoint implementations as well
 pub struct EndpointStats {
@@ -337,18 +346,18 @@ pub struct EndpointStats {
     pub system_time: Option<String>,
 }
 
-impl From<shiplift::rep::Info> for EndpointStats {
-    fn from(info: shiplift::rep::Info) -> Self {
+impl From<bollard::models::SystemInfo> for EndpointStats {
+    fn from(info: bollard::models::SystemInfo) -> Self {
         EndpointStats {
-            name: info.name,
-            containers: info.containers,
-            images: info.images,
-            id: info.id,
-            kernel_version: info.kernel_version,
-            mem_total: info.mem_total,
-            memory_limit: info.memory_limit,
-            n_cpu: info.n_cpu,
-            operating_system: info.operating_system,
+            name: info.name.unwrap_or_default(),
+            containers: info.containers.map(|c| c as u64).unwrap_or(0),
+            images: info.images.map(|i| i as u64).unwrap_or(0),
+            id: info.id.unwrap_or_default(),
+            kernel_version: info.kernel_version.unwrap_or_default(),
+            mem_total: info.mem_total.map(|m| m as u64).unwrap_or(0),
+            memory_limit: info.memory_limit.unwrap_or_default(),
+            n_cpu: info.ncpu.map(|n| n as u64).unwrap_or(0),
+            operating_system: info.operating_system.unwrap_or_default(),
             system_time: info.system_time,
         }
     }
@@ -364,15 +373,33 @@ pub struct ContainerStat {
     pub status: String,
 }
 
-impl From<shiplift::rep::Container> for ContainerStat {
-    fn from(cont: shiplift::rep::Container) -> Self {
+impl From<bollard::models::ContainerSummary> for ContainerStat {
+    fn from(cont: bollard::models::ContainerSummary) -> Self {
         ContainerStat {
-            created: cont.created,
-            id: cont.id,
-            image: cont.image,
-            image_id: cont.image_id,
-            state: cont.state,
-            status: cont.status,
+            created: cont
+                .created
+                .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
+                .unwrap_or_default(),
+            id: cont.id.unwrap_or_default(),
+            image: cont.image.unwrap_or_default(),
+            image_id: cont.image_id.unwrap_or_default(),
+            state: cont.state.map(|s| s.to_string()).unwrap_or_default(),
+            status: cont.status.unwrap_or_default(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Top {
+    pub titles: Vec<String>,
+    pub processes: Vec<Vec<String>>,
+}
+
+impl From<bollard::models::ContainerTopResponse> for Top {
+    fn from(top: bollard::models::ContainerTopResponse) -> Self {
+        Top {
+            titles: top.titles.unwrap_or_default(),
+            processes: top.processes.unwrap_or_default(),
         }
     }
 }
@@ -389,12 +416,16 @@ pub struct Image {
     tags: Option<Vec<String>>,
 }
 
-impl From<shiplift::rep::Image> for Image {
-    fn from(img: shiplift::rep::Image) -> Self {
+impl From<bollard::models::ImageSummary> for Image {
+    fn from(img: bollard::models::ImageSummary) -> Self {
         Image {
-            created: img.created,
+            created: chrono::DateTime::from_timestamp(img.created, 0).unwrap_or_default(),
             id: img.id,
-            tags: img.repo_tags,
+            tags: if img.repo_tags.is_empty() {
+                None
+            } else {
+                Some(img.repo_tags)
+            },
         }
     }
 }
@@ -430,13 +461,167 @@ impl std::ops::Deref for EndpointHandle {
     }
 }
 
+#[derive(Clone)]
+pub struct Container<'a> {
+    docker: &'a Docker,
+    id: String,
+}
+
+impl<'a> Container<'a> {
+    pub fn new(docker: &'a Docker, id: impl Into<String>) -> Self {
+        Self {
+            docker,
+            id: id.into(),
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub async fn top(&self, ps_args: Option<&str>) -> Result<Top> {
+        let options = ps_args.map(|ps| bollard::query_parameters::TopOptions {
+            ps_args: ps.to_string(),
+        });
+        self.docker
+            .top_processes(&self.id, options)
+            .await
+            .map(Top::from)
+            .map_err(Error::from)
+    }
+
+    pub async fn kill(&self, signal: Option<&str>) -> Result<()> {
+        let options = signal.map(|s| bollard::query_parameters::KillContainerOptions {
+            signal: s.to_string(),
+        });
+        self.docker
+            .kill_container(&self.id, options)
+            .await
+            .map_err(Error::from)
+    }
+
+    pub async fn delete(&self) -> Result<()> {
+        self.docker
+            .remove_container(
+                &self.id,
+                None::<bollard::query_parameters::RemoveContainerOptions>,
+            )
+            .await
+            .map_err(Error::from)
+    }
+
+    pub async fn start(&self) -> Result<()> {
+        self.docker
+            .start_container(
+                &self.id,
+                None::<bollard::query_parameters::StartContainerOptions>,
+            )
+            .await
+            .map_err(Error::from)
+    }
+
+    pub async fn stop(&self, timeout: Option<std::time::Duration>) -> Result<()> {
+        let options = timeout.map(|t| bollard::query_parameters::StopContainerOptions {
+            t: Some(t.as_secs() as i32),
+            ..Default::default()
+        });
+        self.docker
+            .stop_container(&self.id, options)
+            .await
+            .map_err(Error::from)
+    }
+
+    pub async fn inspect(&self) -> Result<bollard::models::ContainerInspectResponse> {
+        self.docker
+            .inspect_container(
+                &self.id,
+                None::<bollard::query_parameters::InspectContainerOptions>,
+            )
+            .await
+            .map_err(Error::from)
+    }
+
+    pub async fn copy_file_into<P: AsRef<Path>>(&self, path: P, bytes: &[u8]) -> Result<()> {
+        let path = path.as_ref();
+
+        let mut ar = tar::Builder::new(Vec::new());
+        let mut header = tar::Header::new_gnu();
+        header.set_size(bytes.len() as u64);
+        header.set_mode(0o0644);
+        ar.append_data(&mut header, path.iter().skip(1).collect::<PathBuf>(), bytes)
+            .context("Building tar archive entry for copy_file_into")?;
+        let data = ar
+            .into_inner()
+            .context("Finalizing tar archive for copy_file_into")?;
+
+        self.docker
+            .upload_to_container(
+                &self.id,
+                Some(bollard::query_parameters::UploadToContainerOptions {
+                    path: "/".to_string(),
+                    ..Default::default()
+                }),
+                bollard::body_full(bytes::Bytes::from(data)),
+            )
+            .await
+            .map_err(Error::from)
+    }
+
+    pub fn copy_from(&self, path: &Path) -> impl Stream<Item = Result<Vec<u8>>> + use<'a> {
+        let options = bollard::query_parameters::DownloadFromContainerOptions {
+            path: path.to_string_lossy().to_string(),
+        };
+        self.docker
+            .download_from_container(&self.id, Some(options))
+            .map_ok(|b| b.to_vec())
+            .map_err(Error::from)
+    }
+
+    pub async fn exec(
+        &self,
+        cmd: Vec<String>,
+        attach_stdout: bool,
+        attach_stderr: bool,
+    ) -> Result<
+        Pin<
+            Box<
+                dyn Stream<Item = Result<bollard::container::LogOutput, bollard::errors::Error>>
+                    + Send,
+            >,
+        >,
+    > {
+        let create_options = bollard::exec::CreateExecOptions {
+            cmd: Some(cmd),
+            attach_stdout: Some(attach_stdout),
+            attach_stderr: Some(attach_stderr),
+            ..Default::default()
+        };
+        let exec = self
+            .docker
+            .create_exec(&self.id, create_options)
+            .await
+            .context("Creating exec instance")?;
+        let res = self
+            .docker
+            .start_exec(&exec.id, None::<bollard::exec::StartExecOptions>)
+            .await
+            .context("Starting exec instance")?;
+        match res {
+            bollard::exec::StartExecResults::Attached { output, .. } => Ok(output),
+            bollard::exec::StartExecResults::Detached => Err(anyhow!(
+                "Exec instance started detached when attached was expected"
+            )),
+        }
+    }
+}
+
 #[derive(Getters)]
 pub struct PreparedContainer<'a> {
     endpoint: &'a Endpoint,
     script: Script,
 
     #[getset(get = "pub")]
-    create_info: shiplift::rep::ContainerCreateInfo,
+    create_info: bollard::models::ContainerCreateResponse,
 }
 
 impl<'a> PreparedContainer<'a> {
@@ -448,7 +633,7 @@ impl<'a> PreparedContainer<'a> {
     ) -> Result<PreparedContainer<'a>> {
         let script = job.script().clone();
         let create_info = Self::build_container(endpoint, job).await?;
-        let container = endpoint.docker.containers().get(&create_info.id);
+        let container = Container::new(&endpoint.docker, &create_info.id);
 
         let (cpysrc, cpypch, cpyart, cpyscr) = tokio::join!(
             Self::copy_source_to_container(&container, job),
@@ -489,53 +674,61 @@ impl<'a> PreparedContainer<'a> {
             )
         })?;
 
-        Ok({
-            PreparedContainer {
-                endpoint,
-                script,
-                create_info,
-            }
+        Ok(PreparedContainer {
+            endpoint,
+            script,
+            create_info,
         })
     }
 
     async fn build_container(
         endpoint: &Endpoint,
         job: &RunnableJob,
-    ) -> Result<shiplift::rep::ContainerCreateInfo> {
+    ) -> Result<bollard::models::ContainerCreateResponse> {
         let envs = job
             .environment()
             .map(|(k, v)| format!("{}={}", k.as_ref(), v))
             .collect::<Vec<_>>();
         trace!("Job resources: Environment variables = {:?}", envs);
 
-        let builder_opts = {
-            let mut builder_opts = shiplift::ContainerOptions::builder(job.image().as_ref());
-            let container_name = format!(
-                "butido-{package}-{version}-{id}",
-                package = job.package().name().as_ref(),
-                version = job.package().version().as_ref(),
-                id = job.uuid()
-            );
-            trace!("container name = {}", container_name);
-            builder_opts.name(&container_name);
-            builder_opts.env(envs.iter().map(AsRef::as_ref).collect::<Vec<&str>>());
-            builder_opts.cmd(vec!["/bin/bash"]); // we start the container with /bin/bash, but exec() the script in it later
-            builder_opts.attach_stdin(true); // we have to attach, otherwise bash exits
+        let container_name = format!(
+            "butido-{package}-{version}-{id}",
+            package = job.package().name().as_ref(),
+            version = job.package().version().as_ref(),
+            id = job.uuid()
+        );
+        trace!("container name = {}", container_name);
 
-            if let Some(network_mode) = endpoint.network_mode().as_ref() {
-                builder_opts.network_mode(network_mode);
-            }
+        let host_config =
+            endpoint
+                .network_mode()
+                .as_ref()
+                .map(|network_mode| bollard::models::HostConfig {
+                    network_mode: Some(network_mode.clone()),
+                    ..Default::default()
+                });
 
-            builder_opts.build()
+        let body = bollard::models::ContainerCreateBody {
+            image: Some(job.image().as_ref().to_string()),
+            env: Some(envs),
+            cmd: Some(vec!["/bin/bash".to_string()]),
+            attach_stdin: Some(true),
+            open_stdin: Some(true),
+            host_config,
+            ..Default::default()
         };
-        trace!("Builder options = {:?}", builder_opts);
+
+        let options = bollard::query_parameters::CreateContainerOptions {
+            name: Some(container_name),
+            ..Default::default()
+        };
+
+        trace!("Create options = {:?}, body = {:?}", options, body);
 
         let create_info = endpoint
             .docker
-            .containers()
-            .create(&builder_opts)
+            .create_container(Some(options), body)
             .await
-            .with_context(|| anyhow!("Creating container with builder options = {builder_opts:?}"))
             .with_context(|| anyhow!("Creating container on '{}'", endpoint.name))?;
         trace!("Create info = {:?}", create_info);
         Ok(create_info)
@@ -642,7 +835,6 @@ impl<'a> PreparedContainer<'a> {
                 container
                     .copy_file_into(destination, &buf)
                     .await
-                    .map_err(Error::from)
                     .inspect(|_| trace!("Copying patch {} successful", patch.display()))
                     .with_context(|| {
                         anyhow!(
@@ -774,10 +966,8 @@ impl<'a> PreparedContainer<'a> {
     }
 
     pub async fn start(self) -> Result<StartedContainer<'a>> {
-        self.endpoint
-            .docker
-            .containers()
-            .get(&self.create_info.id)
+        let container = Container::new(&self.endpoint.docker, &self.create_info.id);
+        container
             .start()
             .inspect(|r| trace!("Starting container {} -> {:?}", self.create_info.id, r))
             .map(|r| {
@@ -791,12 +981,10 @@ impl<'a> PreparedContainer<'a> {
             })
             .await?;
 
-        Ok({
-            StartedContainer {
-                endpoint: self.endpoint,
-                script: self.script,
-                create_info: self.create_info,
-            }
+        Ok(StartedContainer {
+            endpoint: self.endpoint,
+            script: self.script,
+            create_info: self.create_info,
         })
     }
 }
@@ -804,7 +992,7 @@ impl<'a> PreparedContainer<'a> {
 pub struct StartedContainer<'a> {
     endpoint: &'a Endpoint,
     script: Script,
-    create_info: shiplift::rep::ContainerCreateInfo,
+    create_info: bollard::models::ContainerCreateResponse,
 }
 
 impl<'a> StartedContainer<'a> {
@@ -812,23 +1000,18 @@ impl<'a> StartedContainer<'a> {
         self,
         logsink: UnboundedSender<LogItem>,
     ) -> Result<ExecutedContainer<'a>> {
-        let exec_opts = ExecContainerOptions::builder()
-            .cmd(vec!["/bin/bash", "/script"])
-            .attach_stderr(true)
-            .attach_stdout(true)
-            .build();
-        trace!("Exec options = {:?}", exec_opts);
-
         trace!(
             "Moving logs to log sink for container {}",
             self.create_info.id
         );
-        let stream = self
-            .endpoint
-            .docker
-            .containers()
-            .get(&self.create_info.id)
-            .exec(&exec_opts);
+        let container = Container::new(&self.endpoint.docker, &self.create_info.id);
+        let stream = container
+            .exec(
+                vec!["/bin/bash".to_string(), "/script".to_string()],
+                true,
+                true,
+            )
+            .await?;
 
         let exited_successfully: Option<(bool, Option<String>)> =
             buffer_stream_to_line_stream(stream)
@@ -896,20 +1079,18 @@ impl<'a> StartedContainer<'a> {
                     (Some((true, _)), Some((true, _))) => Some((true, None)),
                 });
 
-        Ok({
-            ExecutedContainer {
-                endpoint: self.endpoint,
-                create_info: self.create_info,
-                script: self.script,
-                exit_info: exited_successfully,
-            }
+        Ok(ExecutedContainer {
+            endpoint: self.endpoint,
+            create_info: self.create_info,
+            script: self.script,
+            exit_info: exited_successfully,
         })
     }
 }
 
 pub struct ExecutedContainer<'a> {
     endpoint: &'a Endpoint,
-    create_info: shiplift::rep::ContainerCreateInfo,
+    create_info: bollard::models::ContainerCreateResponse,
     script: Script,
     exit_info: Option<(bool, Option<String>)>,
 }
@@ -939,7 +1120,7 @@ impl ExecutedContainer<'_> {
             }
 
             Some((true, _)) | None => {
-                let container = self.endpoint.docker.containers().get(&self.create_info.id);
+                let container = Container::new(&self.endpoint.docker, &self.create_info.id);
 
                 trace!(
                     "Fetching {} from container {}",
@@ -947,7 +1128,7 @@ impl ExecutedContainer<'_> {
                     self.create_info.id
                 );
                 let tar_stream = container
-                    .copy_from(&PathBuf::from(crate::consts::OUTPUTS_DIR_PATH))
+                    .copy_from(Path::new(crate::consts::OUTPUTS_DIR_PATH))
                     .map(|item| {
                         item.with_context(|| {
                             anyhow!(
@@ -970,11 +1151,9 @@ impl ExecutedContainer<'_> {
             }
         };
 
-        Ok({
-            FinalizedContainer {
-                artifacts,
-                exit_info,
-            }
+        Ok(FinalizedContainer {
+            artifacts,
+            exit_info,
         })
     }
 }

@@ -13,12 +13,12 @@ use std::str::FromStr;
 
 use anyhow::Error;
 use anyhow::Result;
+use bollard::container::LogOutput;
 use futures::AsyncBufReadExt;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use pom::parser::Parser as PomParser;
-use shiplift::tty::TtyChunk;
 
 use crate::log::util::*;
 use crate::log::LogItem;
@@ -27,7 +27,7 @@ type IoResult<T> = RResult<T, futures::io::Error>;
 
 pub fn buffer_stream_to_line_stream<S>(stream: S) -> impl Stream<Item = IoResult<String>>
 where
-    S: Stream<Item = shiplift::Result<TtyChunk>> + std::marker::Unpin,
+    S: Stream<Item = Result<LogOutput, bollard::errors::Error>> + std::marker::Unpin,
 {
     stream
         .map(|r| r.map(TtyChunkBuf::from))
@@ -219,9 +219,7 @@ mod tests {
 
     #[test]
     fn test_phase_multiline() {
-        let s = "#BUTIDO:PHASE:a
-
-            ";
+        let s = "#BUTIDO:PHASE:a\n\n            ";
         let p = parser();
         let r = p.parse(s.as_bytes());
 
